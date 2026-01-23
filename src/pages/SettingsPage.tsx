@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { invoke } from '@tauri-apps/api/core';
+import { getVersion } from '@tauri-apps/api/app';
 import { changeLanguage, getCurrentLanguage, normalizeLanguage } from '../i18n';
 import * as accountService from '../services/accountService';
 import './settings/Settings.css';
@@ -10,7 +11,7 @@ import {
   AlertCircle, RefreshCw, Check, ExternalLink
 } from 'lucide-react';
 
-const APP_VERSION = "v0.2.0";
+
 
 /** 网络配置类型 */
 interface NetworkConfig {
@@ -57,6 +58,12 @@ export function SettingsPage() {
   const [generalLoaded, setGeneralLoaded] = useState(false);
   const generalSaveTimerRef = useRef<number | null>(null);
   const suppressGeneralSaveRef = useRef(false);
+  
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    getVersion().then(ver => setAppVersion(`v${ver}`));
+  }, []);
   
   // Network States
   const [wsEnabled, setWsEnabled] = useState(true);
@@ -576,7 +583,7 @@ export function SettingsPage() {
               <div className="app-info">
                 <h2>{t('settings.about.appName')}</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div className="version-tag">{APP_VERSION}</div>
+                  <div className="version-tag">{appVersion}</div>
                   <button 
                     className="btn btn-sm btn-ghost"
                     onClick={handleCheckUpdate}

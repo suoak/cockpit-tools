@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.3.2] - 2026-01-23
+
+### Added
+- **Engineering**: Added automatic version synchronization script. `package.json` version now automatically syncs to `tauri.conf.json` and `Cargo.toml`.
+- **Engineering**: Added git pre-commit hook to strictly enforce Changelog updates when version changes.
+
+## [0.3.1] - 2026-01-23
+
+### Changed
+- **Maintenance**: Routine version update and dependency maintenance.
+
 ## [0.3.0] - 2026-01-22
 
 ### Added

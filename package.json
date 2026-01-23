@@ -1,13 +1,14 @@
 {
   "name": "antigravity-cockpit-tools",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run sync-version && tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "npm run sync-version && tauri",
+    "sync-version": "node scripts/sync-version.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
