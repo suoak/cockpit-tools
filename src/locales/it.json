@@ -568,7 +568,8 @@
       "portInUseTitle": "Porta in uso",
       "portInUseConfirm": "La porta {{port}} è in uso. Chiudere il processo che usa questa porta?",
       "portCloseFailed": "Impossibile chiudere la porta: {{error}}",
-      "portStillInUse": "La porta {{port}} è ancora in uso."
+      "portStillInUse": "La porta {{port}} è ancora in uso.",
+      "portInUseAction": "Chiudi la porta e riprova"
     },
     "token": {
       "desc": "Incolla il contenuto di auth.json o i dati JSON dell'account",

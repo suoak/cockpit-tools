@@ -568,7 +568,8 @@
       "portInUseTitle": "Cổng đang được sử dụng",
       "portInUseConfirm": "Cổng {{port}} đang được sử dụng. Bạn có muốn đóng tiến trình dùng cổng này không?",
       "portCloseFailed": "Không thể đóng cổng: {{error}}",
-      "portStillInUse": "Cổng {{port}} vẫn đang được sử dụng."
+      "portStillInUse": "Cổng {{port}} vẫn đang được sử dụng.",
+      "portInUseAction": "Đóng cổng và thử lại"
     },
     "token": {
       "desc": "Dán nội dung auth.json hoặc dữ liệu JSON tài khoản",

@@ -568,7 +568,8 @@
       "portInUseTitle": "포트 사용 중",
       "portInUseConfirm": "포트 {{port}}가 사용 중입니다. 이 포트를 사용하는 프로세스를 종료할까요?",
       "portCloseFailed": "포트 종료 실패: {{error}}",
-      "portStillInUse": "포트 {{port}}가 여전히 사용 중입니다."
+      "portStillInUse": "포트 {{port}}가 여전히 사용 중입니다.",
+      "portInUseAction": "포트 종료 후 다시 시도"
     },
     "token": {
       "desc": "auth.json 내용 또는 계정 JSON 데이터를 붙여넣으세요",

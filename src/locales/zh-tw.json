@@ -568,7 +568,8 @@
       "portInUseTitle": "連接埠被佔用",
       "portInUseConfirm": "連接埠 {{port}} 已被佔用，是否關閉佔用該連接埠的程式？",
       "portCloseFailed": "關閉連接埠失敗: {{error}}",
-      "portStillInUse": "連接埠 {{port}} 仍被佔用。"
+      "portStillInUse": "連接埠 {{port}} 仍被佔用。",
+      "portInUseAction": "關閉佔用連接埠並重試"
     },
     "token": {
       "desc": "貼上 auth.json 內容或帳號 JSON 資料",

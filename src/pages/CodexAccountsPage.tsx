@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Plus,
   RefreshCw,
@@ -37,7 +37,6 @@ import { invoke } from '@tauri-apps/api/core';
 export function CodexAccountsPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language || 'zh-CN';
-  const oauthPort = 1455;
   const {
     accounts,
     currentAccount,
@@ -69,6 +68,7 @@ export function CodexAccountsPage() {
   const [oauthUrl, setOauthUrl] = useState('');
   const [oauthUrlCopied, setOauthUrlCopied] = useState(false);
   const [oauthPrepareError, setOauthPrepareError] = useState<string | null>(null);
+  const [oauthPortInUse, setOauthPortInUse] = useState<number | null>(null);
   const [tokenInput, setTokenInput] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; message: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -127,11 +127,12 @@ export function CodexAccountsPage() {
     };
   }, [fetchAccounts, fetchCurrentAccount, t]);
 
-  // 准备 OAuth URL
-  useEffect(() => {
-    if (!showAddModal || addTab !== 'oauth' || oauthUrl) return;
+  const prepareOauthUrl = useCallback(() => {
+    if (!showAddModalRef.current || addTabRef.current !== 'oauth') return;
+    if (oauthActiveRef.current) return;
     oauthActiveRef.current = true;
     setOauthPrepareError(null);
+    setOauthPortInUse(null);
     codexService
       .prepareCodexOAuthUrl()
       .then((url) => {
@@ -145,12 +146,21 @@ export function CodexAccountsPage() {
         oauthActiveRef.current = false;
         const match = String(e).match(/CODEX_OAUTH_PORT_IN_USE:(\d+)/);
         if (match) {
+          const port = Number(match[1]);
+          setOauthPortInUse(Number.isNaN(port) ? null : port);
           setOauthPrepareError(t('codex.oauth.portInUse', { port: match[1] }));
           return;
         }
+        setOauthPrepareError(t('codex.oauth.failed', '授权失败') + ': ' + String(e));
         console.error('准备 Codex OAuth 链接失败:', e);
       });
-  }, [showAddModal, addTab, oauthUrl, t]);
+  }, [t]);
+
+  // 准备 OAuth URL
+  useEffect(() => {
+    if (!showAddModal || addTab !== 'oauth' || oauthUrl) return;
+    prepareOauthUrl();
+  }, [showAddModal, addTab, oauthUrl, prepareOauthUrl]);
 
   // 关闭弹窗时取消 OAuth
   useEffect(() => {
@@ -220,43 +230,13 @@ export function CodexAccountsPage() {
     setOauthUrl('');
     setOauthUrlCopied(false);
     setOauthPrepareError(null);
+    setOauthPortInUse(null);
   };
 
   const openAddModal = (tab: 'oauth' | 'token' | 'import') => {
-    const run = async () => {
-      if (tab === 'oauth') {
-        try {
-          const inUse = await codexService.isCodexOAuthPortInUse();
-          if (inUse) {
-            const confirmed = await confirmDialog(
-              t('codex.oauth.portInUseConfirm', { port: oauthPort }),
-              {
-                title: t('codex.oauth.portInUseTitle'),
-                kind: 'warning',
-                okLabel: t('common.confirm'),
-                cancelLabel: t('common.cancel'),
-              }
-            );
-            if (!confirmed) {
-              return;
-            }
-            await codexService.closeCodexOAuthPort();
-            const stillInUse = await codexService.isCodexOAuthPortInUse();
-            if (stillInUse) {
-              setMessage({ text: t('codex.oauth.portStillInUse', { port: oauthPort }), tone: 'error' });
-              return;
-            }
-          }
-        } catch (e) {
-          setMessage({ text: t('codex.oauth.portCloseFailed', { error: String(e) }), tone: 'error' });
-          return;
-        }
-      }
-      setAddTab(tab);
-      setShowAddModal(true);
-      resetAddModalState();
-    };
-    void run();
+    setAddTab(tab);
+    setShowAddModal(true);
+    resetAddModalState();
   };
 
   const closeAddModal = () => {
@@ -349,6 +329,32 @@ export function CodexAccountsPage() {
     } catch (e) {
       console.error('复制失败:', e);
     }
+  };
+
+  const handleReleaseOauthPort = async () => {
+    const port = oauthPortInUse;
+    if (!port) return;
+    const confirmed = await confirmDialog(
+      t('codex.oauth.portInUseConfirm', { port }),
+      {
+        title: t('codex.oauth.portInUseTitle'),
+        kind: 'warning',
+        okLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel'),
+      }
+    );
+    if (!confirmed) return;
+
+    setOauthPrepareError(null);
+    try {
+      await codexService.closeCodexOAuthPort();
+    } catch (e) {
+      setOauthPrepareError(t('codex.oauth.portCloseFailed', { error: String(e) }));
+      setOauthPortInUse(port);
+      return;
+    }
+
+    prepareOauthUrl();
   };
 
   const handleOpenOauthUrl = async () => {
@@ -928,10 +934,21 @@ export function CodexAccountsPage() {
                       </p>
                     </div>
                   ) : oauthPrepareError ? (
-                    <div className="add-status error">
-                      <X size={16} />
-                      <span>{oauthPrepareError}</span>
-                    </div>
+                    <>
+                      <div className="add-status error">
+                        <X size={16} />
+                        <span>{oauthPrepareError}</span>
+                      </div>
+                      {oauthPortInUse ? (
+                        <button
+                          className="btn btn-secondary btn-full"
+                          style={{ marginTop: '8px' }}
+                          onClick={handleReleaseOauthPort}
+                        >
+                          {t('codex.oauth.portInUseAction', 'Close port and retry')}
+                        </button>
+                      ) : null}
+                    </>
                   ) : (
                     <div className="oauth-loading">
                       <RefreshCw size={20} className="loading-spinner" />

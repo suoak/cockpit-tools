@@ -568,7 +568,8 @@
       "portInUseTitle": "Port in use",
       "portInUseConfirm": "Port {{port}} is in use. Close the process using this port?",
       "portCloseFailed": "Failed to close port: {{error}}",
-      "portStillInUse": "Port {{port}} is still in use."
+      "portStillInUse": "Port {{port}} is still in use.",
+      "portInUseAction": "Close port and retry"
     },
     "token": {
       "desc": "Paste auth.json content or account JSON data",

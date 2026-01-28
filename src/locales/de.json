@@ -568,7 +568,8 @@
       "portInUseTitle": "Port belegt",
       "portInUseConfirm": "Port {{port}} ist belegt. Prozess schließen, der den Port verwendet?",
       "portCloseFailed": "Port konnte nicht geschlossen werden: {{error}}",
-      "portStillInUse": "Port {{port}} ist weiterhin belegt."
+      "portStillInUse": "Port {{port}} ist weiterhin belegt.",
+      "portInUseAction": "Port schließen und erneut versuchen"
     },
     "token": {
       "desc": "auth.json-Inhalt oder Konto-JSON einfügen",

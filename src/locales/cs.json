@@ -568,7 +568,8 @@
       "portInUseTitle": "Port je obsazen",
       "portInUseConfirm": "Port {{port}} je obsazen. Zavřít proces, který jej používá?",
       "portCloseFailed": "Nepodařilo se zavřít port: {{error}}",
-      "portStillInUse": "Port {{port}} je stále obsazen."
+      "portStillInUse": "Port {{port}} je stále obsazen.",
+      "portInUseAction": "Zavřít port a zkusit znovu"
     },
     "token": {
       "desc": "Vložte obsah auth.json nebo JSON dat účtu",

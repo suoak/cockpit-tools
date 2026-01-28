@@ -568,7 +568,8 @@
       "portInUseTitle": "Порт занят",
       "portInUseConfirm": "Порт {{port}} занят. Закрыть процесс, который использует этот порт?",
       "portCloseFailed": "Не удалось закрыть порт: {{error}}",
-      "portStillInUse": "Порт {{port}} все еще занят."
+      "portStillInUse": "Порт {{port}} все еще занят.",
+      "portInUseAction": "Закрыть порт и повторить"
     },
     "token": {
       "desc": "Вставьте содержимое auth.json или JSON данных аккаунта",

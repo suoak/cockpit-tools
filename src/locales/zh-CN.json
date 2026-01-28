@@ -568,7 +568,8 @@
       "portInUseTitle": "端口被占用",
       "portInUseConfirm": "端口 {{port}} 已被占用，是否关闭占用该端口的进程？",
       "portCloseFailed": "关闭端口失败: {{error}}",
-      "portStillInUse": "端口 {{port}} 仍被占用。"
+      "portStillInUse": "端口 {{port}} 仍被占用。",
+      "portInUseAction": "关闭占用端口并重试"
     },
     "token": {
       "desc": "粘贴 auth.json 内容或账号 JSON 数据",

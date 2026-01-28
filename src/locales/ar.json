@@ -568,7 +568,8 @@
       "portInUseTitle": "المنفذ قيد الاستخدام",
       "portInUseConfirm": "المنفذ {{port}} قيد الاستخدام. هل تريد إغلاق العملية التي تستخدم هذا المنفذ؟",
       "portCloseFailed": "فشل إغلاق المنفذ: {{error}}",
-      "portStillInUse": "المنفذ {{port}} ما يزال قيد الاستخدام."
+      "portStillInUse": "المنفذ {{port}} ما يزال قيد الاستخدام.",
+      "portInUseAction": "إغلاق المنفذ وإعادة المحاولة"
     },
     "token": {
       "desc": "الصق محتوى auth.json أو بيانات JSON للحساب",

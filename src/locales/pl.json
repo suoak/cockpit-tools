@@ -568,7 +568,8 @@
       "portInUseTitle": "Port zajęty",
       "portInUseConfirm": "Port {{port}} jest zajęty. Zamknąć proces używający tego portu?",
       "portCloseFailed": "Nie udało się zamknąć portu: {{error}}",
-      "portStillInUse": "Port {{port}} nadal jest zajęty."
+      "portStillInUse": "Port {{port}} nadal jest zajęty.",
+      "portInUseAction": "Zamknij port i spróbuj ponownie"
     },
     "token": {
       "desc": "Wklej zawartość auth.json lub dane JSON konta",

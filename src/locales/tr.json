@@ -568,7 +568,8 @@
       "portInUseTitle": "Port kullanımda",
       "portInUseConfirm": "Port {{port}} kullanımda. Bu portu kullanan işlemi kapatmak ister misiniz?",
       "portCloseFailed": "Port kapatılamadı: {{error}}",
-      "portStillInUse": "Port {{port}} hâlâ kullanımda."
+      "portStillInUse": "Port {{port}} hâlâ kullanımda.",
+      "portInUseAction": "Portu kapatıp yeniden dene"
     },
     "token": {
       "desc": "auth.json içeriğini veya hesap JSON verisini yapıştırın",
