@@ -1,7 +1,7 @@
 use crate::utils::protobuf;
 use base64::{engine::general_purpose, Engine as _};
 use rusqlite::Connection;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 获取 Antigravity 数据库路径
 pub fn get_db_path() -> Result<PathBuf, String> {
@@ -36,16 +36,16 @@ pub fn get_db_path() -> Result<PathBuf, String> {
     }
 }
 
-/// 注入 Token 到 Antigravity 数据库
-pub fn inject_token(
+/// 注入 Token 到指定数据库路径
+pub fn inject_token_to_path(
+    db_path: &Path,
     access_token: &str,
     refresh_token: &str,
     expiry: i64,
 ) -> Result<String, String> {
-    let db_path = get_db_path()?;
     crate::modules::logger::log_info(&format!("注入 Token 到数据库: {:?}", db_path));
 
-    let conn = Connection::open(&db_path).map_err(|e| format!("打开数据库失败: {}", e))?;
+    let conn = Connection::open(db_path).map_err(|e| format!("打开数据库失败: {}", e))?;
 
     // 读取当前数据
     let current_data: String = conn
@@ -88,6 +88,16 @@ pub fn inject_token(
 
     crate::modules::logger::log_info("Token 注入成功");
     Ok(format!("Token 注入成功！\n数据库: {:?}", db_path))
+}
+
+/// 注入 Token 到 Antigravity 默认数据库
+pub fn inject_token(
+    access_token: &str,
+    refresh_token: &str,
+    expiry: i64,
+) -> Result<String, String> {
+    let db_path = get_db_path()?;
+    inject_token_to_path(&db_path, access_token, refresh_token, expiry)
 }
 
 /// 写入 serviceMachineId 到数据库

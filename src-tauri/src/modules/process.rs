@@ -5,6 +5,8 @@ use std::time::Duration;
 use sysinfo::System;
 
 const OPENCODE_APP_NAME: &str = "OpenCode";
+#[cfg(target_os = "macos")]
+const CODEX_APP_PATH: &str = "/Applications/Codex.app/Contents/MacOS/Codex";
 
 fn normalize_custom_path(value: Option<&str>) -> Option<String> {
     let trimmed = value.unwrap_or("").trim();
@@ -80,6 +82,487 @@ pub fn is_antigravity_running() -> bool {
     }
 
     false
+}
+
+fn extract_user_data_dir(args: &[std::ffi::OsString]) -> Option<String> {
+    let mut iter = args.iter().peekable();
+    while let Some(arg) = iter.next() {
+        let value = arg.to_string_lossy().to_string();
+        if value.starts_with("--user-data-dir=") {
+            return Some(value.trim_start_matches("--user-data-dir=").to_string());
+        }
+        if value == "--user-data-dir" {
+            if let Some(next) = iter.next() {
+                return Some(next.to_string_lossy().to_string());
+            }
+        }
+    }
+    None
+}
+
+fn parse_user_data_dir_value(raw: &str) -> Option<String> {
+    let rest = raw.trim_start();
+    if rest.is_empty() {
+        return None;
+    }
+    let value = if rest.starts_with('"') {
+        let end = rest[1..].find('"').map(|idx| idx + 1).unwrap_or(rest.len());
+        &rest[1..end]
+    } else if rest.starts_with('\'') {
+        let end = rest[1..].find('\'').map(|idx| idx + 1).unwrap_or(rest.len());
+        &rest[1..end]
+    } else {
+        let end = rest.find(" --").unwrap_or(rest.len());
+        &rest[..end]
+    };
+    let value = value.trim();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
+}
+
+fn extract_user_data_dir_from_command_line(command_line: &str) -> Option<String> {
+    if let Some(pos) = command_line.find("--user-data-dir=") {
+        let rest = &command_line[pos + "--user-data-dir=".len()..];
+        return parse_user_data_dir_value(rest);
+    }
+    if let Some(pos) = command_line.find("--user-data-dir") {
+        let rest = &command_line[pos + "--user-data-dir".len()..];
+        return parse_user_data_dir_value(rest);
+    }
+    None
+}
+
+fn parse_env_value(raw: &str) -> Option<String> {
+    let rest = raw.trim_start();
+    if rest.is_empty() {
+        return None;
+    }
+    let value = if rest.starts_with('"') {
+        let end = rest[1..].find('"').map(|idx| idx + 1).unwrap_or(rest.len());
+        &rest[1..end]
+    } else if rest.starts_with('\'') {
+        let end = rest[1..].find('\'').map(|idx| idx + 1).unwrap_or(rest.len());
+        &rest[1..end]
+    } else {
+        let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+        &rest[..end]
+    };
+    let value = value.trim();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
+}
+
+fn extract_env_value(command_line: &str, key: &str) -> Option<String> {
+    let needle = format!("{}=", key);
+    let pos = command_line.find(&needle)?;
+    let rest = &command_line[pos + needle.len()..];
+    parse_env_value(rest)
+}
+
+fn normalize_path_for_compare(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    let resolved = std::fs::canonicalize(trimmed)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| trimmed.to_string());
+
+    #[cfg(target_os = "windows")]
+    {
+        return resolved.to_lowercase();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        return resolved;
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn list_user_data_dirs_from_ps() -> Vec<String> {
+    let mut result = Vec::new();
+    let output = Command::new("ps").args(["-axo", "pid,command"]).output();
+    let output = match output {
+        Ok(value) => value,
+        Err(_) => return result,
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines().skip(1) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let lower = line.to_lowercase();
+        if !lower.contains("antigravity.app/contents/") {
+            continue;
+        }
+        if lower.contains("antigravity tools.app/contents/") {
+            continue;
+        }
+        if lower.contains("crashpad_handler") {
+            continue;
+        }
+        if let Some(dir) = extract_user_data_dir_from_command_line(line) {
+            let normalized = normalize_path_for_compare(&dir);
+            if !normalized.is_empty() {
+                result.push(normalized);
+            }
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "windows")]
+fn list_user_data_dirs_from_powershell() -> Vec<String> {
+    let mut result = Vec::new();
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance Win32_Process -Filter \"Name='Antigravity.exe'\" | Select-Object -Expand CommandLine",
+        ])
+        .output();
+    let output = match output {
+        Ok(value) => value,
+        Err(_) => return result,
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(dir) = extract_user_data_dir_from_command_line(line) {
+            let normalized = normalize_path_for_compare(&dir);
+            if !normalized.is_empty() {
+                result.push(normalized);
+            }
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn list_user_data_dirs_from_proc() -> Vec<String> {
+    let mut result = Vec::new();
+    let entries = match std::fs::read_dir("/proc") {
+        Ok(value) => value,
+        Err(_) => return result,
+    };
+    for entry in entries.flatten() {
+        let file_name = entry.file_name();
+        let pid = file_name.to_string_lossy();
+        if !pid.chars().all(|ch| ch.is_ascii_digit()) {
+            continue;
+        }
+        let cmdline_path = format!("/proc/{}/cmdline", pid);
+        let cmdline = match std::fs::read(&cmdline_path) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        if cmdline.is_empty() {
+            continue;
+        }
+        let cmdline_str = String::from_utf8_lossy(&cmdline).replace('\0', " ");
+        let cmd_lower = cmdline_str.to_lowercase();
+        let exe_path = std::fs::read_link(format!("/proc/{}/exe", pid))
+            .ok()
+            .and_then(|p| p.to_str().map(|s| s.to_lowercase()))
+            .unwrap_or_default();
+        if !cmd_lower.contains("antigravity") && !exe_path.contains("antigravity") {
+            continue;
+        }
+        if cmd_lower.contains("tools") || exe_path.contains("tools") {
+            continue;
+        }
+        if let Some(dir) = extract_user_data_dir_from_command_line(&cmdline_str) {
+            let normalized = normalize_path_for_compare(&dir);
+            if !normalized.is_empty() {
+                result.push(normalized);
+            }
+        }
+    }
+    result
+}
+
+fn collect_antigravity_pids_by_user_data_dir(user_data_dir: &str) -> Vec<u32> {
+    let target = normalize_path_for_compare(user_data_dir);
+    if target.is_empty() {
+        return Vec::new();
+    }
+
+    let mut result = Vec::new();
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+    let current_pid = std::process::id();
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+
+        let name = process.name().to_string_lossy().to_lowercase();
+        let exe_path = process
+            .exe()
+            .and_then(|p| p.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        #[cfg(target_os = "macos")]
+        let is_antigravity =
+            exe_path.contains("antigravity.app") && !exe_path.contains("antigravity tools.app");
+        #[cfg(target_os = "windows")]
+        let is_antigravity = name == "antigravity.exe" || exe_path.ends_with("\\antigravity.exe");
+        #[cfg(target_os = "linux")]
+        let is_antigravity = (name.contains("antigravity") || exe_path.contains("/antigravity"))
+            && !name.contains("tools")
+            && !exe_path.contains("tools");
+
+        if !is_antigravity {
+            continue;
+        }
+
+        let args = process.cmd();
+        if let Some(dir) = extract_user_data_dir(&args) {
+            let normalized = normalize_path_for_compare(&dir);
+            if normalized == target {
+                result.push(pid_u32);
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let output = Command::new("ps").args(["-axo", "pid,command"]).output();
+        if let Ok(output) = output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+                let mut parts = line.splitn(2, |ch: char| ch.is_whitespace());
+                let pid_str = parts.next().unwrap_or("").trim();
+                let cmdline = parts.next().unwrap_or("").trim();
+                let pid = match pid_str.parse::<u32>() {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                let lower = cmdline.to_lowercase();
+                if !lower.contains("antigravity.app/contents/")
+                    || lower.contains("antigravity tools.app/contents/")
+                    || lower.contains("crashpad_handler")
+                {
+                    continue;
+                }
+                if let Some(dir) = extract_user_data_dir_from_command_line(cmdline) {
+                    let normalized = normalize_path_for_compare(&dir);
+                    if normalized == target {
+                        result.push(pid);
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process -Filter \"Name='Antigravity.exe'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }",
+            ])
+            .output();
+        if let Ok(output) = output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+                let mut parts = line.splitn(2, '|');
+                let pid_str = parts.next().unwrap_or("").trim();
+                let cmdline = parts.next().unwrap_or("").trim();
+                let pid = match pid_str.parse::<u32>() {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                if let Some(dir) = extract_user_data_dir_from_command_line(cmdline) {
+                    let normalized = normalize_path_for_compare(&dir);
+                    if normalized == target {
+                        result.push(pid);
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let entries = match std::fs::read_dir("/proc") {
+            Ok(value) => value,
+            Err(_) => return result,
+        };
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let pid_str = file_name.to_string_lossy();
+            if !pid_str.chars().all(|ch| ch.is_ascii_digit()) {
+                continue;
+            }
+            let pid = match pid_str.parse::<u32>() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let cmdline_path = format!("/proc/{}/cmdline", pid);
+            let cmdline = match std::fs::read(&cmdline_path) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if cmdline.is_empty() {
+                continue;
+            }
+            let cmdline_str = String::from_utf8_lossy(&cmdline).replace('\0', " ");
+            let cmd_lower = cmdline_str.to_lowercase();
+            let exe_path = std::fs::read_link(format!("/proc/{}/exe", pid))
+                .ok()
+                .and_then(|p| p.to_str().map(|s| s.to_lowercase()))
+                .unwrap_or_default();
+            if !cmd_lower.contains("antigravity") && !exe_path.contains("antigravity") {
+                continue;
+            }
+            if cmd_lower.contains("tools") || exe_path.contains("tools") {
+                continue;
+            }
+            if let Some(dir) = extract_user_data_dir_from_command_line(&cmdline_str) {
+                let normalized = normalize_path_for_compare(&dir);
+                if normalized == target {
+                    result.push(pid);
+                }
+            }
+        }
+    }
+
+    result.sort();
+    result.dedup();
+    result
+}
+
+pub fn parse_extra_args(raw: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut in_single = false;
+    let mut in_double = false;
+
+    for ch in raw.chars() {
+        match ch {
+            '\'' if !in_double => {
+                in_single = !in_single;
+            }
+            '"' if !in_single => {
+                in_double = !in_double;
+            }
+            ' ' | '\t' if !in_single && !in_double => {
+                if !current.is_empty() {
+                    args.push(current.clone());
+                    current.clear();
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    if !current.is_empty() {
+        args.push(current);
+    }
+
+    args
+}
+
+/// 获取正在运行的 Antigravity 实例的 user-data-dir
+pub fn list_antigravity_user_data_dirs() -> Vec<String> {
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+    let current_pid = std::process::id();
+    let mut result = Vec::new();
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+
+        let name = process.name().to_string_lossy().to_lowercase();
+        let exe_path = process
+            .exe()
+            .and_then(|p| p.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let args = process.cmd();
+
+        #[cfg(target_os = "macos")]
+        let is_antigravity =
+            exe_path.contains("antigravity.app") && !exe_path.contains("antigravity tools.app");
+        #[cfg(target_os = "windows")]
+        let is_antigravity = name == "antigravity.exe" || exe_path.ends_with("\\antigravity.exe");
+        #[cfg(target_os = "linux")]
+        let is_antigravity = (name.contains("antigravity") || exe_path.contains("/antigravity"))
+            && !name.contains("tools")
+            && !exe_path.contains("tools");
+
+        if !is_antigravity {
+            continue;
+        }
+
+        if let Some(dir) = extract_user_data_dir(&args) {
+            let normalized = normalize_path_for_compare(&dir);
+            if !normalized.is_empty() {
+                result.push(normalized);
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let mut ps_dirs = list_user_data_dirs_from_ps();
+        if !ps_dirs.is_empty() {
+            result.append(&mut ps_dirs);
+            result.sort();
+            result.dedup();
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut ps_dirs = list_user_data_dirs_from_powershell();
+        if !ps_dirs.is_empty() {
+            result.append(&mut ps_dirs);
+            result.sort();
+            result.dedup();
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let mut proc_dirs = list_user_data_dirs_from_proc();
+        if !proc_dirs.is_empty() {
+            result.append(&mut proc_dirs);
+            result.sort();
+            result.dedup();
+        }
+    }
+
+    result
 }
 
 /// 获取所有 Antigravity 进程的 PID（包括主进程和Helper进程）
@@ -238,14 +721,128 @@ pub fn close_antigravity(timeout_secs: u64) -> Result<(), String> {
     Ok(())
 }
 
+/// 关闭指定实例（按 user-data-dir 匹配）
+pub fn close_antigravity_instance(user_data_dir: &str, timeout_secs: u64) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let _ = timeout_secs;
+    let target = normalize_path_for_compare(user_data_dir);
+    if target.is_empty() {
+        return Err("实例目录为空，无法关闭".to_string());
+    }
+
+    let mut pids = collect_antigravity_pids_by_user_data_dir(user_data_dir);
+    if pids.is_empty() {
+        return Ok(());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        for pid in &pids {
+            let _ = Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .output();
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        for pid in &pids {
+            let _ = Command::new("kill").args(["-15", &pid.to_string()]).output();
+        }
+
+        let graceful_timeout = (timeout_secs * 7) / 10;
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(graceful_timeout) {
+            if collect_antigravity_pids_by_user_data_dir(user_data_dir).is_empty() {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(400));
+        }
+
+        pids = collect_antigravity_pids_by_user_data_dir(user_data_dir);
+        if !pids.is_empty() {
+            for pid in &pids {
+                let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+            }
+            thread::sleep(Duration::from_millis(800));
+        }
+    }
+
+    if !collect_antigravity_pids_by_user_data_dir(user_data_dir).is_empty() {
+        return Err("无法关闭实例进程，请手动关闭后重试".to_string());
+    }
+
+    Ok(())
+}
+
+/// 强制关闭指定实例（按 user-data-dir 匹配，直接 SIGKILL / taskkill /F）
+pub fn force_kill_antigravity_instance(user_data_dir: &str) -> Result<(), String> {
+    let target = normalize_path_for_compare(user_data_dir);
+    if target.is_empty() {
+        return Err("实例目录为空，无法关闭".to_string());
+    }
+
+    let pids = collect_antigravity_pids_by_user_data_dir(user_data_dir);
+    if pids.is_empty() {
+        return Ok(());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        for pid in &pids {
+            let _ = Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .output();
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        for pid in &pids {
+            let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+        }
+        thread::sleep(Duration::from_millis(300));
+    }
+
+    if !collect_antigravity_pids_by_user_data_dir(user_data_dir).is_empty() {
+        return Err("无法强制关闭实例进程，请手动关闭后重试".to_string());
+    }
+
+    Ok(())
+}
+
 /// 启动 Antigravity
 pub fn start_antigravity() -> Result<(), String> {
+    start_antigravity_with_args("", &[])
+}
+
+/// 启动 Antigravity（支持 user-data-dir 与附加参数）
+pub fn start_antigravity_with_args(user_data_dir: &str, extra_args: &[String]) -> Result<(), String> {
     crate::modules::logger::log_info("正在启动 Antigravity...");
 
     #[cfg(target_os = "macos")]
     {
-        let output = Command::new("open")
-            .args(["-a", "Antigravity"])
+        let mut cmd = Command::new("open");
+        let force_new = !user_data_dir.trim().is_empty()
+            || extra_args.iter().any(|arg| !arg.trim().is_empty());
+        if force_new {
+            cmd.args(["-n", "-a", "Antigravity", "--args"]);
+            if !user_data_dir.trim().is_empty() {
+                cmd.arg("--user-data-dir");
+                cmd.arg(user_data_dir.trim());
+            }
+            for arg in extra_args {
+                if !arg.trim().is_empty() {
+                    cmd.arg(arg);
+                }
+            }
+        } else {
+            cmd.args(["-a", "Antigravity"]);
+        }
+
+        let output = cmd
             .output()
             .map_err(|e| format!("启动 Antigravity 失败: {}", e))?;
 
@@ -277,9 +874,18 @@ pub fn start_antigravity() -> Result<(), String> {
         for path_opt in possible_paths.iter().flatten() {
             let path = std::path::Path::new(path_opt);
             if path.exists() {
-                Command::new(path_opt)
-                    .creation_flags(0x08000000) // CREATE_NO_WINDOW
-                    .spawn()
+                let mut cmd = Command::new(path_opt);
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                if !user_data_dir.trim().is_empty() {
+                    cmd.arg("--user-data-dir");
+                    cmd.arg(user_data_dir.trim());
+                }
+                for arg in extra_args {
+                    if !arg.trim().is_empty() {
+                        cmd.arg(arg);
+                    }
+                }
+                cmd.spawn()
                     .map_err(|e| format!("启动 Antigravity 失败: {}", e))?;
                 crate::modules::logger::log_info(&format!("Antigravity 已启动: {}", path_opt));
                 return Ok(());
@@ -295,8 +901,17 @@ pub fn start_antigravity() -> Result<(), String> {
 
         for path in possible_paths {
             if std::path::Path::new(path).exists() {
-                Command::new(path)
-                    .spawn()
+                let mut cmd = Command::new(path);
+                if !user_data_dir.trim().is_empty() {
+                    cmd.arg("--user-data-dir");
+                    cmd.arg(user_data_dir.trim());
+                }
+                for arg in extra_args {
+                    if !arg.trim().is_empty() {
+                        cmd.arg(arg);
+                    }
+                }
+                cmd.spawn()
                     .map_err(|e| format!("启动 Antigravity 失败: {}", e))?;
                 crate::modules::logger::log_info(&format!("Antigravity 已启动: {}", path));
                 return Ok(());
@@ -304,7 +919,17 @@ pub fn start_antigravity() -> Result<(), String> {
         }
 
         // 尝试 PATH 中的 antigravity
-        if Command::new("antigravity").spawn().is_ok() {
+        let mut cmd = Command::new("antigravity");
+        if !user_data_dir.trim().is_empty() {
+            cmd.arg("--user-data-dir");
+            cmd.arg(user_data_dir.trim());
+        }
+        for arg in extra_args {
+            if !arg.trim().is_empty() {
+                cmd.arg(arg);
+            }
+        }
+        if cmd.spawn().is_ok() {
             crate::modules::logger::log_info("Antigravity 已启动 (从 PATH)");
             return Ok(());
         }
@@ -314,6 +939,261 @@ pub fn start_antigravity() -> Result<(), String> {
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     Err("不支持的操作系统".to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
+    let mut result = Vec::new();
+    let output = Command::new("ps")
+        .args(["-eww", "-axo", "pid,command"])
+        .output();
+    let output = match output {
+        Ok(value) => value,
+        Err(_) => return result,
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines().skip(1) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let mut parts = line.splitn(2, |ch: char| ch.is_whitespace());
+        let pid_str = parts.next().unwrap_or("").trim();
+        let cmdline = parts.next().unwrap_or("").trim();
+        let pid = match pid_str.parse::<u32>() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let lower = cmdline.to_lowercase();
+        if !lower.contains("codex.app/contents/macos/codex") {
+            continue;
+        }
+        let is_helper = lower.contains("--type=")
+            || lower.contains("helper")
+            || lower.contains("renderer")
+            || lower.contains("gpu")
+            || lower.contains("crashpad")
+            || lower.contains("utility")
+            || lower.contains("audio")
+            || lower.contains("sandbox");
+        if is_helper {
+            continue;
+        }
+        let codex_home = extract_env_value(cmdline, "CODEX_HOME");
+        result.push((pid, codex_home));
+    }
+    result
+}
+
+#[cfg(target_os = "macos")]
+fn collect_codex_pids_by_home(target_home: &str, default_home: &str) -> Vec<u32> {
+    let target = normalize_path_for_compare(target_home);
+    if target.is_empty() {
+        return Vec::new();
+    }
+    let default_normalized = normalize_path_for_compare(default_home);
+    let mut result = Vec::new();
+    for (pid, home) in collect_codex_process_entries() {
+        let resolved = home
+            .as_ref()
+            .map(|value| normalize_path_for_compare(value))
+            .unwrap_or_else(|| default_normalized.clone());
+        if resolved == target {
+            result.push(pid);
+        }
+    }
+    result.sort();
+    result.dedup();
+    result
+}
+
+/// 获取正在运行的 Codex 实例的 CODEX_HOME
+pub fn list_codex_home_dirs(default_home: &str) -> Vec<String> {
+    #[cfg(target_os = "macos")]
+    {
+        let mut result = Vec::new();
+        let mut has_default = false;
+        for (_, home) in collect_codex_process_entries() {
+            if let Some(value) = home {
+                let normalized = normalize_path_for_compare(&value);
+                if !normalized.is_empty() {
+                    result.push(normalized);
+                }
+            } else {
+                has_default = true;
+            }
+        }
+        if has_default {
+            let normalized = normalize_path_for_compare(default_home);
+            if !normalized.is_empty() {
+                result.push(normalized);
+            }
+        }
+        result.sort();
+        result.dedup();
+        return result;
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = default_home;
+        Vec::new()
+    }
+}
+
+/// 启动 Codex（支持 CODEX_HOME 与附加参数，仅 macOS）
+pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        if !std::path::Path::new(CODEX_APP_PATH).exists() {
+            return Err("未找到 Codex 应用，请确保已安装 Codex".to_string());
+        }
+        let mut cmd = Command::new(CODEX_APP_PATH);
+        cmd.env("CODEX_HOME", codex_home.trim());
+        for arg in extra_args {
+            if !arg.trim().is_empty() {
+                cmd.arg(arg);
+            }
+        }
+        cmd.spawn()
+            .map_err(|e| format!("启动 Codex 失败: {}", e))?;
+        crate::modules::logger::log_info("Codex 启动命令已发送");
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (codex_home, extra_args);
+        Err("Codex 多开实例仅支持 macOS".to_string())
+    }
+}
+
+/// 关闭 Codex 进程（仅 macOS）
+pub fn close_codex(timeout_secs: u64) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        crate::modules::logger::log_info("正在关闭 Codex...");
+        let pids: Vec<u32> = collect_codex_process_entries().into_iter().map(|(pid, _)| pid).collect();
+        if pids.is_empty() {
+            return Ok(());
+        }
+
+        for pid in &pids {
+            let _ = Command::new("kill").args(["-15", &pid.to_string()]).output();
+        }
+
+        let graceful_timeout = (timeout_secs * 7) / 10;
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(graceful_timeout) {
+            if collect_codex_process_entries().is_empty() {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(500));
+        }
+
+        let remaining: Vec<u32> = collect_codex_process_entries().into_iter().map(|(pid, _)| pid).collect();
+        for pid in &remaining {
+            let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+        }
+        thread::sleep(Duration::from_secs(1));
+
+        if !collect_codex_process_entries().is_empty() {
+            return Err("无法关闭 Codex 进程，请手动关闭后重试".to_string());
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = timeout_secs;
+        Err("Codex 多开实例仅支持 macOS".to_string())
+    }
+}
+
+/// 关闭指定 Codex 实例（按 CODEX_HOME 匹配）
+pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let default_home = crate::modules::codex_account::get_codex_home()
+            .to_string_lossy()
+            .to_string();
+        let target = normalize_path_for_compare(codex_home);
+        if target.is_empty() {
+            return Err("实例目录为空，无法关闭".to_string());
+        }
+
+        let mut pids = collect_codex_pids_by_home(codex_home, &default_home);
+        if pids.is_empty() {
+            return Ok(());
+        }
+
+        for pid in &pids {
+            let _ = Command::new("kill").args(["-15", &pid.to_string()]).output();
+        }
+
+        let graceful_timeout = (timeout_secs * 7) / 10;
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(graceful_timeout) {
+            if collect_codex_pids_by_home(codex_home, &default_home).is_empty() {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(400));
+        }
+
+        pids = collect_codex_pids_by_home(codex_home, &default_home);
+        if !pids.is_empty() {
+            for pid in &pids {
+                let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+            }
+            thread::sleep(Duration::from_millis(800));
+        }
+
+        if !collect_codex_pids_by_home(codex_home, &default_home).is_empty() {
+            return Err("无法关闭实例进程，请手动关闭后重试".to_string());
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (codex_home, timeout_secs);
+        Err("Codex 多开实例仅支持 macOS".to_string())
+    }
+}
+
+/// 强制关闭指定 Codex 实例（按 CODEX_HOME 匹配）
+pub fn force_kill_codex_instance(codex_home: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let default_home = crate::modules::codex_account::get_codex_home()
+            .to_string_lossy()
+            .to_string();
+        let target = normalize_path_for_compare(codex_home);
+        if target.is_empty() {
+            return Err("实例目录为空，无法关闭".to_string());
+        }
+
+        let pids = collect_codex_pids_by_home(codex_home, &default_home);
+        if pids.is_empty() {
+            return Ok(());
+        }
+
+        for pid in &pids {
+            let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+        }
+        thread::sleep(Duration::from_millis(300));
+
+        if !collect_codex_pids_by_home(codex_home, &default_home).is_empty() {
+            return Err("无法强制关闭实例进程，请手动关闭后重试".to_string());
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = codex_home;
+        Err("Codex 多开实例仅支持 macOS".to_string())
+    }
 }
 
 /// 检查 OpenCode（桌面端）是否在运行

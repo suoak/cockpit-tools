@@ -237,3 +237,68 @@ pub fn handle_window_close(window: tauri::Window, action: String, remember: bool
     
     Ok(())
 }
+
+/// 打开指定文件夹（如不存在则创建）
+#[tauri::command]
+pub async fn open_folder(path: String) -> Result<(), String> {
+    let folder_path = std::path::Path::new(&path);
+    
+    // 如果目录不存在则创建
+    if !folder_path.exists() {
+        std::fs::create_dir_all(folder_path)
+            .map_err(|e| format!("创建文件夹失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+
+    Ok(())
+}
+
+/// 删除损坏的文件（会先备份）
+#[tauri::command]
+pub async fn delete_corrupted_file(path: String) -> Result<(), String> {
+    let file_path = std::path::Path::new(&path);
+    
+    if !file_path.exists() {
+        // 文件不存在，直接返回成功
+        return Ok(());
+    }
+    
+    // 创建备份文件名
+    let timestamp = chrono::Utc::now().timestamp();
+    let backup_name = format!("{}.corrupted.{}", path, timestamp);
+    
+    // 备份文件
+    std::fs::rename(&path, &backup_name)
+        .map_err(|e| format!("备份损坏文件失败: {}", e))?;
+    
+    modules::logger::log_info(&format!(
+        "已备份并删除损坏文件: {} -> {}", 
+        path, 
+        backup_name
+    ));
+    
+    Ok(())
+}
