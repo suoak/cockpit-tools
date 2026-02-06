@@ -4,13 +4,16 @@
   "version": "0.5.2",
   "type": "module",
   "scripts": {
+    "dev:strip": "scripts\\dev.bat",
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "prebuild": "npm run typecheck",
     "build": "npm run sync-version && tsc && vite build",
+	  "build:strip": "scripts\\build.bat",
     "preview": "vite preview",
     "pretauri": "npm run typecheck",
     "tauri": "npm run sync-version && tauri",
+    "tauri:build-strip": "npm run sync-version && scripts\\build.bat",
     "sync-version": "node scripts/sync-version.js"
   },
   "dependencies": {
