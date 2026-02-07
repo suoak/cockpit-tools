@@ -159,35 +159,80 @@ pub async fn refresh_all_codex_quotas(app: AppHandle) -> Result<i32, String> {
     Ok(success_count as i32)
 }
 
-/// 准备 OAuth URL
-#[tauri::command]
-pub async fn prepare_codex_oauth_url(app_handle: AppHandle) -> Result<String, String> {
-    codex_oauth::prepare_oauth_url(app_handle).await
-}
-
-/// 用授权码换取 Token 并添加账号
-#[tauri::command]
-pub async fn complete_codex_oauth(code: String) -> Result<CodexAccount, String> {
-    logger::log_info(&format!("Codex OAuth 完成授权，code: {}...", &code[..code.len().min(10)]));
-    
-    let tokens = codex_oauth::exchange_code_for_token(&code).await?;
+async fn save_codex_oauth_tokens(tokens: CodexTokens) -> Result<CodexAccount, String> {
     let account = codex_account::upsert_account(tokens)?;
-    
-    // 刷新配额
+
     if let Err(e) = codex_quota::refresh_account_quota(&account.id).await {
         logger::log_error(&format!("刷新配额失败: {}", e));
     }
-    
-    // 重新加载账号以获取配额
-    codex_account::load_account(&account.id)
-        .ok_or_else(|| "账号保存后无法读取".to_string())
+
+    let loaded =
+        codex_account::load_account(&account.id).ok_or_else(|| "账号保存后无法读取".to_string())?;
+    logger::log_info(&format!(
+        "Codex OAuth 账号已保存: account_id={}, email={}",
+        loaded.id, loaded.email
+    ));
+    Ok(loaded)
 }
 
-/// 取消 OAuth 流程
+/// OAuth：开始登录（返回 loginId + authUrl）
 #[tauri::command]
-pub fn cancel_codex_oauth() -> Result<(), String> {
-    codex_oauth::cancel_oauth_flow();
-    Ok(())
+pub async fn codex_oauth_login_start(
+    app_handle: AppHandle,
+) -> Result<codex_oauth::CodexOAuthLoginStartResponse, String> {
+    logger::log_info("Codex OAuth start 命令触发");
+    let response = codex_oauth::start_oauth_login(app_handle).await?;
+    logger::log_info(&format!(
+        "Codex OAuth start 命令成功: login_id={}",
+        response.login_id
+    ));
+    Ok(response)
+}
+
+/// OAuth：浏览器授权完成后按 loginId 完成登录
+#[tauri::command]
+pub async fn codex_oauth_login_completed(login_id: String) -> Result<CodexAccount, String> {
+    let started_at_ms = chrono::Utc::now().timestamp_millis();
+    logger::log_info(&format!(
+        "Codex OAuth completed 命令开始: login_id={}, started_at_ms={}",
+        login_id, started_at_ms
+    ));
+    let tokens = match codex_oauth::complete_oauth_login(&login_id).await {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            logger::log_error(&format!(
+                "Codex OAuth completed 命令失败: login_id={}, duration_ms={}, error={}",
+                login_id,
+                chrono::Utc::now().timestamp_millis() - started_at_ms,
+                e
+            ));
+            return Err(e);
+        }
+    };
+    let account = save_codex_oauth_tokens(tokens).await?;
+    logger::log_info(&format!(
+        "Codex OAuth completed 命令成功: login_id={}, duration_ms={}, account_id={}, account_email={}",
+        login_id,
+        chrono::Utc::now().timestamp_millis() - started_at_ms,
+        account.id,
+        account.email
+    ));
+    Ok(account)
+}
+
+/// OAuth：按 loginId 取消登录（login_id 为空时取消当前流程）
+#[tauri::command]
+pub fn codex_oauth_login_cancel(login_id: Option<String>) -> Result<(), String> {
+    logger::log_info(&format!(
+        "Codex OAuth cancel 命令触发: login_id={}",
+        login_id.as_deref().unwrap_or("<none>")
+    ));
+    let result = codex_oauth::cancel_oauth_flow_for(login_id.as_deref());
+    logger::log_info(&format!(
+        "Codex OAuth cancel 命令返回: {:?}",
+        result.as_ref().map(|_| "ok").map_err(|e| e)
+    ));
+    result
 }
 
 /// 通过 Token 添加账号

@@ -7,6 +7,27 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.5.4] - 2026-02-07
+
+### Added
+- **Codex OAuth login session API**: Added command set `codex_oauth_login_start` / `codex_oauth_login_completed` / `codex_oauth_login_cancel` with `loginId + authUrl` response model.
+- **OAuth timeout event contract**: Added backend timeout event payload (`loginId`, `callbackUrl`, `timeoutSeconds`) for frontend-driven retry UX.
+
+### Changed
+- **Codex OAuth flow alignment**: Switched from code-push completion to login-session completion (backend stores callback code by session, frontend completes by `loginId`).
+- **UI authorization flow**: OAuth link is prepared and shown in modal first; browser open remains explicit user action.
+- **Timeout retry UX**: On timeout, the main OAuth CTA switches to `Refresh authorization link`; after refresh succeeds, it switches back to `Open in Browser`.
+- **Timeout behavior**: Timeout no longer triggers automatic authorization re-creation loops; retry is user-triggered.
+- **OAuth observability**: Refined OAuth logs to concise operational checkpoints (session creation/start/timeout/cancel/complete), removing verbose full-payload noise.
+
+### Removed
+- **Legacy Codex OAuth commands**: Removed `prepare_codex_oauth_url`, `complete_codex_oauth`, `cancel_codex_oauth` and related frontend/service fallback paths.
+
+### Fixed
+- **Duplicate callback completion risk**: Hardened frontend callback handling with session and in-flight guards to reduce duplicate-complete races.
+- **OAuth timeout UI duplication**: Resolved repeated timeout error presentation in modal by consolidating timeout-state rendering.
+
+---
 ## [0.5.3] - 2026-02-06
 
 ### Added
