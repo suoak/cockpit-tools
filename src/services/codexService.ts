@@ -1,6 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import { CodexAccount, CodexQuota } from '../types/codex';
 
+export interface CodexOAuthLoginStartResponse {
+  loginId: string;
+  authUrl: string;
+}
+
 /** 列出所有 Codex 账号 */
 export async function listCodexAccounts(): Promise<CodexAccount[]> {
   return await invoke('list_codex_accounts');
@@ -51,19 +56,19 @@ export async function refreshAllCodexQuotas(): Promise<number> {
   return await invoke('refresh_all_codex_quotas');
 }
 
-/** 准备 OAuth URL */
-export async function prepareCodexOAuthUrl(): Promise<string> {
-  return await invoke('prepare_codex_oauth_url');
+/** 新 OAuth 流程：开始登录 */
+export async function startCodexOAuthLogin(): Promise<CodexOAuthLoginStartResponse> {
+  return await invoke('codex_oauth_login_start');
 }
 
-/** 完成 OAuth 授权 */
-export async function completeCodexOAuth(code: string): Promise<CodexAccount> {
-  return await invoke('complete_codex_oauth', { code });
+/** 新 OAuth 流程：完成登录 */
+export async function completeCodexOAuthLogin(loginId: string): Promise<CodexAccount> {
+  return await invoke('codex_oauth_login_completed', { loginId });
 }
 
-/** 取消 OAuth 流程 */
-export async function cancelCodexOAuth(): Promise<void> {
-  return await invoke('cancel_codex_oauth');
+/** 新 OAuth 流程：取消登录 */
+export async function cancelCodexOAuthLogin(loginId?: string): Promise<void> {
+  return await invoke('codex_oauth_login_cancel', { loginId: loginId ?? null });
 }
 
 /** 通过 Token 添加账号 */

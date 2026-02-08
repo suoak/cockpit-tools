@@ -91,6 +91,34 @@ Codex 同样支持多账号多实例并行运行。比如同时打开两个 Code
 *   **Windows**: `.msi` (推荐) 或 `.exe`
 *   **Linux**: `.deb` (Debian/Ubuntu) 或 `.AppImage` (通用)
 
+### 选项 B: Homebrew 安装 (macOS)
+
+> 需要先安装 Homebrew。
+
+```bash
+brew tap jlcodes99/cockpit-tools https://github.com/jlcodes99/cockpit-tools
+brew install --cask cockpit-tools
+```
+
+如果遇到 macOS “应用已损坏”或无法打开，也可以使用 `--no-quarantine` 安装：
+
+```bash
+brew install --cask --no-quarantine cockpit-tools
+```
+
+如果提示已存在应用（例如：`already an App at '/Applications/Cockpit Tools.app'`），请先删除旧版本再安装：
+
+```bash
+rm -rf "/Applications/Cockpit Tools.app"
+brew install --cask cockpit-tools
+```
+
+或者直接强制覆盖安装：
+
+```bash
+brew install --cask --force cockpit-tools
+```
+
 ### 🛠️ 常见问题排查 (Troubleshooting)
 
 #### macOS 提示“应用已损坏，无法打开”？

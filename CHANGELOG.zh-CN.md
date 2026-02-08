@@ -7,6 +7,27 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
 ---
+## [0.5.4] - 2026-02-07
+
+### 新增
+- **Codex OAuth 登录会话命令集**：新增 `codex_oauth_login_start` / `codex_oauth_login_completed` / `codex_oauth_login_cancel`，统一以 `loginId + authUrl` 作为启动返回模型。
+- **OAuth 超时事件协议**：后端新增超时事件载荷（`loginId`、`callbackUrl`、`timeoutSeconds`），用于前端做可控重试。
+
+### 变更
+- **Codex OAuth 流程对齐**：从“直接用 code 完成”调整为“会话化完成”（后端按会话缓存回调 code，前端按 `loginId` 完成登录）。
+- **授权交互顺序**：先在弹窗内展示授权链接，再由用户手动点击打开浏览器。
+- **超时重试交互**：超时后主按钮由 `在浏览器中打开` 切换为 `刷新授权链接`；刷新成功后自动切回 `在浏览器中打开`。
+- **超时策略**：超时后不再自动循环重建授权，会话重试改为用户手动触发。
+- **OAuth 日志收敛**：日志调整为会话创建/启动/超时/取消/完成等关键节点，移除冗长明细输出。
+
+### 移除
+- **旧版 Codex OAuth 命令**：移除 `prepare_codex_oauth_url`、`complete_codex_oauth`、`cancel_codex_oauth` 及前端/服务层回退链路。
+
+### 修复
+- **回调重复完成风险**：前端增加会话与并发保护，降低回调重复触发导致的二次完成竞态。
+- **超时样式重复问题**：合并弹窗超时态展示，修复重复红色错误区样式。
+
+---
 ## [0.5.3] - 2026-02-06
 
 ### 新增
