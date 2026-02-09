@@ -1,0 +1,6 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeBundleCommand": "powershell -ExecutionPolicy Bypass -File ../scripts/strip-metadata.ps1"
+  }
+}
