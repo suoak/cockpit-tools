@@ -80,7 +80,21 @@ jobs:
             exit 1
           fi
 
-      - name: Build the app
+      # Windows: Download Resource Hacker for metadata stripping
+      - name: Download Resource Hacker (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $url = "http://www.angusj.com/resourcehacker/resource_hacker.zip"
+          $zipPath = "$env:RUNNER_TEMP\resource_hacker.zip"
+          $extractPath = "$env:RUNNER_TEMP\resource_hacker"
+          Invoke-WebRequest -Uri $url -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+          echo "RESHACKER_PATH=$extractPath\ResourceHacker.exe" >> $env:GITHUB_ENV
+
+      # Non-Windows: Use tauri-action with auto-upload
+      - name: Build the app (non-Windows)
+        if: matrix.platform != 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,6 +105,63 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      # Windows: Build exe only (no bundle)
+      - name: Build exe only (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: npm run tauri build -- --no-bundle
+
+      # Windows: Strip metadata from exe before bundling
+      - name: Strip metadata from exe (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $exePath = "src-tauri\target\release\cockpit-tools.exe"
+          if (Test-Path $exePath) {
+            Write-Host "[INFO] Stripping metadata from $exePath..."
+            & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
+            Write-Host "[SUCCESS] Exe metadata stripped!"
+          } else {
+            Write-Host "[ERROR] Exe not found at $exePath"
+            exit 1
+          }
+
+      # Windows: Generate NSIS installer with stripped exe
+      - name: Generate NSIS installer (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: npm run tauri build -- --bundles nsis
+
+      # Windows: Strip metadata from NSIS installer itself
+      - name: Strip metadata from NSIS installer (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.app_version.outputs.VERSION }}"
+          $installerPath = "src-tauri\target\release\bundle\nsis\Cockpit Tools_${version}_x64-setup.exe"
+          if (Test-Path $installerPath) {
+            Write-Host "[INFO] Stripping metadata from $installerPath..."
+            & $env:RESHACKER_PATH -open $installerPath -save $installerPath -action delete -mask "VERSIONINFO,,"
+            Write-Host "[SUCCESS] Installer metadata stripped!"
+          } else {
+            Write-Host "[ERROR] Installer not found at $installerPath"
+            Get-ChildItem -Path "src-tauri\target\release\bundle\nsis\" -ErrorAction SilentlyContinue
+            exit 1
+          }
+
+      # Windows: Create/Get Release and upload stripped artifacts
+      - name: Create Release (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.app_version.outputs.VERSION }}"
+          name: "Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
+          body: "See the assets to download this version and install."
+          draft: false
+          prerelease: false
+          files: |
+            src-tauri/target/release/bundle/nsis/*.exe
 
   update-homebrew-cask:
     name: Update Homebrew Cask
