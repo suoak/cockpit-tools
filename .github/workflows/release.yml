@@ -105,6 +105,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+          tauriScript: npx tauri
 
       # Windows: Build exe only (no bundle)
       - name: Build exe only (Windows)
