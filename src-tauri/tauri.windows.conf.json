@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "build": {
-    "beforeBundleCommand": "powershell -ExecutionPolicy Bypass -File ../scripts/strip-metadata.ps1"
+    "beforeBundleCommand": "powershell -ExecutionPolicy Bypass -Command \"if ($env:RESHACKER_PATH -and (Test-Path 'target\\release\\cockpit-tools.exe')) { Write-Host '[INFO] Stripping exe metadata...'; & $env:RESHACKER_PATH -open 'target\\release\\cockpit-tools.exe' -save 'target\\release\\cockpit-tools.exe' -action delete -mask 'VERSIONINFO,,'; Write-Host '[SUCCESS] Done!' } else { Write-Host '[SKIP] RESHACKER_PATH not set or exe not found' }\""
   }
 }
