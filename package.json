@@ -11,7 +11,7 @@
     "build": "npm run sync-version && tsc && vite build",
     "build:strip": "scripts\\build.bat",
     "release:preflight": "node scripts/release/preflight.cjs",
-    "release:checksums": "node scripts/release/gen_checksums.cjs"
+    "release:checksums": "node scripts/release/gen_checksums.cjs",
     "preview": "vite preview",
     "pretauri": "npm run typecheck",
     "tauri": "npm run sync-version && tauri",
