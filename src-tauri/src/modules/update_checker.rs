@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::modules::logger;
 
-const GITHUB_API_URL: &str = "https://api.github.com/repos/jlcodes99/cockpit-tools/releases/latest";
-const CHANGELOG_EN_URL: &str = "https://raw.githubusercontent.com/jlcodes99/cockpit-tools/main/CHANGELOG.md";
-const CHANGELOG_ZH_URL: &str = "https://raw.githubusercontent.com/jlcodes99/cockpit-tools/main/CHANGELOG.zh-CN.md";
+const GITHUB_API_URL: &str = "https://api.github.com/repos/suoak/cockpit-tools/releases/latest";
+const CHANGELOG_EN_URL: &str = "https://raw.githubusercontent.com/suoak/cockpit-tools/main/CHANGELOG.md";
+const CHANGELOG_ZH_URL: &str = "https://raw.githubusercontent.com/suoak/cockpit-tools/main/CHANGELOG.zh-CN.md";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_CHECK_INTERVAL_HOURS: u64 = 24;
 
