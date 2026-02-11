@@ -108,13 +108,11 @@ jobs:
           tauriScript: npx tauri
 
       # Windows: Manual multi-step build with metadata stripping
-      # Step 1: Build exe only (no bundling)
+      # Step 1: Build frontend + compile exe (no installer bundling)
       - name: Build exe only (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
-        run: |
-          cd src-tauri
-          cargo build --release
+        run: npx tauri build --no-bundle
 
       # Step 2: Strip exe metadata before NSIS packaging
       - name: Strip exe metadata (Windows)
