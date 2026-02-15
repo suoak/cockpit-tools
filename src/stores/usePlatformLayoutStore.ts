@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { invoke } from '@tauri-apps/api/core';
 import { ALL_PLATFORM_IDS, PlatformId } from '../types/platform';
 
 const PLATFORM_LAYOUT_STORAGE_KEY = 'agtools.platform_layout.v1';
@@ -7,19 +8,51 @@ type PersistedPlatformLayout = {
   orderedPlatformIds?: PlatformId[];
   hiddenPlatformIds?: PlatformId[];
   sidebarPlatformIds?: PlatformId[];
+  trayPlatformIds?: PlatformId[];
+  traySortMode?: 'auto' | 'manual';
 };
 
 interface PlatformLayoutState {
   orderedPlatformIds: PlatformId[];
   hiddenPlatformIds: PlatformId[];
   sidebarPlatformIds: PlatformId[];
+  trayPlatformIds: PlatformId[];
+  traySortMode: 'auto' | 'manual';
 
   movePlatform: (fromIndex: number, toIndex: number) => void;
   toggleHiddenPlatform: (id: PlatformId) => void;
   setHiddenPlatform: (id: PlatformId, hidden: boolean) => void;
   toggleSidebarPlatform: (id: PlatformId) => void;
   setSidebarPlatform: (id: PlatformId, enabled: boolean) => void;
+  toggleTrayPlatform: (id: PlatformId) => void;
+  setTrayPlatform: (id: PlatformId, enabled: boolean) => void;
+  syncTrayLayout: () => void;
   resetPlatformLayout: () => void;
+}
+
+let trayLayoutSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function syncTrayLayoutToBackend(state: Pick<PlatformLayoutState, 'orderedPlatformIds' | 'trayPlatformIds' | 'traySortMode'>) {
+  invoke('save_tray_platform_layout', {
+    sortMode: state.traySortMode,
+    orderedPlatformIds: state.orderedPlatformIds,
+    trayPlatformIds: state.trayPlatformIds,
+  }).catch((error) => {
+    console.error('同步托盘平台布局失败:', error);
+  });
+}
+
+function scheduleTrayLayoutSync(state: Pick<PlatformLayoutState, 'orderedPlatformIds' | 'trayPlatformIds' | 'traySortMode'>) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (trayLayoutSyncTimer) {
+    window.clearTimeout(trayLayoutSyncTimer);
+  }
+  trayLayoutSyncTimer = window.setTimeout(() => {
+    trayLayoutSyncTimer = null;
+    syncTrayLayoutToBackend(state);
+  }, 120);
 }
 
 function sanitizePlatformIds(list: unknown): PlatformId[] {
@@ -56,9 +89,17 @@ function normalizeSidebar(sidebar: PlatformId[], hidden: PlatformId[]): Platform
   return normalized.slice(0, 2);
 }
 
+function normalizeTray(tray: PlatformId[]): PlatformId[] {
+  return sanitizePlatformIds(tray);
+}
+
+function normalizeTraySortMode(mode: unknown): 'auto' | 'manual' {
+  return mode === 'manual' ? 'manual' : 'auto';
+}
+
 function loadPersistedState(): Pick<
   PlatformLayoutState,
-  'orderedPlatformIds' | 'hiddenPlatformIds' | 'sidebarPlatformIds'
+  'orderedPlatformIds' | 'hiddenPlatformIds' | 'sidebarPlatformIds' | 'trayPlatformIds' | 'traySortMode'
 > {
   try {
     const raw = localStorage.getItem(PLATFORM_LAYOUT_STORAGE_KEY);
@@ -67,27 +108,40 @@ function loadPersistedState(): Pick<
         orderedPlatformIds: [...ALL_PLATFORM_IDS],
         hiddenPlatformIds: [],
         sidebarPlatformIds: ['antigravity', 'codex'],
+        trayPlatformIds: [...ALL_PLATFORM_IDS],
+        traySortMode: 'auto',
       };
     }
     const parsed = JSON.parse(raw) as PersistedPlatformLayout;
     const hiddenPlatformIds = normalizeHidden(parsed.hiddenPlatformIds ?? []);
     const orderedPlatformIds = normalizeOrder(parsed.orderedPlatformIds ?? ALL_PLATFORM_IDS);
     const sidebarPlatformIds = normalizeSidebar(parsed.sidebarPlatformIds ?? ['antigravity', 'codex'], hiddenPlatformIds);
+    const trayPlatformIds = normalizeTray(parsed.trayPlatformIds ?? ALL_PLATFORM_IDS);
+    const traySortMode = normalizeTraySortMode(parsed.traySortMode);
     return {
       orderedPlatformIds,
       hiddenPlatformIds,
       sidebarPlatformIds,
+      trayPlatformIds,
+      traySortMode,
     };
   } catch {
     return {
       orderedPlatformIds: [...ALL_PLATFORM_IDS],
       hiddenPlatformIds: [],
       sidebarPlatformIds: ['antigravity', 'codex'],
+      trayPlatformIds: [...ALL_PLATFORM_IDS],
+      traySortMode: 'auto',
     };
   }
 }
 
-function persist(state: Pick<PlatformLayoutState, 'orderedPlatformIds' | 'hiddenPlatformIds' | 'sidebarPlatformIds'>) {
+function persist(
+  state: Pick<
+    PlatformLayoutState,
+    'orderedPlatformIds' | 'hiddenPlatformIds' | 'sidebarPlatformIds' | 'trayPlatformIds' | 'traySortMode'
+  >,
+) {
   try {
     localStorage.setItem(PLATFORM_LAYOUT_STORAGE_KEY, JSON.stringify(state));
   } catch {
@@ -109,9 +163,12 @@ export const usePlatformLayoutStore = create<PlatformLayoutState>((set, get) => 
       orderedPlatformIds,
       hiddenPlatformIds: [...get().hiddenPlatformIds],
       sidebarPlatformIds: [...get().sidebarPlatformIds],
+      trayPlatformIds: [...get().trayPlatformIds],
+      traySortMode: 'manual' as const,
     };
     set(next);
     persist(next);
+    scheduleTrayLayoutSync(next);
   },
 
   toggleHiddenPlatform: (id) => {
@@ -124,6 +181,8 @@ export const usePlatformLayoutStore = create<PlatformLayoutState>((set, get) => 
       orderedPlatformIds: [...get().orderedPlatformIds],
       hiddenPlatformIds,
       sidebarPlatformIds,
+      trayPlatformIds: [...get().trayPlatformIds],
+      traySortMode: get().traySortMode,
     };
     set(next);
     persist(next);
@@ -156,6 +215,8 @@ export const usePlatformLayoutStore = create<PlatformLayoutState>((set, get) => 
       orderedPlatformIds: [...get().orderedPlatformIds],
       hiddenPlatformIds,
       sidebarPlatformIds,
+      trayPlatformIds: [...get().trayPlatformIds],
+      traySortMode: get().traySortMode,
     };
     set(next);
     persist(next);
@@ -167,14 +228,56 @@ export const usePlatformLayoutStore = create<PlatformLayoutState>((set, get) => 
     get().toggleSidebarPlatform(id);
   },
 
+  toggleTrayPlatform: (id) => {
+    const current = [...get().trayPlatformIds];
+    const exists = current.includes(id);
+    const nextTray = exists
+      ? current.filter((item) => item !== id)
+      : [...current, id];
+
+    const next = {
+      orderedPlatformIds: [...get().orderedPlatformIds],
+      hiddenPlatformIds: [...get().hiddenPlatformIds],
+      sidebarPlatformIds: [...get().sidebarPlatformIds],
+      trayPlatformIds: normalizeTray(nextTray),
+      traySortMode: get().traySortMode,
+    };
+    set(next);
+    persist(next);
+    scheduleTrayLayoutSync(next);
+  },
+
+  setTrayPlatform: (id, enabled) => {
+    const current = get().trayPlatformIds.includes(id);
+    if (current === enabled) return;
+    get().toggleTrayPlatform(id);
+  },
+
+  syncTrayLayout: () => {
+    const state = get();
+    syncTrayLayoutToBackend({
+      orderedPlatformIds: state.orderedPlatformIds,
+      trayPlatformIds: state.trayPlatformIds,
+      traySortMode: state.traySortMode,
+    });
+  },
+
   resetPlatformLayout: () => {
     const next = {
       orderedPlatformIds: [...ALL_PLATFORM_IDS],
       hiddenPlatformIds: [],
       sidebarPlatformIds: ['antigravity', 'codex'] as PlatformId[],
+      trayPlatformIds: [...ALL_PLATFORM_IDS],
+      traySortMode: 'auto' as const,
     };
     set(next);
     persist(next);
+    scheduleTrayLayoutSync(next);
   },
 }));
 
+if (typeof window !== 'undefined') {
+  window.setTimeout(() => {
+    usePlatformLayoutStore.getState().syncTrayLayout();
+  }, 0);
+}

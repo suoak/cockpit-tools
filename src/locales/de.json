@@ -1371,6 +1371,7 @@
     "tip": "Zum Neuanordnen ziehen. In der Seitenleiste können maximal zwei Plattformen angezeigt werden. Wenn nur eine ausgewählt ist, wird nur eine angezeigt.",
     "sidebarToggle": "In Seitenleiste anzeigen",
     "dashboardToggle": "Im Dashboard anzeigen",
+    "trayToggle": "Im Tray anzeigen",
     "hiddenBadge": "Ausgeblendet",
     "openFromMore": "Plattformlayout verwalten",
     "dragHandleLabel": "Zum Neuanordnen ziehen"
@@ -1388,6 +1389,7 @@
     "resume": "Fortsetzen",
     "paused": "Pausiert",
     "level": "Level {{level}}",
+    "levelScore": "Level-Punktzahl {{score}}",
     "levelCleared": "Level geschafft",
     "nextLevel": "Nächstes Level",
     "history": "Verlauf",

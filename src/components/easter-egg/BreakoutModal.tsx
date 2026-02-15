@@ -69,6 +69,7 @@ interface LevelLayout {
 interface GameState {
   runSeed: number;
   level: number;
+  levelScore: number;
   paddleX: number;
   paddleWidth: number;
   isBallLaunched: boolean;
@@ -79,6 +80,7 @@ interface GameState {
   brickLookup: Map<string, number>;
   drops: DropItem[];
   dropCounts: DropCounts;
+  levelDropCounts: DropCounts;
   score: number;
   shields: number;
   nextBallId: number;
@@ -1212,6 +1214,7 @@ function createInitialState(runSeed: number = generateRunSeed()): GameState {
   return {
     runSeed,
     level: 1,
+    levelScore: 0,
     paddleX,
     paddleWidth: PADDLE_BASE_WIDTH,
     isBallLaunched: false,
@@ -1222,6 +1225,7 @@ function createInitialState(runSeed: number = generateRunSeed()): GameState {
     brickLookup: layout.brickLookup,
     drops: [],
     dropCounts: createEmptyDropCounts(),
+    levelDropCounts: createEmptyDropCounts(),
     score: 0,
     shields: 0,
     nextBallId: 2,
@@ -1640,6 +1644,7 @@ export function BreakoutModal({ onClose }: BreakoutModalProps) {
     const layout = createLevelLayout(state.runSeed, levelNumber);
     const paddleX = (BOARD_WIDTH - PADDLE_BASE_WIDTH) / 2;
     state.level = levelNumber;
+    state.levelScore = 0;
     state.paddleX = paddleX;
     state.paddleWidth = PADDLE_BASE_WIDTH;
     state.isBallLaunched = false;
@@ -1649,6 +1654,7 @@ export function BreakoutModal({ onClose }: BreakoutModalProps) {
     state.bricks = layout.bricks;
     state.brickLookup = layout.brickLookup;
     state.drops = [];
+    state.levelDropCounts = createEmptyDropCounts();
   }, []);
 
   const handleRestart = useCallback(() => {
@@ -1820,6 +1826,7 @@ export function BreakoutModal({ onClose }: BreakoutModalProps) {
         if (hitBrick) {
           hitBrick.alive = false;
           state.score += 1;
+          state.levelScore += 1;
           bounceBallFromRect(ball, hitBrick);
 
           if (state.drops.length < MAX_DROPS && Math.random() < DROP_CHANCE) {
@@ -1856,6 +1863,7 @@ export function BreakoutModal({ onClose }: BreakoutModalProps) {
 
       if (hitPaddle) {
         state.dropCounts[drop.type] += 1;
+        state.levelDropCounts[drop.type] += 1;
         if (drop.type === 'split') {
           const freeSlots = Math.max(0, MAX_BALLS - state.balls.length);
           const spawnCount = Math.min(3, freeSlots);
@@ -2358,6 +2366,24 @@ export function BreakoutModal({ onClose }: BreakoutModalProps) {
             <div className="breakout-level-clear">
               <div className="breakout-level-clear-title">
                 {t('breakout.levelCleared', '关卡完成')}
+              </div>
+              <div className="breakout-level-clear-stats">
+                <div className="breakout-level-clear-score">
+                  {t('breakout.levelScore', {
+                    score: stateRef.current.levelScore,
+                    defaultValue: `本关分数 ${stateRef.current.levelScore}`,
+                  })}
+                </div>
+                <div className="breakout-drop-counts breakout-drop-counts-levelclear">
+                  {getSortedDropTypes(stateRef.current.levelDropCounts, dropTypeOrder).map((dropType) => (
+                    <span key={`levelclear-${dropType}`} className="breakout-drop-count-chip">
+                      <span className="breakout-drop-count-icon">
+                        {renderPlatformIcon(DROP_ICON_MAP[dropType], 13)}
+                      </span>
+                      <span className="breakout-drop-count-value">x{stateRef.current.levelDropCounts[dropType]}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
               <button className="breakout-restart-btn" onClick={handleNextLevel}>
                 {t('breakout.nextLevel', '下一关')}

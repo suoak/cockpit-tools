@@ -23,6 +23,7 @@ pub mod quota;
 pub mod quota_cache;
 pub mod sync_settings;
 pub mod tray;
+pub mod tray_layout;
 pub mod update_checker;
 pub mod vscode_inject;
 pub mod wakeup;

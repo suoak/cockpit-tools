@@ -160,6 +160,7 @@ pub fn run() {
             commands::system::save_network_config,
             commands::system::get_general_config,
             commands::system::save_general_config,
+            commands::system::save_tray_platform_layout,
             commands::system::set_app_path,
             commands::system::detect_app_path,
             commands::system::set_wakeup_override,

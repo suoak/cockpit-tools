@@ -1371,6 +1371,7 @@
     "tip": "Přetažením změňte pořadí. V postranním panelu lze zobrazit nejvýše dvě platformy. Pokud je vybrána jen jedna, zobrazí se pouze jedna.",
     "sidebarToggle": "Zobrazit v postranním panelu",
     "dashboardToggle": "Zobrazit na nástěnce",
+    "trayToggle": "Zobrazit v systémové liště",
     "hiddenBadge": "Skryto",
     "openFromMore": "Spravovat rozložení platforem",
     "dragHandleLabel": "Přetažením změnit pořadí"
@@ -1388,6 +1389,7 @@
     "resume": "Pokračovat",
     "paused": "Pozastaveno",
     "level": "Úroveň {{level}}",
+    "levelScore": "Skóre úrovně {{score}}",
     "levelCleared": "Úroveň dokončena",
     "nextLevel": "Další úroveň",
     "history": "Historie",

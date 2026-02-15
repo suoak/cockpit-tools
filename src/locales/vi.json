@@ -1371,6 +1371,7 @@
     "tip": "Kéo để sắp xếp lại. Thanh bên chỉ hiển thị tối đa hai nền tảng. Nếu chỉ chọn một, chỉ một nền tảng sẽ được hiển thị.",
     "sidebarToggle": "Hiển thị ở thanh bên",
     "dashboardToggle": "Hiển thị trên bảng điều khiển",
+    "trayToggle": "Hiển thị trên khay hệ thống",
     "hiddenBadge": "Ẩn",
     "openFromMore": "Quản lý bố cục nền tảng",
     "dragHandleLabel": "Kéo để sắp xếp lại"
@@ -1388,6 +1389,7 @@
     "resume": "Tiếp tục",
     "paused": "Đã tạm dừng",
     "level": "Màn {{level}}",
+    "levelScore": "Điểm màn {{score}}",
     "levelCleared": "Qua màn",
     "nextLevel": "Màn tiếp theo",
     "history": "Lịch sử",

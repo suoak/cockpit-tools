@@ -512,6 +512,25 @@
   height: 22px;
 }
 
+.breakout-level-clear-stats {
+  width: min(360px, calc(100% - 48px));
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.breakout-level-clear-score {
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.breakout-drop-counts-levelclear .breakout-drop-count-chip {
+  height: 22px;
+}
+
 .breakout-rank-summary-title {
   color: #bfdbfe;
   font-size: 12px;

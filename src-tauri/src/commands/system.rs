@@ -213,6 +213,7 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
 /// 保存通用设置配置
 #[tauri::command]
 pub fn save_general_config(
+    app: tauri::AppHandle,
     language: String,
     theme: String,
     auto_refresh_minutes: i32,
@@ -305,8 +306,25 @@ pub fn save_general_config(
         // 但为了减少写入，可以检查是否有客户端连接
         // 这里简化处理：总是写入，插件端启动时会比较时间戳
         modules::sync_settings::write_sync_setting("language", &normalized_language);
+
+        // 仅在语言变更时刷新托盘菜单，避免无关配置触发托盘重建
+        if let Err(err) = modules::tray::update_tray_menu(&app) {
+            modules::logger::log_warn(&format!("[Tray] 语言变更后刷新托盘失败: {}", err));
+        }
     }
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn save_tray_platform_layout(
+    app: tauri::AppHandle,
+    sort_mode: String,
+    ordered_platform_ids: Vec<String>,
+    tray_platform_ids: Vec<String>,
+) -> Result<(), String> {
+    modules::tray_layout::save_tray_layout(sort_mode, ordered_platform_ids, tray_platform_ids)?;
+    modules::tray::update_tray_menu(&app)?;
     Ok(())
 }
 

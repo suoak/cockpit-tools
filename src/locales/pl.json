@@ -1371,6 +1371,7 @@
     "tip": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie dwie platformy. Jeśli wybrana jest tylko jedna, zostanie wyświetlona tylko jedna.",
     "sidebarToggle": "Pokaż na pasku bocznym",
     "dashboardToggle": "Pokaż na pulpicie",
+    "trayToggle": "Pokaż w zasobniku",
     "hiddenBadge": "Ukryte",
     "openFromMore": "Zarządzaj układem platform",
     "dragHandleLabel": "Przeciągnij, aby zmienić kolejność"
@@ -1388,6 +1389,7 @@
     "resume": "Wznów",
     "paused": "Wstrzymano",
     "level": "Poziom {{level}}",
+    "levelScore": "Wynik poziomu {{score}}",
     "levelCleared": "Poziom ukończony",
     "nextLevel": "Następny poziom",
     "history": "Historia",

@@ -1371,6 +1371,7 @@
     "tip": "ドラッグして並び替え。サイドバーには最大2つまで表示できます。1つだけ選択した場合は1つだけ表示されます。",
     "sidebarToggle": "サイドバーに表示",
     "dashboardToggle": "ダッシュボードに表示",
+    "trayToggle": "トレイに表示",
     "hiddenBadge": "非表示",
     "openFromMore": "プラットフォームレイアウトを管理",
     "dragHandleLabel": "ドラッグして並び替え"
@@ -1388,6 +1389,7 @@
     "resume": "再開",
     "paused": "一時停止中",
     "level": "レベル {{level}}",
+    "levelScore": "このレベルのスコア {{score}}",
     "levelCleared": "レベルクリア",
     "nextLevel": "次のレベル",
     "history": "履歴",

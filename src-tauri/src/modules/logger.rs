@@ -1,12 +1,18 @@
 use crate::modules::account::get_data_dir;
 use chrono::{DateTime, Duration, Local};
+use regex::{Captures, Regex};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 const LOG_FILE_PREFIX: &str = "app.log";
 const LOG_RETENTION_DAYS: i64 = 3;
+static EMAIL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b")
+        .expect("email regex should be valid")
+});
 
 struct LocalTimer;
 
@@ -142,13 +148,62 @@ pub fn init_logger() {
 }
 
 pub fn log_info(message: &str) {
-    info!("{}", message);
+    info!("{}", sanitize_message(message));
 }
 
 pub fn log_warn(message: &str) {
-    warn!("{}", message);
+    warn!("{}", sanitize_message(message));
 }
 
 pub fn log_error(message: &str) {
-    error!("{}", message);
+    error!("{}", sanitize_message(message));
+}
+
+fn sanitize_message(message: &str) -> String {
+    EMAIL_REGEX
+        .replace_all(message, |caps: &Captures| mask_email(&caps[0]))
+        .to_string()
+}
+
+fn mask_email(email: &str) -> String {
+    let (local, domain) = match email.split_once('@') {
+        Some(parts) => parts,
+        None => return email.to_string(),
+    };
+
+    format!("{}@{}", mask_local_part(local), mask_domain_part(domain))
+}
+
+fn mask_local_part(local: &str) -> String {
+    let chars: Vec<char> = local.chars().collect();
+    match chars.len() {
+        0 => "***".to_string(),
+        1 => "*".to_string(),
+        2 => format!("{}*", chars[0]),
+        3 => format!("{}*{}", chars[0], chars[2]),
+        _ => format!("{}{}***{}", chars[0], chars[1], chars[chars.len() - 1]),
+    }
+}
+
+fn mask_domain_part(domain: &str) -> String {
+    let mut parts = domain.split('.');
+    let head = parts.next().unwrap_or_default();
+    let tail = parts.collect::<Vec<&str>>();
+
+    let masked_head = mask_domain_head(head);
+    if tail.is_empty() {
+        masked_head
+    } else {
+        format!("{}.{}", masked_head, tail.join("."))
+    }
+}
+
+fn mask_domain_head(head: &str) -> String {
+    let chars: Vec<char> = head.chars().collect();
+    match chars.len() {
+        0 => "***".to_string(),
+        1 => "*".to_string(),
+        2 => format!("{}*", chars[0]),
+        _ => format!("{}***{}", chars[0], chars[chars.len() - 1]),
+    }
 }

@@ -1371,6 +1371,7 @@
     "tip": "Arraste para reordenar. É possível exibir no máximo duas plataformas na barra lateral. Se apenas uma for selecionada, apenas uma será exibida.",
     "sidebarToggle": "Mostrar na barra lateral",
     "dashboardToggle": "Mostrar no painel",
+    "trayToggle": "Mostrar na bandeja",
     "hiddenBadge": "Oculto",
     "openFromMore": "Gerenciar layout de plataformas",
     "dragHandleLabel": "Arrastar para reordenar"
@@ -1388,6 +1389,7 @@
     "resume": "Continuar",
     "paused": "Pausado",
     "level": "Nível {{level}}",
+    "levelScore": "Pontuação do nível {{score}}",
     "levelCleared": "Nível concluído",
     "nextLevel": "Próximo nível",
     "history": "Histórico",

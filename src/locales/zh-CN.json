@@ -54,6 +54,7 @@
     "resume": "继续",
     "paused": "已暂停",
     "level": "关卡 {{level}}",
+    "levelScore": "本关分数 {{score}}",
     "levelCleared": "关卡完成",
     "nextLevel": "下一关",
     "history": "历史记录",
@@ -73,6 +74,7 @@
     "tip": "拖拽可排序；最多选择两个平台显示在侧边栏。若只选择一个，侧边栏只显示一个。",
     "sidebarToggle": "侧边栏显示",
     "dashboardToggle": "仪表盘显示",
+    "trayToggle": "菜单栏显示",
     "hiddenBadge": "已隐藏",
     "openFromMore": "管理平台布局",
     "dragHandleLabel": "拖拽排序"

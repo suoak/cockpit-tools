@@ -16,9 +16,11 @@ export function PlatformLayoutModal({ open, onClose }: PlatformLayoutModalProps)
     orderedPlatformIds,
     hiddenPlatformIds,
     sidebarPlatformIds,
+    trayPlatformIds,
     movePlatform,
     setHiddenPlatform,
     setSidebarPlatform,
+    setTrayPlatform,
     resetPlatformLayout,
   } = usePlatformLayoutStore();
   const [draggingId, setDraggingId] = useState<PlatformId | null>(null);
@@ -26,6 +28,7 @@ export function PlatformLayoutModal({ open, onClose }: PlatformLayoutModalProps)
 
   const hiddenSet = useMemo(() => new Set(hiddenPlatformIds), [hiddenPlatformIds]);
   const sidebarSet = useMemo(() => new Set(sidebarPlatformIds), [sidebarPlatformIds]);
+  const traySet = useMemo(() => new Set(trayPlatformIds), [trayPlatformIds]);
 
   const stopDragging = () => {
     setDraggingId(null);
@@ -153,6 +156,15 @@ export function PlatformLayoutModal({ open, onClose }: PlatformLayoutModalProps)
                         onChange={(event) => setHiddenPlatform(platformId, !event.target.checked)}
                       />
                       <span>{t('platformLayout.dashboardToggle', '仪表盘显示')}</span>
+                    </label>
+
+                    <label className="platform-layout-toggle">
+                      <input
+                        type="checkbox"
+                        checked={traySet.has(platformId)}
+                        onChange={(event) => setTrayPlatform(platformId, event.target.checked)}
+                      />
+                      <span>{t('platformLayout.trayToggle', '菜单栏显示')}</span>
                     </label>
                   </div>
                 </div>

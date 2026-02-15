@@ -454,6 +454,16 @@ function App() {
       } catch (error) {
         console.error('Failed to refresh Codex quotas:', error);
       }
+      try {
+        await invoke('refresh_all_github_copilot_tokens');
+      } catch (error) {
+        console.error('Failed to refresh GitHub Copilot quotas:', error);
+      }
+      try {
+        await invoke('refresh_all_windsurf_tokens');
+      } catch (error) {
+        console.error('Failed to refresh Windsurf quotas:', error);
+      }
     }).then((fn) => { unlisten = fn; });
 
     return () => {
@@ -615,6 +625,8 @@ function App() {
           switch (target) {
             case 'overview':
             case 'codex':
+            case 'github-copilot':
+            case 'windsurf':
             case 'settings':
               setPage(target as Page);
               break;

@@ -54,6 +54,7 @@
     "resume": "Resume",
     "paused": "Paused",
     "level": "Level {{level}}",
+    "levelScore": "Level Score {{score}}",
     "levelCleared": "Level Cleared",
     "nextLevel": "Next Level",
     "history": "History",
@@ -73,6 +74,7 @@
     "tip": "Drag to reorder. Up to two platforms can be shown in the sidebar. If only one is selected, only one is shown.",
     "sidebarToggle": "Show in sidebar",
     "dashboardToggle": "Show in dashboard",
+    "trayToggle": "Show in tray",
     "hiddenBadge": "Hidden",
     "openFromMore": "Manage platform layout",
     "dragHandleLabel": "Drag to reorder"

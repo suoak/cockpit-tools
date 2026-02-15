@@ -1371,6 +1371,7 @@
     "tip": "드래그하여 순서를 변경하세요. 사이드바에는 최대 2개 플랫폼만 표시할 수 있습니다. 1개만 선택하면 1개만 표시됩니다.",
     "sidebarToggle": "사이드바에 표시",
     "dashboardToggle": "대시보드에 표시",
+    "trayToggle": "트레이에 표시",
     "hiddenBadge": "숨김",
     "openFromMore": "플랫폼 레이아웃 관리",
     "dragHandleLabel": "드래그하여 순서 변경"
@@ -1388,6 +1389,7 @@
     "resume": "계속",
     "paused": "일시정지됨",
     "level": "레벨 {{level}}",
+    "levelScore": "레벨 점수 {{score}}",
     "levelCleared": "레벨 클리어",
     "nextLevel": "다음 레벨",
     "history": "기록",

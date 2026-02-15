@@ -1371,6 +1371,7 @@
     "tip": "Trascina per riordinare. Nella barra laterale possono essere mostrate al massimo due piattaforme. Se ne selezioni solo una, verrà mostrata solo una.",
     "sidebarToggle": "Mostra nella barra laterale",
     "dashboardToggle": "Mostra nella dashboard",
+    "trayToggle": "Mostra nell'area di notifica",
     "hiddenBadge": "Nascosto",
     "openFromMore": "Gestisci layout piattaforme",
     "dragHandleLabel": "Trascina per riordinare"
@@ -1388,6 +1389,7 @@
     "resume": "Riprendi",
     "paused": "In pausa",
     "level": "Livello {{level}}",
+    "levelScore": "Punteggio del livello {{score}}",
     "levelCleared": "Livello completato",
     "nextLevel": "Livello successivo",
     "history": "Cronologia",

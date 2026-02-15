@@ -1371,6 +1371,7 @@
     "tip": "Faites glisser pour réorganiser. Jusqu'à deux plateformes peuvent être affichées dans la barre latérale. Si une seule est sélectionnée, une seule est affichée.",
     "sidebarToggle": "Afficher dans la barre latérale",
     "dashboardToggle": "Afficher dans le tableau de bord",
+    "trayToggle": "Afficher dans la zone de notification",
     "hiddenBadge": "Masqué",
     "openFromMore": "Gérer la disposition des plateformes",
     "dragHandleLabel": "Glisser pour réorganiser"
@@ -1388,6 +1389,7 @@
     "resume": "Reprendre",
     "paused": "En pause",
     "level": "Niveau {{level}}",
+    "levelScore": "Score du niveau {{score}}",
     "levelCleared": "Niveau terminé",
     "nextLevel": "Niveau suivant",
     "history": "Historique",

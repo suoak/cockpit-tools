@@ -46,7 +46,7 @@ pub fn export_windsurf_accounts(account_ids: Vec<String>) -> Result<String, Stri
 
 #[tauri::command]
 pub async fn refresh_windsurf_token(
-    _app: AppHandle,
+    app: AppHandle,
     account_id: String,
 ) -> Result<WindsurfAccount, String> {
     let started_at = Instant::now();
@@ -59,6 +59,7 @@ pub async fn refresh_windsurf_token(
             if let Err(e) = windsurf_account::run_quota_alert_if_needed() {
                 logger::log_warn(&format!("[QuotaAlert][Windsurf] 预警检查失败: {}", e));
             }
+            let _ = crate::modules::tray::update_tray_menu(&app);
             logger::log_info(&format!(
                 "[Windsurf Command] 手动刷新账号完成: account_id={}, login={}, elapsed={}ms",
                 account.id,
@@ -80,7 +81,7 @@ pub async fn refresh_windsurf_token(
 }
 
 #[tauri::command]
-pub async fn refresh_all_windsurf_tokens(_app: AppHandle) -> Result<i32, String> {
+pub async fn refresh_all_windsurf_tokens(app: AppHandle) -> Result<i32, String> {
     let started_at = Instant::now();
     logger::log_info("[Windsurf Command] 手动批量刷新开始");
     let results = windsurf_account::refresh_all_tokens().await?;
@@ -109,6 +110,7 @@ pub async fn refresh_all_windsurf_tokens(_app: AppHandle) -> Result<i32, String>
             logger::log_warn(&format!("[QuotaAlert][Windsurf] 全量刷新后预警检查失败: {}", e));
         }
     }
+    let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(success_count as i32)
 }
 
@@ -119,7 +121,10 @@ pub async fn windsurf_oauth_login_start() -> Result<WindsurfOAuthStartResponse, 
 }
 
 #[tauri::command]
-pub async fn windsurf_oauth_login_complete(login_id: String) -> Result<WindsurfAccount, String> {
+pub async fn windsurf_oauth_login_complete(
+    app: AppHandle,
+    login_id: String,
+) -> Result<WindsurfAccount, String> {
     logger::log_info(&format!(
         "Windsurf OAuth complete 命令触发: login_id={}",
         login_id
@@ -130,6 +135,7 @@ pub async fn windsurf_oauth_login_complete(login_id: String) -> Result<WindsurfA
         "Windsurf OAuth complete 成功: account_id={}, login={}",
         account.id, account.github_login
     ));
+    let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(account)
 }
 
@@ -144,10 +150,12 @@ pub fn windsurf_oauth_login_cancel(login_id: Option<String>) -> Result<(), Strin
 
 #[tauri::command]
 pub async fn add_windsurf_account_with_token(
+    app: AppHandle,
     github_access_token: String,
 ) -> Result<WindsurfAccount, String> {
     let payload = windsurf_oauth::build_payload_from_token(&github_access_token).await?;
     let account = windsurf_account::upsert_account(payload)?;
+    let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(account)
 }
 
@@ -213,6 +221,7 @@ pub async fn inject_windsurf_to_vscode(
     };
 
     if let Some(err) = launch_warning {
+        let _ = crate::modules::tray::update_tray_menu(&app);
         logger::log_warn(&format!(
             "[Windsurf Switch] 切号完成但启动失败: account_id={}, login={}, elapsed={}ms, error={}",
             account.id,
@@ -222,6 +231,7 @@ pub async fn inject_windsurf_to_vscode(
         ));
         Ok(format!("切换完成，但 Windsurf 启动失败: {}", err))
     } else {
+        let _ = crate::modules::tray::update_tray_menu(&app);
         logger::log_info(&format!(
             "[Windsurf Switch] 切号成功: account_id={}, login={}, elapsed={}ms",
             account.id,

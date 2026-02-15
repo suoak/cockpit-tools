@@ -1371,6 +1371,7 @@
     "tip": "Sıralamayı değiştirmek için sürükleyin. Kenar çubuğunda en fazla iki platform gösterilebilir. Yalnızca bir platform seçilirse yalnızca bir platform gösterilir.",
     "sidebarToggle": "Kenar çubuğunda göster",
     "dashboardToggle": "Panoda göster",
+    "trayToggle": "Tepside göster",
     "hiddenBadge": "Gizli",
     "openFromMore": "Platform düzenini yönet",
     "dragHandleLabel": "Sürükleyerek sırala"
@@ -1388,6 +1389,7 @@
     "resume": "Devam et",
     "paused": "Duraklatıldı",
     "level": "Seviye {{level}}",
+    "levelScore": "Seviye puanı {{score}}",
     "levelCleared": "Seviye tamamlandı",
     "nextLevel": "Sonraki seviye",
     "history": "Geçmiş",

@@ -7,6 +7,24 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.7.3] - 2026-02-15
+
+### Added
+- **Tray platform layout persistence**: Added backend tray layout config storage (`tray_layout.json`) and command `save_tray_platform_layout` to save tray visibility, order, and sort mode.
+- **Tray visibility control in layout modal**: Added `Show in tray` toggle in platform layout management and synchronized the related locale key across supported languages.
+- **Expanded tray platform coverage**: Added GitHub Copilot and Windsurf tray submenus with account/quota summary and direct navigation targets.
+
+### Changed
+- **Tray menu architecture**: Refactored tray menu generation to dynamic multi-platform rendering, supporting auto/manual ordering and overflow grouping (`More platforms`).
+- **Tray refresh trigger points**: GitHub Copilot/Windsurf refresh, OAuth completion, token import, and account switch flows now refresh tray content immediately; language changes also trigger tray rebuild.
+- **Frontend tray event handling**: `tray:refresh_quota` now refreshes Antigravity, Codex, GitHub Copilot, and Windsurf in one flow; tray navigation now recognizes `github-copilot` and `windsurf`.
+- **Platform layout sync strategy**: Added debounced frontend-to-backend tray layout sync on reorder/visibility changes and on initial app load.
+
+### Fixed
+- **Tray visibility filtering correctness**: Fixed tray platform filtering so disabled platforms remain hidden and the empty-state item appears when no tray platform is selected.
+- **Log privacy hardening**: Logger now masks email addresses in log messages to reduce exposure of sensitive identifiers.
+
+---
 ## [0.7.2] - 2026-02-14
 
 ### Added
