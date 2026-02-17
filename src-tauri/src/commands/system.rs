@@ -51,6 +51,8 @@ pub struct GeneralConfig {
     pub kiro_app_path: String,
     /// 切换 Codex 时是否自动重启 OpenCode
     pub opencode_sync_on_switch: bool,
+    /// 切换 Codex 时是否自动启动/重启 Codex App
+    pub codex_launch_on_switch: bool,
     /// 是否启用自动切号
     pub auto_switch_enabled: bool,
     /// 自动切号阈值（百分比）
@@ -165,6 +167,7 @@ pub fn save_network_config(ws_enabled: bool, ws_port: u16) -> Result<bool, Strin
         windsurf_app_path: current.windsurf_app_path,
         kiro_app_path: current.kiro_app_path,
         opencode_sync_on_switch: current.opencode_sync_on_switch,
+        codex_launch_on_switch: current.codex_launch_on_switch,
         auto_switch_enabled: current.auto_switch_enabled,
         auto_switch_threshold: current.auto_switch_threshold,
         quota_alert_enabled: current.quota_alert_enabled,
@@ -211,6 +214,7 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         windsurf_app_path: user_config.windsurf_app_path,
         kiro_app_path: user_config.kiro_app_path,
         opencode_sync_on_switch: user_config.opencode_sync_on_switch,
+        codex_launch_on_switch: user_config.codex_launch_on_switch,
         auto_switch_enabled: user_config.auto_switch_enabled,
         auto_switch_threshold: user_config.auto_switch_threshold,
         quota_alert_enabled: user_config.quota_alert_enabled,
@@ -245,6 +249,7 @@ pub fn save_general_config(
     windsurf_app_path: Option<String>,
     kiro_app_path: Option<String>,
     opencode_sync_on_switch: bool,
+    codex_launch_on_switch: bool,
     auto_switch_enabled: Option<bool>,
     auto_switch_threshold: Option<i32>,
     quota_alert_enabled: Option<bool>,
@@ -304,6 +309,7 @@ pub fn save_general_config(
         windsurf_app_path: normalized_windsurf_path,
         kiro_app_path: normalized_kiro_path,
         opencode_sync_on_switch,
+        codex_launch_on_switch,
         auto_switch_enabled: auto_switch_enabled.unwrap_or(current.auto_switch_enabled),
         auto_switch_threshold: auto_switch_threshold.unwrap_or(current.auto_switch_threshold),
         quota_alert_enabled: quota_alert_enabled.unwrap_or(current.quota_alert_enabled),

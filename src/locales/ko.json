@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "기본 경로를 사용하려면 비워 두세요.",
       "kiroAppPathPlaceholder": "기본 경로",
       "kiroPathSelect": "선택하다",
-      "kiroPathReset": "기본값으로 재설정"
+      "kiroPathReset": "기본값으로 재설정",
+      "codexLaunchOnSwitch": "Codex 전환 시 Codex App 자동 실행",
+      "codexLaunchOnSwitchDesc": "계정 전환 후 Codex App을 자동으로 시작하거나 재시작"
     },
     "network": {
       "apiTitle": "반중력 조종석 API",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "게임 종료",
-    "gameOverRank": "현재 순위 #{{rank}}",
+    "gameOverRank": "현재 로컬 순위 #{{rank}}",
     "startGame": "게임 시작",
     "startHint": "시작 버튼 또는 스페이스를 누르세요",
-    "rankTitle": "기록 순위",
+    "rankTitle": "로컬 기록 순위",
     "rankCurrent": "현재",
     "rankNoData": "--",
     "restart": "다시 시작",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "게임 종료",
     "historyReasonManualExit": "수동 종료",
     "serveHint": "스페이스바로 공을 발사",
-    "ranking": "기록",
-    "rankingShort": "기록",
-    "rankingEmpty": "기록이 없습니다",
-    "rankingClear": "지우기",
+    "ranking": "로컬 기록",
+    "rankingShort": "로컬",
+    "rankingEmpty": "로컬 기록이 없습니다",
+    "rankingClear": "로컬 기록 지우기",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

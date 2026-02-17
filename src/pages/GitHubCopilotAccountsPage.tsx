@@ -791,12 +791,23 @@ export function GitHubCopilotAccountsPage() {
   const resolveGroupLabel = (groupKey: string) =>
     groupKey === untaggedKey ? t('accounts.defaultGroup', '默认分组') : groupKey;
 
+  const resolvePlanLabel = useCallback(
+    (account: (typeof accounts)[number], planKey: string) => {
+      const rawPlan = account.copilot_plan?.trim();
+      if (rawPlan && rawPlan.toUpperCase() !== 'UNKNOWN') return rawPlan;
+      const fallbackPlan = account.plan_type?.trim();
+      if (fallbackPlan && fallbackPlan.toUpperCase() !== 'UNKNOWN') return fallbackPlan;
+      return planKey;
+    },
+    [],
+  );
+
   const renderGridCards = (items: typeof filteredAccounts, groupKey?: string) =>
     items.map((account) => {
       const displayEmail = account.email ?? account.github_email ?? account.github_login;
       const maskedDisplayEmail = maskAccountText(displayEmail);
       const planKey = getGitHubCopilotPlanDisplayName(account.plan_type);
-      const planLabel = t(`githubCopilot.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const isSelected = selected.has(account.id);
       const isCurrent = currentAccountId === account.id;
 
@@ -923,7 +934,7 @@ export function GitHubCopilotAccountsPage() {
       const displayEmail = account.email ?? account.github_email ?? account.github_login;
       const maskedDisplayEmail = maskAccountText(displayEmail);
       const planKey = getGitHubCopilotPlanDisplayName(account.plan_type);
-      const planLabel = t(`githubCopilot.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const isCurrent = currentAccountId === account.id;
       return (
         <tr key={groupKey ? `${groupKey}-${account.id}` : account.id} className={isCurrent ? 'current' : ''}>

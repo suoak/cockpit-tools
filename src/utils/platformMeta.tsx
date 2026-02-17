@@ -7,14 +7,14 @@ import { CodexIcon } from '../components/icons/CodexIcon';
 import { WindsurfIcon } from '../components/icons/WindsurfIcon';
 import { KiroIcon } from '../components/icons/KiroIcon';
 
-export function getPlatformLabel(platformId: PlatformId, t: TFunction): string {
+export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string {
   switch (platformId) {
     case 'antigravity':
-      return t('nav.overview', 'Antigravity');
+      return 'Antigravity';
     case 'codex':
-      return t('nav.codex', 'Codex');
+      return 'Codex';
     case 'github-copilot':
-      return t('nav.githubCopilot', 'GitHub Copilot');
+      return 'GitHub Copilot';
     case 'windsurf':
       return 'Windsurf';
     case 'kiro':

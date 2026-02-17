@@ -20,6 +20,12 @@ export function getSubscriptionTier(quota?: QuotaData): string {
   return 'FREE';
 }
 
+export function getSubscriptionTierDisplay(quota?: QuotaData): string {
+  const rawTier = quota?.subscription_tier?.trim();
+  if (rawTier) return rawTier;
+  return getSubscriptionTier(quota);
+}
+
 export function getQuotaClass(percentage: number): string {
   if (percentage >= 70) return 'high';
   if (percentage >= 30) return 'medium';

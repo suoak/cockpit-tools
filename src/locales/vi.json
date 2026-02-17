@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Để trống để sử dụng đường dẫn mặc định",
       "kiroAppPathPlaceholder": "Đường dẫn mặc định",
       "kiroPathSelect": "Lựa chọn",
-      "kiroPathReset": "Đặt lại về mặc định"
+      "kiroPathReset": "Đặt lại về mặc định",
+      "codexLaunchOnSwitch": "Tự động khởi chạy Codex App khi chuyển Codex",
+      "codexLaunchOnSwitchDesc": "Tự động khởi động hoặc khởi động lại Codex App sau khi chuyển tài khoản"
     },
     "network": {
       "apiTitle": "API Antigravity Cockpit",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Kết thúc game",
-    "gameOverRank": "Hạng hiện tại #{{rank}}",
+    "gameOverRank": "Hạng cục bộ hiện tại #{{rank}}",
     "startGame": "Bắt đầu chơi",
     "startHint": "Bấm bắt đầu hoặc nhấn phím Space",
-    "rankTitle": "Xếp hạng lịch sử",
+    "rankTitle": "Xếp hạng lịch sử cục bộ",
     "rankCurrent": "Hiện tại",
     "rankNoData": "--",
     "restart": "Chơi lại",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Kết thúc game",
     "historyReasonManualExit": "Thoát thủ công",
     "serveHint": "Nhấn phím cách để phóng bóng",
-    "ranking": "Lịch sử",
-    "rankingShort": "Lịch sử",
-    "rankingEmpty": "Chưa có bản ghi",
-    "rankingClear": "Xóa",
+    "ranking": "Lịch sử cục bộ",
+    "rankingShort": "Cục bộ",
+    "rankingEmpty": "Chưa có bản ghi cục bộ",
+    "rankingClear": "Xóa xếp hạng cục bộ",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

@@ -89,6 +89,9 @@ pub struct UserConfig {
     /// 切换 Codex 时是否自动重启 OpenCode
     #[serde(default = "default_opencode_sync_on_switch")]
     pub opencode_sync_on_switch: bool,
+    /// 切换 Codex 时是否自动启动/重启 Codex App
+    #[serde(default = "default_codex_launch_on_switch")]
+    pub codex_launch_on_switch: bool,
     /// 是否启用自动切号
     #[serde(default = "default_auto_switch_enabled")]
     pub auto_switch_enabled: bool,
@@ -196,6 +199,9 @@ fn default_kiro_app_path() -> String {
 fn default_opencode_sync_on_switch() -> bool {
     true
 }
+fn default_codex_launch_on_switch() -> bool {
+    true
+}
 fn default_auto_switch_enabled() -> bool {
     false
 }
@@ -253,6 +259,7 @@ impl Default for UserConfig {
             windsurf_app_path: default_windsurf_app_path(),
             kiro_app_path: default_kiro_app_path(),
             opencode_sync_on_switch: default_opencode_sync_on_switch(),
+            codex_launch_on_switch: default_codex_launch_on_switch(),
             auto_switch_enabled: default_auto_switch_enabled(),
             auto_switch_threshold: default_auto_switch_threshold(),
             quota_alert_enabled: default_quota_alert_enabled(),

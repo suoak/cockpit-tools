@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
       "kiroAppPathPlaceholder": "المسار الافتراضي",
       "kiroPathSelect": "يختار",
-      "kiroPathReset": "إعادة التعيين إلى الوضع الافتراضي"
+      "kiroPathReset": "إعادة التعيين إلى الوضع الافتراضي",
+      "codexLaunchOnSwitch": "تشغيل تطبيق Codex App تلقائيًا عند تبديل Codex",
+      "codexLaunchOnSwitchDesc": "تشغيل أو إعادة تشغيل تطبيق Codex App تلقائيًا بعد تبديل الحساب"
     },
     "network": {
       "apiTitle": "واجهة برمجة تطبيقات قمرة القيادة المضادة للجاذبية",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "انتهت اللعبة",
-    "gameOverRank": "تصنيفك الحالي #{{rank}}",
+    "gameOverRank": "ترتيبك المحلي الحالي #{{rank}}",
     "startGame": "ابدأ اللعبة",
     "startHint": "اضغط بدء أو مفتاح المسافة",
-    "rankTitle": "التصنيف التاريخي",
+    "rankTitle": "التصنيف المحلي التاريخي",
     "rankCurrent": "الحالي",
     "rankNoData": "--",
     "restart": "إعادة البدء",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "انتهت اللعبة",
     "historyReasonManualExit": "خروج يدوي",
     "serveHint": "اضغط على مفتاح المسافة لإطلاق الكرة",
-    "ranking": "السجل",
-    "rankingShort": "سجل",
-    "rankingEmpty": "لا توجد سجلات بعد",
-    "rankingClear": "مسح",
+    "ranking": "السجل المحلي",
+    "rankingShort": "محلي",
+    "rankingEmpty": "لا توجد سجلات محلية بعد",
+    "rankingClear": "مسح السجل المحلي",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

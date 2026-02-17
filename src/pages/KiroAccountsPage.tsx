@@ -705,16 +705,22 @@ export function KiroAccountsPage() {
   );
 
   const resolvePlanLabel = useCallback(
-    (planKey: string) => {
-      if ((KIRO_KNOWN_PLAN_FILTERS as readonly string[]).includes(planKey)) {
-        return t(`kiro.plan.${planKey.toLowerCase()}`, planKey);
-      }
-      if (planKey === 'UNKNOWN') {
-        return t('kiro.plan.unknown', 'UNKNOWN');
+    (account: (typeof accounts)[number], planKey: string) => {
+      const credits = resolveCreditsSummary(account);
+      const candidates = [
+        account.plan_name,
+        account.plan_tier,
+        credits.planName,
+        account.copilot_plan,
+        account.plan_type,
+      ];
+      for (const candidate of candidates) {
+        const raw = candidate?.trim();
+        if (raw && raw.toUpperCase() !== 'UNKNOWN') return raw;
       }
       return planKey;
     },
-    [t],
+    [resolveCreditsSummary],
   );
 
   const resolvePlanBadgeClass = useCallback((planKey: string) => {
@@ -1098,7 +1104,7 @@ export function KiroAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = resolvePlanLabel(planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const bonusExpiryValue = resolveBonusExpiryValue(credits);
       const showAddOnCredits = shouldShowAddOnCredits(credits, addOnMetrics);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -1260,7 +1266,7 @@ export function KiroAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = resolvePlanLabel(planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const bonusExpiryValue = resolveBonusExpiryValue(credits);
       const showAddOnCredits = shouldShowAddOnCredits(credits, addOnMetrics);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);

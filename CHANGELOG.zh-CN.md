@@ -7,6 +7,20 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
 ---
+## [0.8.1] - 2026-02-17
+
+### 变更
+- **套餐标签改为原始值展示**：Antigravity/Codex/GitHub Copilot/Windsurf/Kiro 的账号卡片与表格订阅标签改为直接显示后端/本地原始 plan/tier 值，仅保留现有样式映射。
+- **平台页签改为固定默认文案**：平台账号页的页签文案（账号总览/多开实例）改为直接使用默认值，避免不同语言环境下被平台分组翻译覆盖导致展示不一致。
+- **平台名称统一使用原始标识**：共享平台名称渲染统一为 `Antigravity`、`Codex`、`GitHub Copilot`、`Windsurf`、`Kiro`。
+- **Codex 切号启动行为可配置**：新增 `codex_launch_on_switch` 配置并打通后端配置模型、设置页与快速设置，可控制切换 Codex 后是否自动启动/重启 Codex App。
+
+### 修复
+- **首页隐私开关一致性**：仪表盘账号邮箱已接入与账号页/实例页同一隐私开关，并补充 focus/visibility/storage 同步，确保脱敏状态一致。
+- **OpenCode 切号凭证同步可靠性**：修复 GPT 切号后未有效替换 OpenCode 登录凭证的问题，避免运行中仍停留在旧账号会话。(#51)
+- **仪表盘卡片布局平衡性**：修复 Dashboard 中 Antigravity 账号卡片宽度表现，减少右侧明显留白并提升整体视觉平衡。(#49)
+
+---
 ## [0.8.0] - 2026-02-17
 
 ### 新增

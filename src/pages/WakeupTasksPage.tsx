@@ -1087,6 +1087,7 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
           codexAppPath: config.codex_app_path ?? '',
           vscodeAppPath: config.vscode_app_path ?? '',
           opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? true,
+          codexLaunchOnSwitch: config.codex_launch_on_switch ?? true,
         });
         
         // 触发配置更新事件（让 useAutoRefresh 重新设置定时器）

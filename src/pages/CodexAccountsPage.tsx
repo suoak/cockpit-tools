@@ -883,11 +883,20 @@ export function CodexAccountsPage() {
   const resolveGroupLabel = (groupKey: string) =>
     groupKey === untaggedKey ? t('accounts.defaultGroup', '默认分组') : groupKey;
 
+  const resolvePlanLabel = useCallback(
+    (account: (typeof accounts)[number], planKey: string) => {
+      const rawPlan = account.plan_type?.trim();
+      if (rawPlan && rawPlan.toUpperCase() !== 'UNKNOWN') return rawPlan;
+      return planKey;
+    },
+    [],
+  );
+
   const renderGridCards = (items: typeof filteredAccounts, groupKey?: string) =>
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id;
       const planKey = getCodexPlanDisplayName(account.plan_type);
-      const planLabel = t(`codex.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const isSelected = selected.has(account.id);
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
@@ -1022,7 +1031,7 @@ export function CodexAccountsPage() {
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id;
       const planKey = getCodexPlanDisplayName(account.plan_type);
-      const planLabel = t(`codex.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
       return (

@@ -774,6 +774,7 @@ fn handle_set_language(language: &str, source: Option<&str>) -> Result<String, S
         windsurf_app_path: current.windsurf_app_path,
         kiro_app_path: current.kiro_app_path,
         opencode_sync_on_switch: current.opencode_sync_on_switch,
+        codex_launch_on_switch: current.codex_launch_on_switch,
         auto_switch_enabled: current.auto_switch_enabled,
         auto_switch_threshold: current.auto_switch_threshold,
         quota_alert_enabled: current.quota_alert_enabled,

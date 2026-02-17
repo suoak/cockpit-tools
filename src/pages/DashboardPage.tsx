@@ -41,6 +41,7 @@ import { WindsurfIcon } from '../components/icons/WindsurfIcon';
 import { KiroIcon } from '../components/icons/KiroIcon';
 import { PlatformId, PLATFORM_PAGE_MAP } from '../types/platform';
 import { getPlatformLabel, renderPlatformIcon } from '../utils/platformMeta';
+import { isPrivacyModeEnabledByDefault, maskSensitiveValue } from '../utils/privacy';
 
 interface DashboardPageProps {
   onNavigate: (page: Page) => void;
@@ -101,6 +102,34 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     () => orderedPlatformIds.filter((platformId) => !hiddenPlatformIds.includes(platformId)),
     [orderedPlatformIds, hiddenPlatformIds],
   );
+  const [privacyModeEnabled, setPrivacyModeEnabled] = React.useState<boolean>(() =>
+    isPrivacyModeEnabledByDefault()
+  );
+  const maskAccountText = React.useCallback(
+    (value?: string | null) => maskSensitiveValue(value, privacyModeEnabled),
+    [privacyModeEnabled],
+  );
+
+  React.useEffect(() => {
+    const syncPrivacyMode = () => {
+      setPrivacyModeEnabled(isPrivacyModeEnabledByDefault());
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncPrivacyMode();
+      }
+    };
+
+    window.addEventListener('focus', syncPrivacyMode);
+    window.addEventListener('storage', syncPrivacyMode);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', syncPrivacyMode);
+      window.removeEventListener('storage', syncPrivacyMode);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   
   // Antigravity Data
@@ -620,14 +649,16 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
 
     const tier = getSubscriptionTier(account.quota);
-    const tierLabel = t(`accounts.tier.${tier.toLowerCase()}`, tier);
+    const tierLabel = tier;
     const displayModels = getDisplayModels(account.quota).slice(0, 4); // Show top 4 models
 
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
            <div className="account-info-row">
-             <span className="account-email" title={account.email}>{account.email}</span>
+             <span className="account-email" title={maskAccountText(account.email)}>
+               {maskAccountText(account.email)}
+             </span>
              <span className={`tier-tag ${tier.toLowerCase()}`}>{tierLabel}</span>
            </div>
         </div>
@@ -680,13 +711,15 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
 
     const planName = getCodexPlanDisplayName(account.plan_type);
-    const planLabel = t(`codex.plan.${planName.toLowerCase()}`, planName);
+    const planLabel = planName;
     
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
            <div className="account-info-row">
-             <span className="account-email" title={account.email}>{account.email}</span>
+             <span className="account-email" title={maskAccountText(account.email)}>
+               {maskAccountText(account.email)}
+             </span>
              <span className={`tier-tag ${planName.toLowerCase()}`}>{planLabel}</span>
            </div>
         </div>
@@ -758,19 +791,20 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
 
     const planName = getGitHubCopilotPlanDisplayName(account.plan_type);
-    const planLabel = t(`githubCopilot.plan.${planName.toLowerCase()}`, planName);
+    const planLabel = planName;
     const hourly = account.quota?.hourly_percentage ?? null;
     const weekly = account.quota?.weekly_percentage ?? null;
     const hasQuota = hourly != null || weekly != null;
     const isRefreshing = refreshing.has(account.id);
     const isSwitching = switching.has(account.id);
+    const displayEmail = account.email ?? account.github_email ?? account.github_login;
 
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
           <div className="account-info-row">
-            <span className="account-email" title={account.email ?? account.github_email ?? account.github_login}>
-              {account.email ?? account.github_email ?? account.github_login}
+            <span className="account-email" title={maskAccountText(displayEmail)}>
+              {maskAccountText(displayEmail)}
             </span>
             <span className={`tier-tag ${planName.toLowerCase()}`}>{planLabel}</span>
           </div>
@@ -849,7 +883,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
 
     const planName = getWindsurfPlanDisplayName(account.plan_type ?? account.copilot_plan);
-    const planLabel = t(`windsurf.plan.${planName.toLowerCase()}`, planName);
+    const planLabel = planName;
     const credits = getWindsurfCreditsSummary(account);
     const promptMetrics = buildCreditMetrics(
       credits.promptCreditsUsed,
@@ -862,13 +896,14 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     const cycleText = credits.planEndsAt
       ? formatWindsurfResetTime(credits.planEndsAt, t)
       : t('common.shared.credits.planEndsUnknown', '配额周期时间未知');
+    const displayEmail = account.email ?? account.github_email ?? account.github_login;
 
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
           <div className="account-info-row">
-            <span className="account-email" title={account.email ?? account.github_email ?? account.github_login}>
-              {account.email ?? account.github_email ?? account.github_login}
+            <span className="account-email" title={maskAccountText(displayEmail)}>
+              {maskAccountText(displayEmail)}
             </span>
             <span className={`tier-tag ${planName.toLowerCase()}`}>{planLabel}</span>
           </div>
@@ -963,7 +998,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     const accountPlan =
       rawAccountPlan && rawAccountPlan.toUpperCase() !== 'UNKNOWN' ? rawAccountPlan : null;
     const planName = getKiroPlanDisplayName(accountPlan ?? account.plan_name ?? account.plan_tier ?? null);
-    const planLabel = t(`kiro.plan.${planName.toLowerCase()}`, planName);
+    const planLabel = planName;
     const planBadgeClass = getKiroPlanBadgeClass(planName);
     const credits = getKiroCreditsSummary(account);
     const promptMetrics = buildCreditMetrics(
@@ -991,13 +1026,14 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     const cycleText = credits.planEndsAt
       ? formatKiroResetTime(credits.planEndsAt, t)
       : t('common.shared.credits.planEndsUnknown', '配额周期时间未知');
+    const displayEmail = getKiroAccountDisplayEmail(account);
 
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
           <div className="account-info-row">
-            <span className="account-email" title={getKiroAccountDisplayEmail(account)}>
-              {getKiroAccountDisplayEmail(account)}
+            <span className="account-email" title={maskAccountText(displayEmail)}>
+              {maskAccountText(displayEmail)}
             </span>
             <span className={`tier-tag ${planBadgeClass}`}>{planLabel}</span>
           </div>
@@ -1106,6 +1142,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
   };
 
   const visibleCardPlatformIds = visiblePlatformOrder;
+  const isSinglePlatformMode = visibleCardPlatformIds.length === 1;
   const cardRows = useMemo(() => {
     const rows: PlatformId[][] = [];
     for (let i = 0; i < visibleCardPlatformIds.length; i += 2) {
@@ -1400,9 +1437,12 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       {/* Main Comparison Section */}
       <div className="cards-section">
         {cardRows.map((row, rowIndex) => (
-          <div className="cards-split-row" key={`row-${rowIndex}`}>
+          <div
+            className={`cards-split-row${isSinglePlatformMode ? ' single-platform-row' : ''}`}
+            key={`row-${rowIndex}`}
+          >
             {row.map((platformId) => renderPlatformCard(platformId))}
-            {row.length < 2 && <div className="main-card main-card-placeholder" />}
+            {!isSinglePlatformMode && row.length < 2 && <div className="main-card main-card-placeholder" />}
           </div>
         ))}
       </div>

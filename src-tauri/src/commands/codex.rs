@@ -76,21 +76,26 @@ pub async fn switch_codex_account(
 
     #[cfg(target_os = "macos")]
     {
-        if process::is_codex_running() {
-            logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
-        }
-        match crate::commands::codex_instance::codex_start_instance("__default__".to_string()).await
-        {
-            Ok(_) => {}
-            Err(e) => {
-                logger::log_warn(&format!("Codex 启动失败: {}", e));
-                if e.starts_with("APP_PATH_NOT_FOUND:") {
-                    let _ = app.emit(
-                        "app:path_missing",
-                        serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
-                    );
+        if user_config.codex_launch_on_switch {
+            if process::is_codex_running() {
+                logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
+            }
+            match crate::commands::codex_instance::codex_start_instance("__default__".to_string())
+                .await
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    logger::log_warn(&format!("Codex 启动失败: {}", e));
+                    if e.starts_with("APP_PATH_NOT_FOUND:") {
+                        let _ = app.emit(
+                            "app:path_missing",
+                            serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
+                        );
+                    }
                 }
             }
+        } else {
+            logger::log_info("已关闭切换 Codex 时自动启动 Codex App");
         }
     }
 

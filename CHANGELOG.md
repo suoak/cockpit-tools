@@ -7,6 +7,20 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.8.1] - 2026-02-17
+
+### Changed
+- **Plan/Tier labels now use raw values**: Account-card and table badges across Antigravity/Codex/GitHub Copilot/Windsurf/Kiro now display original backend/local plan values directly, while keeping existing style mapping.
+- **Overview tabs use fixed default labels**: Platform overview tabs (`Account Overview` / `Multi-Instance`) now render default text directly to avoid cross-locale mismatch from platform-specific translation overrides.
+- **Platform names are fixed to source labels**: Shared platform label rendering now always shows original platform names (`Antigravity`, `Codex`, `GitHub Copilot`, `Windsurf`, `Kiro`).
+- **Codex switch behavior is configurable**: Added `codex_launch_on_switch` to backend/user config and wired it into Settings and Quick Settings so switching Codex can optionally skip auto launch/restart.
+
+### Fixed
+- **Dashboard privacy consistency**: Dashboard account emails are now masked by the same privacy toggle used in account/instance pages, with focus/visibility/storage sync to keep masking state consistent.
+- **OpenCode switch-token sync reliability**: Fixed a regression where GPT account switching did not effectively replace OpenCode login credentials in runtime scenarios, causing the app session to stay on the previous account. (#51)
+- **Dashboard card layout balance**: Fixed the Antigravity account card width behavior to avoid obvious right-side whitespace in dashboard layouts and improve visual balance. (#49)
+
+---
 ## [0.8.0] - 2026-02-17
 
 ### Added

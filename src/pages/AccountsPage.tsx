@@ -41,6 +41,7 @@ import {
   getQuotaClass,
   formatResetTimeDisplay,
   getSubscriptionTier,
+  getSubscriptionTierDisplay,
   getDisplayModels,
   getModelShortName,
   matchModelName
@@ -1356,7 +1357,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id
       const tier = getSubscriptionTier(account.quota)
-      const tierLabel = t(`accounts.tier.${tier.toLowerCase()}`, tier)
+      const tierLabel = getSubscriptionTierDisplay(account.quota)
       const displayModels = getDisplayModels(account.quota)
       const isDisabled = account.disabled
       const isForbidden = Boolean(account.quota?.is_forbidden)
@@ -1876,7 +1877,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id
       const tier = getSubscriptionTier(account.quota)
-      const tierLabel = t(`accounts.tier.${tier.toLowerCase()}`, tier)
+      const tierLabel = getSubscriptionTierDisplay(account.quota)
       const displayModels = getDisplayModels(account.quota)
       const isForbidden = Boolean(account.quota?.is_forbidden)
       const quotaError = account.quota_error
@@ -2803,7 +2804,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
           const account = accounts.find((a) => a.id === showQuotaModal)
           if (!account) return null
           const tier = getSubscriptionTier(account.quota)
-          const tierLabel = t(`accounts.tier.${tier.toLowerCase()}`, tier)
+          const tierLabel = getSubscriptionTierDisplay(account.quota)
           const tierClass =
             tier === 'PRO' || tier === 'ULTRA'
               ? 'pill-success'

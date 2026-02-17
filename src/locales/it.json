@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Lascia vuoto per utilizzare il percorso predefinito",
       "kiroAppPathPlaceholder": "Percorso predefinito",
       "kiroPathSelect": "Selezionare",
-      "kiroPathReset": "Ripristina le impostazioni predefinite"
+      "kiroPathReset": "Ripristina le impostazioni predefinite",
+      "codexLaunchOnSwitch": "Avvia Codex App quando cambi Codex",
+      "codexLaunchOnSwitchDesc": "Avvia o riavvia automaticamente Codex App dopo il cambio account"
     },
     "network": {
       "apiTitle": "API della cabina di pilotaggio antigravità",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Partita finita",
-    "gameOverRank": "Posizione attuale #{{rank}}",
+    "gameOverRank": "Posizione locale attuale #{{rank}}",
     "startGame": "Avvia gioco",
     "startHint": "Clicca Avvia o premi Spazio",
-    "rankTitle": "Classifica storica",
+    "rankTitle": "Classifica storica locale",
     "rankCurrent": "Attuale",
     "rankNoData": "--",
     "restart": "Ricomincia",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Partita finita",
     "historyReasonManualExit": "Uscita manuale",
     "serveHint": "Premi Spazio per lanciare la palla",
-    "ranking": "Cronologia",
-    "rankingShort": "Cronologia",
-    "rankingEmpty": "Nessun record",
-    "rankingClear": "Cancella",
+    "ranking": "Cronologia locale",
+    "rankingShort": "Locale",
+    "rankingEmpty": "Nessun record locale",
+    "rankingClear": "Cancella classifica locale",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

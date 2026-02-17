@@ -41,6 +41,7 @@ interface GeneralConfig {
   windsurf_app_path: string;
   kiro_app_path: string;
   opencode_sync_on_switch: boolean;
+  codex_launch_on_switch: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
   quota_alert_enabled: boolean;
@@ -117,6 +118,7 @@ export function SettingsPage() {
   const [kiroAppPath, setKiroAppPath] = useState('');
   const [appPathResetDetectingTargets, setAppPathResetDetectingTargets] = useState<Set<AppPathTarget>>(new Set());
   const [opencodeSyncOnSwitch, setOpencodeSyncOnSwitch] = useState(true);
+  const [codexLaunchOnSwitch, setCodexLaunchOnSwitch] = useState(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(false);
   const [autoSwitchThreshold, setAutoSwitchThreshold] = useState('20');
   const [quotaAlertEnabled, setQuotaAlertEnabled] = useState(false);
@@ -229,6 +231,7 @@ export function SettingsPage() {
           windsurfAppPath,
           kiroAppPath,
           opencodeSyncOnSwitch,
+          codexLaunchOnSwitch,
           autoSwitchEnabled,
           autoSwitchThreshold: Number.isNaN(parsedAutoSwitchThreshold) ? 20 : parsedAutoSwitchThreshold,
           quotaAlertEnabled,
@@ -279,6 +282,7 @@ export function SettingsPage() {
     windsurfAppPath,
     kiroAppPath,
     opencodeSyncOnSwitch,
+    codexLaunchOnSwitch,
     autoSwitchEnabled,
     autoSwitchThreshold,
     quotaAlertEnabled,
@@ -426,6 +430,7 @@ export function SettingsPage() {
       setWindsurfAppPath(config.windsurf_app_path || '');
       setKiroAppPath(config.kiro_app_path || '');
       setOpencodeSyncOnSwitch(config.opencode_sync_on_switch ?? true);
+      setCodexLaunchOnSwitch(config.codex_launch_on_switch ?? true);
       setAutoSwitchEnabled(config.auto_switch_enabled ?? false);
       setAutoSwitchThreshold(String(config.auto_switch_threshold ?? 20));
       setQuotaAlertEnabled(config.quota_alert_enabled ?? false);
@@ -1094,6 +1099,23 @@ export function SettingsPage() {
                         : getResetLabelByTarget('codex')}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="row-label">
+                  <div className="row-title">{t('settings.general.codexLaunchOnSwitch', '切换 Codex 时自动启动 Codex App')}</div>
+                  <div className="row-desc">{t('settings.general.codexLaunchOnSwitchDesc', '切换账号后自动启动或重启 Codex App')}</div>
+                </div>
+                <div className="row-control">
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={codexLaunchOnSwitch}
+                      onChange={(e) => setCodexLaunchOnSwitch(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
                 </div>
               </div>
 

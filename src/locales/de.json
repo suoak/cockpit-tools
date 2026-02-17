@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Lassen Sie das Feld leer, um den Standardpfad zu verwenden",
       "kiroAppPathPlaceholder": "Standardpfad",
       "kiroPathSelect": "Wählen",
-      "kiroPathReset": "Auf Standard zurücksetzen"
+      "kiroPathReset": "Auf Standard zurücksetzen",
+      "codexLaunchOnSwitch": "Codex App beim Wechseln von Codex automatisch starten",
+      "codexLaunchOnSwitchDesc": "Nach dem Kontowechsel Codex App automatisch starten oder neu starten"
     },
     "network": {
       "apiTitle": "Antigravity-Cockpit-API",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Spiel vorbei",
-    "gameOverRank": "Aktueller Rang #{{rank}}",
+    "gameOverRank": "Lokaler Rang #{{rank}}",
     "startGame": "Spiel starten",
     "startHint": "Auf Start klicken oder Leertaste drücken",
-    "rankTitle": "Historisches Ranking",
+    "rankTitle": "Lokales historisches Ranking",
     "rankCurrent": "Aktuell",
     "rankNoData": "--",
     "restart": "Neu starten",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Spiel vorbei",
     "historyReasonManualExit": "Manuell beendet",
     "serveHint": "Drücke die Leertaste, um den Ball zu starten",
-    "ranking": "Verlauf",
-    "rankingShort": "Verlauf",
-    "rankingEmpty": "Noch keine Einträge",
-    "rankingClear": "Leeren",
+    "ranking": "Lokaler Verlauf",
+    "rankingShort": "Lokal",
+    "rankingEmpty": "Noch keine lokalen Einträge",
+    "rankingClear": "Lokales Ranking leeren",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

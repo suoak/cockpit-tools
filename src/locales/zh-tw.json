@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "留空以使用預設路徑",
       "kiroAppPathPlaceholder": "預設路徑",
       "kiroPathSelect": "選擇",
-      "kiroPathReset": "重設為預設值"
+      "kiroPathReset": "重設為預設值",
+      "codexLaunchOnSwitch": "切換 Codex 時自動啟動 Codex App",
+      "codexLaunchOnSwitchDesc": "切換帳號後自動啟動或重新啟動 Codex App"
     },
     "network": {
       "apiTitle": "反重力駕駛艙 API",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "本局結束",
-    "gameOverRank": "當前歷史排名 #{{rank}}",
+    "gameOverRank": "當前本地排名 #{{rank}}",
     "startGame": "開始遊戲",
     "startHint": "點擊開始按鈕或按空白鍵",
-    "rankTitle": "歷史排名",
+    "rankTitle": "本地歷史排名",
     "rankCurrent": "當前",
     "rankNoData": "--",
     "restart": "重新開始",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "本局結束",
     "historyReasonManualExit": "手動退出",
     "serveHint": "按空白鍵開始發球",
-    "ranking": "歷史記錄",
-    "rankingShort": "歷史",
-    "rankingEmpty": "暫無歷史記錄",
-    "rankingClear": "清空",
+    "ranking": "本地歷史記錄",
+    "rankingShort": "本地",
+    "rankingEmpty": "暫無本地歷史記錄",
+    "rankingClear": "清空本地排名",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

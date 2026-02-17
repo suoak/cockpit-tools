@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Chcete-li použít výchozí cestu, ponechte prázdné",
       "kiroAppPathPlaceholder": "Výchozí cesta",
       "kiroPathSelect": "Vybrat",
-      "kiroPathReset": "Obnovit výchozí"
+      "kiroPathReset": "Obnovit výchozí",
+      "codexLaunchOnSwitch": "Při přepnutí Codex automaticky spustit Codex App",
+      "codexLaunchOnSwitchDesc": "Po přepnutí účtu automaticky spustit nebo restartovat Codex App"
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Konec hry",
-    "gameOverRank": "Aktuální pořadí #{{rank}}",
+    "gameOverRank": "Místní pořadí #{{rank}}",
     "startGame": "Spustit hru",
     "startHint": "Klikni na start nebo stiskni mezerník",
-    "rankTitle": "Historické pořadí",
+    "rankTitle": "Místní historické pořadí",
     "rankCurrent": "Aktuální",
     "rankNoData": "--",
     "restart": "Restartovat",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Konec hry",
     "historyReasonManualExit": "Ruční ukončení",
     "serveHint": "Stiskněte mezerník pro vystřelení míčku",
-    "ranking": "Historie",
-    "rankingShort": "Historie",
-    "rankingEmpty": "Zatím bez záznamů",
-    "rankingClear": "Vymazat",
+    "ranking": "Místní historie",
+    "rankingShort": "Místní",
+    "rankingEmpty": "Zatím bez místních záznamů",
+    "rankingClear": "Vymazat místní pořadí",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

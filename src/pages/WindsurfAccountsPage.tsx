@@ -742,6 +742,19 @@ export function WindsurfAccountsPage() {
     [resolveCreditsSummary],
   );
 
+  const resolvePlanLabel = useCallback(
+    (account: (typeof accounts)[number], planKey: string) => {
+      const credits = resolveCreditsSummary(account);
+      const candidates = [credits.planName, account.copilot_plan, account.plan_type];
+      for (const candidate of candidates) {
+        const raw = candidate?.trim();
+        if (raw && raw.toUpperCase() !== 'UNKNOWN') return raw;
+      }
+      return planKey;
+    },
+    [resolveCreditsSummary],
+  );
+
   const formatCreditsNumber = useCallback((value: number | null | undefined) => {
     const n = typeof value === 'number' && Number.isFinite(value) ? value : 0;
     return n.toFixed(2);
@@ -971,7 +984,7 @@ export function WindsurfAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = t(`windsurf.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const isSelected = selected.has(account.id);
       const isCurrent = currentAccountId === account.id;
 
@@ -1101,7 +1114,7 @@ export function WindsurfAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = t(`windsurf.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const isCurrent = currentAccountId === account.id;
       return (
         <tr key={groupKey ? `${groupKey}-${account.id}` : account.id} className={isCurrent ? 'current' : ''}>
