@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
@@ -6,21 +6,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, X } from 'lucide-react';
-import { AccountsPage } from './pages/AccountsPage';
-import { CodexAccountsPage } from './pages/CodexAccountsPage';
-import { GitHubCopilotAccountsPage } from './pages/GitHubCopilotAccountsPage';
-import { WindsurfAccountsPage } from './pages/WindsurfAccountsPage';
-
-import { FingerprintsPage } from './pages/FingerprintsPage';
-import { WakeupTasksPage } from './pages/WakeupTasksPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { InstancesPage } from './pages/InstancesPage';
 import { SideNav } from './components/layout/SideNav';
-import { PlatformLayoutModal } from './components/PlatformLayoutModal';
-import { UpdateNotification } from './components/UpdateNotification';
-import { CloseConfirmDialog } from './components/CloseConfirmDialog';
-import { BreakoutModal } from './components/easter-egg/BreakoutModal';
 import { GlobalModal } from './components/GlobalModal';
+import type { QuickSettingsType } from './components/QuickSettingsPopover';
 import { Page } from './types/navigation';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useEasterEggTrigger } from './hooks/useEasterEggTrigger';
@@ -30,8 +18,54 @@ import { useAccountStore } from './stores/useAccountStore';
 import { useCodexAccountStore } from './stores/useCodexAccountStore';
 import { useGitHubCopilotAccountStore } from './stores/useGitHubCopilotAccountStore';
 import { useWindsurfAccountStore } from './stores/useWindsurfAccountStore';
+import { useKiroAccountStore } from './stores/useKiroAccountStore';
 
-import { DashboardPage } from './pages/DashboardPage';
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+);
+const AccountsPage = lazy(() =>
+  import('./pages/AccountsPage').then((module) => ({ default: module.AccountsPage })),
+);
+const CodexAccountsPage = lazy(() =>
+  import('./pages/CodexAccountsPage').then((module) => ({ default: module.CodexAccountsPage })),
+);
+const GitHubCopilotAccountsPage = lazy(() =>
+  import('./pages/GitHubCopilotAccountsPage').then((module) => ({
+    default: module.GitHubCopilotAccountsPage,
+  })),
+);
+const WindsurfAccountsPage = lazy(() =>
+  import('./pages/WindsurfAccountsPage').then((module) => ({ default: module.WindsurfAccountsPage })),
+);
+const KiroAccountsPage = lazy(() =>
+  import('./pages/KiroAccountsPage').then((module) => ({ default: module.KiroAccountsPage })),
+);
+const FingerprintsPage = lazy(() =>
+  import('./pages/FingerprintsPage').then((module) => ({ default: module.FingerprintsPage })),
+);
+const WakeupTasksPage = lazy(() =>
+  import('./pages/WakeupTasksPage').then((module) => ({ default: module.WakeupTasksPage })),
+);
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })),
+);
+const InstancesPage = lazy(() =>
+  import('./pages/InstancesPage').then((module) => ({ default: module.InstancesPage })),
+);
+const PlatformLayoutModal = lazy(() =>
+  import('./components/PlatformLayoutModal').then((module) => ({
+    default: module.PlatformLayoutModal,
+  })),
+);
+const UpdateNotification = lazy(() =>
+  import('./components/UpdateNotification').then((module) => ({ default: module.UpdateNotification })),
+);
+const CloseConfirmDialog = lazy(() =>
+  import('./components/CloseConfirmDialog').then((module) => ({ default: module.CloseConfirmDialog })),
+);
+const BreakoutModal = lazy(() =>
+  import('./components/easter-egg/BreakoutModal').then((module) => ({ default: module.BreakoutModal })),
+);
 
 interface GeneralConfigTheme {
   theme: string;
@@ -43,10 +77,11 @@ interface GeneralConfig extends GeneralConfigTheme {
   codex_app_path: string;
   vscode_app_path: string;
   windsurf_app_path: string;
+  kiro_app_path: string;
 }
 
 type AppPathMissingDetail = {
-  app: 'antigravity' | 'codex' | 'vscode' | 'windsurf';
+  app: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro';
   retry?: { kind: 'default' | 'instance'; instanceId?: string };
 };
 
@@ -85,7 +120,7 @@ type QuotaAlertPayload = {
   triggered_at: number;
 };
 
-type QuotaAlertPlatform = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf';
+type QuotaAlertPlatform = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro';
 
 function normalizeQuotaAlertPlatform(platform: string | undefined): QuotaAlertPlatform {
   switch (platform) {
@@ -95,6 +130,8 @@ function normalizeQuotaAlertPlatform(platform: string | undefined): QuotaAlertPl
       return 'github_copilot';
     case 'windsurf':
       return 'windsurf';
+    case 'kiro':
+      return 'kiro';
     default:
       return 'antigravity';
   }
@@ -111,8 +148,40 @@ function getQuotaAlertPlatformLabel(
       return t('nav.githubCopilot', 'GitHub Copilot');
     case 'windsurf':
       return 'Windsurf';
+    case 'kiro':
+      return 'Kiro';
     default:
       return t('nav.overview', 'Antigravity');
+  }
+}
+
+function getQuotaAlertTargetPage(platform: QuotaAlertPlatform): Page {
+  switch (platform) {
+    case 'codex':
+      return 'codex';
+    case 'github_copilot':
+      return 'github-copilot';
+    case 'windsurf':
+      return 'windsurf';
+    case 'kiro':
+      return 'kiro';
+    default:
+      return 'overview';
+  }
+}
+
+function getQuotaAlertQuickSettingsType(platform: QuotaAlertPlatform): QuickSettingsType {
+  switch (platform) {
+    case 'codex':
+      return 'codex';
+    case 'github_copilot':
+      return 'github_copilot';
+    case 'windsurf':
+      return 'windsurf';
+    case 'kiro':
+      return 'kiro';
+    default:
+      return 'antigravity';
   }
 }
 
@@ -129,6 +198,7 @@ function App() {
   const [appPathDetecting, setAppPathDetecting] = useState(false);
   const [appPathDraft, setAppPathDraft] = useState('');
   const { showModal, closeModal } = useGlobalModal();
+  const trayRefreshInFlightRef = useRef(false);
   const openBreakout = useCallback(() => setShowBreakout(true), []);
   const {
     count: easterEggClickCount,
@@ -141,6 +211,18 @@ function App() {
   
   // 启用自动刷新 hook
   useAutoRefresh();
+
+  const openQuickSettingsForPlatform = useCallback((platform: QuotaAlertPlatform) => {
+    const targetPage = getQuotaAlertTargetPage(platform);
+    const targetType = getQuotaAlertQuickSettingsType(platform);
+    closeModal();
+    setPage(targetPage);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent('quick-settings:open', { detail: { type: targetType } }));
+      });
+    });
+  }, [closeModal]);
 
   useEffect(() => {
     let cleanup: (() => void) | null = null;
@@ -200,6 +282,7 @@ function App() {
         await invoke('detect_app_path', { app: 'antigravity' });
         await invoke('detect_app_path', { app: 'vscode' });
         await invoke('detect_app_path', { app: 'windsurf' });
+        await invoke('detect_app_path', { app: 'kiro' });
         const userAgent = navigator.userAgent.toLowerCase();
         if (userAgent.includes('mac')) {
           await invoke('detect_app_path', { app: 'codex' });
@@ -257,7 +340,7 @@ function App() {
       if (!nextLanguage || nextLanguage === getCurrentLanguage()) {
         return;
       }
-      changeLanguage(nextLanguage);
+      void changeLanguage(nextLanguage);
       window.dispatchEvent(new CustomEvent('general-language-updated', { detail: { language: nextLanguage } }));
     }).then((fn) => { unlisten = fn; });
 
@@ -329,6 +412,15 @@ function App() {
             label: t('quotaAlert.modal.later', '稍后处理'),
             variant: 'secondary',
           },
+          {
+            id: 'quota-alert-open-settings',
+            label: t('quotaAlert.modal.openSettings', '调整预警设置'),
+            variant: 'secondary',
+            autoClose: false,
+            onClick: () => {
+              openQuickSettingsForPlatform(platform);
+            },
+          },
           ...(hasRecommendation
             ? [{
                 id: 'quota-alert-switch',
@@ -349,6 +441,9 @@ function App() {
                     } else if (platform === 'windsurf') {
                       await useWindsurfAccountStore.getState().switchAccount(targetAccountId);
                       setPage('windsurf');
+                    } else if (platform === 'kiro') {
+                      await useKiroAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('kiro');
                     } else {
                       await useAccountStore.getState().switchAccount(targetAccountId);
                       setPage('overview');
@@ -389,7 +484,7 @@ function App() {
         unlisten();
       }
     };
-  }, [closeModal, showModal, t]);
+  }, [closeModal, openQuickSettingsForPlatform, showModal, t]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -443,26 +538,45 @@ function App() {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
 
+    const refreshTasks = [
+      {
+        command: 'refresh_current_quota',
+        errorMessage: 'Failed to refresh Antigravity quotas:',
+      },
+      {
+        command: 'refresh_current_codex_quota',
+        errorMessage: 'Failed to refresh Codex quotas:',
+      },
+      {
+        command: 'refresh_all_github_copilot_tokens',
+        errorMessage: 'Failed to refresh GitHub Copilot quotas:',
+      },
+      {
+        command: 'refresh_all_windsurf_tokens',
+        errorMessage: 'Failed to refresh Windsurf quotas:',
+      },
+      {
+        command: 'refresh_all_kiro_tokens',
+        errorMessage: 'Failed to refresh Kiro quotas:',
+      },
+    ] as const;
+
     listen('tray:refresh_quota', async () => {
-      try {
-        await invoke('refresh_current_quota');
-      } catch (error) {
-        console.error('Failed to refresh Antigravity quotas:', error);
+      if (trayRefreshInFlightRef.current) {
+        return;
       }
+      trayRefreshInFlightRef.current = true;
+
       try {
-        await invoke('refresh_current_codex_quota');
-      } catch (error) {
-        console.error('Failed to refresh Codex quotas:', error);
-      }
-      try {
-        await invoke('refresh_all_github_copilot_tokens');
-      } catch (error) {
-        console.error('Failed to refresh GitHub Copilot quotas:', error);
-      }
-      try {
-        await invoke('refresh_all_windsurf_tokens');
-      } catch (error) {
-        console.error('Failed to refresh Windsurf quotas:', error);
+        await Promise.all(
+          refreshTasks.map(({ command, errorMessage }) =>
+            invoke(command).catch((error) => {
+              console.error(errorMessage, error);
+            }),
+          ),
+        );
+      } finally {
+        trayRefreshInFlightRef.current = false;
       }
     }).then((fn) => { unlisten = fn; });
 
@@ -478,7 +592,15 @@ function App() {
     const handlePayload = (payload: unknown) => {
       if (!payload || typeof payload !== 'object') return;
       const detail = payload as AppPathMissingDetail;
-      if (detail.app !== 'antigravity' && detail.app !== 'codex' && detail.app !== 'vscode' && detail.app !== 'windsurf') return;
+      if (
+        detail.app !== 'antigravity' &&
+        detail.app !== 'codex' &&
+        detail.app !== 'vscode' &&
+        detail.app !== 'windsurf' &&
+        detail.app !== 'kiro'
+      ) {
+        return;
+      }
       setAppPathMissing(detail);
     };
 
@@ -519,6 +641,8 @@ function App() {
               ? config.vscode_app_path
               : appPathMissing.app === 'windsurf'
                 ? config.windsurf_app_path
+              : appPathMissing.app === 'kiro'
+                ? config.kiro_app_path
               : config.antigravity_app_path;
         if (active) {
           setAppPathDraft(currentPath || '');
@@ -566,6 +690,8 @@ function App() {
           await invoke('github_copilot_start_instance', { instanceId: retry.instanceId });
         } else if (app === 'windsurf') {
           await invoke('windsurf_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'kiro') {
+          await invoke('kiro_start_instance', { instanceId: retry.instanceId });
         } else {
           await invoke('start_instance', { instanceId: retry.instanceId });
         }
@@ -576,6 +702,8 @@ function App() {
           await invoke('github_copilot_start_instance', { instanceId: '__default__' });
         } else if (app === 'windsurf') {
           await invoke('windsurf_start_instance', { instanceId: '__default__' });
+        } else if (app === 'kiro') {
+          await invoke('kiro_start_instance', { instanceId: '__default__' });
         } else {
           await invoke('start_instance', { instanceId: '__default__' });
         }
@@ -627,6 +755,7 @@ function App() {
             case 'codex':
             case 'github-copilot':
             case 'windsurf':
+            case 'kiro':
             case 'settings':
               setPage(target as Page);
               break;
@@ -646,22 +775,33 @@ function App() {
   const handleDragStart = () => {
     getCurrentWindow().startDragging();
   };
+  const suspenseFallback = (
+    <div className="loading-state">
+      {t('common.loading', '加载中...')}
+    </div>
+  );
 
   return (
     <div className="app-container">
       {/* 更新通知 */}
       {showUpdateNotification && (
-        <UpdateNotification key={updateNotificationKey} onClose={() => setShowUpdateNotification(false)} />
+        <Suspense fallback={null}>
+          <UpdateNotification key={updateNotificationKey} onClose={() => setShowUpdateNotification(false)} />
+        </Suspense>
       )}
       <GlobalModal />
 
       {/* 关闭确认对话框 */}
       {showCloseDialog && (
-        <CloseConfirmDialog onClose={() => setShowCloseDialog(false)} />
+        <Suspense fallback={null}>
+          <CloseConfirmDialog onClose={() => setShowCloseDialog(false)} />
+        </Suspense>
       )}
 
       {showBreakout && (
-        <BreakoutModal onClose={() => setShowBreakout(false)} />
+        <Suspense fallback={null}>
+          <BreakoutModal onClose={() => setShowBreakout(false)} />
+        </Suspense>
       )}
 
       {appPathMissing && (
@@ -687,6 +827,8 @@ function App() {
                         ? 'VS Code'
                         : appPathMissing.app === 'windsurf'
                           ? 'Windsurf'
+                        : appPathMissing.app === 'kiro'
+                          ? 'Kiro'
                         : 'Antigravity',
                 })}
               </p>
@@ -719,6 +861,8 @@ function App() {
                             ? t('settings.general.vscodePathReset', '重置默认')
                             : appPathMissing.app === 'windsurf'
                               ? t('settings.general.windsurfPathReset', '重置默认')
+                              : appPathMissing.app === 'kiro'
+                                ? t('settings.general.kiroPathReset', '重置默认')
                               : t('settings.general.codexPathReset', '重置默认')
                         )
                     }
@@ -731,6 +875,8 @@ function App() {
                           ? t('settings.general.vscodePathReset', '重置默认')
                           : appPathMissing.app === 'windsurf'
                             ? t('settings.general.windsurfPathReset', '重置默认')
+                            : appPathMissing.app === 'kiro'
+                              ? t('settings.general.kiroPathReset', '重置默认')
                             : t('settings.general.codexPathReset', '重置默认')
                       )}
                   </button>
@@ -773,26 +919,30 @@ function App() {
         onEasterEggTriggerClick={handleEasterEggTriggerClick}
       />
 
-      <PlatformLayoutModal open={showPlatformLayoutModal} onClose={() => setShowPlatformLayoutModal(false)} />
+      <Suspense fallback={null}>
+        <PlatformLayoutModal open={showPlatformLayoutModal} onClose={() => setShowPlatformLayoutModal(false)} />
+      </Suspense>
 
       <div className="main-wrapper">
         {/* overview 现在是合并后的账号总览页面 */}
-
-        {page === 'dashboard' && (
-          <DashboardPage
-            onNavigate={setPage}
-            onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
-            onEasterEggTriggerClick={handleEasterEggTriggerClick}
-          />
-        )}
-        {page === 'overview' && <AccountsPage onNavigate={setPage} />}
-        {page === 'codex' && <CodexAccountsPage />}
-        {page === 'github-copilot' && <GitHubCopilotAccountsPage />}
-        {page === 'windsurf' && <WindsurfAccountsPage />}
-        {page === 'instances' && <InstancesPage onNavigate={setPage} />}
-        {page === 'fingerprints' && <FingerprintsPage onNavigate={setPage} />}
-        {page === 'wakeup' && <WakeupTasksPage onNavigate={setPage} />}
-        {page === 'settings' && <SettingsPage />}
+        <Suspense fallback={suspenseFallback}>
+          {page === 'dashboard' && (
+            <DashboardPage
+              onNavigate={setPage}
+              onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+              onEasterEggTriggerClick={handleEasterEggTriggerClick}
+            />
+          )}
+          {page === 'overview' && <AccountsPage onNavigate={setPage} />}
+          {page === 'codex' && <CodexAccountsPage />}
+          {page === 'github-copilot' && <GitHubCopilotAccountsPage />}
+          {page === 'windsurf' && <WindsurfAccountsPage />}
+          {page === 'kiro' && <KiroAccountsPage />}
+          {page === 'instances' && <InstancesPage onNavigate={setPage} />}
+          {page === 'fingerprints' && <FingerprintsPage onNavigate={setPage} />}
+          {page === 'wakeup' && <WakeupTasksPage onNavigate={setPage} />}
+          {page === 'settings' && <SettingsPage />}
+        </Suspense>
       </div>
     </div>
   );

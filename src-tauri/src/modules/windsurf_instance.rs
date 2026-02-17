@@ -1105,20 +1105,23 @@ pub fn resolve_windsurf_pid_from_entries(
     user_data_dir: Option<&str>,
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
+    let default_dir = get_default_windsurf_user_data_dir()
+        .ok()
+        .map(|dir| normalize_path_for_compare(&dir.to_string_lossy()));
+    let target = normalize_non_empty_path(user_data_dir).or(default_dir.clone());
+    let allow_none_for_target = default_dir
+        .as_ref()
+        .zip(target.as_ref())
+        .map(|(value, current)| value == current)
+        .unwrap_or(false);
+
     if let Some(pid) = last_pid {
         if modules::process::is_pid_running(pid) {
             return Some(pid);
         }
     }
 
-    let default_dir = get_default_windsurf_user_data_dir()
-        .ok()
-        .map(|dir| normalize_path_for_compare(&dir.to_string_lossy()));
-    let target = normalize_non_empty_path(user_data_dir).or(default_dir.clone())?;
-    let allow_none_for_target = default_dir
-        .as_ref()
-        .map(|value| value == &target)
-        .unwrap_or(false);
+    let target = target?;
 
     let mut matches = Vec::new();
     for (pid, dir) in entries {

@@ -2053,15 +2053,15 @@ pub fn resolve_codex_pid_from_entries(
     codex_home: Option<&str>,
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
+    let target = codex_home
+        .map(|value| normalize_path_for_compare(value))
+        .filter(|value| !value.is_empty());
+
     if let Some(pid) = last_pid {
         if is_pid_running(pid) {
             return Some(pid);
         }
     }
-
-    let target = codex_home
-        .map(|value| normalize_path_for_compare(value))
-        .filter(|value| !value.is_empty());
 
     let mut matches = Vec::new();
     for (pid, home) in entries {
