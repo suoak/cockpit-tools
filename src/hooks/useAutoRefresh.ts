@@ -22,6 +22,7 @@ interface GeneralConfig {
   vscode_app_path?: string;
   windsurf_app_path?: string;
   opencode_sync_on_switch?: boolean;
+  codex_launch_on_switch?: boolean;
 }
 
 export function useAutoRefresh() {
@@ -140,6 +141,7 @@ export function useAutoRefresh() {
                     vscodeAppPath: config.vscode_app_path ?? '',
                     windsurfAppPath: config.windsurf_app_path ?? '',
                     opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? true,
+                    codexLaunchOnSwitch: config.codex_launch_on_switch ?? true,
                   });
                   config.auto_refresh_minutes = 2;
                 }

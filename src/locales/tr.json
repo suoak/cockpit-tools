@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Varsayılan yolu kullanmak için boş bırakın",
       "kiroAppPathPlaceholder": "Varsayılan yol",
       "kiroPathSelect": "Seçme",
-      "kiroPathReset": "Varsayılana sıfırla"
+      "kiroPathReset": "Varsayılana sıfırla",
+      "codexLaunchOnSwitch": "Codex değiştirirken Codex App'i otomatik başlat",
+      "codexLaunchOnSwitchDesc": "Hesap değişiminden sonra Codex App'i otomatik başlat veya yeniden başlat"
     },
     "network": {
       "apiTitle": "Yerçekimine Karşı Kokpit API'si",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Oyun bitti",
-    "gameOverRank": "Mevcut sıralama #{{rank}}",
+    "gameOverRank": "Mevcut yerel sıralama #{{rank}}",
     "startGame": "Oyunu başlat",
     "startHint": "Başlat'a tıkla veya Boşluk tuşuna bas",
-    "rankTitle": "Geçmiş sıralama",
+    "rankTitle": "Geçmiş yerel sıralama",
     "rankCurrent": "Mevcut",
     "rankNoData": "--",
     "restart": "Yeniden başlat",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Oyun bitti",
     "historyReasonManualExit": "Manuel çıkış",
     "serveHint": "Topu fırlatmak için Boşluk tuşuna basın",
-    "ranking": "Geçmiş",
-    "rankingShort": "Geçmiş",
-    "rankingEmpty": "Henüz kayıt yok",
-    "rankingClear": "Temizle",
+    "ranking": "Yerel geçmiş",
+    "rankingShort": "Yerel",
+    "rankingEmpty": "Henüz yerel kayıt yok",
+    "rankingClear": "Yerel sıralamayı temizle",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

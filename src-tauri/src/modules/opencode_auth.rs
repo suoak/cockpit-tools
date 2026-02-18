@@ -4,12 +4,58 @@ use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 
+fn push_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
+    if !paths.iter().any(|item| item == &path) {
+        paths.push(path);
+    }
+}
+
+fn get_opencode_auth_json_path_candidates() -> Result<Vec<PathBuf>, String> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    // OpenCode CLI 以 XDG_DATA_HOME 为优先路径（未设置时默认 ~/.local/share）。
+    if let Ok(xdg_data_home) = std::env::var("XDG_DATA_HOME") {
+        let trimmed = xdg_data_home.trim();
+        if !trimmed.is_empty() {
+            push_unique_path(
+                &mut candidates,
+                PathBuf::from(trimmed).join("opencode").join("auth.json"),
+            );
+        }
+    }
+
+    if let Some(home) = dirs::home_dir() {
+        push_unique_path(
+            &mut candidates,
+            home.join(".local")
+                .join("share")
+                .join("opencode")
+                .join("auth.json"),
+        );
+    }
+
+    // 兼容历史实现写入的位置，作为回退和迁移来源。
+    if let Some(data_dir) = dirs::data_dir() {
+        push_unique_path(&mut candidates, data_dir.join("opencode").join("auth.json"));
+    }
+
+    if candidates.is_empty() {
+        return Err("无法推断 OpenCode auth.json 路径".to_string());
+    }
+
+    Ok(candidates)
+}
+
 /// 获取 OpenCode 的 auth.json 路径
 ///
-/// - 根据系统数据目录自动定位（与 OpenCode 保持一致）
+/// - 优先使用 OpenCode CLI 同源路径：$XDG_DATA_HOME/opencode/auth.json 或 ~/.local/share/opencode/auth.json
+/// - 兼容回退历史路径：系统数据目录/opencode/auth.json
 pub fn get_opencode_auth_json_path() -> Result<PathBuf, String> {
-    let data_dir = dirs::data_dir().ok_or("无法获取系统数据目录")?;
-    Ok(data_dir.join("opencode").join("auth.json"))
+    let candidates = get_opencode_auth_json_path_candidates()?;
+    Ok(candidates
+        .first()
+        .cloned()
+        .ok_or_else(|| "无法推断 OpenCode auth.json 路径".to_string())?)
 }
 
 fn atomic_write(path: &PathBuf, content: &str) -> Result<(), String> {
@@ -74,12 +120,25 @@ pub fn replace_openai_entry_from_codex(account: &CodexAccount) -> Result<(), Str
         return Err("Codex access_token 已过期，无法同步到 OpenCode".to_string());
     }
 
-    let auth_path = get_opencode_auth_json_path()?;
-    let mut auth_json = if auth_path.exists() {
-        let content = fs::read_to_string(&auth_path)
-            .map_err(|e| format!("读取 OpenCode auth.json 失败: {}", e))?;
-        serde_json::from_str::<serde_json::Value>(&content)
-            .map_err(|e| format!("解析 OpenCode auth.json 失败: {}", e))?
+    let auth_paths = get_opencode_auth_json_path_candidates()?;
+    let target_auth_path = get_opencode_auth_json_path()?;
+    let source_auth_path = auth_paths.iter().find(|path| path.exists()).cloned();
+
+    let mut auth_json = if let Some(source_path) = source_auth_path.as_ref() {
+        let content = fs::read_to_string(source_path).map_err(|e| {
+            format!(
+                "读取 OpenCode auth.json 失败 ({}): {}",
+                source_path.display(),
+                e
+            )
+        })?;
+        serde_json::from_str::<serde_json::Value>(&content).map_err(|e| {
+            format!(
+                "解析 OpenCode auth.json 失败 ({}): {}",
+                source_path.display(),
+                e
+            )
+        })?
     } else {
         json!({})
     };
@@ -95,8 +154,35 @@ pub fn replace_openai_entry_from_codex(account: &CodexAccount) -> Result<(), Str
 
     let content = serde_json::to_string_pretty(&auth_json)
         .map_err(|e| format!("序列化 OpenCode auth.json 失败: {}", e))?;
-    atomic_write(&auth_path, &content)?;
+    atomic_write(&target_auth_path, &content)?;
 
-    logger::log_info("已更新 OpenCode auth.json 中的 openai 记录");
+    // 若历史路径文件存在，保持同步，避免旧版本读取不到最新登录态。
+    for extra_path in &auth_paths {
+        if extra_path == &target_auth_path || !extra_path.exists() {
+            continue;
+        }
+        if let Err(err) = atomic_write(extra_path, &content) {
+            logger::log_warn(&format!(
+                "同步 OpenCode 备用 auth.json 失败 ({}): {}",
+                extra_path.display(),
+                err
+            ));
+        }
+    }
+
+    if let Some(source_path) = source_auth_path {
+        if source_path != target_auth_path {
+            logger::log_info(&format!(
+                "OpenCode auth.json 已迁移: {} -> {}",
+                source_path.display(),
+                target_auth_path.display()
+            ));
+        }
+    }
+
+    logger::log_info(&format!(
+        "已更新 OpenCode auth.json 中的 openai 记录: {}",
+        target_auth_path.display()
+    ));
     Ok(())
 }

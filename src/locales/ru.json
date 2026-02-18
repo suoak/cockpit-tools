@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Оставьте пустым, чтобы использовать путь по умолчанию",
       "kiroAppPathPlaceholder": "Путь по умолчанию",
       "kiroPathSelect": "Выбирать",
-      "kiroPathReset": "Сбросить настройки по умолчанию"
+      "kiroPathReset": "Сбросить настройки по умолчанию",
+      "codexLaunchOnSwitch": "Автоматически запускать Codex App при переключении Codex",
+      "codexLaunchOnSwitchDesc": "После переключения аккаунта автоматически запускать или перезапускать Codex App"
     },
     "network": {
       "apiTitle": "API антигравитационной кабины",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Игра окончена",
-    "gameOverRank": "Текущий ранг #{{rank}}",
+    "gameOverRank": "Текущий локальный ранг #{{rank}}",
     "startGame": "Начать игру",
     "startHint": "Нажмите старт или пробел",
-    "rankTitle": "Исторический рейтинг",
+    "rankTitle": "Исторический локальный рейтинг",
     "rankCurrent": "Текущий",
     "rankNoData": "--",
     "restart": "Перезапуск",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Игра окончена",
     "historyReasonManualExit": "Ручной выход",
     "serveHint": "Нажмите пробел, чтобы запустить мяч",
-    "ranking": "История",
-    "rankingShort": "История",
-    "rankingEmpty": "Записей пока нет",
-    "rankingClear": "Очистить",
+    "ranking": "Локальная история",
+    "rankingShort": "Локально",
+    "rankingEmpty": "Локальных записей пока нет",
+    "rankingClear": "Очистить локальный рейтинг",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

@@ -99,12 +99,12 @@ export function PlatformOverviewTabsHeader({
   const tabs: TabSpec[] = [
     {
       key: 'overview',
-      label: t(config.overviewTabKey, config.overviewTabDefault),
+      label: config.overviewTabDefault,
       icon: config.overviewIcon,
     },
     {
       key: 'instances',
-      label: t(config.instancesTabKey, config.instancesTabDefault),
+      label: config.instancesTabDefault,
       icon: <Layers className="tab-icon" />,
     },
   ];

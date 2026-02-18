@@ -23,6 +23,7 @@ interface GeneralConfig {
   windsurf_app_path: string;
   kiro_app_path: string;
   opencode_sync_on_switch: boolean;
+  codex_launch_on_switch: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
   quota_alert_enabled: boolean;
@@ -158,6 +159,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           windsurfAppPath: merged.windsurf_app_path,
           kiroAppPath: merged.kiro_app_path,
           opencodeSyncOnSwitch: merged.opencode_sync_on_switch,
+          codexLaunchOnSwitch: merged.codex_launch_on_switch,
           autoSwitchEnabled: merged.auto_switch_enabled,
           autoSwitchThreshold: merged.auto_switch_threshold,
           quotaAlertEnabled: merged.quota_alert_enabled,
@@ -535,6 +537,28 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
             {/* ─── Codex: opencode sync ─── */}
             {type === 'codex' && (
               <div className="qs-section">
+                <div className="qs-row">
+                  <div className="qs-row-label">
+                    <Zap size={15} />
+                    <span>
+                      {t(
+                        'settings.general.codexLaunchOnSwitch',
+                        '切换 Codex 时自动启动 Codex App'
+                      )}
+                    </span>
+                  </div>
+                  <div className="qs-row-control">
+                    <label className="qs-switch">
+                      <input
+                        type="checkbox"
+                        checked={config.codex_launch_on_switch}
+                        onChange={(e) => saveConfig({ codex_launch_on_switch: e.target.checked })}
+                      />
+                      <span className="qs-switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="qs-row">
                   <div className="qs-row-label">
                     <Zap size={15} />

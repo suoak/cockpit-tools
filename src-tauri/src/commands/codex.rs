@@ -76,21 +76,26 @@ pub async fn switch_codex_account(
 
     #[cfg(target_os = "macos")]
     {
-        if process::is_codex_running() {
-            logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
-        }
-        match crate::commands::codex_instance::codex_start_instance("__default__".to_string()).await
-        {
-            Ok(_) => {}
-            Err(e) => {
-                logger::log_warn(&format!("Codex 启动失败: {}", e));
-                if e.starts_with("APP_PATH_NOT_FOUND:") {
-                    let _ = app.emit(
-                        "app:path_missing",
-                        serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
-                    );
+        if user_config.codex_launch_on_switch {
+            if process::is_codex_running() {
+                logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
+            }
+            match crate::commands::codex_instance::codex_start_instance("__default__".to_string())
+                .await
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    logger::log_warn(&format!("Codex 启动失败: {}", e));
+                    if e.starts_with("APP_PATH_NOT_FOUND:") {
+                        let _ = app.emit(
+                            "app:path_missing",
+                            serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
+                        );
+                    }
                 }
             }
+        } else {
+            logger::log_info("已关闭切换 Codex 时自动启动 Codex App");
         }
     }
 
@@ -149,7 +154,10 @@ pub async fn refresh_current_codex_quota(app: AppHandle) -> Result<(), String> {
     let result = codex_quota::refresh_account_quota(&account.id).await;
     if result.is_ok() {
         if let Err(e) = codex_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!("[QuotaAlert][Codex] 当前账号刷新后预警检查失败: {}", e));
+            logger::log_warn(&format!(
+                "[QuotaAlert][Codex] 当前账号刷新后预警检查失败: {}",
+                e
+            ));
         }
         let _ = crate::modules::tray::update_tray_menu(&app);
         Ok(())
@@ -167,7 +175,10 @@ pub async fn refresh_all_codex_quotas(app: AppHandle) -> Result<i32, String> {
     let success_count = results.iter().filter(|(_, r)| r.is_ok()).count();
     if success_count > 0 {
         if let Err(e) = codex_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!("[QuotaAlert][Codex] 全量刷新后预警检查失败: {}", e));
+            logger::log_warn(&format!(
+                "[QuotaAlert][Codex] 全量刷新后预警检查失败: {}",
+                e
+            ));
         }
     }
     let _ = crate::modules::tray::update_tray_menu(&app);

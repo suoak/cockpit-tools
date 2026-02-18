@@ -796,7 +796,7 @@ export function GitHubCopilotAccountsPage() {
       const displayEmail = account.email ?? account.github_email ?? account.github_login;
       const maskedDisplayEmail = maskAccountText(displayEmail);
       const planKey = getGitHubCopilotPlanDisplayName(account.plan_type);
-      const planLabel = t(`githubCopilot.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = planKey;
       const isSelected = selected.has(account.id);
       const isCurrent = currentAccountId === account.id;
 
@@ -923,7 +923,7 @@ export function GitHubCopilotAccountsPage() {
       const displayEmail = account.email ?? account.github_email ?? account.github_login;
       const maskedDisplayEmail = maskAccountText(displayEmail);
       const planKey = getGitHubCopilotPlanDisplayName(account.plan_type);
-      const planLabel = t(`githubCopilot.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = planKey;
       const isCurrent = currentAccountId === account.id;
       return (
         <tr key={groupKey ? `${groupKey}-${account.id}` : account.id} className={isCurrent ? 'current' : ''}>
@@ -1120,33 +1120,12 @@ export function GitHubCopilotAccountsPage() {
               onChange={(e) => setFilterType(e.target.value as typeof filterType)}
               aria-label={t('common.shared.filterLabel', '筛选')}
             >
-              <option value="all">
-                {t('common.shared.filter.all', { count: tierCounts.all, defaultValue: 'All ({{count}})' })}
-              </option>
-              <option value="FREE">
-                {t('common.shared.filter.free', { count: tierCounts.FREE, defaultValue: 'FREE ({{count}})' })}
-              </option>
-              <option value="INDIVIDUAL">
-                {t('common.shared.filter.individual', {
-                  count: tierCounts.INDIVIDUAL,
-                  defaultValue: 'INDIVIDUAL ({{count}})',
-                })}
-              </option>
-              <option value="PRO">
-                {t('common.shared.filter.pro', { count: tierCounts.PRO, defaultValue: 'PRO ({{count}})' })}
-              </option>
-              <option value="BUSINESS">
-                {t('common.shared.filter.business', {
-                  count: tierCounts.BUSINESS,
-                  defaultValue: 'BUSINESS ({{count}})',
-                })}
-              </option>
-              <option value="ENTERPRISE">
-                {t('common.shared.filter.enterprise', {
-                  count: tierCounts.ENTERPRISE,
-                  defaultValue: 'ENTERPRISE ({{count}})',
-                })}
-              </option>
+              <option value="all">{t('common.shared.filter.all', { count: tierCounts.all })}</option>
+              <option value="FREE">{`FREE (${tierCounts.FREE})`}</option>
+              <option value="INDIVIDUAL">{`INDIVIDUAL (${tierCounts.INDIVIDUAL})`}</option>
+              <option value="PRO">{`PRO (${tierCounts.PRO})`}</option>
+              <option value="BUSINESS">{`BUSINESS (${tierCounts.BUSINESS})`}</option>
+              <option value="ENTERPRISE">{`ENTERPRISE (${tierCounts.ENTERPRISE})`}</option>
             </select>
           </div>
 

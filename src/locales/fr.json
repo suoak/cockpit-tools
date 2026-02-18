@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "Laisser vide pour utiliser le chemin par défaut",
       "kiroAppPathPlaceholder": "Chemin par défaut",
       "kiroPathSelect": "Sélectionner",
-      "kiroPathReset": "Réinitialiser aux valeurs par défaut"
+      "kiroPathReset": "Réinitialiser aux valeurs par défaut",
+      "codexLaunchOnSwitch": "Lancer Codex App lors du changement de Codex",
+      "codexLaunchOnSwitchDesc": "Démarrer ou redémarrer automatiquement Codex App après un changement de compte"
     },
     "network": {
       "apiTitle": "API du cockpit antigravité",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "Partie terminée",
-    "gameOverRank": "Classement actuel #{{rank}}",
+    "gameOverRank": "Classement local actuel #{{rank}}",
     "startGame": "Démarrer",
     "startHint": "Cliquez sur démarrer ou appuyez sur Espace",
-    "rankTitle": "Classement historique",
+    "rankTitle": "Classement historique local",
     "rankCurrent": "Actuel",
     "rankNoData": "--",
     "restart": "Recommencer",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "Partie terminée",
     "historyReasonManualExit": "Sortie manuelle",
     "serveHint": "Appuyez sur Espace pour lancer la balle",
-    "ranking": "Historique",
-    "rankingShort": "Historique",
-    "rankingEmpty": "Aucun enregistrement",
-    "rankingClear": "Effacer",
+    "ranking": "Historique local",
+    "rankingShort": "Locale",
+    "rankingEmpty": "Aucun enregistrement local",
+    "rankingClear": "Effacer l'historique local",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

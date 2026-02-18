@@ -238,7 +238,9 @@
       "kiroAppPathDesc": "デフォルトのパスを使用するには空のままにしてください",
       "kiroAppPathPlaceholder": "デフォルトのパス",
       "kiroPathSelect": "選択",
-      "kiroPathReset": "デフォルトにリセットする"
+      "kiroPathReset": "デフォルトにリセットする",
+      "codexLaunchOnSwitch": "Codex 切替時に Codex App を自動起動",
+      "codexLaunchOnSwitchDesc": "アカウント切替後に Codex App を自動で起動または再起動"
     },
     "network": {
       "apiTitle": "反重力コックピット API",
@@ -1285,10 +1287,10 @@
   },
   "breakout": {
     "gameOver": "ゲームオーバー",
-    "gameOverRank": "現在の順位 #{{rank}}",
+    "gameOverRank": "現在のローカル順位 #{{rank}}",
     "startGame": "ゲーム開始",
     "startHint": "開始を押すかスペースキーを押してください",
-    "rankTitle": "履歴ランキング",
+    "rankTitle": "ローカル履歴ランキング",
     "rankCurrent": "現在",
     "rankNoData": "--",
     "restart": "リスタート",
@@ -1309,10 +1311,10 @@
     "historyReasonGameOver": "ゲームオーバー",
     "historyReasonManualExit": "手動終了",
     "serveHint": "スペースキーでボールを発射",
-    "ranking": "履歴",
-    "rankingShort": "履歴",
-    "rankingEmpty": "履歴はまだありません",
-    "rankingClear": "クリア",
+    "ranking": "ローカル履歴",
+    "rankingShort": "ローカル",
+    "rankingEmpty": "ローカル履歴はまだありません",
+    "rankingClear": "ローカル履歴をクリア",
     "rankingRankShort": "#{{rank}}"
   },
   "kiro": {

@@ -7,6 +7,42 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.8.3] - 2026-02-18
+
+### Changed
+- **Tray platform matrix expanded with Kiro**: Added Kiro to tray platform ordering/display and account-count aggregation, and introduced Kiro account summary rendering in tray menus (plan + prompt/add-on remaining with reset time).
+- **Legacy tray layout compatibility for Kiro rollout**: When loading old four-platform tray configs, Kiro is auto-appended only for legacy default layouts while preserving user-customized visibility/order.
+- **Raw plan/tier labels enforced in account pages**: Antigravity/Codex/GitHub Copilot/Windsurf account cards, tables, and filter options now show original plan/tier values directly (no localized remapping).
+
+### Fixed
+- **Auto-switch threshold boundary**: Account auto-switch trigger now fires when remaining percentage is less than or equal to threshold (`<=`) to avoid missing boundary cases at exact threshold.
+
+---
+## [0.8.2] - 2026-02-18
+
+### Changed
+- **OAuth callback server hardening**: Rewrote the local OAuth callback server to loop over incoming requests, silently ignoring non-callback requests (e.g. favicon), and only processing the actual `/oauth-callback` path. Added CORS preflight (OPTIONS) support and an explicit 404 response for unmatched routes.
+- **OAuth CSRF protection**: OAuth authorization URL now includes a `state` parameter generated per flow; the callback server validates the returned state to prevent cross-site request forgery.
+- **OAuth flow timeout & cleanup**: Added a configurable timeout for the OAuth callback wait; on timeout or failure the flow state is automatically cleaned up, and a user-facing retry message is returned.
+- **OAuth redirect host normalization**: Changed OAuth redirect URI from `127.0.0.1` to `localhost` for broader browser/OS redirection compatibility.
+- **Account identity matching overhaul**: Replaced the previous email-only account matching with a strict multi-factor identity matcher (`session_id` → `refresh_token` → `email + project_id`), plus a legacy single-email fallback for backward compatibility during upsert.
+- **Google user ID persistence**: OAuth `UserInfo` now parses and stores the Google `id` field, writing it into account data on login completion.
+
+---
+## [0.8.1] - 2026-02-17
+
+### Changed
+- **Plan/Tier labels now use raw values**: Account-card and table badges across Antigravity/Codex/GitHub Copilot/Windsurf/Kiro now display original backend/local plan values directly, while keeping existing style mapping.
+- **Overview tabs use fixed default labels**: Platform overview tabs (`Account Overview` / `Multi-Instance`) now render default text directly to avoid cross-locale mismatch from platform-specific translation overrides.
+- **Platform names are fixed to source labels**: Shared platform label rendering now always shows original platform names (`Antigravity`, `Codex`, `GitHub Copilot`, `Windsurf`, `Kiro`).
+- **Codex switch behavior is configurable**: Added `codex_launch_on_switch` to backend/user config and wired it into Settings and Quick Settings so switching Codex can optionally skip auto launch/restart.
+
+### Fixed
+- **Dashboard privacy consistency**: Dashboard account emails are now masked by the same privacy toggle used in account/instance pages, with focus/visibility/storage sync to keep masking state consistent.
+- **OpenCode switch-token sync reliability**: Fixed a regression where GPT account switching did not effectively replace OpenCode login credentials in runtime scenarios, causing the app session to stay on the previous account. (#51)
+- **Dashboard card layout balance**: Fixed the Antigravity account card width behavior to avoid obvious right-side whitespace in dashboard layouts and improve visual balance. (#49)
+
+---
 ## [0.8.0] - 2026-02-17
 
 ### Added

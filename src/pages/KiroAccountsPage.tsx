@@ -705,16 +705,22 @@ export function KiroAccountsPage() {
   );
 
   const resolvePlanLabel = useCallback(
-    (planKey: string) => {
-      if ((KIRO_KNOWN_PLAN_FILTERS as readonly string[]).includes(planKey)) {
-        return t(`kiro.plan.${planKey.toLowerCase()}`, planKey);
-      }
-      if (planKey === 'UNKNOWN') {
-        return t('kiro.plan.unknown', 'UNKNOWN');
+    (account: (typeof accounts)[number], planKey: string) => {
+      const credits = resolveCreditsSummary(account);
+      const candidates = [
+        account.plan_name,
+        account.plan_tier,
+        credits.planName,
+        account.copilot_plan,
+        account.plan_type,
+      ];
+      for (const candidate of candidates) {
+        const raw = candidate?.trim();
+        if (raw && raw.toUpperCase() !== 'UNKNOWN') return raw;
       }
       return planKey;
     },
-    [t],
+    [resolveCreditsSummary],
   );
 
   const resolvePlanBadgeClass = useCallback((planKey: string) => {
@@ -892,12 +898,16 @@ export function KiroAccountsPage() {
       ENTERPRISE: 0,
     };
     const dynamicCounts = new Map<string, number>();
+    const displayLabels = new Map<string, string>();
 
     accounts.forEach((account) => {
       const tier = resolvePlanKey(account);
       dynamicCounts.set(tier, (dynamicCounts.get(tier) ?? 0) + 1);
       if (tier in knownCounts) {
         knownCounts[tier as keyof typeof knownCounts] += 1;
+      }
+      if (!displayLabels.has(tier)) {
+        displayLabels.set(tier, resolvePlanLabel(account, tier));
       }
     });
 
@@ -910,8 +920,9 @@ export function KiroAccountsPage() {
       knownCounts,
       dynamicCounts,
       extraKeys,
+      displayLabels,
     };
-  }, [accounts, resolvePlanKey]);
+  }, [accounts, resolvePlanKey, resolvePlanLabel]);
 
   useEffect(() => {
     if (filterType === 'all') return;
@@ -921,27 +932,10 @@ export function KiroAccountsPage() {
 
   const resolveFilterLabel = useCallback(
     (planKey: string, count: number) => {
-      if (planKey === 'FREE') {
-        return t('common.shared.filter.free', { count, defaultValue: 'FREE ({{count}})' });
-      }
-      if (planKey === 'INDIVIDUAL') {
-        return t('common.shared.filter.individual', { count, defaultValue: 'INDIVIDUAL ({{count}})' });
-      }
-      if (planKey === 'PRO') {
-        return t('common.shared.filter.pro', { count, defaultValue: 'PRO ({{count}})' });
-      }
-      if (planKey === 'BUSINESS') {
-        return t('common.shared.filter.business', { count, defaultValue: 'BUSINESS ({{count}})' });
-      }
-      if (planKey === 'ENTERPRISE') {
-        return t('common.shared.filter.enterprise', { count, defaultValue: 'ENTERPRISE ({{count}})' });
-      }
-      if (planKey === 'UNKNOWN') {
-        return `${t('kiro.plan.unknown', 'UNKNOWN')} (${count})`;
-      }
-      return `${planKey} (${count})`;
+      const label = tierSummary.displayLabels.get(planKey) ?? planKey;
+      return `${label} (${count})`;
     },
-    [t],
+    [tierSummary.displayLabels],
   );
 
   const filteredAccounts = useMemo(() => {
@@ -1098,7 +1092,7 @@ export function KiroAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = resolvePlanLabel(planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const bonusExpiryValue = resolveBonusExpiryValue(credits);
       const showAddOnCredits = shouldShowAddOnCredits(credits, addOnMetrics);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -1260,7 +1254,7 @@ export function KiroAccountsPage() {
       const promptMetrics = resolvePromptMetrics(credits);
       const addOnMetrics = resolveAddOnMetrics(credits);
       const planKey = resolvePlanKey(account);
-      const planLabel = resolvePlanLabel(planKey);
+      const planLabel = resolvePlanLabel(account, planKey);
       const bonusExpiryValue = resolveBonusExpiryValue(credits);
       const showAddOnCredits = shouldShowAddOnCredits(credits, addOnMetrics);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -1483,9 +1477,7 @@ export function KiroAccountsPage() {
               onChange={(e) => setFilterType(e.target.value)}
               aria-label={t('common.shared.filterLabel', '筛选')}
             >
-              <option value="all">
-                {t('common.shared.filter.all', { count: tierSummary.all, defaultValue: 'All ({{count}})' })}
-              </option>
+              <option value="all">{`ALL (${tierSummary.all})`}</option>
               <option value="FREE">
                 {resolveFilterLabel('FREE', tierSummary.knownCounts.FREE)}
               </option>

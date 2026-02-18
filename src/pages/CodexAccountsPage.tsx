@@ -887,7 +887,7 @@ export function CodexAccountsPage() {
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id;
       const planKey = getCodexPlanDisplayName(account.plan_type);
-      const planLabel = t(`codex.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = planKey;
       const isSelected = selected.has(account.id);
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
@@ -1022,7 +1022,7 @@ export function CodexAccountsPage() {
     items.map((account) => {
       const isCurrent = currentAccount?.id === account.id;
       const planKey = getCodexPlanDisplayName(account.plan_type);
-      const planLabel = t(`codex.plan.${planKey.toLowerCase()}`, planKey);
+      const planLabel = planKey;
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
       return (
@@ -1197,11 +1197,11 @@ export function CodexAccountsPage() {
               aria-label={t('common.shared.filterLabel', '筛选')}
             >
               <option value="all">{t('common.shared.filter.all', { count: tierCounts.all })}</option>
-              <option value="FREE">{t('common.shared.filter.free', { count: tierCounts.FREE })}</option>
-              <option value="PLUS">{t('codex.filter.plus', { count: tierCounts.PLUS })}</option>
-              <option value="PRO">{t('common.shared.filter.pro', { count: tierCounts.PRO })}</option>
-              <option value="TEAM">{t('codex.filter.team', { count: tierCounts.TEAM })}</option>
-              <option value="ENTERPRISE">{t('common.shared.filter.enterprise', { count: tierCounts.ENTERPRISE })}</option>
+              <option value="FREE">{`FREE (${tierCounts.FREE})`}</option>
+              <option value="PLUS">{`PLUS (${tierCounts.PLUS})`}</option>
+              <option value="PRO">{`PRO (${tierCounts.PRO})`}</option>
+              <option value="TEAM">{`TEAM (${tierCounts.TEAM})`}</option>
+              <option value="ENTERPRISE">{`ENTERPRISE (${tierCounts.ENTERPRISE})`}</option>
             </select>
           </div>
 
