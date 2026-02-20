@@ -109,6 +109,11 @@
   box-shadow: 0 0 0 2px var(--primary-light), var(--shadow-md);
 }
 
+.ghcp-account-card.disabled {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.05);
+}
+
 .ghcp-account-card.selected {
   border-color: var(--primary);
   background: var(--primary-light);
@@ -261,6 +266,31 @@
   font-size: 11px;
   font-weight: 600;
   border-radius: var(--radius-full);
+}
+
+.ghcp-accounts-page .status-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.ghcp-accounts-page .status-pill.warning {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.ghcp-accounts-page .status-pill.forbidden {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .ghcp-account-card .tier-badge,
@@ -938,6 +968,10 @@
 
 .ghcp-accounts-page .account-table tr.current {
   background: rgba(29, 78, 216, 0.08);
+}
+
+.ghcp-accounts-page .account-table tr.disabled {
+  background: rgba(239, 68, 68, 0.04);
 }
 
 .ghcp-accounts-page .account-table .quota-item {

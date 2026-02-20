@@ -29,6 +29,8 @@ export interface KiroAccount {
   kiro_auth_token_raw?: unknown;
   kiro_profile_raw?: unknown;
   kiro_usage_raw?: unknown;
+  status?: string | null;
+  status_reason?: string | null;
 
   created_at: number;
   last_used: number;
@@ -670,6 +672,46 @@ export function getKiroAccountLoginProvider(account: KiroAccount): string | null
   if (lower === 'github') return 'GitHub';
   if (lower === 'social') return 'Social';
   return provider;
+}
+
+export type KiroAccountStatus = 'normal' | 'banned' | 'error' | 'unknown';
+
+function normalizeStatusText(raw: string | null | undefined): string {
+  return raw?.trim().toLowerCase() ?? '';
+}
+
+function inferBannedFromReason(raw: string | null | undefined): boolean {
+  const reason = normalizeStatusText(raw);
+  if (!reason) return false;
+  return (
+    reason.includes('banned') ||
+    reason.includes('forbidden') ||
+    reason.includes('suspended') ||
+    reason.includes('disabled') ||
+    reason.includes('封禁') ||
+    reason.includes('禁用')
+  );
+}
+
+export function getKiroAccountStatus(account: KiroAccount): KiroAccountStatus {
+  const status = normalizeStatusText(account.status);
+  if (status === 'normal' || status === 'ok' || status === 'active') return 'normal';
+  if (status === 'banned' || status === 'ban' || status === 'forbidden') return 'banned';
+  if (status === 'error' || status === 'failed' || status === 'invalid') return 'error';
+
+  if (inferBannedFromReason(account.status_reason)) return 'banned';
+  if (normalizeStatusText(account.status_reason)) return 'error';
+  return 'unknown';
+}
+
+export function getKiroAccountStatusReason(account: KiroAccount): string | null {
+  const fromField = account.status_reason?.trim();
+  if (fromField) return fromField;
+  return null;
+}
+
+export function isKiroAccountBanned(account: KiroAccount): boolean {
+  return getKiroAccountStatus(account) === 'banned';
 }
 
 export function getKiroCreditsSummary(account: KiroAccount): KiroCreditsSummary {

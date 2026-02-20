@@ -54,6 +54,10 @@ pub struct KiroAccount {
     pub kiro_profile_raw: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kiro_usage_raw: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status_reason: Option<String>,
 
     pub created_at: i64,
     pub last_used: i64,
@@ -134,6 +138,8 @@ pub struct KiroOAuthCompletePayload {
     pub kiro_auth_token_raw: Option<serde_json::Value>,
     pub kiro_profile_raw: Option<serde_json::Value>,
     pub kiro_usage_raw: Option<serde_json::Value>,
+    pub status: Option<String>,
+    pub status_reason: Option<String>,
 }
 
 impl KiroAccount {

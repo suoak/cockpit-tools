@@ -22,6 +22,7 @@ import {
   Play,
   Eye,
   EyeOff,
+  Lock,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useKiroAccountStore } from '../stores/useKiroAccountStore';
@@ -35,6 +36,9 @@ import {
   getKiroAccountDisplayEmail,
   getKiroAccountDisplayUserId,
   getKiroAccountLoginProvider,
+  getKiroAccountStatus,
+  getKiroAccountStatusReason,
+  isKiroAccountBanned,
 } from '../types/kiro';
 
 import { save } from '@tauri-apps/plugin-dialog';
@@ -339,8 +343,12 @@ export function KiroAccountsPage() {
 
   const handleInjectToVSCode = async (accountId: string) => {
     setMessage(null);
-    setInjecting(accountId);
     const account = accounts.find((item) => item.id === accountId);
+    if (account && isKiroAccountBanned(account)) {
+      setMessage({ text: t('accounts.status.forbidden_msg'), tone: 'error' });
+      return;
+    }
+    setInjecting(accountId);
     const displayEmail = account?.email || account?.github_email || account?.github_login || accountId;
     try {
       await kiroService.injectKiroToVSCode(accountId);
@@ -1100,11 +1108,17 @@ export function KiroAccountsPage() {
       const moreTagCount = Math.max(0, accountTags.length - visibleTags.length);
       const isSelected = selected.has(account.id);
       const isCurrent = currentAccountId === account.id;
+      const accountStatus = getKiroAccountStatus(account);
+      const statusReason = getKiroAccountStatusReason(account);
+      const isBanned = accountStatus === 'banned';
+      const hasStatusError = accountStatus === 'error';
+      const bannedTitle = statusReason || t('accounts.status.forbidden_tooltip');
+      const errorTitle = statusReason || t('accounts.status.refreshFailed');
 
       return (
         <div
           key={groupKey ? `${groupKey}-${account.id}` : account.id}
-          className={`ghcp-account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}`}
+          className={`ghcp-account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''} ${isBanned ? 'disabled' : ''}`}
         >
           <div className="card-top">
             <div className="card-select">
@@ -1120,6 +1134,18 @@ export function KiroAccountsPage() {
             {isCurrent && (
               <span className="current-tag">
                 {t('accounts.status.current')}
+              </span>
+            )}
+            {hasStatusError && (
+              <span className="status-pill warning" title={errorTitle}>
+                <CircleAlert size={12} />
+                {t('accounts.status.refreshFailed')}
+              </span>
+            )}
+            {isBanned && (
+              <span className="status-pill forbidden" title={bannedTitle}>
+                <Lock size={12} />
+                {t('accounts.status.forbidden')}
               </span>
             )}
             <span className={`tier-badge ${resolvePlanBadgeClass(planKey)}`}>{planLabel}</span>
@@ -1202,8 +1228,12 @@ export function KiroAccountsPage() {
               <button
                 className="card-action-btn success"
                 onClick={() => handleInjectToVSCode(account.id)}
-                disabled={!!injecting}
-                title={t('kiro.injectToVSCode', '切换到 Kiro')}
+                disabled={!!injecting || isBanned}
+                title={
+                  isBanned
+                    ? t('accounts.status.forbidden_msg')
+                    : t('kiro.injectToVSCode', '切换到 Kiro')
+                }
               >
                 {injecting === account.id ? (
                   <RefreshCw size={14} className="loading-spinner" />
@@ -1261,8 +1291,17 @@ export function KiroAccountsPage() {
       const visibleTags = accountTags.slice(0, 3);
       const moreTagCount = Math.max(0, accountTags.length - visibleTags.length);
       const isCurrent = currentAccountId === account.id;
+      const accountStatus = getKiroAccountStatus(account);
+      const statusReason = getKiroAccountStatusReason(account);
+      const isBanned = accountStatus === 'banned';
+      const hasStatusError = accountStatus === 'error';
+      const bannedTitle = statusReason || t('accounts.status.forbidden_tooltip');
+      const errorTitle = statusReason || t('accounts.status.refreshFailed');
       return (
-        <tr key={groupKey ? `${groupKey}-${account.id}` : account.id} className={isCurrent ? 'current' : ''}>
+        <tr
+          key={groupKey ? `${groupKey}-${account.id}` : account.id}
+          className={`${isCurrent ? 'current' : ''} ${isBanned ? 'disabled' : ''}`}
+        >
           <td>
             <input
               type="checkbox"
@@ -1278,6 +1317,22 @@ export function KiroAccountsPage() {
                 </span>
                 {isCurrent && <span className="mini-tag current">{t('accounts.status.current')}</span>}
               </div>
+              {(hasStatusError || isBanned) && (
+                <div className="account-sub-line">
+                  {hasStatusError && (
+                    <span className="status-pill warning" title={errorTitle}>
+                      <CircleAlert size={12} />
+                      {t('accounts.status.refreshFailed')}
+                    </span>
+                  )}
+                  {isBanned && (
+                    <span className="status-pill forbidden" title={bannedTitle}>
+                      <Lock size={12} />
+                      {t('accounts.status.forbidden')}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="account-sub-line">
                 <span className="kiro-table-subline">
                   {signedInWithText} | {t('kiro.account.userId', 'User ID')}: {maskAccountText(userIdText)}
@@ -1355,8 +1410,12 @@ export function KiroAccountsPage() {
               <button
                 className="action-btn success"
                 onClick={() => handleInjectToVSCode(account.id)}
-                disabled={!!injecting}
-                title={t('kiro.injectToVSCode', '切换到 Kiro')}
+                disabled={!!injecting || isBanned}
+                title={
+                  isBanned
+                    ? t('accounts.status.forbidden_msg')
+                    : t('kiro.injectToVSCode', '切换到 Kiro')
+                }
               >
                 {injecting === account.id ? <RefreshCw size={14} className="loading-spinner" /> : <Play size={14} />}
               </button>

@@ -7,6 +7,32 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.8.5] - 2026-02-19
+
+### Added
+- **Kiro account ban detection**: Automatic detection of suspended/banned Kiro accounts. When the quota refresh API returns a ban signal (e.g. 403 FORBIDDEN), the account is automatically marked as `banned` with the reason stored.
+
+### Changed
+- **Banned account UI**: Account cards and table rows now show a 🔒 `forbidden` status badge and a greyed-out card style to visually distinguish banned accounts.
+- **Banned account action restrictions**: The switch button is disabled for banned accounts; the dashboard recommendation algorithm and quota alert suggestions automatically exclude banned accounts.
+- **Bulk refresh skips banned accounts**: Refresh-all now skips accounts already marked as banned, reducing unnecessary API calls, and logs the skipped count.
+- **Quota alert excludes banned current account**: If the currently active account is banned, quota alert checks are skipped.
+
+### Fixed
+- **Error vs. ban state separation**: Refresh failures (`error`) and account bans (`banned`) are now recorded separately, preventing all refresh errors from being misclassified as generic errors.
+
+---
+## [0.8.4] - 2026-02-19
+
+### Changed
+- **Kiro JSON import now supports raw account snapshots**: The import pipeline now accepts Kiro-style raw JSON objects (and arrays) with fields like `accessToken`, `refreshToken`, `expiresAt`, `provider`, `profileArn`, and `usageData`, then maps them into normalized local accounts.
+- **Kiro import parser is unified with OAuth snapshot mapping**: JSON import now reuses the same snapshot-to-payload extraction path as OAuth/local import, improving consistency of email/user/provider/plan/quota field parsing.
+
+### Fixed
+- **Slash datetime parsing for imported expiry**: Kiro token expiry values in `YYYY/MM/DD HH:mm:ss` format (e.g. `2026/02/19 02:01:47`) are now parsed correctly during import.
+- **Bonus expiry fallback coverage**: `freeTrialExpiry` is now recognized as a fallback source when deriving Kiro add-on expiry days.
+
+---
 ## [0.8.3] - 2026-02-18
 
 ### Changed

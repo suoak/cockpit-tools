@@ -32,6 +32,7 @@ import {
   getKiroPlanBadgeClass,
   getKiroPlanDisplayName,
   getKiroQuotaClass,
+  isKiroAccountBanned,
   formatKiroResetTime,
 } from '../types/kiro';
 import './DashboardPage.css';
@@ -618,7 +619,9 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
   const kiroRecommended = useMemo(() => {
     if (kiroAccounts.length <= 1) return null;
     const currentId = kiroCurrent?.id;
-    const others = kiroAccounts.filter((account) => account.id !== currentId);
+    const others = kiroAccounts.filter(
+      (account) => account.id !== currentId && !isKiroAccountBanned(account),
+    );
     if (others.length === 0) return null;
 
     const getScore = (account: KiroAccount) => {
@@ -1021,6 +1024,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       (typeof credits.bonusExpireDays === 'number' &&
         Number.isFinite(credits.bonusExpireDays) &&
         credits.bonusExpireDays > 0);
+    const isBanned = isKiroAccountBanned(account);
     const isRefreshing = refreshing.has(account.id);
     const isSwitching = switching.has(account.id);
     const cycleText = credits.planEndsAt
@@ -1117,7 +1121,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
             className="mini-icon-btn"
             onClick={() => handleSwitchKiro(account.id)}
             title={t('dashboard.switch', '切换')}
-            disabled={isSwitching}
+            disabled={isSwitching || isBanned}
           >
             {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
           </button>
