@@ -73,7 +73,7 @@ interface AccountsPageProps {
 }
 
 type ViewMode = 'grid' | 'list' | 'compact'
-type FilterType = 'all' | 'PRO' | 'ULTRA' | 'FREE'
+type FilterType = 'all' | 'PRO' | 'ULTRA' | 'FREE' | 'UNKNOWN'
 
 export function AccountsPage({ onNavigate }: AccountsPageProps) {
   const { t, i18n } = useTranslation()
@@ -467,12 +467,13 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
 
   // 统计数量
   const tierCounts = useMemo(() => {
-    const counts = { all: accounts.length, PRO: 0, ULTRA: 0, FREE: 0 }
+    const counts = { all: accounts.length, PRO: 0, ULTRA: 0, FREE: 0, UNKNOWN: 0 }
     accounts.forEach((acc) => {
       const tier = getSubscriptionTier(acc.quota)
       if (tier === 'PRO') counts.PRO++
       else if (tier === 'ULTRA') counts.ULTRA++
-      else counts.FREE++
+      else if (tier === 'FREE') counts.FREE++
+      else counts.UNKNOWN++
     })
     return counts
   }, [accounts])
@@ -1363,6 +1364,9 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
       const isSelected = selected.has(account.id)
       const quotaError = account.quota_error
       const hasQuotaError = Boolean(quotaError?.message)
+      const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean)
+      const visibleTags = accountTags.slice(0, 2)
+      const moreTagCount = Math.max(0, accountTags.length - visibleTags.length)
       const warning = refreshWarnings[account.email]
       const warningLabel =
         warning?.kind === 'auth'
@@ -1428,6 +1432,17 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
               {tierLabel}
             </span>
           </div>
+
+          {accountTags.length > 0 && (
+            <div className="card-tags">
+              {visibleTags.map((tag, idx) => (
+                <span key={`${account.id}-${tag}-${idx}`} className="tag-pill">
+                  {tag}
+                </span>
+              ))}
+              {moreTagCount > 0 && <span className="tag-pill more">+{moreTagCount}</span>}
+            </div>
+          )}
 
           <div className="card-quota-grid">
             {isForbidden ? (
@@ -2166,6 +2181,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
                 <option value="PRO">{`PRO (${tierCounts.PRO})`}</option>
                 <option value="ULTRA">{`ULTRA (${tierCounts.ULTRA})`}</option>
                 <option value="FREE">{`FREE (${tierCounts.FREE})`}</option>
+                <option value="UNKNOWN">{`UNKNOWN (${tierCounts.UNKNOWN})`}</option>
               </select>
             </div>
 
@@ -2815,9 +2831,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
                 <div className="modal-header">
                   <h2>{t('modals.quota.title')}</h2>
                   <div className="badges">
-                    {account.quota?.subscription_tier && (
-                      <span className={`pill ${tierClass}`}>{tierLabel}</span>
-                    )}
+                    <span className={`pill ${tierClass}`}>{tierLabel}</span>
                   </div>
                   <button
                     className="close-btn"

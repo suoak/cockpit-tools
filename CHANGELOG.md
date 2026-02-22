@@ -7,6 +7,54 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.8.9] - 2026-02-21
+
+### Added
+- **Account card tags are now visible across all five platforms**: Account tags now render directly on grid cards in Antigravity, Codex, GitHub Copilot, Windsurf, and Kiro for faster visual identification.
+
+### Changed
+- **Card tag display is unified**: Tag chips now follow a consistent compact rule across platforms (show up to 2 tags with `+N` overflow).
+
+### Fixed
+- **Release checksum upload workflow no longer depends on local git checkout**: Added explicit `GH_REPO` context for `gh release` calls in the checksum upload job to avoid `fatal: not a git repository` failures.
+
+---
+## [0.8.8] - 2026-02-21
+
+### Changed
+- **Codex quota windows now follow window presence**: Codex quota rendering is now driven by `primary_window` / `secondary_window` presence instead of always forcing two fixed lines.
+- **Codex window labels now use Codex-style rules**: Window labels now use unified dynamic formatting (`5h`, `Weekly`, `Xd`, `Xh`, `Xm`) based on actual window minutes.
+- **Multi-instance Codex account selector now shows plan badge**: Bound-account dropdown/list in Codex instances now shows subscription badges (`FREE/PLUS/PRO/TEAM/ENTERPRISE`) alongside account emails to reduce free-plan ambiguity.
+- **Manual update check now always shows feedback**: Clicking `Check Updates` now shows loading state and explicit result feedback (`up to date` / `check failed`) instead of silent no-op when no new version is found.
+- **Release workflow now auto-publishes checksums**: GitHub Release pipeline now automatically generates and uploads `SHA256SUMS.txt` from release assets, removing manual checksum upload.
+
+### Refactored
+- **Shared Codex quota-window helper introduced**: Codex account page, dashboard cards, and Codex instances now reuse the same window-label/window-visibility helper to keep display logic consistent.
+
+---
+## [0.8.7] - 2026-02-21
+
+### Changed
+- **Unknown-tier rendering and filtering added**: Accounts with missing subscription tier now resolve to `UNKNOWN` (instead of falling back to `FREE`) in cards/tables, and the account filter dropdown now supports `UNKNOWN` as a dedicated option.
+- **Unknown badge now uses warning styling**: `UNKNOWN` tier badges are highlighted in red to visually distinguish tier-identification anomalies from normal `FREE` accounts.
+- **Quota modal badge consistency**: Quota details modal now always shows a tier badge, including `UNKNOWN` when subscription tier is unavailable.
+
+### Fixed
+- **No stale tier carry-over after refresh**: Removed backend behavior that preserved previous `subscription_tier` when the new quota payload had no tier, preventing old `PRO/ULTRA` labels from persisting incorrectly.
+- **Tier-identification diagnostics improved**: Subscription identification logs now emit explicit `UNKNOWN` failure reasons (including status/body snippets and loadCodeAssist context) to distinguish API errors from successful responses without tier data.
+
+---
+## [0.8.6] - 2026-02-21
+
+### Changed
+- **Model group auto-classification now ignores version suffixes**: Added prefix/pattern matching for model families so Claude and Gemini variants are grouped by family (Pro/Flash/Image) even when exact IDs are not pre-listed.
+- **"Other Models" cleanup for Claude/Gemini variants**: Claude Sonnet/Opus variants and Gemini x Pro/Flash/Pro Image variants are now routed into their target default groups instead of falling into `Other Models`.
+- **Default Gemini group labels renamed**: Group display names were updated from `G3-Pro`, `G3-Flash`, `G3-Image` to `Gemini Pro`, `Gemini Flash`, `Gemini Image` for version-agnostic naming.
+
+### Fixed
+- **Legacy group-name compatibility**: Existing saved group settings with legacy `G3-*` names are automatically migrated to the new Gemini labels on load.
+
+---
 ## [0.8.5] - 2026-02-19
 
 ### Added
