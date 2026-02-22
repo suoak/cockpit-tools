@@ -293,6 +293,7 @@ jobs:
           git diff -- "$FILE"
 
       - name: Create pull request
+        id: create_cask_pr
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "chore(homebrew): update cask for v${{ env.VERSION }}"
@@ -305,3 +306,18 @@ jobs:
           branch: "automation/update-cask-v${{ env.VERSION }}"
           base: main
           delete-branch: true
+
+      - name: Enable auto-merge for cask PR
+        if: ${{ steps.create_cask_pr.outputs.pull-request-number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ steps.create_cask_pr.outputs.pull-request-number }}"
+          PR_BRANCH="$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)"
+          if [[ "$PR_BRANCH" != automation/update-cask-v* ]]; then
+            echo "Unexpected PR branch: $PR_BRANCH"
+            exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
