@@ -7,6 +7,76 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.9.5] - 2026-02-28
+
+### Fixed
+- **Windows wakeup no longer pops black terminal windows**: Added hidden-process flags for official Language Server startup and Windows CLI probes (`netstat`, `where.exe`) used by wakeup-related flows.
+- **Local wakeup gateway intermittent transport failures now self-recover once**: Added local health-check preflight, transport error classification, and one-time gateway cache rebuild retry for recoverable local connection/TLS/timeout failures.
+- **Local gateway requests now bypass system proxy and use a canonical loopback address**: Gateway/official-LS local clients now enforce `no_proxy`, and loopback base URLs are normalized to `127.0.0.1` to reduce proxy/interception-related failures.
+
+### Changed
+- **Verification copy and action labels switched from “Verify” to “Detect” across all locales**: Added/used `wakeup.verification.actions.runCheckNow`, updated run-hint wording, and aligned the verification-page primary CTA/title.
+- **GitHub Copilot instances quota row now includes Premium requests**: Instance account quota summary now shows Inline, Chat, and Premium usage percentages together.
+
+---
+## [0.9.4] - 2026-02-27
+
+### Fixed
+- **Linux `.deb` blank/white window rendering on some environments**: Disabled transparent window by default (`transparent: false`) and added Linux WebKitGTK fallback (`WEBKIT_DISABLE_DMABUF_RENDERER=1` when unset) to improve render stability.
+- **Windows account-switch flow could hang while probing Antigravity processes**: Added a 5-second timeout for PowerShell process probing and automatic fallback to `sysinfo` scanning to avoid blocking the switch path.
+- **Switch-success but launch-failure now becomes user-visible**: If account data is switched but launching Antigravity fails, backend now returns an explicit error message so frontend can show a visible failure notice.
+- **Official LS resolution now follows configured Antigravity app path on all desktop OSes**: Wakeup/verification now derive LS from `antigravity_app_path` on Windows/macOS/Linux (with platform-specific extension/bin path and filename priority), and return unified `APP_PATH_NOT_FOUND:antigravity` when missing so existing path-setup guidance is triggered before execution.
+
+---
+## [0.9.3] - 2026-02-27
+
+### Fixed
+- **AppImage blank-page rendering on Linux (including Arch) caused by absolute asset paths**: Vite build output now uses relative asset paths (`base: "./"`), so packaged AppImage can resolve frontend JS/CSS correctly.
+
+### Changed
+- **Release-process documentation aligned to current completion rule**: Updated `docs/release-process.md` to treat `remote branch + remote tag` as release completion, while GitHub Actions/asset publishing remains a post-release async step.
+
+---
+## [0.9.2] - 2026-02-27
+
+### Changed
+- **Windows wakeup/verification now prechecks runtime readiness before execution**: Added a frontend + backend preflight gate so wakeup test and batch verification validate official LS readiness first, instead of failing after request dispatch.
+- **Official LS path resolution now derives from configured Antigravity app path on Windows**: Runtime now resolves LS from the configured `antigravity_app_path` (`resources/app/extensions/antigravity/bin`), with deterministic filename priority and fallback matching in the same bin directory.
+
+### Fixed
+- **Path-missing guidance now triggers before wakeup starts**: When Antigravity app path or LS binary is unavailable on Windows, the existing `app-path-missing` flow is triggered immediately, preventing late 500 errors from gateway startup.
+
+---
+## [0.9.1] - 2026-02-27
+
+### Added
+- **Announcement system (desktop)**: Added a full announcement pipeline with Tauri commands, frontend store/service/types, and announcement center UI (list/detail modal, unread badge, mark-read, refresh, popup, image preview, and action handling for tab/url/command).
+- **Announcement source controls for dev testing**: Added local override support (`~/.antigravity_cockpit/announcements.local.json`) and debug workspace source (`announcements.json`) for `npm run tauri dev` testing, with persisted read-state/cache files.
+- **Repository announcement seed file**: Added a repository-level `announcements.json` with a welcome announcement and feedback action for quick local debugging and remote source alignment.
+
+### Changed
+- **Remote-first announcement strategy for normal users**: Non-dev/runtime builds now skip local override files and use remote announcements (with cache/fallback) by default.
+- **Dashboard header action area**: Replaced the dashboard date display with an inline `Announcement` action button; announcement entry is now shown in dashboard context instead of global full-page placement.
+- **v0.9.0 announcement content is now fully localized**: Added/filled title, summary, body, and action copy for all 17 supported languages in `announcements.json`, so users see localized announcement content per language environment.
+- **GitHub Copilot usage rendering alignment (dashboard + tray)**: Switched usage parsing to structured snapshot semantics (`completions` / `chat` / `premium_interactions`), added `Included` handling, and added a `Premium` metric line/dimension in both dashboard cards and tray summaries.
+- **Locale and copy coverage for announcement/tray semantics**: Added `announcement.*` keys across all locale files and extended tray copy mapping with `Included` and GitHub Copilot metric labels (`Inline` / `Chat` / `Premium`).
+
+---
+## [0.9.0] - 2026-02-27
+
+### Added
+- **Dedicated Antigravity account verification workspace**: added model-based batch account verification with live progress, persisted verification history, per-batch detail view, and status filters (`All` / `Success` / `Verification required` / `Failed`).
+- **Official-aligned wakeup/verification transport**: added a `local gateway + official Language Server protocol` flow using `StartCascade` / `SendUserCascadeMessage` / `GetCascadeTrajectory` / `DeleteCascadeTrajectory` for wakeup conversations and account verification runs.
+- **403 verification quick actions**: verification-required results now expose validation URL and actions (`Verify now`, copy validation URL, copy debug info) for self-service verification.
+
+### Changed
+- **Unified model-list rule across wakeup surfaces**: wakeup task model picker, verification picker, and quota-related model display now all derive from official `agentModelSorts[].groups[].modelIds`; when unavailable, fallback is limited to the fixed 6 recommended models.
+- **Antigravity model grouping reduced to 3 groups**: default display groups are now `Claude / Gemini Pro / Gemini Flash`; `Gemini Image` group and legacy mapping are removed to avoid duplicate group rendering.
+- **Verification-page UX and privacy alignment**: added batch selection/deletion flow, closable notices, and privacy-toggle-linked email masking consistent with the Accounts page.
+- **GitHub Copilot (VS Code semantics) display alignment**: `individual` plans are now normalized to `PRO`; usage is derived from `quota_snapshots.completions/chat/premium_interactions`; cards and tables now include a `Premium requests` dimension with `Included` display support.
+- **Wakeup custom-time interaction refinement**: custom time keeps a `time picker + quick input` interaction; empty state no longer shows a default time value; custom time input is now applied to next-run preview and task save even if `Add` is not clicked.
+
+---
 ## [0.8.13] - 2026-02-24
 
 ### Added

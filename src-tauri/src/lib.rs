@@ -55,6 +55,14 @@ fn apply_macos_activation_policy(app: &tauri::AppHandle) {
 pub fn run() {
     logger::init_logger();
 
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+            logger::log_info("[Linux] 设置 WEBKIT_DISABLE_DMABUF_RENDERER=1");
+        }
+    }
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -202,17 +210,28 @@ pub fn run() {
             commands::system::open_folder,
             commands::system::delete_corrupted_file,
             // Wakeup Commands
+            commands::wakeup::wakeup_ensure_runtime_ready,
             commands::wakeup::trigger_wakeup,
             commands::wakeup::fetch_available_models,
             commands::wakeup::wakeup_sync_state,
             commands::wakeup::wakeup_load_history,
+            commands::wakeup::wakeup_add_history,
             commands::wakeup::wakeup_clear_history,
+            commands::wakeup::wakeup_verification_load_state,
+            commands::wakeup::wakeup_verification_load_history,
+            commands::wakeup::wakeup_verification_delete_history,
+            commands::wakeup::wakeup_verification_run_batch,
             // Update Commands
             commands::update::check_for_updates,
             commands::update::should_check_updates,
             commands::update::update_last_check_time,
             commands::update::get_update_settings,
             commands::update::save_update_settings,
+            // Announcement Commands
+            commands::announcement::announcement_get_state,
+            commands::announcement::announcement_mark_as_read,
+            commands::announcement::announcement_mark_all_as_read,
+            commands::announcement::announcement_force_refresh,
             // Group Commands
             commands::group::get_group_settings,
             commands::group::save_group_settings,

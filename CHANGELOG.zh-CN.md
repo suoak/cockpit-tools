@@ -7,6 +7,76 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
 ---
+## [0.9.5] - 2026-02-28
+
+### 修复
+- **Windows 唤醒不再弹出黑色终端窗口**：为官方 Language Server 启动及唤醒相关 Windows 命令探测（`netstat`、`where.exe`）补齐隐藏窗口标记。
+- **本地唤醒网关的间歇性传输失败可自动恢复一次**：新增本地健康检查预热、传输错误分类，并在可恢复的本地连接/TLS/超时错误下自动清理网关地址缓存后重试一次。
+- **本地网关请求强制绕过系统代理并统一回环地址**：本地网关/官方 LS 客户端启用 `no_proxy`，并将本地地址归一为 `127.0.0.1`，降低代理或拦截导致的请求失败。
+
+### 变更
+- **账号验证文案与操作统一切换为“检测”语义（全语言）**：新增并使用 `wakeup.verification.actions.runCheckNow`，更新 run-hint 文案，验证页主按钮与弹窗标题同步对齐。
+- **GitHub Copilot 多开实例配额展示新增 Premium 维度**：实例账号配额摘要现同时展示 Inline、Chat、Premium 使用百分比。
+
+---
+## [0.9.4] - 2026-02-27
+
+### 修复
+- **Linux `.deb` 在部分环境下出现白屏/空白窗口**：默认关闭透明窗口（`transparent: false`），并在 Linux 侧补充 WebKitGTK 运行时兜底（未设置时自动注入 `WEBKIT_DISABLE_DMABUF_RENDERER=1`），提升渲染稳定性。
+- **Windows 切号流程在探测 Antigravity 进程时可能卡住**：为 PowerShell 进程探测增加 5 秒超时，并在超时/失败后自动回退到 `sysinfo` 扫描，避免阻塞切号链路。
+- **“切号成功但启动失败”现在可前端可见**：当账号落盘切换完成但启动 Antigravity 失败时，后端会返回明确错误信息，前端可直接提示失败原因。
+- **全平台官方 LS 解析统一改为基于已配置 Antigravity 启动路径**：唤醒/验证在 Windows/macOS/Linux 均从 `antigravity_app_path` 推导 LS（按平台扩展目录与文件名优先级匹配）；若缺失则统一返回 `APP_PATH_NOT_FOUND:antigravity`，在执行前触发现有路径设置引导。
+
+---
+## [0.9.3] - 2026-02-27
+
+### 修复
+- **Linux（含 Arch）AppImage 因静态资源绝对路径导致空白页**：Vite 构建产物改为相对资源路径（`base: "./"`），确保 AppImage 内可正确加载前端 JS/CSS。
+
+### 变更
+- **发布流程文档口径对齐当前完成标准**：更新 `docs/release-process.md`，将“远端分支 + 远端标签”定义为发版完成；GitHub Actions 与发布资产更新改为发版后异步流程。
+
+---
+## [0.9.2] - 2026-02-27
+
+### 变更
+- **Windows 唤醒/验证改为执行前预检运行时就绪状态**：为“立即测试”和“批量验证”增加前后端预检门禁，先校验官方 LS 是否可用，不再在请求发出后才失败。
+- **Windows 官方 LS 路径改为基于已配置的 Antigravity 启动路径推导**：运行时从 `antigravity_app_path` 推导 `resources/app/extensions/antigravity/bin` 下的 LS，按固定文件名优先级匹配，并在同目录内兜底匹配。
+
+### 修复
+- **缺失路径引导前置触发**：当 Windows 缺少 Antigravity 路径或 LS 二进制时，会在执行唤醒前直接触发现有 `app-path-missing` 引导，避免网关启动后出现 500 才报错。
+
+---
+## [0.9.1] - 2026-02-27
+
+### 新增
+- **桌面端公告系统**：新增完整公告能力链路，包含 Tauri 公告命令、前端 store/service/type 与公告中心 UI（列表/详情弹窗、未读角标、已读标记、刷新、弹窗公告、图片预览、tab/url/command 动作处理）。
+- **开发调试公告源控制**：新增本地覆盖文件支持（`~/.antigravity_cockpit/announcements.local.json`）与 Debug 工作区公告源（`announcements.json`），用于 `npm run tauri dev` 调试，同时持久化已读记录与缓存文件。
+- **仓库级公告种子文件**：新增仓库根目录 `announcements.json`，内置欢迎公告与反馈动作，便于本地调试并与远端公告源结构保持一致。
+
+### 变更
+- **普通用户公告策略改为远端优先**：非开发/运行时构建默认不再读取本地覆盖公告文件，统一走远端公告（含缓存与失败回退）。
+- **仪表盘页头操作区调整**：将仪表盘右上角日期展示替换为内嵌“公告”按钮；公告入口改为仪表盘上下文显示，不再全局全页悬浮。
+- **v0.9.0 公告内容已补齐全语言**：新增/补齐 `announcements.json` 中该公告的 17 种语言标题、摘要、正文与动作文案，确保各语言环境都能看到对应本地化内容。
+- **GitHub Copilot 用量展示对齐（仪表盘 + 托盘）**：用量解析切换为结构化快照口径（`completions` / `chat` / `premium_interactions`），补充 `Included` 语义处理，并在仪表盘卡片与托盘摘要中新增 `Premium` 维度展示。
+- **公告/托盘文案覆盖补齐**：为全部语言文件新增 `announcement.*` 文案键，并在托盘文案映射中补充 `Included` 与 GitHub Copilot 指标标签（`Inline` / `Chat` / `Premium`）。
+
+---
+## [0.9.0] - 2026-02-27
+
+### 新增
+- **独立账号验证工作台**：新增 Antigravity「账号验证」页面，支持按模型批量验证账号、实时进度、验证历史落库、批次详情查看，以及 `全部/成功/需要验证/失败` 状态筛选。
+- **官方对齐的唤醒/验证链路**：新增 `本地网关 + 官方 Language Server 协议` 通道，按 `StartCascade` / `SendUserCascadeMessage` / `GetCascadeTrajectory` / `DeleteCascadeTrajectory` 执行，用于对话唤醒与账号验证调用。
+- **403 验证快捷操作**：在“需要验证”结果中提供验证地址展示与快捷操作（`立即验证`、复制验证地址、复制调试信息），便于用户自助完成验证。
+
+### 变更
+- **模型列表规则统一**：唤醒任务模型选择、账号验证模型选择、配额相关模型展示统一按官方 `agentModelSorts[].groups[].modelIds` 生成；官方列表不可用时回退固定 6 个推荐模型。
+- **Antigravity 分组展示收敛为 3 组**：默认分组调整为 `Claude / Gemini Pro / Gemini Flash`，移除 `Gemini Image` 分组并兼容清理旧映射，避免重复分组展示。
+- **账号验证页交互与隐私展示对齐**：支持批量勾选/删除验证记录、可手动关闭结果提示，并与账号总览隐私开关联动（邮箱脱敏展示一致）。
+- **GitHub Copilot（VS Code 口径）展示对齐**：套餐映射中 `individual` 统一归并为 `PRO`；用量展示改为按 `quota_snapshots.completions/chat/premium_interactions` 解析，卡片与表格新增 `Premium requests` 维度并支持 `Included` 展示。
+- **唤醒任务自定义时间交互优化**：自定义时间保持“时间选择器 + 快速输入”交互；空值不再展示默认时间；输入但未点击“添加”的自定义时间也会参与“下次触发预览”和任务保存。
+
+---
 ## [0.8.13] - 2026-02-24
 
 ### 新增

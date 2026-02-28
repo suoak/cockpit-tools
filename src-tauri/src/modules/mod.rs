@@ -1,4 +1,5 @@
 pub mod account;
+pub mod announcement;
 pub mod codex_account;
 pub mod codex_instance;
 pub mod codex_oauth;
@@ -30,8 +31,10 @@ pub mod tray_layout;
 pub mod update_checker;
 pub mod vscode_inject;
 pub mod wakeup;
+pub mod wakeup_gateway;
 pub mod wakeup_history;
 pub mod wakeup_scheduler;
+pub mod wakeup_verification;
 pub mod websocket;
 pub mod windsurf_account;
 pub mod windsurf_instance;
