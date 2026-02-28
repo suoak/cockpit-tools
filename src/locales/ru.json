@@ -95,7 +95,7 @@
         "importFailedMsg": "Импорт не удался: {{error}}",
         "importing": "Импорт...",
         "importSuccessMsg": "Импортировано аккаунтов: {{count}}",
-        "placeholder": "Вставьте JSON..."
+        "placeholder": "Пример: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Карточки",
@@ -131,7 +131,8 @@
         "periodRange": "Цикл: {{start}} - {{end}}",
         "planEndsIn": "Цикл сбросится через {{days}} дн.",
         "planEndsUnknown": "Время цикла недоступно",
-        "usedLine": "Использовано {{used}} / {{total}}"
+        "usedLine": "Использовано {{used}} / {{total}}",
+        "planEndsInHours": "Сбрасывается через {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Альтернатива: использовать изоляцию мульти-инстансов (разные --user-data-dir). Войдите один раз для каждого инстанса, затем запускайте нужный инстанс для быстрого переключения на целевую среду аккаунта."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "Вставьте содержимое auth.json или JSON данных аккаунта",
-      "placeholder": "Вставьте JSON..."
+      "placeholder": "Пример: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Импортировать текущий аккаунт из ~/.codex/auth.json",

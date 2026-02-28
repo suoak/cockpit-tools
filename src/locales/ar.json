@@ -95,7 +95,7 @@
         "importFailedMsg": "فشل الاستيراد: {{error}}",
         "importing": "جارٍ الاستيراد...",
         "importSuccessMsg": "تم استيراد {{count}} حسابًا",
-        "placeholder": "الصق Token أو JSON..."
+        "placeholder": "مثال: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "عرض البطاقات",
@@ -131,7 +131,8 @@
         "periodRange": "الدورة: {{start}} - {{end}}",
         "planEndsIn": "تتم إعادة ضبط الدورة خلال {{days}} يومًا",
         "planEndsUnknown": "توقيت الدورة غير متاح",
-        "usedLine": "تم استخدام {{used}} / {{total}}"
+        "usedLine": "تم استخدام {{used}} / {{total}}",
+        "planEndsInHours": "تتم إعادة الضبط خلال {{hours}} ساعة"
       },
       "flowNotice": {
         "alternative": "بديل: استخدم العزل عبر المثيلات المتعددة (باستخدام --user-data-dir مختلف). سجّل الدخول مرة واحدة لكل مثيل، ثم شغّل حسب المثيل للتبديل السريع إلى بيئة الحساب المستهدف."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "الصق محتوى auth.json أو بيانات JSON للحساب",
-      "placeholder": "الصق محتوى JSON..."
+      "placeholder": "مثال: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "استيراد الحساب الحالي من ~/.codex/auth.json",

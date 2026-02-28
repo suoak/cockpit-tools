@@ -95,7 +95,7 @@
         "importFailedMsg": "Import nieudany: {{error}}",
         "importing": "Importowanie...",
         "importSuccessMsg": "Zaimportowano {{count}} kont",
-        "placeholder": "Wklej JSON..."
+        "placeholder": "Przykład: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Widok kart",
@@ -131,7 +131,8 @@
         "periodRange": "Cykl: {{start}} - {{end}}",
         "planEndsIn": "Cykl resetuje się za {{days}} dni",
         "planEndsUnknown": "Brak informacji o cyklu",
-        "usedLine": "Użyto {{used}} / {{total}}"
+        "usedLine": "Użyto {{used}} / {{total}}",
+        "planEndsInHours": "Resetuje się za {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Alternatywa: użyj izolacji wielu instancji (różne --user-data-dir). Zaloguj się raz na instancję, a potem uruchamiaj po instancji, aby szybko przełączać się do środowiska docelowego konta."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "Wklej zawartość auth.json lub dane JSON konta",
-      "placeholder": "Wklej JSON..."
+      "placeholder": "Przykład: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Importuj bieżące konto z ~/.codex/auth.json",

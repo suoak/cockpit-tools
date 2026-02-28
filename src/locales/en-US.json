@@ -95,7 +95,7 @@
         "importFailedMsg": "Import failed: {{error}}",
         "importing": "Importing...",
         "importSuccessMsg": "Imported {{count}} account(s) successfully",
-        "placeholder": "Paste token or JSON..."
+        "placeholder": "Example: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Card view",
@@ -131,7 +131,8 @@
         "periodRange": "Cycle: {{start}} - {{end}}",
         "planEndsIn": "Cycle resets in {{days}} days",
         "planEndsUnknown": "Cycle timing unavailable",
-        "usedLine": "{{used}} / {{total}} used"
+        "usedLine": "{{used}} / {{total}} used",
+        "planEndsInHours": "Resets in {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Multi-instance isolation: use different --user-data-dir profiles and log in once per instance to switch account environments quickly."
@@ -1051,7 +1052,7 @@
     },
     "token": {
       "desc": "Paste auth.json content or account JSON data",
-      "placeholder": "Paste JSON content..."
+      "placeholder": "Example: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Import the currently logged-in account from ~/.codex/auth.json",

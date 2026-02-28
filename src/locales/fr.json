@@ -95,7 +95,7 @@
         "importFailedMsg": "Échec de l'import : {{error}}",
         "importing": "Importation...",
         "importSuccessMsg": "{{count}} compte(s) importé(s)",
-        "placeholder": "Coller le contenu JSON..."
+        "placeholder": "Exemple : ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Vue cartes",
@@ -131,7 +131,8 @@
         "periodRange": "Cycle : {{start}} - {{end}}",
         "planEndsIn": "Le cycle se réinitialise dans {{days}} jours",
         "planEndsUnknown": "Période du cycle indisponible",
-        "usedLine": "{{used}} / {{total}} utilisés"
+        "usedLine": "{{used}} / {{total}} utilisés",
+        "planEndsInHours": "Réinitialisé dans {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Alternative : utiliser l'isolation multi-instance (--user-data-dir différent). Connectez-vous une fois par instance, puis lancez par instance pour basculer rapidement vers l'environnement du compte cible."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "Collez le contenu auth.json ou les données JSON du compte",
-      "placeholder": "Coller le contenu JSON..."
+      "placeholder": "Exemple : {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Importer le compte connecté depuis ~/.codex/auth.json",

@@ -95,7 +95,7 @@
         "importFailedMsg": "Nhập thất bại: {{error}}",
         "importing": "Đang nhập...",
         "importSuccessMsg": "Đã nhập {{count}} tài khoản",
-        "placeholder": "Dán nội dung JSON..."
+        "placeholder": "Ví dụ: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Dạng thẻ",
@@ -131,7 +131,8 @@
         "periodRange": "Chu kỳ: {{start}} - {{end}}",
         "planEndsIn": "Chu kỳ đặt lại sau {{days}} ngày",
         "planEndsUnknown": "Không có thông tin chu kỳ",
-        "usedLine": "Đã dùng {{used}} / {{total}}"
+        "usedLine": "Đã dùng {{used}} / {{total}}",
+        "planEndsInHours": "Đặt lại sau {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Giải pháp thay thế: dùng cô lập đa phiên bản (khác --user-data-dir). Đăng nhập một lần cho mỗi phiên bản, sau đó khởi chạy theo phiên bản để chuyển nhanh sang môi trường tài khoản mục tiêu."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "Dán nội dung auth.json hoặc dữ liệu JSON tài khoản",
-      "placeholder": "Dán nội dung JSON..."
+      "placeholder": "Ví dụ: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Nhập tài khoản hiện tại từ ~/.codex/auth.json",

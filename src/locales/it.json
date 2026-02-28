@@ -95,7 +95,7 @@
         "importFailedMsg": "Importazione fallita: {{error}}",
         "importing": "Importazione...",
         "importSuccessMsg": "Importati {{count}} account",
-        "placeholder": "Incolla contenuto JSON..."
+        "placeholder": "Esempio: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "Vista schede",
@@ -131,7 +131,8 @@
         "periodRange": "Ciclo: {{start}} - {{end}}",
         "planEndsIn": "Il ciclo si resetta tra {{days}} giorni",
         "planEndsUnknown": "Tempistiche del ciclo non disponibili",
-        "usedLine": "{{used}} / {{total}} utilizzati"
+        "usedLine": "{{used}} / {{total}} utilizzati",
+        "planEndsInHours": "Si ripristina tra {{hours}}h"
       },
       "flowNotice": {
         "alternative": "Alternativa: usa l'isolamento multi-istanza (diverso --user-data-dir). Accedi una volta per istanza e poi avvia per istanza per passare rapidamente all'ambiente account desiderato."
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "Incolla il contenuto di auth.json o i dati JSON dell'account",
-      "placeholder": "Incolla contenuto JSON..."
+      "placeholder": "Esempio: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "Importa l'account attuale da ~/.codex/auth.json",

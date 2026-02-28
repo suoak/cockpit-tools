@@ -95,7 +95,7 @@
         "importFailedMsg": "インポート失敗: {{error}}",
         "importing": "インポート中...",
         "importSuccessMsg": "{{count}} 件のアカウントをインポートしました",
-        "placeholder": "JSON を貼り付け..."
+        "placeholder": "例: ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "カード表示",
@@ -131,7 +131,8 @@
         "periodRange": "サイクル: {{start}} - {{end}}",
         "planEndsIn": "{{days}} 日後にサイクルがリセットされます",
         "planEndsUnknown": "サイクル時刻は利用できません",
-        "usedLine": "{{used}} / {{total}} 使用済み"
+        "usedLine": "{{used}} / {{total}} 使用済み",
+        "planEndsInHours": "{{hours}}h でリセット"
       },
       "flowNotice": {
         "alternative": "代替案: マルチインスタンス分離（異なる --user-data-dir）を利用します。インスタンスごとに一度ログインすれば、以後はインスタンス単位で起動して目的のアカウント環境へ素早く切り替えられます。"
@@ -837,7 +838,7 @@
     },
     "token": {
       "desc": "auth.json の内容またはアカウント JSON を貼り付けてください",
-      "placeholder": "JSON を貼り付け..."
+      "placeholder": "例: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "~/.codex/auth.json から現在ログイン中のアカウントをインポート",

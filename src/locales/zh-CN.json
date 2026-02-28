@@ -95,7 +95,7 @@
         "importFailedMsg": "导入失败: {{error}}",
         "importing": "正在导入...",
         "importSuccessMsg": "成功导入 {{count}} 个账号",
-        "placeholder": "粘贴 Token 或 JSON..."
+        "placeholder": "示例：ghu_xxx / sk-ws-xxx / {\"access_token\":\"eyJ...\",\"refresh_token\":\"rt_...\"} / [{...}]"
       },
       "view": {
         "grid": "卡片视图",
@@ -131,7 +131,8 @@
         "periodRange": "周期：{{start}} - {{end}}",
         "planEndsIn": "配额周期剩余 {{days}} 天",
         "planEndsUnknown": "配额周期时间未知",
-        "usedLine": "{{used}} / {{total}} used"
+        "usedLine": "{{used}} / {{total}} used",
+        "planEndsInHours": "{{hours}} 小时后重置"
       },
       "flowNotice": {
         "alternative": "多开实例隔离：使用不同 --user-data-dir 做账号隔离；每个实例登录一次，后续按实例启动即可快速切换到对应账号环境。"
@@ -1083,7 +1084,7 @@
     },
     "token": {
       "desc": "粘贴 auth.json 内容或账号 JSON 数据",
-      "placeholder": "粘贴 JSON 内容..."
+      "placeholder": "示例：{\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
     "local": {
       "desc": "从 ~/.codex/auth.json 导入当前已登录的账号",
