@@ -153,6 +153,20 @@ pub async fn switch_account(app: AppHandle, account_id: String) -> Result<models
         account.email, account.id
     ));
 
+    // 预检应用路径：路径缺失时只触发引导，不执行任何关闭/注入动作。
+    if let Err(e) = modules::process::ensure_antigravity_launch_path_configured() {
+        if e.starts_with("APP_PATH_NOT_FOUND:") {
+            let _ = app.emit(
+                "app:path_missing",
+                serde_json::json!({
+                    "app": "antigravity",
+                    "retry": { "kind": "switchAccount", "accountId": account_id }
+                }),
+            );
+        }
+        return Err(e);
+    }
+
     // 2. 确保 Token 有效（自动刷新过期的 Token）
     let fresh_token = modules::oauth::ensure_fresh_token(&account.token)
         .await
@@ -202,14 +216,11 @@ pub async fn switch_account(app: AppHandle, account_id: String) -> Result<models
         ));
     }
 
-    // 6. 对齐默认实例启动逻辑：按 PID 精准关闭旧进程，再将账号注入默认实例目录
-    let default_settings = modules::instance::load_default_settings()?;
-    if let Some(pid) = modules::process::resolve_antigravity_pid(default_settings.last_pid, None) {
-        modules::logger::log_info(&format!("命中默认实例运行 PID: {}，准备关闭", pid));
-        modules::process::close_pid(pid, 20)?;
-        let _ = modules::instance::update_default_pid(None);
-    }
+    // 6. 对齐默认实例启动逻辑：按默认实例目录关闭受管进程，再将账号注入默认实例目录
     let default_dir = modules::instance::get_default_user_data_dir()?;
+    let default_dir_str = default_dir.to_string_lossy().to_string();
+    modules::process::close_antigravity_instances(&[default_dir_str], 20)?;
+    let _ = modules::instance::update_default_pid(None);
     modules::instance::inject_account_to_profile(&default_dir, &account_id)?;
 
     // 7. 启动 Antigravity（启动失败不阻断切号，保持原行为）
@@ -236,6 +247,9 @@ pub async fn switch_account(app: AppHandle, account_id: String) -> Result<models
     if let Some(err) = launch_error {
         // 账号状态已经切换成功，仍广播账号切换事件，确保前端状态与本地落盘一致
         modules::websocket::broadcast_account_switched(&account.id, &account.email);
+        if err.starts_with("APP_PATH_NOT_FOUND:") {
+            return Err(err);
+        }
         return Err(format!("账号已切换，但启动 Antigravity 失败: {}", err));
     }
 

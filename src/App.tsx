@@ -5,7 +5,7 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, X } from 'lucide-react';
+import { FolderOpen, RefreshCw, X } from 'lucide-react';
 import { SideNav } from './components/layout/SideNav';
 import { GlobalModal } from './components/GlobalModal';
 import type { QuickSettingsType } from './components/QuickSettingsPopover';
@@ -88,7 +88,10 @@ interface GeneralConfig extends GeneralConfigTheme {
 
 type AppPathMissingDetail = {
   app: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro';
-  retry?: { kind: 'default' | 'instance'; instanceId?: string };
+  retry?:
+    | { kind: 'default' }
+    | { kind: 'instance'; instanceId?: string }
+    | { kind: 'switchAccount'; accountId?: string };
 };
 
 const WAKEUP_ENABLED_KEY = 'agtools.wakeup.enabled';
@@ -206,6 +209,7 @@ function App() {
   const [appPathSetting, setAppPathSetting] = useState(false);
   const [appPathDetecting, setAppPathDetecting] = useState(false);
   const [appPathDraft, setAppPathDraft] = useState('');
+  const [appPathActionError, setAppPathActionError] = useState('');
   const { showModal, closeModal } = useGlobalModal();
   const trayRefreshInFlightRef = useRef(false);
   const openBreakout = useCallback(() => setShowBreakout(true), []);
@@ -697,10 +701,12 @@ function App() {
     if (!appPathMissing) {
       setAppPathDraft('');
       setAppPathDetecting(false);
+      setAppPathActionError('');
       return () => {
         active = false;
       };
     }
+    setAppPathActionError('');
     (async () => {
       try {
         const config = await invoke<GeneralConfig>('get_general_config');
@@ -735,6 +741,7 @@ function App() {
       });
       const path = Array.isArray(selected) ? selected[0] : selected;
       if (path) {
+        setAppPathActionError('');
         setAppPathDraft(path);
       }
     } catch (error) {
@@ -747,13 +754,18 @@ function App() {
     const path = appPathDraft.trim();
     if (!path) return;
     setAppPathSetting(true);
+    setAppPathActionError('');
     try {
       const app = appPathMissing.app;
       const retry = appPathMissing.retry;
       await invoke('set_app_path', { app, path });
-      setAppPathMissing(null);
-      setAppPathSetting(false);
-      if (retry?.kind === 'instance' && retry.instanceId) {
+      if (retry?.kind === 'switchAccount' && retry.accountId) {
+        await invoke('switch_account', { accountId: retry.accountId });
+        await Promise.allSettled([
+          useAccountStore.getState().fetchAccounts(),
+          useAccountStore.getState().fetchCurrentAccount(),
+        ]);
+      } else if (retry?.kind === 'instance' && retry.instanceId) {
         if (app === 'codex') {
           await invoke('codex_start_instance', { instanceId: retry.instanceId });
         } else if (app === 'vscode') {
@@ -778,8 +790,11 @@ function App() {
           await invoke('start_instance', { instanceId: '__default__' });
         }
       }
+      setAppPathMissing(null);
+      setAppPathSetting(false);
     } catch (error) {
       console.error('设置应用路径失败:', error);
+      setAppPathActionError(String(error));
       setAppPathSetting(false);
     }
   };
@@ -792,6 +807,7 @@ function App() {
         app: appPathMissing.app,
         force: true,
       });
+      setAppPathActionError('');
       setAppPathDraft((detected || '').trim());
     } catch (error) {
       console.error('自动探测应用路径失败:', error);
@@ -851,6 +867,30 @@ function App() {
     </div>
   );
 
+  const appPathMissingAppName = appPathMissing
+    ? appPathMissing.app === 'codex'
+      ? 'Codex'
+      : appPathMissing.app === 'vscode'
+        ? 'VS Code'
+        : appPathMissing.app === 'windsurf'
+          ? 'Windsurf'
+          : appPathMissing.app === 'kiro'
+            ? 'Kiro'
+            : 'Antigravity'
+    : '';
+
+  const appPathMissingPathLabel = appPathMissing
+    ? appPathMissing.app === 'codex'
+      ? t('quickSettings.codex.appPath', '启动路径')
+      : appPathMissing.app === 'vscode'
+        ? t('quickSettings.githubCopilot.appPath', 'VS Code 路径')
+        : appPathMissing.app === 'windsurf'
+          ? t('quickSettings.windsurf.appPath', 'Windsurf 路径')
+          : appPathMissing.app === 'kiro'
+            ? t('quickSettings.kiro.appPath', 'Kiro 路径')
+            : t('quickSettings.antigravity.appPath', '启动路径')
+    : t('quickSettings.antigravity.appPath', '启动路径');
+
   return (
     <div className="app-container">
       {/* 更新通知 */}
@@ -880,84 +920,80 @@ function App() {
       )}
 
       {appPathMissing && (
-        <div className="modal-overlay">
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <h2>{t('appPath.missing.title', '未找到应用程序路径')}</h2>
+        <div className="qs-overlay">
+          <div className="qs-modal app-path-missing-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="qs-header">
+              <span className="qs-title">{t('appPath.missing.title', '未找到应用程序路径')}</span>
               <button
-                className="modal-close"
+                className="qs-close"
                 onClick={() => setAppPathMissing(null)}
                 aria-label={t('common.close', '关闭')}
               >
-                <X />
+                <X size={16} />
               </button>
             </div>
-            <div className="modal-body">
-              <p style={{ margin: 0, color: 'var(--text-primary)' }}>
-                {t('appPath.missing.desc', '未找到 {{app}} 应用程序路径，请立即设置后继续启动。', {
-                  app:
-                    appPathMissing.app === 'codex'
-                      ? 'Codex'
-                      : appPathMissing.app === 'vscode'
-                        ? 'VS Code'
-                        : appPathMissing.app === 'windsurf'
-                          ? 'Windsurf'
-                        : appPathMissing.app === 'kiro'
-                          ? 'Kiro'
-                        : 'Antigravity',
-                })}
-              </p>
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+
+            <div className="qs-body">
+              <div className="qs-section">
+                <p className="app-path-missing-desc">
+                  {t('appPath.missing.desc', '未找到 {{app}} 应用程序路径，请立即设置后继续启动。', {
+                    app: appPathMissingAppName,
+                  })}
+                </p>
+              </div>
+
+              <div className="qs-section">
+                <div className="qs-section-header">
+                  <FolderOpen size={15} />
+                  <span>{appPathMissingPathLabel}</span>
+                </div>
+                <div className="qs-path-control">
                   <input
                     type="text"
-                    className="settings-input settings-input--path"
+                    className="qs-path-input"
                     value={appPathDraft}
                     placeholder={t('settings.general.codexAppPathPlaceholder', '默认路径')}
                     onChange={(e) => setAppPathDraft(e.target.value)}
                     disabled={appPathSetting}
                   />
-                  <button
-                    className="btn btn-secondary"
-                    onClick={handlePickMissingAppPath}
-                    disabled={appPathSetting || appPathDetecting}
-                  >
-                    {t('settings.general.codexPathSelect', '选择')}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={handleResetMissingAppPath}
-                    disabled={appPathSetting || appPathDetecting}
-                    title={
-                      appPathDetecting
-                        ? t('common.loading', '加载中...')
-                        : (
-                          appPathMissing.app === 'vscode'
-                            ? t('settings.general.vscodePathReset', '重置默认')
-                            : appPathMissing.app === 'windsurf'
-                              ? t('settings.general.windsurfPathReset', '重置默认')
-                              : appPathMissing.app === 'kiro'
-                                ? t('settings.general.kiroPathReset', '重置默认')
-                              : t('settings.general.codexPathReset', '重置默认')
-                        )
-                    }
-                  >
-                    <RefreshCw size={14} className={appPathDetecting ? 'spin' : undefined} />
-                    {appPathDetecting
-                      ? t('common.loading', '加载中...')
-                      : (
-                        appPathMissing.app === 'vscode'
-                          ? t('settings.general.vscodePathReset', '重置默认')
-                          : appPathMissing.app === 'windsurf'
-                            ? t('settings.general.windsurfPathReset', '重置默认')
-                            : appPathMissing.app === 'kiro'
-                              ? t('settings.general.kiroPathReset', '重置默认')
-                            : t('settings.general.codexPathReset', '重置默认')
-                      )}
-                  </button>
+                  <div className="qs-path-actions">
+                    <button
+                      className="qs-btn"
+                      onClick={handlePickMissingAppPath}
+                      disabled={appPathSetting || appPathDetecting}
+                    >
+                      {t('settings.general.codexPathSelect', '选择')}
+                    </button>
+                    <button
+                      className="qs-btn"
+                      onClick={handleResetMissingAppPath}
+                      disabled={appPathSetting || appPathDetecting}
+                      title={
+                        appPathDetecting
+                          ? t('common.loading', '加载中...')
+                          : (
+                            appPathMissing.app === 'vscode'
+                              ? t('settings.general.vscodePathReset', '重置默认')
+                              : appPathMissing.app === 'windsurf'
+                                ? t('settings.general.windsurfPathReset', '重置默认')
+                                : appPathMissing.app === 'kiro'
+                                  ? t('settings.general.kiroPathReset', '重置默认')
+                                  : t('settings.general.codexPathReset', '重置默认')
+                          )
+                      }
+                    >
+                      <RefreshCw size={12} className={appPathDetecting ? 'spin' : undefined} />
+                    </button>
+                  </div>
                 </div>
+                {appPathActionError ? (
+                  <p className="app-path-missing-error">
+                    {t('messages.switchFailed', { error: appPathActionError })}
+                  </p>
+                ) : null}
               </div>
             </div>
+
             <div className="modal-footer">
               <button
                 className="btn btn-secondary"

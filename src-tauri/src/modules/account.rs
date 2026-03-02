@@ -305,10 +305,7 @@ fn find_matching_account_id(
     index: &AccountIndex,
     email: &str,
     token: &TokenData,
-    allow_legacy_email_fallback: bool,
 ) -> Result<Option<String>, String> {
-    let mut email_matches: Vec<String> = Vec::new();
-
     for summary in &index.accounts {
         let existing = match load_account(&summary.id) {
             Ok(account) => account,
@@ -324,18 +321,6 @@ fn find_matching_account_id(
         if is_strict_account_identity_match(&existing, email, token) {
             return Ok(Some(existing.id));
         }
-
-        if existing.email == email {
-            email_matches.push(existing.id);
-        }
-    }
-
-    if allow_legacy_email_fallback && email_matches.len() == 1 {
-        modules::logger::log_warn(&format!(
-            "账号匹配走兼容路径（单 email 回退）: email={}",
-            email
-        ));
-        return Ok(email_matches.into_iter().next());
     }
 
     Ok(None)
@@ -352,7 +337,7 @@ pub fn add_account(
         .map_err(|e| format!("获取锁失败: {}", e))?;
     let mut index = load_account_index()?;
 
-    if find_matching_account_id(&index, &email, &token, false)?.is_some() {
+    if find_matching_account_id(&index, &email, &token)?.is_some() {
         return Err(format!("账号已存在: {}", email));
     }
 
@@ -421,7 +406,7 @@ pub fn upsert_account(
         .map_err(|e| format!("获取锁失败: {}", e))?;
     let mut index = load_account_index()?;
 
-    let existing_account_id = find_matching_account_id(&index, &email, &token, true)?;
+    let existing_account_id = find_matching_account_id(&index, &email, &token)?;
 
     if let Some(account_id) = existing_account_id {
         match load_account(&account_id) {
@@ -1296,6 +1281,9 @@ pub async fn fetch_quota_with_retry(
 pub async fn switch_account_internal(account_id: &str) -> Result<Account, String> {
     modules::logger::log_info("[Switch] 开始切换账号");
 
+    // 路径缺失时不执行关闭/注入，避免破坏当前运行态。
+    modules::process::ensure_antigravity_launch_path_configured()?;
+
     // 1. 加载并验证账号存在
     let mut account = prepare_account_for_injection(account_id).await?;
     modules::logger::log_info("[Switch] 正在切换到账号");
@@ -1327,14 +1315,11 @@ pub async fn switch_account_internal(account_id: &str) -> Result<Account, String
         modules::logger::log_warn(&format!("[Switch] 更新默认实例绑定账号失败: {}", e));
     }
 
-    // 6. 对齐默认实例启动逻辑：按 PID 精准关闭旧进程，再注入默认实例目录
-    let default_settings = modules::instance::load_default_settings()?;
-    if let Some(pid) = modules::process::resolve_antigravity_pid(default_settings.last_pid, None) {
-        modules::logger::log_info(&format!("[Switch] 命中默认实例 PID={}，准备关闭", pid));
-        modules::process::close_pid(pid, 20)?;
-        let _ = modules::instance::update_default_pid(None);
-    }
+    // 6. 对齐默认实例启动逻辑：按默认实例目录关闭受管进程，再注入默认实例目录
     let default_dir = modules::instance::get_default_user_data_dir()?;
+    let default_dir_str = default_dir.to_string_lossy().to_string();
+    modules::process::close_antigravity_instances(&[default_dir_str], 20)?;
+    let _ = modules::instance::update_default_pid(None);
     modules::instance::inject_account_to_profile(&default_dir, account_id)?;
 
     // 7. 启动 Antigravity（启动失败不阻断切号，保持原行为）

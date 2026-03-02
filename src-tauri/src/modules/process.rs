@@ -1,9 +1,7 @@
 use crate::modules::config;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-use std::process::Child;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 use sysinfo::{Pid, ProcessRefreshKind, System, UpdateKind};
@@ -24,6 +22,226 @@ const DETACHED_PROCESS: u32 = 0x0000_0008;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(target_os = "windows")]
 const WINDOWS_PROCESS_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+
+fn strict_process_detect_enabled() -> bool {
+    std::env::var("AG_STRICT_PROCESS_DETECT")
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn parse_env_bool(value: &str) -> Option<bool> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Some(true),
+        "0" | "false" | "no" | "off" => Some(false),
+        _ => None,
+    }
+}
+
+fn command_trace_enabled() -> bool {
+    if let Ok(value) = std::env::var("COCKPIT_COMMAND_TRACE") {
+        if let Some(enabled) = parse_env_bool(&value) {
+            return enabled;
+        }
+    }
+    false
+}
+
+fn quote_command_part(part: &str) -> String {
+    if part.is_empty() {
+        return "\"\"".to_string();
+    }
+    let needs_quote = part.chars().any(|ch| {
+        ch.is_whitespace() || matches!(ch, '"' | '\'' | '$' | '`' | '|' | '&' | ';' | '(' | ')')
+    });
+    if !needs_quote {
+        return part.to_string();
+    }
+    format!("{:?}", part)
+}
+
+fn format_command_preview(command: &Command) -> String {
+    let program = quote_command_part(command.get_program().to_string_lossy().as_ref());
+    let args = command
+        .get_args()
+        .map(|arg| quote_command_part(arg.to_string_lossy().as_ref()))
+        .collect::<Vec<String>>();
+    if args.is_empty() {
+        program
+    } else {
+        format!("{} {}", program, args.join(" "))
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn escape_powershell_single_quoted(value: &str) -> String {
+    value.replace('\'', "''")
+}
+
+#[cfg(target_os = "windows")]
+fn build_windows_path_filtered_process_probe_script(
+    process_name: &str,
+    expected_exe_path: &str,
+) -> String {
+    let process = escape_powershell_single_quoted(process_name);
+    let expected = escape_powershell_single_quoted(expected_exe_path);
+    format!(
+        r#"$processName='{process}';
+$expectedRaw='{expected}';
+function Normalize-ExePath([string]$path) {{
+  if ([string]::IsNullOrWhiteSpace($path)) {{ return $null }}
+  $value = $path.Trim().Trim('"')
+  $value = [Environment]::ExpandEnvironmentVariables($value)
+  if ($value.StartsWith('\\?\UNC\', [System.StringComparison]::OrdinalIgnoreCase)) {{
+    $value = '\\' + $value.Substring(8)
+  }} elseif ($value.StartsWith('\\?\', [System.StringComparison]::OrdinalIgnoreCase)) {{
+    $value = $value.Substring(4)
+  }}
+  $value = $value -replace '/', '\'
+  try {{ $value = [System.IO.Path]::GetFullPath($value) }} catch {{}}
+  if ($value.StartsWith('\\?\UNC\', [System.StringComparison]::OrdinalIgnoreCase)) {{
+    $value = '\\' + $value.Substring(8)
+  }} elseif ($value.StartsWith('\\?\', [System.StringComparison]::OrdinalIgnoreCase)) {{
+    $value = $value.Substring(4)
+  }}
+  return $value.ToLowerInvariant()
+}}
+function Get-ExePathFromCmdLine([string]$cmdline) {{
+  if ([string]::IsNullOrWhiteSpace($cmdline)) {{ return $null }}
+  $value = $cmdline.Trim()
+  if ($value.StartsWith('"')) {{
+    $end = $value.IndexOf('"', 1)
+    if ($end -gt 1) {{ return $value.Substring(1, $end - 1) }}
+  }}
+  $exeMatch = [regex]::Match($value, '^[^""]+?\.exe', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  if ($exeMatch.Success) {{ return $exeMatch.Value.Trim() }}
+  $space = $value.IndexOf(' ')
+  if ($space -gt 0) {{ return $value.Substring(0, $space) }}
+  return $value
+}}
+$expected = Normalize-ExePath $expectedRaw
+if ([string]::IsNullOrWhiteSpace($expected)) {{ exit 0 }}
+Get-CimInstance Win32_Process -Filter ("Name='" + $processName + "'") |
+  Where-Object {{
+    $exe = Normalize-ExePath $_.ExecutablePath
+    if (-not $exe) {{ $exe = Normalize-ExePath (Get-ExePathFromCmdLine $_.CommandLine) }}
+    $exe -eq $expected
+  }} |
+  ForEach-Object {{ "$($_.ProcessId)|$($_.CommandLine)" }}"#
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn truncate_for_trace(text: &str, max_chars: usize) -> String {
+    let mut iter = text.chars();
+    let mut current = String::new();
+    for _ in 0..max_chars {
+        let Some(ch) = iter.next() else {
+            return text.to_string();
+        };
+        current.push(ch);
+    }
+    if iter.next().is_none() {
+        text.to_string()
+    } else {
+        format!("{}...(truncated)", current)
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn output_bytes_for_trace(bytes: &[u8]) -> String {
+    let value = String::from_utf8_lossy(bytes);
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        "<empty>".to_string()
+    } else {
+        truncate_for_trace(trimmed, 4000)
+    }
+}
+
+fn log_command_trace_exec(command_preview: &str) {
+    if !command_trace_enabled() {
+        return;
+    }
+    crate::modules::logger::log_info(&format!("[CmdTrace] EXEC {}", command_preview));
+}
+
+#[cfg(target_os = "windows")]
+fn log_command_trace_result(
+    command_preview: &str,
+    result: &std::io::Result<std::process::Output>,
+    elapsed: Duration,
+) {
+    if !command_trace_enabled() {
+        return;
+    }
+    match result {
+        Ok(output) => {
+            crate::modules::logger::log_info(&format!(
+                "[CmdTrace] RESULT elapsed={}ms status={} cmd={}",
+                elapsed.as_millis(),
+                output.status,
+                command_preview
+            ));
+            crate::modules::logger::log_info(&format!(
+                "[CmdTrace] STDOUT cmd={} => {}",
+                command_preview,
+                output_bytes_for_trace(&output.stdout)
+            ));
+            crate::modules::logger::log_info(&format!(
+                "[CmdTrace] STDERR cmd={} => {}",
+                command_preview,
+                output_bytes_for_trace(&output.stderr)
+            ));
+        }
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[CmdTrace] ERROR elapsed={}ms cmd={} err={}",
+                elapsed.as_millis(),
+                command_preview,
+                err
+            ));
+        }
+    }
+}
+
+fn log_command_trace_spawn_result(
+    command_preview: &str,
+    result: &std::io::Result<Child>,
+    elapsed: Duration,
+) {
+    if !command_trace_enabled() {
+        return;
+    }
+    match result {
+        Ok(child) => crate::modules::logger::log_info(&format!(
+            "[CmdTrace] SPAWN elapsed={}ms pid={} cmd={}",
+            elapsed.as_millis(),
+            child.id(),
+            command_preview
+        )),
+        Err(err) => crate::modules::logger::log_warn(&format!(
+            "[CmdTrace] SPAWN_ERROR elapsed={}ms cmd={} err={}",
+            elapsed.as_millis(),
+            command_preview,
+            err
+        )),
+    }
+}
+
+fn spawn_command_with_trace(cmd: &mut Command) -> std::io::Result<Child> {
+    let preview = format_command_preview(cmd);
+    log_command_trace_exec(&preview);
+    let start = Instant::now();
+    let result = cmd.spawn();
+    log_command_trace_spawn_result(&preview, &result, start.elapsed());
+    result
+}
 
 #[cfg(target_os = "windows")]
 fn build_powershell_command(args: &[&str]) -> Command {
@@ -68,7 +286,13 @@ fn build_powershell_command(args: &[&str]) -> Command {
 
 #[cfg(target_os = "windows")]
 fn powershell_output(args: &[&str]) -> std::io::Result<std::process::Output> {
-    build_powershell_command(args).output()
+    let mut command = build_powershell_command(args);
+    let preview = format_command_preview(&command);
+    log_command_trace_exec(&preview);
+    let start = Instant::now();
+    let result = command.output();
+    log_command_trace_result(&preview, &result, start.elapsed());
+    result
 }
 
 #[cfg(target_os = "windows")]
@@ -78,11 +302,25 @@ fn powershell_output_with_timeout(
 ) -> std::io::Result<std::process::Output> {
     use std::io::{Error, ErrorKind, Read};
 
-    let mut child = build_powershell_command(args)
+    let mut command = build_powershell_command(args);
+    command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .stderr(Stdio::piped());
+    let preview = format_command_preview(&command);
+    log_command_trace_exec(&preview);
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(err) => {
+            if command_trace_enabled() {
+                crate::modules::logger::log_warn(&format!(
+                    "[CmdTrace] SPAWN_ERROR elapsed=0ms cmd={} err={}",
+                    preview, err
+                ));
+            }
+            return Err(err);
+        }
+    };
     let start = Instant::now();
 
     loop {
@@ -95,23 +333,27 @@ fn powershell_output_with_timeout(
             if let Some(mut err) = child.stderr.take() {
                 let _ = err.read_to_end(&mut stderr);
             }
-            return Ok(std::process::Output {
+            let result = Ok(std::process::Output {
                 status,
                 stdout,
                 stderr,
             });
+            log_command_trace_result(&preview, &result, start.elapsed());
+            return result;
         }
 
         if start.elapsed() >= timeout {
             let _ = child.kill();
             let _ = child.wait();
-            return Err(Error::new(
+            let result = Err(Error::new(
                 ErrorKind::TimedOut,
                 format!(
                     "PowerShell 进程探测超时（{}ms）",
                     timeout.as_millis()
                 ),
             ));
+            log_command_trace_result(&preview, &result, start.elapsed());
+            return result;
         }
 
         thread::sleep(Duration::from_millis(100));
@@ -122,10 +364,14 @@ fn powershell_output_with_timeout(
 fn cmd_output(args: &[&str]) -> std::io::Result<std::process::Output> {
     use std::os::windows::process::CommandExt;
 
-    Command::new("cmd")
-        .creation_flags(CREATE_NO_WINDOW)
-        .args(args)
-        .output()
+    let mut command = Command::new("cmd");
+    command.creation_flags(CREATE_NO_WINDOW).args(args);
+    let preview = format_command_preview(&command);
+    log_command_trace_exec(&preview);
+    let start = Instant::now();
+    let result = command.output();
+    log_command_trace_result(&preview, &result, start.elapsed());
+    result
 }
 
 #[cfg(target_os = "windows")]
@@ -146,19 +392,22 @@ fn powershell_output_file(script: &str) -> std::io::Result<std::process::Output>
     );
     std::fs::write(&path, file_script)?;
 
-    let output = Command::new("powershell")
-        .creation_flags(CREATE_NO_WINDOW)
-        .args([
-            "-WindowStyle",
-            "Hidden",
-            "-NonInteractive",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            &path.to_string_lossy(),
-        ])
-        .output();
+    let mut command = Command::new("powershell");
+    command.creation_flags(CREATE_NO_WINDOW).args([
+        "-WindowStyle",
+        "Hidden",
+        "-NonInteractive",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        &path.to_string_lossy(),
+    ]);
+    let preview = format_command_preview(&command);
+    log_command_trace_exec(&preview);
+    let start = Instant::now();
+    let output = command.output();
+    log_command_trace_result(&preview, &output, start.elapsed());
 
     let _ = std::fs::remove_file(&path);
     output
@@ -635,6 +884,13 @@ exit 0
             stdout.chars().take(400).collect::<String>(),
             stderr.chars().take(400).collect::<String>()
         ));
+        if strict_process_detect_enabled() {
+            crate::modules::logger::log_warn(&format!(
+                "[Path Detect] {} strict mode enabled, skip -File fallback",
+                app_label
+            ));
+            return None;
+        }
         let retry = match powershell_output_file(&script) {
             Ok(value) => value,
             Err(err) => {
@@ -699,7 +955,7 @@ fn should_detach_child() -> bool {
 fn spawn_detached_unix(cmd: &mut Command) -> Result<Child, String> {
     use std::os::unix::process::CommandExt;
     if !should_detach_child() {
-        return cmd.spawn().map_err(|e| format!("启动失败: {}", e));
+        return spawn_command_with_trace(cmd).map_err(|e| format!("启动失败: {}", e));
     }
     cmd.stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -712,7 +968,7 @@ fn spawn_detached_unix(cmd: &mut Command) -> Result<Child, String> {
             Ok(())
         });
     }
-    cmd.spawn().map_err(|e| format!("启动失败: {}", e))
+    spawn_command_with_trace(cmd).map_err(|e| format!("启动失败: {}", e))
 }
 
 fn normalize_custom_path(value: Option<&str>) -> Option<String> {
@@ -1271,6 +1527,24 @@ fn resolve_antigravity_launch_path() -> Result<std::path::PathBuf, String> {
     Err(app_path_missing_error("antigravity"))
 }
 
+pub fn ensure_antigravity_launch_path_configured() -> Result<(), String> {
+    resolve_antigravity_launch_path().map(|_| ())
+}
+
+pub fn ensure_vscode_launch_path_configured() -> Result<(), String> {
+    resolve_vscode_launch_path().map(|_| ())
+}
+
+#[cfg(target_os = "macos")]
+pub fn ensure_codex_launch_path_configured() -> Result<(), String> {
+    resolve_codex_launch_path().map(|_| ())
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn ensure_codex_launch_path_configured() -> Result<(), String> {
+    Err(app_path_missing_error("codex"))
+}
+
 fn resolve_vscode_launch_path() -> Result<std::path::PathBuf, String> {
     if let Some(custom) = normalize_custom_path(Some(&config::get_user_config().vscode_app_path)) {
         #[cfg(target_os = "macos")]
@@ -1368,7 +1642,6 @@ pub fn is_antigravity_running() -> bool {
             .unwrap_or("")
             .to_lowercase();
 
-        // 通用的辅助进程排除逻辑
         let args = process.cmd();
         let args_str = args
             .iter()
@@ -1376,39 +1649,8 @@ pub fn is_antigravity_running() -> bool {
             .collect::<Vec<String>>()
             .join(" ");
 
-        let is_helper = args_str.contains("--type=")
-            || name.contains("helper")
-            || name.contains("plugin")
-            || name.contains("renderer")
-            || name.contains("gpu")
-            || name.contains("crashpad")
-            || name.contains("utility")
-            || name.contains("audio")
-            || name.contains("sandbox")
-            || exe_path.contains("crashpad");
-
-        #[cfg(target_os = "macos")]
-        {
-            if exe_path.contains("antigravity.app") && !is_helper {
-                return true;
-            }
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            if name == "antigravity.exe" && !is_helper {
-                return true;
-            }
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            if (name.contains("antigravity") || exe_path.contains("/antigravity"))
-                && !name.contains("tools")
-                && !is_helper
-            {
-                return true;
-            }
+        if is_antigravity_main_process(&name, &exe_path, Some(&args_str)) {
+            return true;
         }
     }
 
@@ -1656,9 +1898,29 @@ fn normalize_path_for_compare(raw: &str) -> String {
     if trimmed.is_empty() {
         return String::new();
     }
-    let resolved = std::fs::canonicalize(trimmed)
+
+    #[cfg(target_os = "windows")]
+    fn normalize_windows_extended_path(raw: &str) -> String {
+        let mut value = raw.trim().trim_matches('"').replace('/', "\\");
+        if value.len() >= 8 && value[..8].eq_ignore_ascii_case("\\\\?\\UNC\\") {
+            value = format!("\\\\{}", &value[8..]);
+        } else if value.len() >= 4 && value[..4].eq_ignore_ascii_case("\\\\?\\") {
+            value = value[4..].to_string();
+        }
+        value
+    }
+
+    #[cfg(target_os = "windows")]
+    let normalized_input = normalize_windows_extended_path(trimmed);
+    #[cfg(not(target_os = "windows"))]
+    let normalized_input = trimmed.to_string();
+
+    let resolved = std::fs::canonicalize(&normalized_input)
         .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| trimmed.to_string());
+        .unwrap_or(normalized_input);
+
+    #[cfg(target_os = "windows")]
+    let resolved = normalize_windows_extended_path(&resolved);
 
     #[cfg(target_os = "windows")]
     {
@@ -1684,6 +1946,158 @@ fn is_helper_command_line(cmdline_lower: &str) -> bool {
         || cmdline_lower.contains("--clientprocessid=")
         || cmdline_lower.contains("\\resources\\app\\extensions\\")
         || cmdline_lower.contains("/resources/app/extensions/")
+}
+
+fn is_antigravity_main_process(
+    name: &str,
+    exe_path: &str,
+    command_line_lower: Option<&str>,
+) -> bool {
+    let cmdline = command_line_lower.unwrap_or("");
+    if cmdline.contains("antigravity tools") || cmdline.contains("antigravity tools.app/contents/")
+    {
+        return false;
+    }
+    if !cmdline.is_empty() && is_helper_command_line(cmdline) {
+        return false;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = name;
+        return exe_path.contains("antigravity.app")
+            && !exe_path.contains("antigravity tools.app")
+            && !exe_path.contains("crashpad");
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return (name == "antigravity.exe" || exe_path.ends_with("\\antigravity.exe"))
+            && !exe_path.contains("crashpad");
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        return (name.contains("antigravity") || exe_path.contains("/antigravity"))
+            && !name.contains("tools")
+            && !exe_path.contains("tools");
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        let _ = (name, exe_path);
+        false
+    }
+}
+
+fn collect_running_process_exe_by_pid() -> HashMap<u32, String> {
+    let mut map = HashMap::new();
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet),
+    );
+    for (pid, process) in system.processes() {
+        let Some(exe) = process.exe().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let normalized = normalize_path_for_compare(exe);
+        if normalized.is_empty() {
+            continue;
+        }
+        map.insert(pid.as_u32(), normalized);
+    }
+    map
+}
+
+fn filter_entries_by_expected_launch_path(
+    app_label: &str,
+    entries: Vec<(u32, Option<String>)>,
+    expected: Option<String>,
+) -> Vec<(u32, Option<String>)> {
+    if entries.is_empty() {
+        return entries;
+    }
+    let Some(expected) = expected else {
+        return Vec::new();
+    };
+    let exe_by_pid = collect_running_process_exe_by_pid();
+    let mut result = Vec::new();
+    let mut missing_exe = 0usize;
+    let mut path_mismatch = 0usize;
+    for (pid, dir) in entries {
+        match exe_by_pid.get(&pid) {
+            Some(actual) if actual == &expected => result.push((pid, dir)),
+            Some(_) => path_mismatch += 1,
+            None => missing_exe += 1,
+        }
+    }
+    if result.is_empty() {
+        crate::modules::logger::log_warn(&format!(
+            "[{} Resolve] 启动路径硬匹配未命中：expected={}, path_mismatch={}, missing_exe={}",
+            app_label, expected, path_mismatch, missing_exe
+        ));
+    }
+    result
+}
+
+fn resolve_expected_antigravity_launch_path_for_match() -> Option<String> {
+    let launch_path = match resolve_antigravity_launch_path() {
+        Ok(path) => path,
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[AG Resolve] 启动路径未配置或无效，跳过 PID 匹配: {}",
+                err
+            ));
+            return None;
+        }
+    };
+    let normalized = normalize_path_for_compare(launch_path.to_string_lossy().as_ref());
+    if normalized.is_empty() {
+        crate::modules::logger::log_warn("[AG Resolve] 启动路径为空，跳过 PID 匹配");
+        return None;
+    }
+    Some(normalized)
+}
+
+fn resolve_expected_vscode_launch_path_for_match() -> Option<String> {
+    let launch_path = match resolve_vscode_launch_path() {
+        Ok(path) => path,
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[VSCode Resolve] 启动路径未配置或无效，跳过 PID 匹配: {}",
+                err
+            ));
+            return None;
+        }
+    };
+    let normalized = normalize_path_for_compare(launch_path.to_string_lossy().as_ref());
+    if normalized.is_empty() {
+        crate::modules::logger::log_warn("[VSCode Resolve] 启动路径为空，跳过 PID 匹配");
+        return None;
+    }
+    Some(normalized)
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_expected_codex_launch_path_for_match() -> Option<String> {
+    let launch_path = match resolve_codex_launch_path() {
+        Ok(path) => path,
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[Codex Resolve] 启动路径未配置或无效，跳过 PID 匹配: {}",
+                err
+            ));
+            return None;
+        }
+    };
+    let normalized = normalize_path_for_compare(launch_path.to_string_lossy().as_ref());
+    if normalized.is_empty() {
+        crate::modules::logger::log_warn("[Codex Resolve] 启动路径为空，跳过 PID 匹配");
+        return None;
+    }
+    Some(normalized)
 }
 
 #[cfg(target_os = "macos")]
@@ -1724,14 +2138,16 @@ fn collect_antigravity_process_entries_from_ps() -> Vec<(u32, Option<String>)> {
 }
 
 #[cfg(target_os = "windows")]
-fn collect_antigravity_process_entries_from_powershell() -> Vec<(u32, Option<String>)> {
+fn collect_antigravity_process_entries_from_powershell(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
     let mut result = Vec::new();
+    let script = build_windows_path_filtered_process_probe_script(
+        "Antigravity.exe",
+        expected_exe_path,
+    );
     let output = powershell_output_with_timeout(
-        &[
-        "-NoProfile",
-        "-Command",
-        "Get-CimInstance Win32_Process -Filter \"Name='Antigravity.exe'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }",
-        ],
+        &["-NoProfile", "-Command", &script],
         WINDOWS_PROCESS_PROBE_TIMEOUT,
     );
     let output = match output {
@@ -1739,11 +2155,11 @@ fn collect_antigravity_process_entries_from_powershell() -> Vec<(u32, Option<Str
         Err(err) => {
             if err.kind() == std::io::ErrorKind::TimedOut {
                 crate::modules::logger::log_warn(
-                    "[AG Probe] PowerShell 进程探测超时（5s），回退到 sysinfo 进程扫描",
+                    "[AG Probe] PowerShell 进程探测超时（5s）",
                 );
             } else {
                 crate::modules::logger::log_warn(&format!(
-                    "[AG Probe] PowerShell 进程探测失败，回退到 sysinfo: {}",
+                    "[AG Probe] PowerShell 进程探测失败: {}",
                     err
                 ));
             }
@@ -1773,12 +2189,107 @@ fn collect_antigravity_process_entries_from_powershell() -> Vec<(u32, Option<Str
             Err(_) => continue,
         };
         let lower = cmdline.to_lowercase();
-        if lower.contains("antigravity tools") || is_helper_command_line(&lower) {
+        if !is_antigravity_main_process("antigravity.exe", "", Some(&lower)) {
             continue;
         }
         let dir = extract_user_data_dir_from_command_line(cmdline);
         result.push((pid, dir));
     }
+    result
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_windows_process_exe_for_match(process: &sysinfo::Process) -> (Option<String>, bool) {
+    if let Some(exe) = process.exe().and_then(|value| value.to_str()) {
+        let normalized = normalize_path_for_compare(exe);
+        if !normalized.is_empty() {
+            return (Some(normalized), false);
+        }
+    }
+    if let Some(first) = process.cmd().first() {
+        let normalized = normalize_path_for_compare(first.to_string_lossy().as_ref());
+        if !normalized.is_empty() {
+            return (Some(normalized), true);
+        }
+    }
+    (None, false)
+}
+
+#[cfg(target_os = "windows")]
+fn collect_antigravity_process_entries_from_sysinfo_fallback(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
+    let expected = normalize_path_for_compare(expected_exe_path);
+    if expected.is_empty() {
+        return Vec::new();
+    }
+
+    let mut result = Vec::new();
+    let mut candidates = 0usize;
+    let mut path_mismatch = 0usize;
+    let mut missing_exe = 0usize;
+    let mut cmdline_fallback_hit = 0usize;
+
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing()
+            .with_exe(UpdateKind::OnlyIfNotSet)
+            .with_cmd(UpdateKind::OnlyIfNotSet),
+    );
+    let current_pid = std::process::id();
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+
+        let name = process.name().to_string_lossy().to_lowercase();
+        let exe_path = process
+            .exe()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let args = process.cmd();
+        let args_lower = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_lowercase())
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        if !is_antigravity_main_process(&name, &exe_path, Some(&args_lower)) {
+            continue;
+        }
+        candidates += 1;
+
+        let (actual, used_cmdline_fallback) = resolve_windows_process_exe_for_match(process);
+        match actual {
+            Some(actual_path) if actual_path == expected => {
+                if used_cmdline_fallback {
+                    cmdline_fallback_hit += 1;
+                }
+                let dir = extract_user_data_dir(args);
+                result.push((pid_u32, dir));
+            }
+            Some(_) => path_mismatch += 1,
+            None => missing_exe += 1,
+        }
+    }
+
+    if result.is_empty() {
+        crate::modules::logger::log_warn(&format!(
+            "[AG Probe] sysinfo fallback no match: expected={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    } else {
+        crate::modules::logger::log_info(&format!(
+            "[AG Probe] sysinfo fallback matched: expected={}, matched={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, result.len(), candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    }
+
     result
 }
 
@@ -1829,31 +2340,61 @@ fn collect_antigravity_process_entries_from_proc() -> Vec<(u32, Option<String>)>
 }
 
 pub fn collect_antigravity_process_entries() -> Vec<(u32, Option<String>)> {
+    let expected_launch = resolve_expected_antigravity_launch_path_for_match();
+    if expected_launch.is_none() {
+        return Vec::new();
+    }
+
     #[cfg(target_os = "macos")]
     {
         let entries = collect_antigravity_process_entries_macos();
         if !entries.is_empty() {
-            return entries;
+            return filter_entries_by_expected_launch_path(
+                "AG",
+                entries,
+                expected_launch.clone(),
+            );
         }
         let entries = collect_antigravity_process_entries_from_ps();
         if !entries.is_empty() {
-            return entries;
+            return filter_entries_by_expected_launch_path(
+                "AG",
+                entries,
+                expected_launch.clone(),
+            );
         }
     }
 
     #[cfg(target_os = "windows")]
     {
-        let entries = collect_antigravity_process_entries_from_powershell();
+        let expected = expected_launch
+            .as_deref()
+            .expect("expected launch path must exist");
+        let entries = collect_antigravity_process_entries_from_powershell(expected);
         if !entries.is_empty() {
             return entries;
         }
+        if strict_process_detect_enabled() {
+            crate::modules::logger::log_warn(
+                "[AG Probe] strict mode enabled and PowerShell returned empty; skip sysinfo fallback",
+            );
+            return Vec::new();
+        }
+        crate::modules::logger::log_warn(
+            "[AG Probe] PowerShell returned empty; fallback to sysinfo probe",
+        );
+        return collect_antigravity_process_entries_from_sysinfo_fallback(expected);
     }
 
     #[cfg(target_os = "linux")]
     {
         let entries = collect_antigravity_process_entries_from_proc();
         if !entries.is_empty() {
-            return entries;
+            return filter_entries_by_expected_launch_path(
+                "AG",
+                entries,
+                expected_launch.clone(),
+            );
         }
     }
 
@@ -1869,36 +2410,32 @@ pub fn collect_antigravity_process_entries() -> Vec<(u32, Option<String>)> {
             continue;
         }
 
-        #[cfg(target_os = "macos")]
-        let _name = process.name().to_string_lossy().to_lowercase();
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
         let name = process.name().to_string_lossy().to_lowercase();
         let exe_path = process
             .exe()
             .and_then(|p| p.to_str())
             .unwrap_or("")
             .to_lowercase();
+        let args = process.cmd();
+        let args_str = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_lowercase())
+            .collect::<Vec<String>>()
+            .join(" ");
 
-        #[cfg(target_os = "macos")]
-        let is_antigravity =
-            exe_path.contains("antigravity.app") && !exe_path.contains("antigravity tools.app");
-        #[cfg(target_os = "windows")]
-        let is_antigravity = name == "antigravity.exe" || exe_path.ends_with("\\antigravity.exe");
-        #[cfg(target_os = "linux")]
-        let is_antigravity = (name.contains("antigravity") || exe_path.contains("/antigravity"))
-            && !name.contains("tools")
-            && !exe_path.contains("tools");
-
-        if !is_antigravity {
+        if !is_antigravity_main_process(&name, &exe_path, Some(&args_str)) {
             continue;
         }
 
-        let args = process.cmd();
         let dir = extract_user_data_dir(&args);
         result.push((pid_u32, dir));
     }
 
-    result
+    filter_entries_by_expected_launch_path(
+        "AG",
+        result,
+        expected_launch,
+    )
 }
 
 fn pick_preferred_pid(mut pids: Vec<u32>) -> Option<u32> {
@@ -1976,14 +2513,21 @@ fn resolve_pid_from_entries_by_user_data_dir(
         return None;
     }
 
+    let matches =
+        collect_matching_pids_by_user_data_dir(entries, target_dir, allow_none_for_target);
+
     if let Some(pid) = last_pid {
-        if is_pid_running(pid) {
+        if is_pid_running(pid) && matches.contains(&pid) {
             return Some(pid);
+        }
+        if is_pid_running(pid) {
+            crate::modules::logger::log_warn(&format!(
+                "[PID Resolve] 忽略不匹配的 last_pid={}，target={}，matched_pids={:?}",
+                pid, target_dir, matches
+            ));
         }
     }
 
-    let matches =
-        collect_matching_pids_by_user_data_dir(entries, target_dir, allow_none_for_target);
     pick_preferred_pid(matches)
 }
 
@@ -1995,14 +2539,18 @@ fn get_default_antigravity_user_data_dir() -> Option<String> {
 }
 
 fn resolve_antigravity_target_and_fallback(user_data_dir: Option<&str>) -> Option<(String, bool)> {
-    build_user_data_dir_match_target(user_data_dir, get_default_antigravity_user_data_dir(), true)
+    build_user_data_dir_match_target(
+        user_data_dir,
+        get_default_antigravity_user_data_dir(),
+        !strict_process_detect_enabled(),
+    )
 }
 
 fn resolve_vscode_target_and_fallback(user_data_dir: Option<&str>) -> Option<(String, bool)> {
     build_user_data_dir_match_target(
         user_data_dir,
         get_default_vscode_user_data_dir_for_os(),
-        true,
+        !strict_process_detect_enabled(),
     )
 }
 
@@ -2012,7 +2560,21 @@ pub fn resolve_antigravity_pid_from_entries(
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
     let (target, allow_none_for_target) = resolve_antigravity_target_and_fallback(user_data_dir)?;
-    resolve_pid_from_entries_by_user_data_dir(last_pid, &target, allow_none_for_target, entries)
+    let matches = collect_matching_pids_by_user_data_dir(entries, &target, allow_none_for_target);
+
+    if let Some(pid) = last_pid {
+        if is_pid_running(pid) && matches.contains(&pid) {
+            return Some(pid);
+        }
+        if is_pid_running(pid) {
+            crate::modules::logger::log_warn(&format!(
+                "[AG Resolve] 忽略不匹配的 last_pid={}，target={}，matched_pids={:?}",
+                pid, target, matches
+            ));
+        }
+    }
+
+    pick_preferred_pid(matches)
 }
 
 pub fn resolve_antigravity_pid(last_pid: Option<u32>, user_data_dir: Option<&str>) -> Option<u32> {
@@ -2045,7 +2607,7 @@ fn focus_window_by_pid(pid: u32) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 fn focus_window_by_pid(pid: u32) -> Result<(), String> {
     let command = format!(
-        r#"$pid={pid};$p=Get-Process -Id $pid -ErrorAction Stop;$h=$p.MainWindowHandle;if ($h -eq 0) {{ throw 'MAIN_WINDOW_HANDLE_EMPTY' }};Add-Type @' 
+        r#"$targetPid={pid};$h=[IntPtr]::Zero;for($i=0;$i -lt 20;$i++){{$p=Get-Process -Id $targetPid -ErrorAction Stop;$h=$p.MainWindowHandle;if ($h -ne 0) {{ break }};Start-Sleep -Milliseconds 150}};if ($h -eq 0) {{ throw 'MAIN_WINDOW_HANDLE_EMPTY' }};Add-Type @' 
 using System; 
 using System.Runtime.InteropServices; 
 public class Win32 {{ 
@@ -2144,12 +2706,6 @@ pub fn resolve_codex_pid_from_entries(
         .map(|value| normalize_path_for_compare(value))
         .filter(|value| !value.is_empty());
 
-    if let Some(pid) = last_pid {
-        if is_pid_running(pid) {
-            return Some(pid);
-        }
-    }
-
     let mut matches = Vec::new();
     for (pid, home) in entries {
         match (&target, home.as_ref()) {
@@ -2169,6 +2725,18 @@ pub fn resolve_codex_pid_from_entries(
                 }
             }
             _ => {}
+        }
+    }
+
+    if let Some(pid) = last_pid {
+        if is_pid_running(pid) && matches.contains(&pid) {
+            return Some(pid);
+        }
+        if is_pid_running(pid) {
+            crate::modules::logger::log_warn(&format!(
+                "[Codex Resolve] 忽略不匹配的 last_pid={}，target={:?}，matched_pids={:?}",
+                pid, target, matches
+            ));
         }
     }
 
@@ -2218,12 +2786,12 @@ pub fn focus_codex_instance(
 }
 
 #[cfg(target_os = "windows")]
-fn collect_vscode_process_entries_from_powershell() -> Vec<(u32, Option<String>)> {
+fn collect_vscode_process_entries_from_powershell(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
     let mut entries: Vec<(u32, Option<String>)> = Vec::new();
-    let output = powershell_output(&[
-        "-Command",
-        "Get-CimInstance Win32_Process -Filter \"Name='Code.exe'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }",
-    ]);
+    let script = build_windows_path_filtered_process_probe_script("Code.exe", expected_exe_path);
+    let output = powershell_output(&["-Command", &script]);
     let output = match output {
         Ok(value) => value,
         Err(_) => return entries,
@@ -2260,13 +2828,114 @@ fn collect_vscode_process_entries_from_powershell() -> Vec<(u32, Option<String>)
     entries
 }
 
+#[cfg(target_os = "windows")]
+fn collect_vscode_process_entries_from_sysinfo_fallback(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
+    let expected = normalize_path_for_compare(expected_exe_path);
+    if expected.is_empty() {
+        return Vec::new();
+    }
+
+    let mut entries: Vec<(u32, Option<String>)> = Vec::new();
+    let mut candidates = 0usize;
+    let mut path_mismatch = 0usize;
+    let mut missing_exe = 0usize;
+    let mut cmdline_fallback_hit = 0usize;
+
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing()
+            .with_exe(UpdateKind::OnlyIfNotSet)
+            .with_cmd(UpdateKind::OnlyIfNotSet),
+    );
+    let current_pid = std::process::id();
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+
+        let name = process.name().to_string_lossy().to_lowercase();
+        let exe_path = process
+            .exe()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let args_line = process
+            .cmd()
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_lowercase())
+            .collect::<Vec<String>>()
+            .join(" ");
+        let is_vscode = name == "code.exe" || exe_path.ends_with("\\code.exe");
+        if !is_vscode || is_helper_command_line(&args_line) || args_line.contains("crashpad_handler")
+        {
+            continue;
+        }
+        candidates += 1;
+
+        let (actual, used_cmdline_fallback) = resolve_windows_process_exe_for_match(process);
+        match actual {
+            Some(actual_path) if actual_path == expected => {
+                if used_cmdline_fallback {
+                    cmdline_fallback_hit += 1;
+                }
+                let dir = extract_user_data_dir(process.cmd()).and_then(|value| {
+                    let normalized = normalize_path_for_compare(&value);
+                    if normalized.is_empty() {
+                        None
+                    } else {
+                        Some(normalized)
+                    }
+                });
+                entries.push((pid_u32, dir));
+            }
+            Some(_) => path_mismatch += 1,
+            None => missing_exe += 1,
+        }
+    }
+
+    entries.sort_by_key(|(pid, _)| *pid);
+    entries.dedup_by(|a, b| a.0 == b.0);
+
+    if entries.is_empty() {
+        crate::modules::logger::log_warn(&format!(
+            "[VSCode Probe] sysinfo fallback no match: expected={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    } else {
+        crate::modules::logger::log_info(&format!(
+            "[VSCode Probe] sysinfo fallback matched: expected={}, matched={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, entries.len(), candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    }
+
+    entries
+}
+
 pub fn collect_vscode_process_entries() -> Vec<(u32, Option<String>)> {
+    let expected_launch = resolve_expected_vscode_launch_path_for_match();
+    if expected_launch.is_none() {
+        return Vec::new();
+    }
+
     #[cfg(target_os = "windows")]
     {
-        let entries = collect_vscode_process_entries_from_powershell();
+        let expected = expected_launch
+            .as_deref()
+            .expect("expected launch path must exist");
+        let entries = collect_vscode_process_entries_from_powershell(expected);
         if !entries.is_empty() {
             return entries;
         }
+        crate::modules::logger::log_warn(
+            "[VSCode Probe] PowerShell returned empty; fallback to sysinfo probe",
+        );
+        return collect_vscode_process_entries_from_sysinfo_fallback(expected);
     }
 
     let mut entries = Vec::new();
@@ -2409,7 +3078,11 @@ pub fn collect_vscode_process_entries() -> Vec<(u32, Option<String>)> {
 
     let mut result: Vec<(u32, Option<String>)> = map.into_iter().collect();
     result.sort_by_key(|(pid, _)| *pid);
-    result
+    filter_entries_by_expected_launch_path(
+        "VSCode",
+        result,
+        expected_launch,
+    )
 }
 
 pub fn resolve_vscode_pid_from_entries(
@@ -2668,31 +3341,23 @@ fn collect_antigravity_pids_by_user_data_dir(user_data_dir: &str) -> Vec<u32> {
             continue;
         }
 
-        #[cfg(target_os = "macos")]
-        let _name = process.name().to_string_lossy().to_lowercase();
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
         let name = process.name().to_string_lossy().to_lowercase();
         let exe_path = process
             .exe()
             .and_then(|p| p.to_str())
             .unwrap_or("")
             .to_lowercase();
+        let args = process.cmd();
+        let args_str = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_lowercase())
+            .collect::<Vec<String>>()
+            .join(" ");
 
-        #[cfg(target_os = "macos")]
-        let is_antigravity =
-            exe_path.contains("antigravity.app") && !exe_path.contains("antigravity tools.app");
-        #[cfg(target_os = "windows")]
-        let is_antigravity = name == "antigravity.exe" || exe_path.ends_with("\\antigravity.exe");
-        #[cfg(target_os = "linux")]
-        let is_antigravity = (name.contains("antigravity") || exe_path.contains("/antigravity"))
-            && !name.contains("tools")
-            && !exe_path.contains("tools");
-
-        if !is_antigravity {
+        if !is_antigravity_main_process(&name, &exe_path, Some(&args_str)) {
             continue;
         }
 
-        let args = process.cmd();
         if let Some(dir) = extract_user_data_dir(&args) {
             let normalized = normalize_path_for_compare(&dir);
             if normalized == target {
@@ -2768,6 +3433,10 @@ fn collect_antigravity_pids_by_user_data_dir(user_data_dir: &str) -> Vec<u32> {
                     Ok(value) => value,
                     Err(_) => continue,
                 };
+                let lower = cmdline.to_lowercase();
+                if !is_antigravity_main_process("antigravity.exe", "", Some(&lower)) {
+                    continue;
+                }
                 if let Some(dir) = extract_user_data_dir_from_command_line(cmdline) {
                     let normalized = normalize_path_for_compare(&dir);
                     if normalized == target {
@@ -3674,8 +4343,7 @@ pub fn start_antigravity_with_args(
                 cmd.arg(arg);
             }
         }
-        let child = cmd
-            .spawn()
+        let child = spawn_command_with_trace(&mut cmd)
             .map_err(|e| format!("启动 Antigravity 失败: {}", e))?;
         crate::modules::logger::log_info(&format!(
             "Antigravity 已启动: {}",
@@ -3717,6 +4385,11 @@ pub fn start_antigravity_with_args(
 
 #[cfg(target_os = "macos")]
 pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
+    let expected_launch = resolve_expected_codex_launch_path_for_match();
+    if expected_launch.is_none() {
+        return Vec::new();
+    }
+
     let mut result = Vec::new();
     let mut pids: Vec<u32> = Vec::new();
     if let Ok(output) = Command::new("pgrep")
@@ -3840,7 +4513,11 @@ pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
         }
         result.push((pid, codex_home));
     }
-    result
+    filter_entries_by_expected_launch_path(
+        "Codex",
+        result,
+        expected_launch,
+    )
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -4374,11 +5051,9 @@ pub fn start_opencode_with_path(custom_path: Option<&str>) -> Result<(), String>
                     continue;
                 }
             }
-            if Command::new(&candidate)
-                .creation_flags(0x08000000)
-                .spawn()
-                .is_ok()
-            {
+            let mut cmd = Command::new(&candidate);
+            cmd.creation_flags(0x08000000);
+            if spawn_command_with_trace(&mut cmd).is_ok() {
                 crate::modules::logger::log_info(&format!("OpenCode 已启动: {}", candidate));
                 return Ok(());
             }
@@ -4404,7 +5079,8 @@ pub fn start_opencode_with_path(custom_path: Option<&str>) -> Result<(), String>
                     continue;
                 }
             }
-            if Command::new(&candidate).spawn().is_ok() {
+            let mut cmd = Command::new(&candidate);
+            if spawn_command_with_trace(&mut cmd).is_ok() {
                 crate::modules::logger::log_info(&format!("OpenCode 已启动: {}", candidate));
                 return Ok(());
             }
@@ -4702,8 +5378,7 @@ pub fn start_vscode_with_args_with_new_window(
             }
         }
 
-        let child = cmd
-            .spawn()
+        let child = spawn_command_with_trace(&mut cmd)
             .map_err(|e| format!("启动 VS Code 失败: {}", e))?;
         crate::modules::logger::log_info("VS Code 启动命令已发送");
         return Ok(child.id());
@@ -4804,8 +5479,7 @@ pub fn start_vscode_default_with_args_with_new_window(
                 cmd.arg(trimmed);
             }
         }
-        let child = cmd
-            .spawn()
+        let child = spawn_command_with_trace(&mut cmd)
             .map_err(|e| format!("启动 VS Code 失败: {}", e))?;
         crate::modules::logger::log_info("VS Code 默认实例启动命令已发送");
         return Ok(child.id());

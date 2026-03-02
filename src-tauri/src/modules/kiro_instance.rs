@@ -490,7 +490,146 @@ fn is_helper_process(name: &str, args_line: &str) -> bool {
         || name.contains("sandbox")
 }
 
+fn command_trace_enabled() -> bool {
+    if let Ok(value) = std::env::var("COCKPIT_COMMAND_TRACE") {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" => return true,
+            "0" | "false" | "no" | "off" => return false,
+            _ => {}
+        }
+    }
+    false
+}
+
+fn quote_command_part(part: &str) -> String {
+    if part.is_empty() {
+        return "\"\"".to_string();
+    }
+    let needs_quote = part
+        .chars()
+        .any(|ch| ch.is_whitespace() || matches!(ch, '"' | '\'' | '$' | '`' | '|' | '&' | ';'));
+    if needs_quote {
+        format!("{:?}", part)
+    } else {
+        part.to_string()
+    }
+}
+
+fn format_command_preview(command: &Command) -> String {
+    let program = quote_command_part(command.get_program().to_string_lossy().as_ref());
+    let args = command
+        .get_args()
+        .map(|arg| quote_command_part(arg.to_string_lossy().as_ref()))
+        .collect::<Vec<String>>();
+    if args.is_empty() {
+        program
+    } else {
+        format!("{} {}", program, args.join(" "))
+    }
+}
+
+fn spawn_command_with_trace(cmd: &mut Command) -> std::io::Result<std::process::Child> {
+    let preview = format_command_preview(cmd);
+    if command_trace_enabled() {
+        modules::logger::log_info(&format!("[CmdTrace][Kiro] EXEC {}", preview));
+    }
+    let start = std::time::Instant::now();
+    let result = cmd.spawn();
+    if command_trace_enabled() {
+        match &result {
+            Ok(child) => modules::logger::log_info(&format!(
+                "[CmdTrace][Kiro] SPAWN elapsed={}ms pid={} cmd={}",
+                start.elapsed().as_millis(),
+                child.id(),
+                preview
+            )),
+            Err(err) => modules::logger::log_warn(&format!(
+                "[CmdTrace][Kiro] SPAWN_ERROR elapsed={}ms cmd={} err={}",
+                start.elapsed().as_millis(),
+                preview,
+                err
+            )),
+        }
+    }
+    result
+}
+
+fn collect_running_process_exe_by_pid() -> HashMap<u32, String> {
+    let mut map = HashMap::new();
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet),
+    );
+    for (pid, process) in system.processes() {
+        let Some(exe) = process.exe().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let normalized = normalize_path_for_compare(exe);
+        if normalized.is_empty() {
+            continue;
+        }
+        map.insert(pid.as_u32(), normalized);
+    }
+    map
+}
+
+fn resolve_expected_kiro_launch_path_for_match() -> Option<String> {
+    let launch_path = match resolve_kiro_launch_path() {
+        Ok(path) => path,
+        Err(err) => {
+            modules::logger::log_warn(&format!(
+                "[Kiro Resolve] 启动路径未配置或无效，跳过 PID 匹配: {}",
+                err
+            ));
+            return None;
+        }
+    };
+    let normalized = normalize_path_for_compare(launch_path.to_string_lossy().as_ref());
+    if normalized.is_empty() {
+        modules::logger::log_warn("[Kiro Resolve] 启动路径为空，跳过 PID 匹配");
+        return None;
+    }
+    Some(normalized)
+}
+
+fn filter_kiro_entries_by_launch_path(
+    entries: Vec<(u32, Option<String>)>,
+    expected: Option<String>,
+) -> Vec<(u32, Option<String>)> {
+    if entries.is_empty() {
+        return entries;
+    }
+    let Some(expected) = expected else {
+        return Vec::new();
+    };
+    let exe_by_pid = collect_running_process_exe_by_pid();
+    let mut result = Vec::new();
+    let mut missing_exe = 0usize;
+    let mut path_mismatch = 0usize;
+    for (pid, dir) in entries {
+        match exe_by_pid.get(&pid) {
+            Some(actual) if actual == &expected => result.push((pid, dir)),
+            Some(_) => path_mismatch += 1,
+            None => missing_exe += 1,
+        }
+    }
+    if result.is_empty() {
+        modules::logger::log_warn(&format!(
+            "[Kiro Resolve] 启动路径硬匹配未命中：expected={}, path_mismatch={}, missing_exe={}",
+            expected, path_mismatch, missing_exe
+        ));
+    }
+    result
+}
+
 pub fn collect_kiro_process_entries() -> Vec<(u32, Option<String>)> {
+    let expected_launch = resolve_expected_kiro_launch_path_for_match();
+    if expected_launch.is_none() {
+        return Vec::new();
+    }
+
     let mut entries: HashMap<u32, Option<String>> = HashMap::new();
     let mut system = System::new();
     system.refresh_processes_specifics(sysinfo::ProcessesToUpdate::All, true, ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet).with_cmd(UpdateKind::OnlyIfNotSet));
@@ -574,7 +713,7 @@ pub fn collect_kiro_process_entries() -> Vec<(u32, Option<String>)> {
 
     let mut result: Vec<(u32, Option<String>)> = entries.into_iter().collect();
     result.sort_by_key(|(pid, _)| *pid);
-    result
+    filter_kiro_entries_by_launch_path(result, expected_launch)
 }
 
 fn pick_preferred_pid(mut pids: Vec<u32>) -> Option<u32> {
@@ -601,12 +740,6 @@ pub fn resolve_kiro_pid_from_entries(
         .map(|(value, current)| value == current)
         .unwrap_or(false);
 
-    if let Some(pid) = last_pid {
-        if modules::process::is_pid_running(pid) {
-            return Some(pid);
-        }
-    }
-
     let target = target?;
 
     let mut matches = Vec::new();
@@ -622,6 +755,19 @@ pub fn resolve_kiro_pid_from_entries(
             _ => {}
         }
     }
+
+    if let Some(pid) = last_pid {
+        if modules::process::is_pid_running(pid) && matches.contains(&pid) {
+            return Some(pid);
+        }
+        if modules::process::is_pid_running(pid) {
+            modules::logger::log_warn(&format!(
+                "[Kiro Resolve] 忽略不匹配的 last_pid={}，target={}，matched_pids={:?}",
+                pid, target, matches
+            ));
+        }
+    }
+
     pick_preferred_pid(matches)
 }
 
@@ -652,7 +798,7 @@ fn focus_window_by_pid(pid: u32) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
 
     let command = format!(
-        r#"$pid={pid};$p=Get-Process -Id $pid -ErrorAction Stop;$h=$p.MainWindowHandle;if ($h -eq 0) {{ throw 'MAIN_WINDOW_HANDLE_EMPTY' }};Add-Type @'
+        r#"$targetPid={pid};$h=[IntPtr]::Zero;for($i=0;$i -lt 20;$i++){{$p=Get-Process -Id $targetPid -ErrorAction Stop;$h=$p.MainWindowHandle;if ($h -ne 0) {{ break }};Start-Sleep -Milliseconds 150}};if ($h -eq 0) {{ throw 'MAIN_WINDOW_HANDLE_EMPTY' }};Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public class Win32 {{
@@ -876,6 +1022,10 @@ fn resolve_kiro_launch_path() -> Result<PathBuf, String> {
     Err("APP_PATH_NOT_FOUND:kiro".to_string())
 }
 
+pub fn ensure_kiro_launch_path_configured() -> Result<(), String> {
+    resolve_kiro_launch_path().map(|_| ())
+}
+
 #[cfg(target_os = "windows")]
 fn spawn_kiro_windows(
     launch_path: &Path,
@@ -901,7 +1051,8 @@ fn spawn_kiro_windows(
             cmd.arg(arg.trim());
         }
     }
-    let child = cmd.spawn().map_err(|e| format!("启动 Kiro 失败: {}", e))?;
+    let child = spawn_command_with_trace(&mut cmd)
+        .map_err(|e| format!("启动 Kiro 失败: {}", e))?;
     Ok(child.id())
 }
 
@@ -927,7 +1078,8 @@ fn spawn_kiro_unix(
             cmd.arg(arg.trim());
         }
     }
-    let child = cmd.spawn().map_err(|e| format!("启动 Kiro 失败: {}", e))?;
+    let child = spawn_command_with_trace(&mut cmd)
+        .map_err(|e| format!("启动 Kiro 失败: {}", e))?;
     Ok(child.id())
 }
 
