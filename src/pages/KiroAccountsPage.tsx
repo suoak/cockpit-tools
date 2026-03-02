@@ -23,6 +23,7 @@ import {
   Eye,
   EyeOff,
   Lock,
+  BookOpen,
 } from 'lucide-react';
 import { useKiroAccountStore } from '../stores/useKiroAccountStore';
 import * as kiroService from '../services/kiroService';
@@ -338,6 +339,30 @@ export function KiroAccountsPage() {
   );
 
   // ─── Filtering & Sorting ────────────────────────────────────────────
+  const compareAccountsBySort = useCallback((a: KiroAccount, b: KiroAccount) => {
+    if (sortBy === 'created_at') {
+      const diff = b.created_at - a.created_at;
+      return sortDirection === 'desc' ? diff : -diff;
+    }
+    if (sortBy === 'plan_end') {
+      const aReset = resolveCreditsSummary(a).planEndsAt ?? null;
+      const bReset = resolveCreditsSummary(b).planEndsAt ?? null;
+      if (aReset == null && bReset == null) return 0;
+      if (aReset == null) return 1;
+      if (bReset == null) return -1;
+      const diff = bReset - aReset;
+      return sortDirection === 'desc' ? diff : -diff;
+    }
+    const aValue = resolveCreditsSummary(a).creditsLeft ?? -1;
+    const bValue = resolveCreditsSummary(b).creditsLeft ?? -1;
+    const diff = bValue - aValue;
+    return sortDirection === 'desc' ? diff : -diff;
+  }, [resolveCreditsSummary, sortBy, sortDirection]);
+
+  const sortedAccountsForInstances = useMemo(
+    () => [...accounts].sort(compareAccountsBySort),
+    [accounts, compareAccountsBySort],
+  );
 
   const filteredAccounts = useMemo(() => {
     let result = [...accounts];
@@ -366,28 +391,10 @@ export function KiroAccountsPage() {
       });
     }
 
-    result.sort((a, b) => {
-      if (sortBy === 'created_at') {
-        const diff = b.created_at - a.created_at;
-        return sortDirection === 'desc' ? diff : -diff;
-      }
-      if (sortBy === 'plan_end') {
-        const aReset = resolveCreditsSummary(a).planEndsAt ?? null;
-        const bReset = resolveCreditsSummary(b).planEndsAt ?? null;
-        if (aReset == null && bReset == null) return 0;
-        if (aReset == null) return 1;
-        if (bReset == null) return -1;
-        const diff = bReset - aReset;
-        return sortDirection === 'desc' ? diff : -diff;
-      }
-      const aValue = resolveCreditsSummary(a).creditsLeft ?? -1;
-      const bValue = resolveCreditsSummary(b).creditsLeft ?? -1;
-      const diff = bValue - aValue;
-      return sortDirection === 'desc' ? diff : -diff;
-    });
+    result.sort(compareAccountsBySort);
 
     return result;
-  }, [accounts, filterType, normalizeTag, resolveCreditsSummary, resolvePlanKey, resolvePresentation, searchQuery, sortBy, sortDirection, tagFilter]);
+  }, [accounts, compareAccountsBySort, filterType, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
 
   const groupedAccounts = useMemo(() => {
     if (!groupByTag) return [] as Array<[string, typeof filteredAccounts]>;
@@ -823,7 +830,16 @@ export function KiroAccountsPage() {
           <Globe size={48} />
           <h3>{t('common.shared.empty.title', '暂无账号')}</h3>
           <p>{t('kiro.empty.description', '点击"添加账号"开始管理您的 Kiro 账号')}</p>
-          <button className="btn btn-primary" onClick={() => openAddModal('oauth')}><Plus size={16} />{t('common.shared.addAccount', '添加账号')}</button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <button className="btn btn-primary" onClick={() => openAddModal('oauth')}>
+              <Plus size={16} />
+              {t('common.shared.addAccount', '添加账号')}
+            </button>
+            <button className="btn btn-secondary" onClick={() => window.dispatchEvent(new CustomEvent('app-request-navigate', { detail: 'manual' }))}>
+              <BookOpen size={16} />
+              {t('manual.navTitle', '功能使用手册')}
+            </button>
+          </div>
         </div>
       ) : filteredAccounts.length === 0 ? (
         <div className="empty-state">
@@ -1071,7 +1087,7 @@ export function KiroAccountsPage() {
       )}
 
       {activeTab === 'instances' && (
-        <KiroInstancesContent />
+        <KiroInstancesContent accountsForSelect={sortedAccountsForInstances} />
       )}
     </div>
   );

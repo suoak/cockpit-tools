@@ -24,6 +24,7 @@ import {
   Play,
   Eye,
   EyeOff,
+  BookOpen
 } from 'lucide-react';
 import { useGitHubCopilotAccountStore } from '../stores/useGitHubCopilotAccountStore';
 import * as githubCopilotService from '../services/githubCopilotService';
@@ -193,6 +194,45 @@ export function GitHubCopilotAccountsPage() {
 
   const normalizeTag = (tag: string) => tag.trim().toLowerCase();
 
+  const compareAccountsBySort = useCallback((a: GitHubCopilotAccount, b: GitHubCopilotAccount) => {
+    if (sortBy === 'created_at') {
+      const diff = b.created_at - a.created_at;
+      return sortDirection === 'desc' ? diff : -diff;
+    }
+
+    if (sortBy === 'weekly_reset' || sortBy === 'hourly_reset') {
+      const aResetMetric = resolveUsageMetric(a, sortBy === 'weekly_reset' ? 'weekly' : 'hourly');
+      const bResetMetric = resolveUsageMetric(b, sortBy === 'weekly_reset' ? 'weekly' : 'hourly');
+      const aReset = parseResetAt(aResetMetric?.resetAt);
+      const bReset = parseResetAt(bResetMetric?.resetAt);
+      if (aReset === null && bReset === null) return 0;
+      if (aReset === null) return 1;
+      if (bReset === null) return -1;
+      const diff = bReset - aReset;
+      return sortDirection === 'desc' ? diff : -diff;
+    }
+
+    const aValue =
+      sortBy === 'weekly'
+        ? (resolveUsageMetric(a, 'weekly')?.percentage ?? -1)
+        : sortBy === 'hourly'
+          ? (resolveUsageMetric(a, 'hourly')?.percentage ?? -1)
+          : (resolveUsageMetric(a, 'premium')?.percentage ?? -1);
+    const bValue =
+      sortBy === 'weekly'
+        ? (resolveUsageMetric(b, 'weekly')?.percentage ?? -1)
+        : sortBy === 'hourly'
+          ? (resolveUsageMetric(b, 'hourly')?.percentage ?? -1)
+          : (resolveUsageMetric(b, 'premium')?.percentage ?? -1);
+    const diff = bValue - aValue;
+    return sortDirection === 'desc' ? diff : -diff;
+  }, [parseResetAt, resolveUsageMetric, sortBy, sortDirection]);
+
+  const sortedAccountsForInstances = useMemo(
+    () => [...accounts].sort(compareAccountsBySort),
+    [accounts, compareAccountsBySort],
+  );
+
   const filteredAccounts = useMemo(() => {
     let result = [...accounts];
 
@@ -215,42 +255,10 @@ export function GitHubCopilotAccountsPage() {
       });
     }
 
-    result.sort((a, b) => {
-      if (sortBy === 'created_at') {
-        const diff = b.created_at - a.created_at;
-        return sortDirection === 'desc' ? diff : -diff;
-      }
-
-      if (sortBy === 'weekly_reset' || sortBy === 'hourly_reset') {
-        const aResetMetric = resolveUsageMetric(a, sortBy === 'weekly_reset' ? 'weekly' : 'hourly');
-        const bResetMetric = resolveUsageMetric(b, sortBy === 'weekly_reset' ? 'weekly' : 'hourly');
-        const aReset = parseResetAt(aResetMetric?.resetAt);
-        const bReset = parseResetAt(bResetMetric?.resetAt);
-        if (aReset === null && bReset === null) return 0;
-        if (aReset === null) return 1;
-        if (bReset === null) return -1;
-        const diff = bReset - aReset;
-        return sortDirection === 'desc' ? diff : -diff;
-      }
-
-      const aValue =
-        sortBy === 'weekly'
-          ? (resolveUsageMetric(a, 'weekly')?.percentage ?? -1)
-          : sortBy === 'hourly'
-            ? (resolveUsageMetric(a, 'hourly')?.percentage ?? -1)
-            : (resolveUsageMetric(a, 'premium')?.percentage ?? -1);
-      const bValue =
-        sortBy === 'weekly'
-          ? (resolveUsageMetric(b, 'weekly')?.percentage ?? -1)
-          : sortBy === 'hourly'
-            ? (resolveUsageMetric(b, 'hourly')?.percentage ?? -1)
-            : (resolveUsageMetric(b, 'premium')?.percentage ?? -1);
-      const diff = bValue - aValue;
-      return sortDirection === 'desc' ? diff : -diff;
-    });
+    result.sort(compareAccountsBySort);
 
     return result;
-  }, [accounts, filterType, parseResetAt, resolvePlanKey, resolvePresentation, resolveUsageMetric, searchQuery, sortBy, sortDirection, tagFilter]);
+  }, [accounts, compareAccountsBySort, filterType, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
 
   const groupedAccounts = useMemo(() => {
     if (!groupByTag) return [] as Array<[string, typeof filteredAccounts]>;
@@ -852,10 +860,16 @@ export function GitHubCopilotAccountsPage() {
           <Globe size={48} />
           <h3>{t('common.shared.empty.title', '暂无账号')}</h3>
           <p>{t('githubCopilot.empty.description', '点击"添加账号"开始管理您的 GitHub Copilot 账号')}</p>
-          <button className="btn btn-primary" onClick={() => openAddModal('oauth')}>
-            <Plus size={16} />
-            {t('common.shared.addAccount', '添加账号')}
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <button className="btn btn-primary" onClick={() => openAddModal('oauth')}>
+              <Plus size={16} />
+              {t('common.shared.addAccount', '添加账号')}
+            </button>
+            <button className="btn btn-secondary" onClick={() => window.dispatchEvent(new CustomEvent('app-request-navigate', { detail: 'manual' }))}>
+              <BookOpen size={16} />
+              {t('manual.navTitle', '功能使用手册')}
+            </button>
+          </div>
         </div>
       ) : filteredAccounts.length === 0 ? (
         <div className="empty-state">
@@ -1217,7 +1231,7 @@ export function GitHubCopilotAccountsPage() {
       )}
 
       {activeTab === 'instances' && (
-        <GitHubCopilotInstancesContent />
+        <GitHubCopilotInstancesContent accountsForSelect={sortedAccountsForInstances} />
       )}
     </div>
   );

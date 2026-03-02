@@ -23,6 +23,7 @@ import {
   Tag,
   Eye,
   EyeOff,
+  BookOpen,
 } from 'lucide-react';
 import { useCodexAccountStore } from '../stores/useCodexAccountStore';
 import * as codexService from '../services/codexService';
@@ -383,6 +384,28 @@ export function CodexAccountsPage() {
   }, [accounts, resolvePlanKey]);
 
   // ─── Filtering & Sorting ────────────────────────────────────────────
+  const compareAccountsBySort = useCallback((a: CodexAccount, b: CodexAccount) => {
+    if (sortBy === 'created_at') {
+      const diff = b.created_at - a.created_at;
+      return sortDirection === 'desc' ? diff : -diff;
+    }
+    if (sortBy === 'weekly_reset' || sortBy === 'hourly_reset') {
+      const aR = sortBy === 'weekly_reset' ? a.quota?.weekly_reset_time ?? null : a.quota?.hourly_reset_time ?? null;
+      const bR = sortBy === 'weekly_reset' ? b.quota?.weekly_reset_time ?? null : b.quota?.hourly_reset_time ?? null;
+      if (aR == null && bR == null) return 0;
+      if (aR == null) return 1;
+      if (bR == null) return -1;
+      return sortDirection === 'desc' ? bR - aR : aR - bR;
+    }
+    const aV = sortBy === 'weekly' ? a.quota?.weekly_percentage ?? -1 : a.quota?.hourly_percentage ?? -1;
+    const bV = sortBy === 'weekly' ? b.quota?.weekly_percentage ?? -1 : b.quota?.hourly_percentage ?? -1;
+    return sortDirection === 'desc' ? bV - aV : aV - bV;
+  }, [sortBy, sortDirection]);
+
+  const sortedAccountsForInstances = useMemo(
+    () => [...accounts].sort(compareAccountsBySort),
+    [accounts, compareAccountsBySort],
+  );
 
   const filteredAccounts = useMemo(() => {
     let result = [...accounts];
@@ -395,20 +418,9 @@ export function CodexAccountsPage() {
       const selectedTags = new Set(tagFilter.map(normalizeTag));
       result = result.filter((a) => (a.tags || []).map(normalizeTag).some((tag) => selectedTags.has(tag)));
     }
-    result.sort((a, b) => {
-      if (sortBy === 'created_at') { const diff = b.created_at - a.created_at; return sortDirection === 'desc' ? diff : -diff; }
-      if (sortBy === 'weekly_reset' || sortBy === 'hourly_reset') {
-        const aR = sortBy === 'weekly_reset' ? a.quota?.weekly_reset_time ?? null : a.quota?.hourly_reset_time ?? null;
-        const bR = sortBy === 'weekly_reset' ? b.quota?.weekly_reset_time ?? null : b.quota?.hourly_reset_time ?? null;
-        if (aR == null && bR == null) return 0; if (aR == null) return 1; if (bR == null) return -1;
-        return sortDirection === 'desc' ? bR - aR : aR - bR;
-      }
-      const aV = sortBy === 'weekly' ? a.quota?.weekly_percentage ?? -1 : a.quota?.hourly_percentage ?? -1;
-      const bV = sortBy === 'weekly' ? b.quota?.weekly_percentage ?? -1 : b.quota?.hourly_percentage ?? -1;
-      return sortDirection === 'desc' ? bV - aV : aV - bV;
-    });
+    result.sort(compareAccountsBySort);
     return result;
-  }, [accounts, filterType, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, sortBy, sortDirection, tagFilter]);
+  }, [accounts, compareAccountsBySort, filterType, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
 
   const groupedAccounts = useMemo(() => {
     if (!groupByTag) return [] as Array<[string, typeof filteredAccounts]>;
@@ -605,7 +617,11 @@ export function CodexAccountsPage() {
         <div className="loading-container"><RefreshCw size={24} className="loading-spinner" /><p>{t('common.loading', '加载中...')}</p></div>
       ) : accounts.length === 0 ? (
         <div className="empty-state"><Globe size={48} /><h3>{t('common.shared.empty.title', '暂无账号')}</h3><p>{t('codex.empty.description', '点击"添加账号"开始管理您的 Codex 账号')}</p>
-          <button className="btn btn-primary" onClick={() => openAddModal('oauth')}><Plus size={16} />{t('common.shared.addAccount', '添加账号')}</button></div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <button className="btn btn-primary" onClick={() => openAddModal('oauth')}><Plus size={16} />{t('common.shared.addAccount', '添加账号')}</button>
+            <button className="btn btn-secondary" onClick={() => window.dispatchEvent(new CustomEvent('app-request-navigate', { detail: 'manual' }))}><BookOpen size={16} />{t('manual.navTitle', '功能使用手册')}</button>
+          </div>
+        </div>
       ) : filteredAccounts.length === 0 ? (
         <div className="empty-state"><h3>{t('common.shared.noMatch.title', '没有匹配的账号')}</h3><p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p></div>
       ) : viewMode === 'grid' ? (
@@ -698,7 +714,9 @@ export function CodexAccountsPage() {
         onClose={() => setShowTagModal(null)} onSave={handleSaveTags} />
       </>)}
 
-      {activeTab === 'instances' && <CodexInstancesContent />}
+      {activeTab === 'instances' && (
+        <CodexInstancesContent accountsForSelect={sortedAccountsForInstances} />
+      )}
     </div>
   );
 }
