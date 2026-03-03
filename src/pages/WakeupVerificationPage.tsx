@@ -217,6 +217,23 @@ export function WakeupVerificationPage({ onNavigate }: WakeupVerificationPagePro
     [availableModels, quotaModelKeys],
   );
 
+  const preferredDefaultModelId = useMemo(() => {
+    if (filteredModels.length === 0) {
+      return '';
+    }
+    const flashModel = filteredModels.find((model) => {
+      const displayName = (
+        model.displayName ||
+        getAntigravityModelDisplayName(model.id) ||
+        model.id
+      )
+        .trim()
+        .toLowerCase();
+      return displayName.includes('flash');
+    });
+    return flashModel?.id || filteredModels[0].id;
+  }, [filteredModels]);
+
   const modelNameById = useMemo(() => {
     const map = new Map<string, string>();
     filteredModels.forEach((model) => {
@@ -376,10 +393,10 @@ export function WakeupVerificationPage({ onNavigate }: WakeupVerificationPagePro
   }, [fetchAccounts]);
 
   useEffect(() => {
-    if (!selectedModel && filteredModels.length > 0) {
-      setSelectedModel(filteredModels[0].id);
+    if (!selectedModel && preferredDefaultModelId) {
+      setSelectedModel(preferredDefaultModelId);
     }
-  }, [filteredModels, selectedModel]);
+  }, [preferredDefaultModelId, selectedModel]);
 
   useEffect(() => {
     const validIds = new Set(historyBatches.map((item) => item.batchId));
@@ -455,8 +472,8 @@ export function WakeupVerificationPage({ onNavigate }: WakeupVerificationPagePro
 
   const openConfigModal = () => {
     setSelectedAccounts(accounts.map((account) => account.id));
-    if (!selectedModel && filteredModels.length > 0) {
-      setSelectedModel(filteredModels[0].id);
+    if (!selectedModel && preferredDefaultModelId) {
+      setSelectedModel(preferredDefaultModelId);
     }
     setShowConfigModal(true);
   };
