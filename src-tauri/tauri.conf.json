@@ -43,7 +43,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4RTYwMDQyMzQ2MTlFN0UKUldSK25tRTBRZ0RtNkIydUZzSE5Wb1cwV3dMRVNMRHlzdlM5WXlmcXgwZWhNYjdEL1FrWEYzNTEK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY4REJDNDEzMUEwQ0EyMkMKUldRc29nd2FFOFRiYU4zNVAzeEpOdHh4MVJLV3VrRzgwdW5jZDNrckFkTGNOcEJoYXArd1JGVlkK",
       "endpoints": [
         "https://github.com/suoak/cockpit-tools/releases/latest/download/latest.json"
       ]
