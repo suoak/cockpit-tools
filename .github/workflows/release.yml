@@ -182,7 +182,7 @@ jobs:
           tagName: "v${{ steps.app_version.outputs.VERSION }}"
           releaseName: "Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
           releaseBody: ${{ steps.release_notes.outputs.body }}
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
           tauriScript: npx tauri
@@ -300,7 +300,10 @@ jobs:
         run: |
           set -euo pipefail
           gh release view "v${VERSION}" --json body --jq '.body' > release-notes.md
-          PUBLISHED_AT="$(gh release view "v${VERSION}" --json publishedAt --jq '.publishedAt')"
+          PUBLISHED_AT="$(gh release view "v${VERSION}" --json publishedAt,createdAt --jq '.publishedAt // .createdAt')"
+          if [ -z "${PUBLISHED_AT}" ] || [ "${PUBLISHED_AT}" = "null" ]; then
+            PUBLISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          fi
           echo "PUBLISHED_AT=${PUBLISHED_AT}" >> "$GITHUB_ENV"
 
       - name: Build merged latest.json
@@ -495,3 +498,27 @@ jobs:
             exit 1
           fi
           gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
+
+  publish-release:
+    name: Publish release as latest
+    needs:
+      - release
+      - rebuild-latest-json
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Determine version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "v${VERSION}" --repo "${GITHUB_REPOSITORY}" --draft=false --prerelease=false --latest
