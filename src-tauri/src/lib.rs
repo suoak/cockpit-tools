@@ -81,6 +81,16 @@ pub fn run() {
             // 存储全局 AppHandle
             let _ = APP_HANDLE.set(app.handle().clone());
 
+            // 初始化 Updater 插件
+            #[cfg(desktop)]
+            {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle()
+                    .plugin(tauri_plugin_process::init())?;
+                info!("[Updater] Tauri Updater + Process 插件已初始化");
+            }
+
             // 启动时同步：读取共享配置文件，与本地配置比较时间戳后合并
             {
                 let current_config = modules::config::get_user_config();
@@ -223,11 +233,12 @@ pub fn run() {
             commands::wakeup::wakeup_verification_delete_history,
             commands::wakeup::wakeup_verification_run_batch,
             // Update Commands
-            commands::update::check_for_updates,
             commands::update::should_check_updates,
             commands::update::update_last_check_time,
             commands::update::get_update_settings,
             commands::update::save_update_settings,
+            commands::update::save_pending_update_notes,
+            commands::update::check_version_jump,
             // Announcement Commands
             commands::announcement::announcement_get_state,
             commands::announcement::announcement_mark_as_read,
