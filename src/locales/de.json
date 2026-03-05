@@ -1035,7 +1035,7 @@
       "comingSoon": "Multi-Instanz kommt bald",
       "comingSoonDesc": "Führen Sie mehrere Codex.app-Instanzen mit verschiedenen Konten gleichzeitig aus.",
       "unsupported": {
-        "desc": "Codex Multi-Instanz ist derzeit nur auf macOS verfügbar."
+        "desc": "Codex mit mehreren Instanzen ist derzeit unter macOS und Windows verfügbar."
       },
       "quota": {
         "hourly": "5 Std.",
@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (alle Codex-Prozesse)"
         },
         "force": {
-          "principle": "Sucht Prozesse anhand von CODEX_HOME und beendet sie gewaltsam (SIGKILL / taskkill /F), startet dann die Zielinstanz.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (Übereinstimmung mit CODEX_HOME)"
+          "principle": "Sucht Prozesse anhand von --user-data-dir und beendet sie gewaltsam (SIGKILL / taskkill /F), startet dann die Zielinstanz.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (Übereinstimmung mit --user-data-dir)"
         }
       }
     },

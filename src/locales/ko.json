@@ -1035,7 +1035,7 @@
       "comingSoon": "멀티 인스턴스 곧 출시",
       "comingSoonDesc": "다른 계정으로 여러 Codex.app 인스턴스를 동시에 실행할 수 있습니다.",
       "unsupported": {
-        "desc": "Codex 멀티 인스턴스는 현재 macOS에서만 사용 가능합니다."
+        "desc": "Codex 다중 인스턴스는 현재 macOS와 Windows에서 사용할 수 있습니다."
       },
       "quota": {
         "hourly": "5시간",
@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (모든 Codex 프로세스)"
         },
         "force": {
-          "principle": "CODEX_HOME으로 프로세스를 찾아 강제 종료(SIGKILL / taskkill /F)한 다음, 대상 인스턴스를 다시 시작합니다.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (CODEX_HOME 일치 항목)"
+          "principle": "--user-data-dir으로 프로세스를 찾아 강제 종료(SIGKILL / taskkill /F)한 다음, 대상 인스턴스를 다시 시작합니다.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (--user-data-dir 일치 항목)"
         }
       }
     },

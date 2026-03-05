@@ -1035,7 +1035,7 @@
       "comingSoon": "Çoklu Örnek Yakında",
       "comingSoonDesc": "Farklı hesaplarla birden fazla Codex.app örneğini aynı anda çalıştırın.",
       "unsupported": {
-        "desc": "Codex çoklu örnek şu anda yalnızca macOS'ta kullanılabilir."
+        "desc": "Codex çoklu örnek özelliği şu anda macOS ve Windows'ta kullanılabilir."
       },
       "quota": {
         "hourly": "5sa",
@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (tüm Codex işlemleri)"
         },
         "force": {
-          "principle": "İşlemleri CODEX_HOME aracılığıyla tanımlar ve zorla kapatır (SIGKILL / taskkill /F), ardından hedef oturumu başlatır.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (CODEX_HOME ile eşleşen)"
+          "principle": "İşlemleri --user-data-dir aracılığıyla tanımlar ve zorla kapatır (SIGKILL / taskkill /F), ardından hedef oturumu başlatır.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (--user-data-dir ile eşleşen)"
         }
       }
     },
