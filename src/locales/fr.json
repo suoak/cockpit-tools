@@ -1035,7 +1035,7 @@
       "comingSoon": "Multi-Instance Bientôt Disponible",
       "comingSoonDesc": "Exécutez plusieurs instances Codex.app avec différents comptes simultanément.",
       "unsupported": {
-        "desc": "Le multi-instance Codex n'est actuellement disponible que sur macOS."
+        "desc": "Le mode multi-instances de Codex est actuellement disponible sur macOS et Windows."
       },
       "quota": {
         "hourly": "5h",

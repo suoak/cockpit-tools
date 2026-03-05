@@ -1035,7 +1035,7 @@
       "comingSoon": "Multi-Instanz kommt bald",
       "comingSoonDesc": "Führen Sie mehrere Codex.app-Instanzen mit verschiedenen Konten gleichzeitig aus.",
       "unsupported": {
-        "desc": "Codex Multi-Instanz ist derzeit nur auf macOS verfügbar."
+        "desc": "Codex mit mehreren Instanzen ist derzeit unter macOS und Windows verfügbar."
       },
       "quota": {
         "hourly": "5 Std.",

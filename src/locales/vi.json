@@ -1035,7 +1035,7 @@
       "comingSoon": "Đa Phiên Bản Sắp Ra Mắt",
       "comingSoonDesc": "Chạy nhiều phiên bản Codex.app với các tài khoản khác nhau cùng lúc.",
       "unsupported": {
-        "desc": "Đa phiên bản Codex hiện chỉ khả dụng trên macOS."
+        "desc": "Tính năng đa phiên bản Codex hiện hỗ trợ macOS và Windows."
       },
       "quota": {
         "hourly": "5 giờ",

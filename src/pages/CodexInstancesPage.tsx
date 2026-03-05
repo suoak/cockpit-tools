@@ -22,7 +22,7 @@ export function CodexInstancesContent({ accountsForSelect }: CodexInstancesConte
   const instanceStore = useCodexInstanceStore();
   const { accounts: storeAccounts, fetchAccounts } = useCodexAccountStore();
   const accounts = accountsForSelect ?? storeAccounts;
-  const isSupportedPlatform = usePlatformRuntimeSupport('macos-only');
+  const isSupportedPlatform = usePlatformRuntimeSupport('macos-windows');
 
   const renderCodexQuotaPreview = (account: CodexAccount) => {
     const presentation = buildCodexAccountPresentation(account, t);
@@ -65,7 +65,7 @@ export function CodexInstancesContent({ accountsForSelect }: CodexInstancesConte
       unsupportedTitleKey="common.shared.instances.unsupported.title"
       unsupportedTitleDefault="暂不支持当前系统"
       unsupportedDescKey="codex.instances.unsupported.desc"
-      unsupportedDescDefault="Codex 多开实例仅支持 macOS。"
+      unsupportedDescDefault="Codex 多开实例仅支持 macOS 和 Windows。"
     />
   );
 }

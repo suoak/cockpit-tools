@@ -1035,7 +1035,7 @@
       "comingSoon": "マルチインスタンス機能は近日公開",
       "comingSoonDesc": "異なるアカウントで複数のCodex.appインスタンスを同時に実行できます。お楽しみに。",
       "unsupported": {
-        "desc": "Codexマルチインスタンスは現在macOSでのみ利用可能です。"
+        "desc": "Codex のマルチインスタンス機能は現在 macOS と Windows で利用できます。"
       },
       "quota": {
         "hourly": "5時間",

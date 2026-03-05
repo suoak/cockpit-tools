@@ -1035,7 +1035,7 @@
       "comingSoon": "ميزة المثيلات المتعددة قادمة قريبًا",
       "comingSoonDesc": "تشغيل عدة مثيلات Codex.app بحسابات مختلفة في وقت واحد، ترقبوا.",
       "unsupported": {
-        "desc": "مثيلات Codex المتعددة متاحة حاليًا على macOS فقط."
+        "desc": "ميزة تعدد مثيلات Codex متاحة حاليًا على macOS وWindows."
       },
       "quota": {
         "hourly": "5 ساعات",

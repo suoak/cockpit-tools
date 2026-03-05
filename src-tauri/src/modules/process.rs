@@ -1592,12 +1592,12 @@ pub fn ensure_vscode_launch_path_configured() -> Result<(), String> {
     resolve_vscode_launch_path().map(|_| ())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn ensure_codex_launch_path_configured() -> Result<(), String> {
     resolve_codex_launch_path().map(|_| ())
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn ensure_codex_launch_path_configured() -> Result<(), String> {
     Err(app_path_missing_error("codex"))
 }
@@ -1622,11 +1622,20 @@ fn resolve_vscode_launch_path() -> Result<std::path::PathBuf, String> {
     Err(app_path_missing_error("vscode"))
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn resolve_codex_launch_path() -> Result<std::path::PathBuf, String> {
     if let Some(custom) = normalize_custom_path(Some(&config::get_user_config().codex_app_path)) {
-        if let Some(exec) = resolve_macos_exec_path(&custom, "Codex") {
-            return Ok(exec);
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(exec) = resolve_macos_exec_path(&custom, "Codex") {
+                return Ok(exec);
+            }
+        }
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(exec) = resolve_macos_exec_path(&custom, "Codex.exe") {
+                return Ok(exec);
+            }
         }
         return Err(app_path_missing_error("codex"));
     }
@@ -2248,7 +2257,7 @@ fn resolve_expected_vscode_launch_path_for_match() -> Option<String> {
     Some(normalized)
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn resolve_expected_codex_launch_path_for_match() -> Option<String> {
     let launch_path = match resolve_codex_launch_path() {
         Ok(path) => path,
@@ -2727,6 +2736,18 @@ fn resolve_vscode_target_and_fallback(user_data_dir: Option<&str>) -> Option<(St
     )
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn resolve_codex_target_and_fallback(codex_home: Option<&str>) -> Option<(String, bool)> {
+    let default_codex_home = crate::modules::codex_instance::get_default_codex_home()
+        .ok()
+        .map(|value| value.to_string_lossy().to_string());
+    build_user_data_dir_match_target(
+        codex_home,
+        default_codex_home,
+        !strict_process_detect_enabled(),
+    )
+}
+
 pub fn resolve_antigravity_pid_from_entries(
     last_pid: Option<u32>,
     user_data_dir: Option<&str>,
@@ -2869,54 +2890,17 @@ pub fn focus_antigravity_instance(
     Ok(pid)
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn resolve_codex_pid_from_entries(
     last_pid: Option<u32>,
     codex_home: Option<&str>,
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
-    let target = codex_home
-        .map(|value| normalize_path_for_compare(value))
-        .filter(|value| !value.is_empty());
-
-    let mut matches = Vec::new();
-    for (pid, home) in entries {
-        match (&target, home.as_ref()) {
-            (Some(target_home), Some(home)) => {
-                let normalized = normalize_path_for_compare(home);
-                if !normalized.is_empty() && &normalized == target_home {
-                    matches.push(*pid);
-                }
-            }
-            (None, None) => {
-                matches.push(*pid);
-            }
-            (None, Some(home)) => {
-                let normalized = normalize_path_for_compare(home);
-                if normalized.is_empty() {
-                    matches.push(*pid);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    if let Some(pid) = last_pid {
-        if is_pid_running(pid) && matches.contains(&pid) {
-            return Some(pid);
-        }
-        if is_pid_running(pid) {
-            crate::modules::logger::log_warn(&format!(
-                "[Codex Resolve] 忽略不匹配的 last_pid={}，target={:?}，matched_pids={:?}",
-                pid, target, matches
-            ));
-        }
-    }
-
-    pick_preferred_pid(matches)
+    let (target, allow_none_for_target) = resolve_codex_target_and_fallback(codex_home)?;
+    resolve_pid_from_entries_by_user_data_dir(last_pid, &target, allow_none_for_target, entries)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn resolve_codex_pid_from_entries(
     _last_pid: Option<u32>,
     _codex_home: Option<&str>,
@@ -2925,13 +2909,13 @@ pub fn resolve_codex_pid_from_entries(
     None
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn resolve_codex_pid(last_pid: Option<u32>, codex_home: Option<&str>) -> Option<u32> {
     let entries = collect_codex_process_entries();
     resolve_codex_pid_from_entries(last_pid, codex_home, &entries)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn resolve_codex_pid(_last_pid: Option<u32>, _codex_home: Option<&str>) -> Option<u32> {
     None
 }
@@ -4706,12 +4690,197 @@ pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     )
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+fn collect_codex_process_entries_from_powershell(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
+    let mut entries: Vec<(u32, Option<String>)> = Vec::new();
+    let script = build_windows_path_filtered_process_probe_script("Codex.exe", expected_exe_path);
+    let output = powershell_output_with_timeout(
+        &["-NoProfile", "-Command", &script],
+        WINDOWS_PROCESS_PROBE_TIMEOUT,
+    );
+    let output = match output {
+        Ok(value) => value,
+        Err(err) => {
+            if err.kind() == std::io::ErrorKind::TimedOut {
+                crate::modules::logger::log_warn(
+                    "[Codex Probe] PowerShell 进程探测超时（5s）",
+                );
+            } else {
+                crate::modules::logger::log_warn(&format!(
+                    "[Codex Probe] PowerShell 进程探测失败: {}",
+                    err
+                ));
+            }
+            return entries;
+        }
+    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        crate::modules::logger::log_warn(&format!(
+            "[Codex Probe] PowerShell 进程探测返回非 0 状态: {}, stderr={}",
+            output.status,
+            stderr.trim()
+        ));
+        return entries;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let mut parts = line.splitn(2, '|');
+        let pid_str = parts.next().unwrap_or("").trim();
+        let cmdline = parts.next().unwrap_or("").trim();
+        let pid = match pid_str.parse::<u32>() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let lower = cmdline.to_lowercase();
+        if !lower.contains("codex.exe")
+            || is_helper_command_line(&lower)
+            || lower.contains("crashpad_handler")
+        {
+            continue;
+        }
+        let dir = extract_user_data_dir_from_command_line(cmdline).and_then(|value| {
+            let normalized = normalize_path_for_compare(&value);
+            if normalized.is_empty() {
+                None
+            } else {
+                Some(normalized)
+            }
+        });
+        entries.push((pid, dir));
+    }
+    entries.sort_by_key(|(pid, _)| *pid);
+    entries.dedup_by(|a, b| a.0 == b.0);
+    entries
+}
+
+#[cfg(target_os = "windows")]
+fn collect_codex_process_entries_from_sysinfo_fallback(
+    expected_exe_path: &str,
+) -> Vec<(u32, Option<String>)> {
+    let expected = normalize_path_for_compare(expected_exe_path);
+    if expected.is_empty() {
+        return Vec::new();
+    }
+
+    let mut entries: Vec<(u32, Option<String>)> = Vec::new();
+    let mut candidates = 0usize;
+    let mut path_mismatch = 0usize;
+    let mut missing_exe = 0usize;
+    let mut cmdline_fallback_hit = 0usize;
+
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        sysinfo::ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing()
+            .with_exe(UpdateKind::OnlyIfNotSet)
+            .with_cmd(UpdateKind::OnlyIfNotSet),
+    );
+    let current_pid = std::process::id();
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+
+        let name = process.name().to_string_lossy().to_lowercase();
+        let exe_path = process
+            .exe()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let args_line = process
+            .cmd()
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_lowercase())
+            .collect::<Vec<String>>()
+            .join(" ");
+        let is_codex = name == "codex.exe" || exe_path.ends_with("\\codex.exe");
+        if !is_codex || is_helper_command_line(&args_line) || args_line.contains("crashpad_handler")
+        {
+            continue;
+        }
+        candidates += 1;
+
+        let (actual, used_cmdline_fallback) = resolve_windows_process_exe_for_match(process);
+        match actual {
+            Some(actual_path) if actual_path == expected => {
+                if used_cmdline_fallback {
+                    cmdline_fallback_hit += 1;
+                }
+                let dir = extract_user_data_dir(process.cmd()).and_then(|value| {
+                    let normalized = normalize_path_for_compare(&value);
+                    if normalized.is_empty() {
+                        None
+                    } else {
+                        Some(normalized)
+                    }
+                });
+                entries.push((pid_u32, dir));
+            }
+            Some(_) => path_mismatch += 1,
+            None => missing_exe += 1,
+        }
+    }
+
+    entries.sort_by_key(|(pid, _)| *pid);
+    entries.dedup_by(|a, b| a.0 == b.0);
+
+    if entries.is_empty() {
+        crate::modules::logger::log_warn(&format!(
+            "[Codex Probe] sysinfo fallback no match: expected={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    } else {
+        crate::modules::logger::log_info(&format!(
+            "[Codex Probe] sysinfo fallback matched: expected={}, matched={}, candidates={}, path_mismatch={}, missing_exe={}, cmdline_fallback_hit={}",
+            expected, entries.len(), candidates, path_mismatch, missing_exe, cmdline_fallback_hit
+        ));
+    }
+
+    entries
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
+    let expected_launch = resolve_expected_codex_launch_path_for_match();
+    if expected_launch.is_none() {
+        return Vec::new();
+    }
+
+    let expected = expected_launch
+        .as_deref()
+        .expect("expected launch path must exist");
+    let entries = collect_codex_process_entries_from_powershell(expected);
+    if !entries.is_empty() {
+        return entries;
+    }
+    if strict_process_detect_enabled() {
+        crate::modules::logger::log_warn(
+            "[Codex Probe] strict mode enabled and PowerShell returned empty; skip sysinfo fallback",
+        );
+        return Vec::new();
+    }
+    crate::modules::logger::log_warn(
+        "[Codex Probe] PowerShell returned empty; fallback to sysinfo probe",
+    );
+    collect_codex_process_entries_from_sysinfo_fallback(expected)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     Vec::new()
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 #[allow(dead_code)]
 fn collect_codex_pids_by_home(target_home: &str, default_home: &str) -> Vec<u32> {
     let target = normalize_path_for_compare(target_home);
@@ -4738,7 +4907,7 @@ fn collect_codex_pids_by_home(target_home: &str, default_home: &str) -> Vec<u32>
 
 #[allow(dead_code)]
 pub fn list_codex_home_dirs(default_home: &str) -> Vec<String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let mut result = Vec::new();
         let mut has_default = false;
@@ -4763,28 +4932,28 @@ pub fn list_codex_home_dirs(default_home: &str) -> Vec<String> {
         return result;
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = default_home;
         Vec::new()
     }
 }
 
-/// 判断 Codex 是否在运行（仅 macOS）
-#[cfg(target_os = "macos")]
+/// 判断 Codex 是否在运行
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn is_codex_running() -> bool {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         !collect_codex_process_entries().is_empty()
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         false
     }
 }
 
-/// 启动 Codex（支持 CODEX_HOME 与附加参数，仅 macOS）
+/// 启动 Codex（支持 CODEX_HOME 与附加参数）
 pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<u32, String> {
     #[cfg(target_os = "macos")]
     {
@@ -4842,14 +5011,47 @@ pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<
         return Err(app_path_missing_error("codex"));
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+
+        let launch_path = resolve_codex_launch_path()?;
+        let mut cmd = Command::new(&launch_path);
+        if should_detach_child() {
+            cmd.creation_flags(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
+            cmd.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+        } else {
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        if !codex_home.trim().is_empty() {
+            cmd.env("CODEX_HOME", codex_home.trim());
+            cmd.arg("--user-data-dir").arg(codex_home.trim());
+        }
+        cmd.arg("--new-window");
+        for arg in extra_args {
+            if !arg.trim().is_empty() {
+                cmd.arg(arg.trim());
+            }
+        }
+        let child =
+            spawn_command_with_trace(&mut cmd).map_err(|e| format!("启动 Codex 失败: {}", e))?;
+        crate::modules::logger::log_info(&format!(
+            "Codex 已启动: {}",
+            launch_path.to_string_lossy()
+        ));
+        return Ok(child.id());
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = (codex_home, extra_args);
-        Err("Codex 多开实例仅支持 macOS".to_string())
+        Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
-/// 启动 Codex 默认实例（不注入 CODEX_HOME/额外参数，仅 macOS）
+/// 启动 Codex 默认实例（默认目录）
 pub fn start_codex_default() -> Result<u32, String> {
     #[cfg(target_os = "macos")]
     {
@@ -4882,14 +5084,21 @@ pub fn start_codex_default() -> Result<u32, String> {
         return Err(app_path_missing_error("codex"));
     }
 
-    #[cfg(not(target_os = "macos"))]
-    Err("Codex 多开实例仅支持 macOS".to_string())
+    #[cfg(target_os = "windows")]
+    {
+        let default_home = crate::modules::codex_instance::get_default_codex_home()?;
+        let default_home = default_home.to_string_lossy().to_string();
+        start_codex_with_args(&default_home, &[])
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
 }
 
-/// 关闭 Codex 进程（仅 macOS）
+/// 关闭 Codex 进程
 #[allow(dead_code)]
 pub fn close_codex(timeout_secs: u64) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         crate::modules::logger::log_info("正在关闭 Codex...");
         let pids: Vec<u32> = collect_codex_process_entries()
@@ -4908,16 +5117,16 @@ pub fn close_codex(timeout_secs: u64) -> Result<(), String> {
         return Ok(());
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = timeout_secs;
-        Err("Codex 多开实例仅支持 macOS".to_string())
+        Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
 /// 关闭受管 Codex 实例（按 CODEX_HOME 匹配，包含默认实例目录）
 pub fn close_codex_instances(codex_homes: &[String], timeout_secs: u64) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         crate::modules::logger::log_info("正在关闭受管 Codex 实例...");
 
@@ -4981,10 +5190,10 @@ pub fn close_codex_instances(codex_homes: &[String], timeout_secs: u64) -> Resul
         return Ok(());
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = (codex_homes, timeout_secs);
-        Err("Codex 多开实例仅支持 macOS".to_string())
+        Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
@@ -4992,7 +5201,7 @@ pub fn close_codex_instances(codex_homes: &[String], timeout_secs: u64) -> Resul
 
 #[allow(dead_code)]
 pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let default_home = crate::modules::codex_account::get_codex_home()
             .to_string_lossy()
@@ -5017,10 +5226,10 @@ pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), S
         return Ok(());
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = (codex_home, timeout_secs);
-        Err("Codex 多开实例仅支持 macOS".to_string())
+        Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
