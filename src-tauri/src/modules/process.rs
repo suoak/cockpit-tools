@@ -952,6 +952,55 @@ pub fn detect_windows_exec_path_by_signatures(
     None
 }
 
+#[cfg(target_os = "windows")]
+fn detect_windows_codex_exec_path_from_appx() -> Option<std::path::PathBuf> {
+    let script = r#"$ErrorActionPreference='SilentlyContinue'
+$pkg = Get-AppxPackage -Name 'OpenAI.Codex' | Sort-Object Version -Descending | Select-Object -First 1
+if ($pkg -and -not [string]::IsNullOrWhiteSpace($pkg.InstallLocation)) {
+  $candidate = Join-Path $pkg.InstallLocation 'app\Codex.exe'
+  if (Test-Path -LiteralPath $candidate) {
+    Write-Output $candidate
+  }
+}
+exit 0
+"#;
+
+    let output = match powershell_output(&["-Command", script]) {
+        Ok(value) => value,
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[Path Detect] codex appx detect failed: {}",
+                err
+            ));
+            return None;
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        crate::modules::logger::log_warn(&format!(
+            "[Path Detect] codex appx detect command failed: status={}, stderr_head={}",
+            output.status,
+            stderr.chars().take(400).collect::<String>()
+        ));
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if let Some(path) = normalize_windows_candidate_path(line) {
+            crate::modules::logger::log_info(&format!(
+                "[Path Detect] codex appx detect hit: {}",
+                path.to_string_lossy()
+            ));
+            return Some(path);
+        }
+    }
+
+    crate::modules::logger::log_warn("[Path Detect] codex appx detect miss");
+    None
+}
+
 fn should_detach_child() -> bool {
     if let Ok(value) = std::env::var("COCKPIT_CHILD_LOGS") {
         let lowered = value.trim().to_lowercase();
@@ -1500,13 +1549,7 @@ fn detect_codex_exec_path() -> Option<std::path::PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        if let Some(path) = detect_windows_exec_path_by_signatures(
-            "codex",
-            &["Codex.exe", "codex.exe"],
-            &["codex"],
-            &["codex"],
-            &["codex"],
-        ) {
+        if let Some(path) = detect_windows_codex_exec_path_from_appx() {
             return Some(path);
         }
     }
