@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (все процессы Codex)"
         },
         "force": {
-          "principle": "Идентифицирует процессы по CODEX_HOME и принудительно завершает их (SIGKILL / taskkill /F), затем запускает целевой инстанс.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (совпадение по CODEX_HOME)"
+          "principle": "Идентифицирует процессы по --user-data-dir и принудительно завершает их (SIGKILL / taskkill /F), затем запускает целевой инстанс.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (совпадение по --user-data-dir)"
         }
       }
     },

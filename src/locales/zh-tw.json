@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid>（全體 Codex）"
         },
         "force": {
-          "principle": "通過 CODEX_HOME 識別進程並強制關閉（SIGKILL / taskkill /F），隨後啟動目標實例。",
-          "commandMac": "macOS：pkill -9 -f“CODEX_HOME=<dir>”",
-          "commandWin": "Windows: taskkill /F /PID <pid>（匹配 CODEX_HOME）"
+          "principle": "通過 --user-data-dir 識別進程並強制關閉（SIGKILL / taskkill /F），隨後啟動目標實例。",
+          "commandMac": "macOS：pkill -9 -f“--user-data-dir=<dir>”",
+          "commandWin": "Windows: taskkill /F /PID <pid>（匹配 --user-data-dir）"
         }
       }
     },

@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (すべての Codex プロセス)"
         },
         "force": {
-          "principle": "CODEX_HOME でプロセスを一致させて強制終了（SIGKILL / taskkill /F）し、その後ターゲットインスタンスを起動します。",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (CODEX_HOME に一致するもの)"
+          "principle": "--user-data-dir でプロセスを一致させて強制終了（SIGKILL / taskkill /F）し、その後ターゲットインスタンスを起動します。",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (--user-data-dir に一致するもの)"
         }
       }
     },

@@ -1174,8 +1174,21 @@ fn spawn_open_app_with_options(
     args: &[String],
     force_new_instance: bool,
 ) -> Result<u32, String> {
+    spawn_open_app_with_options_and_env(app_root, args, force_new_instance, &[])
+}
+
+#[cfg(target_os = "macos")]
+fn spawn_open_app_with_options_and_env(
+    app_root: &str,
+    args: &[String],
+    force_new_instance: bool,
+    extra_envs: &[(&str, &str)],
+) -> Result<u32, String> {
     let mut cmd = Command::new("open");
     sanitize_macos_gui_launch_env(&mut cmd);
+    for (key, value) in extra_envs {
+        cmd.env(key, value);
+    }
     if force_new_instance {
         cmd.arg("-n");
     }
@@ -1902,21 +1915,6 @@ fn extract_user_data_dir(args: &[std::ffi::OsString]) -> Option<String> {
     None
 }
 
-#[cfg(target_os = "windows")]
-fn extract_env_value_from_os_envs(args: &[std::ffi::OsString], key: &str) -> Option<String> {
-    let prefix = format!("{}=", key);
-    for item in args {
-        let value = item.to_string_lossy();
-        if let Some(raw) = value.strip_prefix(&prefix) {
-            let trimmed = raw.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_string());
-            }
-        }
-    }
-    None
-}
-
 #[allow(dead_code)]
 fn parse_user_data_dir_value(raw: &str) -> Option<String> {
     let rest = raw.trim_start();
@@ -1979,71 +1977,6 @@ fn extract_user_data_dir_from_command_line(command_line: &str) -> Option<String>
     None
 }
 
-#[cfg(target_os = "macos")]
-fn parse_env_value(raw: &str) -> Option<String> {
-    let rest = raw.trim_start();
-    if rest.is_empty() {
-        return None;
-    }
-    let value = if rest.starts_with('"') {
-        let end = rest[1..].find('"').map(|idx| idx + 1).unwrap_or(rest.len());
-        &rest[1..end]
-    } else if rest.starts_with('\'') {
-        let end = rest[1..]
-            .find('\'')
-            .map(|idx| idx + 1)
-            .unwrap_or(rest.len());
-        &rest[1..end]
-    } else {
-        let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
-        &rest[..end]
-    };
-    let value = value.trim();
-    if value.is_empty() {
-        None
-    } else {
-        Some(value.to_string())
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn extract_env_value_from_tokens(tokens: &[String], key: &str) -> Option<String> {
-    if tokens.is_empty() {
-        return None;
-    }
-    let prefix = format!("{}=", key);
-    let mut index = 0;
-    while index < tokens.len() {
-        let token = tokens[index].as_str();
-        if let Some(rest) = token.strip_prefix(&prefix) {
-            let mut parts: Vec<&str> = Vec::new();
-            if !rest.is_empty() {
-                parts.push(rest);
-            }
-            let mut next = index + 1;
-            while next < tokens.len() {
-                let value = tokens[next].as_str();
-                if value.starts_with("--") || is_env_token(value) {
-                    break;
-                }
-                parts.push(value);
-                next += 1;
-            }
-            if parts.is_empty() {
-                return None;
-            }
-            let joined = parts.join(" ");
-            let trimmed = joined.trim();
-            if trimmed.is_empty() {
-                return None;
-            }
-            return Some(trimmed.to_string());
-        }
-        index += 1;
-    }
-    None
-}
-
 fn split_command_tokens(command_line: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
@@ -2097,14 +2030,6 @@ fn is_env_token(token: &str) -> bool {
         return false;
     }
     chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
-}
-
-#[cfg(target_os = "macos")]
-fn extract_env_value(command_line: &str, key: &str) -> Option<String> {
-    let needle = format!("{}=", key);
-    let pos = command_line.find(&needle)?;
-    let rest = &command_line[pos + needle.len()..];
-    parse_env_value(rest)
 }
 
 #[allow(dead_code)]
@@ -2841,25 +2766,26 @@ fn resolve_vscode_target_and_fallback(user_data_dir: Option<&str>) -> Option<(St
 }
 
 #[cfg(target_os = "macos")]
-fn resolve_codex_target_and_fallback(codex_home: Option<&str>) -> Option<(String, bool)> {
-    let default_codex_home = crate::modules::codex_instance::get_default_codex_home()
-        .ok()
-        .map(|value| value.to_string_lossy().to_string());
-    build_user_data_dir_match_target(
-        codex_home,
-        default_codex_home,
-        !strict_process_detect_enabled(),
-    )
-}
-
-#[cfg(target_os = "windows")]
-fn resolve_codex_target_and_fallback(codex_home: Option<&str>) -> Option<(String, bool)> {
-    let default_codex_home = crate::modules::codex_instance::get_default_codex_home()
+fn resolve_codex_target_and_fallback(user_data_dir: Option<&str>) -> Option<(String, bool)> {
+    let default_user_data_dir = crate::modules::codex_instance::get_default_codex_home()
         .ok()
         .map(|value| value.to_string_lossy().to_string());
     let (target, _) = build_user_data_dir_match_target(
-        codex_home,
-        default_codex_home,
+        user_data_dir,
+        default_user_data_dir,
+        !strict_process_detect_enabled(),
+    )?;
+    Some((target, false))
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_codex_target_and_fallback(user_data_dir: Option<&str>) -> Option<(String, bool)> {
+    let default_user_data_dir = crate::modules::codex_instance::get_default_codex_home()
+        .ok()
+        .map(|value| value.to_string_lossy().to_string());
+    let (target, _) = build_user_data_dir_match_target(
+        user_data_dir,
+        default_user_data_dir,
         !strict_process_detect_enabled(),
     )?;
     Some((target, false))
@@ -3010,74 +2936,54 @@ pub fn focus_antigravity_instance(
 #[cfg(target_os = "macos")]
 pub fn resolve_codex_pid_from_entries(
     last_pid: Option<u32>,
-    codex_home: Option<&str>,
+    user_data_dir: Option<&str>,
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
-    let (target, allow_none_for_target) = resolve_codex_target_and_fallback(codex_home)?;
+    let (target, allow_none_for_target) = resolve_codex_target_and_fallback(user_data_dir)?;
     resolve_pid_from_entries_by_user_data_dir(last_pid, &target, allow_none_for_target, entries)
 }
 
 #[cfg(target_os = "windows")]
 pub fn resolve_codex_pid_from_entries(
     last_pid: Option<u32>,
-    codex_home: Option<&str>,
+    user_data_dir: Option<&str>,
     entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
-    let (target, allow_none_for_target) = resolve_codex_target_and_fallback(codex_home)?;
-    let matched = resolve_pid_from_entries_by_user_data_dir(
+    let (target, allow_none_for_target) = resolve_codex_target_and_fallback(user_data_dir)?;
+    resolve_pid_from_entries_by_user_data_dir(
         last_pid,
         &target,
         allow_none_for_target,
         entries,
-    );
-    if matched.is_some() {
-        return matched;
-    }
-
-    // Windows 上 CODEX_HOME 可能因进程权限导致暂时不可读，回退到 last_pid。
-    if let Some(pid) = last_pid {
-        if is_pid_running(pid) && entries.iter().any(|(entry_pid, _)| *entry_pid == pid) {
-            crate::modules::logger::log_info(&format!(
-                "[Codex Resolve] 使用 last_pid 回退匹配实例: pid={}",
-                pid
-            ));
-            return Some(pid);
-        }
-    }
-
-    if codex_home.is_none() {
-        return pick_preferred_pid(entries.iter().map(|(pid, _)| *pid).collect());
-    }
-
-    None
+    )
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn resolve_codex_pid_from_entries(
     _last_pid: Option<u32>,
-    _codex_home: Option<&str>,
+    _user_data_dir: Option<&str>,
     _entries: &[(u32, Option<String>)],
 ) -> Option<u32> {
     None
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn resolve_codex_pid(last_pid: Option<u32>, codex_home: Option<&str>) -> Option<u32> {
+pub fn resolve_codex_pid(last_pid: Option<u32>, user_data_dir: Option<&str>) -> Option<u32> {
     let entries = collect_codex_process_entries();
-    resolve_codex_pid_from_entries(last_pid, codex_home, &entries)
+    resolve_codex_pid_from_entries(last_pid, user_data_dir, &entries)
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn resolve_codex_pid(_last_pid: Option<u32>, _codex_home: Option<&str>) -> Option<u32> {
+pub fn resolve_codex_pid(_last_pid: Option<u32>, _user_data_dir: Option<&str>) -> Option<u32> {
     None
 }
 
 pub fn focus_codex_instance(
     last_pid: Option<u32>,
-    codex_home: Option<&str>,
+    user_data_dir: Option<&str>,
 ) -> Result<u32, String> {
     let resolve_start = Instant::now();
-    let pid = resolve_codex_pid(last_pid, codex_home)
+    let pid = resolve_codex_pid(last_pid, user_data_dir)
         .ok_or_else(|| "实例未运行，无法定位窗口".to_string())?;
     crate::modules::logger::log_info(&format!(
         "[Focus] Codex resolve pid={} elapsed={}ms",
@@ -4812,60 +4718,24 @@ pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
         if !lower.contains("codex.app/contents/macos/codex") {
             continue;
         }
-        let tokens = split_command_tokens(&cmdline);
-        let mut args: Vec<String> = Vec::new();
-        let mut env_tokens: Vec<String> = Vec::new();
-        let mut saw_env = false;
-        for (idx, token) in tokens.into_iter().enumerate() {
-            if idx == 0 {
-                args.push(token);
-                continue;
-            }
-            if !saw_env && is_env_token(&token) {
-                saw_env = true;
-                env_tokens.push(token);
-                continue;
-            }
-            if saw_env {
-                env_tokens.push(token);
-            } else {
-                args.push(token);
-            }
-        }
-        let args_lower = args.join(" ").to_lowercase();
-        let is_helper = args_lower.contains("--type=")
-            || args_lower.contains("helper")
-            || args_lower.contains("renderer")
-            || args_lower.contains("gpu")
-            || args_lower.contains("crashpad")
-            || args_lower.contains("utility")
-            || args_lower.contains("audio")
-            || args_lower.contains("sandbox");
-        if is_helper {
+        let args_lower = split_command_tokens(&cmdline).join(" ").to_lowercase();
+        if is_helper_command_line(&args_lower) || args_lower.contains("crashpad_handler") {
             continue;
         }
-        let mut codex_home = extract_env_value_from_tokens(&env_tokens, "CODEX_HOME");
-        if codex_home.is_none() {
-            codex_home = env_tokens
-                .iter()
-                .find_map(|token| token.strip_prefix("CODEX_HOME="))
-                .map(|value| value.to_string());
-        }
-        if codex_home.is_none() {
-            codex_home = extract_env_value(&cmdline, "CODEX_HOME");
-        }
-        if let Some(ref home) = codex_home {
+        let user_data_dir = extract_user_data_dir_from_command_line(&cmdline)
+            .and_then(|value| normalize_non_empty_path_for_compare(&value));
+        if let Some(ref dir) = user_data_dir {
             crate::modules::logger::log_info(&format!(
-                "[Codex Instances] pid={} CODEX_HOME={}",
-                pid, home
+                "[Codex Instances] pid={} user-data-dir={}",
+                pid, dir
             ));
         } else {
             crate::modules::logger::log_info(&format!(
-                "[Codex Instances] pid={} CODEX_HOME not found",
+                "[Codex Instances] pid={} user-data-dir not found",
                 pid
             ));
         }
-        result.push((pid, codex_home));
+        result.push((pid, user_data_dir));
     }
     filter_entries_by_expected_launch_path("Codex", result, expected_launch)
 }
@@ -4923,7 +4793,9 @@ fn collect_codex_process_entries_from_powershell(
         {
             continue;
         }
-        entries.push((pid, None));
+        let dir = extract_user_data_dir_from_command_line(cmdline)
+            .and_then(|value| normalize_non_empty_path_for_compare(&value));
+        entries.push((pid, dir));
     }
     entries.sort_by_key(|(pid, _)| *pid);
     entries.dedup_by(|a, b| a.0 == b.0);
@@ -4951,8 +4823,7 @@ fn collect_codex_process_entries_from_sysinfo_fallback(
         true,
         ProcessRefreshKind::nothing()
             .with_exe(UpdateKind::OnlyIfNotSet)
-            .with_cmd(UpdateKind::OnlyIfNotSet)
-            .with_environ(UpdateKind::OnlyIfNotSet),
+            .with_cmd(UpdateKind::OnlyIfNotSet),
     );
     let current_pid = std::process::id();
 
@@ -4987,16 +4858,8 @@ fn collect_codex_process_entries_from_sysinfo_fallback(
                 if used_cmdline_fallback {
                     cmdline_fallback_hit += 1;
                 }
-                let dir = extract_env_value_from_os_envs(process.environ(), "CODEX_HOME").and_then(
-                    |value| {
-                        let normalized = normalize_path_for_compare(&value);
-                        if normalized.is_empty() {
-                            None
-                        } else {
-                            Some(normalized)
-                        }
-                    },
-                );
+                let dir = extract_user_data_dir(process.cmd())
+                    .and_then(|value| normalize_non_empty_path_for_compare(&value));
                 entries.push((pid_u32, dir));
             }
             Some(_) => path_mismatch += 1,
@@ -5117,7 +4980,7 @@ fn collect_codex_pids_by_home(target_home: &str, default_home: &str) -> Vec<u32>
     result
 }
 
-/// 获取正在运行的 Codex 实例的 CODEX_HOME
+/// 获取正在运行的 Codex 实例的 user-data-dir
 
 #[allow(dead_code)]
 pub fn list_codex_home_dirs(default_home: &str) -> Vec<String> {
@@ -5169,22 +5032,34 @@ pub fn is_codex_running() -> bool {
     }
 }
 
-/// 启动 Codex（支持 CODEX_HOME 与附加参数）
-pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<u32, String> {
+/// 启动 Codex（支持 user-data-dir 与附加参数）
+pub fn start_codex_with_args(user_data_dir: &str, extra_args: &[String]) -> Result<u32, String> {
+    let target = user_data_dir.trim();
+    if target.is_empty() {
+        return Err("实例目录为空，无法启动".to_string());
+    }
+
     #[cfg(target_os = "macos")]
     {
         let app_root = resolve_macos_app_root_from_config("codex");
         let launch_path = resolve_codex_launch_path().ok();
+        let mut launch_args: Vec<String> = vec![
+            "--user-data-dir".to_string(),
+            target.to_string(),
+            "--new-window".to_string(),
+        ];
+        for arg in extra_args {
+            let trimmed = arg.trim();
+            if !trimmed.is_empty() {
+                launch_args.push(trimmed.to_string());
+            }
+        }
         if let Some(path) = launch_path {
             let mut cmd = Command::new(&path);
             sanitize_macos_gui_launch_env(&mut cmd);
-            if !codex_home.trim().is_empty() {
-                cmd.env("CODEX_HOME", codex_home.trim());
-            }
-            for arg in extra_args {
-                if !arg.trim().is_empty() {
-                    cmd.arg(arg);
-                }
+            cmd.env("CODEX_HOME", target);
+            for arg in &launch_args {
+                cmd.arg(arg);
             }
             match spawn_detached_unix(&mut cmd) {
                 Ok(child) => {
@@ -5192,37 +5067,31 @@ pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<
                     return Ok(child.id());
                 }
                 Err(e) => {
-                    if codex_home.trim().is_empty() {
-                        if let Some(app_root) = app_root {
-                            let mut args: Vec<String> = Vec::new();
-                            for arg in extra_args {
-                                if !arg.trim().is_empty() {
-                                    args.push(arg.to_string());
-                                }
-                            }
-                            let pid = spawn_open_app(&app_root, &args)
-                                .map_err(|open_err| format!("启动 Codex 失败: {}", open_err))?;
-                            crate::modules::logger::log_info("Codex 启动命令已发送");
-                            return Ok(pid);
-                        }
+                    if let Some(app_root) = app_root {
+                        let pid = spawn_open_app_with_options_and_env(
+                            &app_root,
+                            &launch_args,
+                            false,
+                            &[("CODEX_HOME", target)],
+                        )
+                            .map_err(|open_err| format!("启动 Codex 失败: {}", open_err))?;
+                        crate::modules::logger::log_info("Codex 启动命令已发送");
+                        return Ok(pid);
                     }
                     return Err(format!("启动 Codex 失败: {}", e));
                 }
             }
         }
-        if codex_home.trim().is_empty() {
-            if let Some(app_root) = app_root {
-                let mut args: Vec<String> = Vec::new();
-                for arg in extra_args {
-                    if !arg.trim().is_empty() {
-                        args.push(arg.to_string());
-                    }
-                }
-                let pid = spawn_open_app(&app_root, &args)
-                    .map_err(|e| format!("启动 Codex 失败: {}", e))?;
-                crate::modules::logger::log_info("Codex 启动命令已发送");
-                return Ok(pid);
-            }
+        if let Some(app_root) = app_root {
+            let pid = spawn_open_app_with_options_and_env(
+                &app_root,
+                &launch_args,
+                false,
+                &[("CODEX_HOME", target)],
+            )
+                .map_err(|e| format!("启动 Codex 失败: {}", e))?;
+            crate::modules::logger::log_info("Codex 启动命令已发送");
+            return Ok(pid);
         }
         return Err(app_path_missing_error("codex"));
     }
@@ -5241,9 +5110,9 @@ pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<
         } else {
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
-        if !codex_home.trim().is_empty() {
-            cmd.env("CODEX_HOME", codex_home.trim());
-        }
+        cmd.env_remove("CODEX_HOME");
+        cmd.env("CODEX_HOME", target);
+        cmd.arg("--user-data-dir").arg(target);
         cmd.arg("--new-window");
         for arg in extra_args {
             if !arg.trim().is_empty() {
@@ -5261,49 +5130,18 @@ pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        let _ = (codex_home, extra_args);
+        let _ = (user_data_dir, extra_args);
         Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
 /// 启动 Codex 默认实例（默认目录）
 pub fn start_codex_default() -> Result<u32, String> {
-    #[cfg(target_os = "macos")]
-    {
-        let app_root = resolve_macos_app_root_from_config("codex");
-        if let Ok(launch_path) = resolve_codex_launch_path() {
-            let mut cmd = Command::new(&launch_path);
-            sanitize_macos_gui_launch_env(&mut cmd);
-            match spawn_detached_unix(&mut cmd) {
-                Ok(child) => {
-                    crate::modules::logger::log_info("Codex 启动命令已发送");
-                    return Ok(child.id());
-                }
-                Err(e) => {
-                    if let Some(app_root) = app_root {
-                        let pid = spawn_open_app(&app_root, &[])
-                            .map_err(|open_err| format!("启动 Codex 失败: {}", open_err))?;
-                        crate::modules::logger::log_info("Codex 启动命令已发送");
-                        return Ok(pid);
-                    }
-                    return Err(format!("启动 Codex 失败: {}", e));
-                }
-            }
-        }
-        if let Some(app_root) = app_root {
-            let pid =
-                spawn_open_app(&app_root, &[]).map_err(|e| format!("启动 Codex 失败: {}", e))?;
-            crate::modules::logger::log_info("Codex 启动命令已发送");
-            return Ok(pid);
-        }
-        return Err(app_path_missing_error("codex"));
-    }
-
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let default_home = crate::modules::codex_instance::get_default_codex_home()?;
         let default_home = default_home.to_string_lossy().to_string();
-        start_codex_with_args(&default_home, &[])
+        return start_codex_with_args(&default_home, &[]);
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -5339,13 +5177,13 @@ pub fn close_codex(timeout_secs: u64) -> Result<(), String> {
     }
 }
 
-/// 关闭受管 Codex 实例（按 CODEX_HOME 匹配，包含默认实例目录）
-pub fn close_codex_instances(codex_homes: &[String], timeout_secs: u64) -> Result<(), String> {
+/// 关闭受管 Codex 实例（按 user-data-dir 匹配，包含默认实例目录）
+pub fn close_codex_instances(user_data_dirs: &[String], timeout_secs: u64) -> Result<(), String> {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         crate::modules::logger::log_info("正在关闭受管 Codex 实例...");
 
-        let target_homes: HashSet<String> = codex_homes
+        let target_homes: HashSet<String> = user_data_dirs
             .iter()
             .map(|value| normalize_path_for_compare(value))
             .filter(|value| !value.is_empty())
@@ -5409,26 +5247,26 @@ pub fn close_codex_instances(codex_homes: &[String], timeout_secs: u64) -> Resul
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        let _ = (codex_homes, timeout_secs);
+        let _ = (user_data_dirs, timeout_secs);
         Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }
 
-/// 关闭指定 Codex 实例（按 CODEX_HOME 匹配）
+/// 关闭指定 Codex 实例（按 user-data-dir 匹配）
 
 #[allow(dead_code)]
-pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), String> {
+pub fn close_codex_instance(user_data_dir: &str, timeout_secs: u64) -> Result<(), String> {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let default_home = crate::modules::codex_account::get_codex_home()
             .to_string_lossy()
             .to_string();
-        let target = normalize_path_for_compare(codex_home);
+        let target = normalize_path_for_compare(user_data_dir);
         if target.is_empty() {
             return Err("实例目录为空，无法关闭".to_string());
         }
 
-        let pids = collect_codex_pids_by_home(codex_home, &default_home);
+        let pids = collect_codex_pids_by_home(user_data_dir, &default_home);
         if pids.is_empty() {
             return Ok(());
         }
@@ -5437,7 +5275,7 @@ pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), S
             let _ = close_pid(*pid, timeout_secs);
         }
 
-        if !collect_codex_pids_by_home(codex_home, &default_home).is_empty() {
+        if !collect_codex_pids_by_home(user_data_dir, &default_home).is_empty() {
             return Err("无法关闭实例进程，请手动关闭后重试".to_string());
         }
         return Ok(());
@@ -5445,7 +5283,7 @@ pub fn close_codex_instance(codex_home: &str, timeout_secs: u64) -> Result<(), S
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        let _ = (codex_home, timeout_secs);
+        let _ = (user_data_dir, timeout_secs);
         Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
     }
 }

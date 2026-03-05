@@ -1048,9 +1048,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (tất cả tiến trình Codex)"
         },
         "force": {
-          "principle": "Xác định các tiến trình qua CODEX_HOME và buộc đóng chúng (SIGKILL / taskkill /F), sau đó bắt đầu phiên bản đích.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (khớp với CODEX_HOME)"
+          "principle": "Xác định các tiến trình qua --user-data-dir và buộc đóng chúng (SIGKILL / taskkill /F), sau đó bắt đầu phiên bản đích.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (khớp với --user-data-dir)"
         }
       }
     },
