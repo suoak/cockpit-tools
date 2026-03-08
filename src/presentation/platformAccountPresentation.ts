@@ -2,6 +2,8 @@ import type { Account } from '../types/account';
 import type { CodexAccount } from '../types/codex';
 import type { GitHubCopilotAccount } from '../types/githubCopilot';
 import type { WindsurfAccount } from '../types/windsurf';
+import type { CursorAccount } from '../types/cursor';
+import type { GeminiAccount } from '../types/gemini';
 import type { KiroAccount, KiroAccountStatus } from '../types/kiro';
 import {
   formatResetTimeDisplay,
@@ -13,6 +15,7 @@ import {
 } from '../utils/account';
 import {
   formatCodexResetTime,
+  getCodexCodeReviewQuotaMetric,
   getCodexPlanDisplayName,
   getCodexQuotaClass,
   getCodexQuotaWindows,
@@ -30,6 +33,20 @@ import {
   getWindsurfPlanDisplayName,
   getWindsurfQuotaClass,
 } from '../types/windsurf';
+import {
+  formatCursorUsageDollars,
+  getCursorAccountDisplayEmail,
+  getCursorPlanDisplayName,
+  getCursorPlanBadgeClass,
+  getCursorUsage,
+  isCursorAccountBanned,
+} from '../types/cursor';
+import {
+  getGeminiAccountDisplayEmail,
+  getGeminiPlanDisplayName,
+  getGeminiPlanBadgeClass,
+  getGeminiTierQuotaSummary,
+} from '../types/gemini';
 import {
   formatKiroResetTime,
   getKiroAccountDisplayEmail,
@@ -274,7 +291,7 @@ export function buildCodexAccountPresentation(
 ): UnifiedAccountPresentation {
   const normalizedPlan = getCodexPlanDisplayName(account.plan_type);
   const rawPlan = account.plan_type?.trim();
-  const quotaItems = getCodexQuotaWindows(account.quota).map((window) => ({
+  const quotaItems: UnifiedQuotaMetric[] = getCodexQuotaWindows(account.quota).map((window) => ({
     key: window.id,
     label: window.label,
     percentage: window.percentage,
@@ -283,6 +300,18 @@ export function buildCodexAccountPresentation(
     resetText: window.resetTime ? formatCodexResetTime(window.resetTime, t) : '',
     resetAt: window.resetTime,
   }));
+  const codeReviewMetric = getCodexCodeReviewQuotaMetric(account.quota);
+  if (codeReviewMetric) {
+    quotaItems.push({
+      key: 'code_review',
+      label: 'Code Review',
+      percentage: codeReviewMetric.percentage,
+      quotaClass: getCodexQuotaClass(codeReviewMetric.percentage),
+      valueText: `${codeReviewMetric.percentage}%`,
+      resetText: codeReviewMetric.resetTime ? formatCodexResetTime(codeReviewMetric.resetTime, t) : '',
+      resetAt: codeReviewMetric.resetTime,
+    });
+  }
 
   return {
     id: account.id,
@@ -532,6 +561,163 @@ export function buildKiroAccountPresentation(
     cycleText: credits.planEndsAt
       ? formatKiroResetTime(credits.planEndsAt, t)
       : t('common.shared.credits.planEndsUnknown', '配额周期时间未知'),
+    quotaItems,
+  };
+}
+
+export interface CursorAccountPresentation extends UnifiedAccountPresentation {
+  isBanned: boolean;
+}
+
+export interface GeminiAccountPresentation extends UnifiedAccountPresentation {
+  isBanned: boolean;
+}
+
+function normalizeCursorUsagePercent(raw: number | null | undefined): number | null {
+  if (raw == null || !Number.isFinite(raw)) {
+    return null;
+  }
+  const base = raw > 0 && raw < 1 ? 1 : raw;
+  return clampPercent(base);
+}
+
+function getCursorUsageQuotaClass(usedPercent: number): string {
+  if (usedPercent >= 90) return 'low';
+  if (usedPercent >= 70) return 'medium';
+  return 'high';
+}
+
+export function buildCursorAccountPresentation(
+  account: CursorAccount,
+  t: Translate,
+): CursorAccountPresentation {
+  const planLabel = getCursorPlanDisplayName(account);
+  const usage = getCursorUsage(account);
+  const ratioPercent =
+    usage.planUsedCents != null &&
+    usage.planLimitCents != null &&
+    usage.planLimitCents > 0
+      ? (usage.planUsedCents / usage.planLimitCents) * 100
+      : null;
+  const totalPercent = normalizeCursorUsagePercent(usage.totalPercentUsed ?? ratioPercent);
+  const autoPercent = normalizeCursorUsagePercent(usage.autoPercentUsed);
+  const apiPercent = normalizeCursorUsagePercent(usage.apiPercentUsed);
+  const quotaItems: UnifiedQuotaMetric[] = [];
+
+  if (totalPercent != null) {
+    quotaItems.push({
+      key: 'total',
+      label: 'Total Usage',
+      percentage: totalPercent,
+      quotaClass: getCursorUsageQuotaClass(totalPercent),
+      valueText: `${totalPercent}%`,
+      resetAt: usage.allowanceResetAt,
+      resetText: usage.allowanceResetAt
+        ? formatCodexResetTime(usage.allowanceResetAt, t)
+        : '',
+    });
+  }
+
+  if (autoPercent != null) {
+    quotaItems.push({
+      key: 'auto',
+      label: 'Auto + Composer',
+      percentage: autoPercent,
+      quotaClass: getCursorUsageQuotaClass(autoPercent),
+      valueText: `${autoPercent}%`,
+    });
+  }
+
+  if (apiPercent != null) {
+    quotaItems.push({
+      key: 'api',
+      label: 'API Usage',
+      percentage: apiPercent,
+      quotaClass: getCursorUsageQuotaClass(apiPercent),
+      valueText: `${apiPercent}%`,
+    });
+  }
+
+  const limitType = (usage.onDemandLimitType || '').toLowerCase();
+  const isTeamLimit = limitType === 'team';
+  const onDemandLimit = usage.onDemandLimitCents;
+  const individualUsed = usage.onDemandUsedCents ?? 0;
+  const teamUsed = usage.teamOnDemandUsedCents ?? 0;
+  const onDemandUsed = individualUsed > 0 ? individualUsed : (isTeamLimit ? teamUsed : individualUsed);
+  const hasFixedOnDemandLimit = onDemandLimit != null && onDemandLimit > 0;
+  const onDemandUnlimited = !hasFixedOnDemandLimit && usage.onDemandEnabled === true && !isTeamLimit;
+
+  if (hasFixedOnDemandLimit) {
+    const rawPercent = (onDemandUsed / onDemandLimit) * 100;
+    const fixedPercent = normalizeCursorUsagePercent(rawPercent) ?? 0;
+    quotaItems.push({
+      key: 'on_demand',
+      label: t('cursor.quota.onDemand', 'On-Demand'),
+      percentage: fixedPercent,
+      quotaClass: getCursorUsageQuotaClass(fixedPercent),
+      valueText: `${fixedPercent}%`,
+      resetText: `${formatCursorUsageDollars(onDemandUsed)} / ${formatCursorUsageDollars(onDemandLimit)}`,
+    });
+  } else if (onDemandUnlimited) {
+    quotaItems.push({
+      key: 'on_demand',
+      label: t('cursor.quota.onDemand', 'On-Demand'),
+      percentage: 0,
+      quotaClass: 'high',
+      valueText: 'Unlimited',
+      resetText: formatCursorUsageDollars(onDemandUsed),
+    });
+  } else if (usage.onDemandEnabled != null || usage.onDemandLimitType != null) {
+    quotaItems.push({
+      key: 'on_demand',
+      label: t('cursor.quota.onDemand', 'On-Demand'),
+      percentage: 0,
+      quotaClass: 'medium',
+      valueText: t('common.disabled', 'Disabled'),
+    });
+  }
+
+  return {
+    id: account.id,
+    displayName: getCursorAccountDisplayEmail(account),
+    planLabel,
+    planClass: getCursorPlanBadgeClass(account.membership_type, account),
+    isBanned: isCursorAccountBanned(account),
+    quotaItems,
+  };
+}
+
+export function buildGeminiAccountPresentation(
+  account: GeminiAccount,
+  t: Translate,
+): GeminiAccountPresentation {
+  const tierSummary = getGeminiTierQuotaSummary(account);
+  const planLabel = getGeminiPlanDisplayName(account);
+  const quotaItems: UnifiedQuotaMetric[] = [];
+
+  [tierSummary.pro, tierSummary.flash].forEach((tier) => {
+    const remaining = tier.remainingPercent == null ? null : clampPercent(tier.remainingPercent);
+    const usedPercent = remaining == null ? 100 : 100 - remaining;
+    quotaItems.push({
+      key: tier.key,
+      label: t(`gemini.quota.${tier.key}`, tier.label),
+      percentage: remaining ?? 0,
+      quotaClass: getCursorUsageQuotaClass(usedPercent),
+      valueText:
+        remaining == null
+          ? '--'
+          : t('gemini.quota.left', '{{value}}% left', { value: remaining }),
+      resetText: '',
+      resetAt: tier.resetAt,
+    });
+  });
+
+  return {
+    id: account.id,
+    displayName: getGeminiAccountDisplayEmail(account),
+    planLabel,
+    planClass: getGeminiPlanBadgeClass(undefined, account),
+    isBanned: false,
     quotaItems,
   };
 }

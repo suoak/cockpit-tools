@@ -12,9 +12,9 @@
 //! This module decrypts the existing GitHub auth sessions, replaces the token,
 //! re-encrypts, and writes back.
 
-use std::path::{Path, PathBuf};
 #[cfg(target_os = "macos")]
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::process::Command;
 
@@ -365,17 +365,12 @@ fn build_macos_safe_storage_candidates(
         }
     }
 
+    // Default mode is used by VS Code / GitHub Copilot injection path.
+    // Keep this list strictly VS Code-family to avoid cross-platform key probing.
     app_names.extend(
-        [
-            "Antigravity",
-            "Antigravity Cockpit",
-            "Code",
-            "Visual Studio Code",
-            "Code - OSS",
-            "VSCodium",
-        ]
-        .iter()
-        .map(|value| value.to_string()),
+        ["Code", "Visual Studio Code", "Code - OSS", "VSCodium"]
+            .iter()
+            .map(|value| value.to_string()),
     );
 
     let mut candidates: Vec<(String, Option<String>)> = Vec::new();
@@ -409,7 +404,14 @@ fn get_macos_safe_storage_password(
         if let Some(account_value) = account.as_deref() {
             if let Some(password) = run_command_get_trimmed(
                 "security",
-                &["find-generic-password", "-w", "-s", &service, "-a", account_value],
+                &[
+                    "find-generic-password",
+                    "-w",
+                    "-s",
+                    &service,
+                    "-a",
+                    account_value,
+                ],
             ) {
                 return Ok(password);
             }
@@ -673,7 +675,10 @@ fn decode_secret_storage_value_with_mode(
 }
 
 #[allow(dead_code)]
-fn decode_secret_storage_value(raw_value: &str, data_root: Option<&Path>) -> Result<String, String> {
+fn decode_secret_storage_value(
+    raw_value: &str,
+    data_root: Option<&Path>,
+) -> Result<String, String> {
     decode_secret_storage_value_with_mode(raw_value, data_root, SafeStorageReadMode::Default)
 }
 
@@ -705,8 +710,13 @@ fn read_secret_storage_value_with_data_root_and_mode(
         return Ok(None);
     }
 
-    let conn = Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open VS Code database {}: {}", db_path.display(), e))?;
+    let conn = Connection::open(&db_path).map_err(|e| {
+        format!(
+            "Failed to open VS Code database {}: {}",
+            db_path.display(),
+            e
+        )
+    })?;
     let secret_key = build_secret_storage_item_key(extension_id, key);
     let raw_value: Option<String> = match conn.query_row(
         "SELECT value FROM ItemTable WHERE key = ?1",
@@ -724,7 +734,9 @@ fn read_secret_storage_value_with_data_root_and_mode(
     };
 
     match raw_value {
-        Some(value) => decode_secret_storage_value_with_mode(&value, Some(data_root), mode).map(Some),
+        Some(value) => {
+            decode_secret_storage_value_with_mode(&value, Some(data_root), mode).map(Some)
+        }
         None => Ok(None),
     }
 }

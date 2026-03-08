@@ -267,10 +267,7 @@ pub fn delete_unbound_fingerprints() -> Result<usize, String> {
     }
 
     save_fingerprint_store(&store)?;
-    logger::log_info(&format!(
-        "已批量删除未绑定账号指纹: {} 个",
-        deleted_count
-    ));
+    logger::log_info(&format!("已批量删除未绑定账号指纹: {} 个", deleted_count));
     Ok(deleted_count)
 }
 

@@ -6,6 +6,8 @@ import { RobotIcon } from '../components/icons/RobotIcon';
 import { CodexIcon } from '../components/icons/CodexIcon';
 import { WindsurfIcon } from '../components/icons/WindsurfIcon';
 import { KiroIcon } from '../components/icons/KiroIcon';
+import { CursorIcon } from '../components/icons/CursorIcon';
+import { GeminiIcon } from '../components/icons/GeminiIcon';
 
 export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string {
   switch (platformId) {
@@ -19,6 +21,10 @@ export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string 
       return 'Windsurf';
     case 'kiro':
       return 'Kiro';
+    case 'cursor':
+      return 'Cursor';
+    case 'gemini':
+      return _t('nav.gemini', 'Gemini');
     default:
       return platformId;
   }
@@ -36,6 +42,10 @@ export function renderPlatformIcon(platformId: PlatformId, size = 20): ReactNode
       return <WindsurfIcon style={{ width: size, height: size }} />;
     case 'kiro':
       return <KiroIcon style={{ width: size, height: size }} />;
+    case 'cursor':
+      return <CursorIcon style={{ width: size, height: size }} />;
+    case 'gemini':
+      return <GeminiIcon style={{ width: size, height: size }} />;
     default:
       return null;
   }

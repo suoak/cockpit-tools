@@ -93,6 +93,12 @@ export interface ProviderPageConfig<TAccount extends ProviderAccountBase> {
   dataService: ProviderDataService;
   /** 获取展示用 email/displayName */
   getDisplayEmail: (account: TAccount) => string;
+  /** 切号注入成功后的扩展回调（可选） */
+  onInjectSuccess?: (params: {
+    accountId: string;
+    account: TAccount | undefined;
+    displayEmail: string;
+  }) => void | Promise<void>;
 }
 
 export interface ProviderAccountBase {
@@ -535,6 +541,17 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
         await injectFn(accountId);
         setCurrentAccountId(accountId);
         setMessage({ text: t('messages.switched', { email: maskAccountText(displayEmail) }) });
+        if (config.onInjectSuccess) {
+          try {
+            await config.onInjectSuccess({
+              accountId,
+              account,
+              displayEmail,
+            });
+          } catch (callbackError) {
+            console.error(`[${platformKey}] onInjectSuccess callback failed:`, callbackError);
+          }
+        }
       } catch (e: unknown) {
         setMessage({
           text: t('messages.switchFailed', {
@@ -545,7 +562,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       }
       setInjecting(null);
     };
-  }, [dataService.injectToVSCode, accounts, config, t, maskAccountText]);
+  }, [dataService.injectToVSCode, accounts, config, t, maskAccountText, platformKey]);
 
   // ─── Export ───────────────────────────────────────────────────────────
   const handleExportError = useCallback(

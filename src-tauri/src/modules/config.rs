@@ -65,6 +65,12 @@ pub struct UserConfig {
     /// Kiro 自动刷新间隔（分钟），-1 表示禁用
     #[serde(default = "default_kiro_auto_refresh")]
     pub kiro_auto_refresh_minutes: i32,
+    /// Cursor 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_cursor_auto_refresh")]
+    pub cursor_auto_refresh_minutes: i32,
+    /// Gemini 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_gemini_auto_refresh")]
+    pub gemini_auto_refresh_minutes: i32,
     /// 窗口关闭行为
     #[serde(default = "default_close_behavior")]
     pub close_behavior: CloseWindowBehavior,
@@ -92,9 +98,15 @@ pub struct UserConfig {
     /// Kiro 启动路径（为空则使用默认路径）
     #[serde(default = "default_kiro_app_path")]
     pub kiro_app_path: String,
+    /// Cursor 启动路径（为空则使用默认路径）
+    #[serde(default = "default_cursor_app_path")]
+    pub cursor_app_path: String,
     /// 切换 Codex 时是否自动重启 OpenCode
     #[serde(default = "default_opencode_sync_on_switch")]
     pub opencode_sync_on_switch: bool,
+    /// 切换 Codex 时是否覆盖 OpenCode 登录信息
+    #[serde(default = "default_opencode_auth_overwrite_on_switch")]
+    pub opencode_auth_overwrite_on_switch: bool,
     /// 切换 Codex 时是否自动启动/重启 Codex App
     #[serde(default = "default_codex_launch_on_switch")]
     pub codex_launch_on_switch: bool,
@@ -134,6 +146,18 @@ pub struct UserConfig {
     /// Kiro 配额预警阈值（百分比）
     #[serde(default = "default_kiro_quota_alert_threshold")]
     pub kiro_quota_alert_threshold: i32,
+    /// 是否启用 Cursor 配额预警通知
+    #[serde(default = "default_cursor_quota_alert_enabled")]
+    pub cursor_quota_alert_enabled: bool,
+    /// Cursor 配额预警阈值（百分比）
+    #[serde(default = "default_cursor_quota_alert_threshold")]
+    pub cursor_quota_alert_threshold: i32,
+    /// 是否启用 Gemini 配额预警通知
+    #[serde(default = "default_gemini_quota_alert_enabled")]
+    pub gemini_quota_alert_enabled: bool,
+    /// Gemini 配额预警阈值（百分比）
+    #[serde(default = "default_gemini_quota_alert_threshold")]
+    pub gemini_quota_alert_threshold: i32,
 }
 
 /// 窗口关闭行为
@@ -197,6 +221,12 @@ fn default_windsurf_auto_refresh() -> i32 {
 fn default_kiro_auto_refresh() -> i32 {
     10
 } // 默认 10 分钟
+fn default_cursor_auto_refresh() -> i32 {
+    10
+} // 默认 10 分钟
+fn default_gemini_auto_refresh() -> i32 {
+    10
+} // 默认 10 分钟
 fn default_close_behavior() -> CloseWindowBehavior {
     CloseWindowBehavior::Ask
 }
@@ -224,7 +254,13 @@ fn default_windsurf_app_path() -> String {
 fn default_kiro_app_path() -> String {
     String::new()
 }
+fn default_cursor_app_path() -> String {
+    String::new()
+}
 fn default_opencode_sync_on_switch() -> bool {
+    true
+}
+fn default_opencode_auth_overwrite_on_switch() -> bool {
     true
 }
 fn default_codex_launch_on_switch() -> bool {
@@ -266,6 +302,18 @@ fn default_kiro_quota_alert_enabled() -> bool {
 fn default_kiro_quota_alert_threshold() -> i32 {
     20
 }
+fn default_cursor_quota_alert_enabled() -> bool {
+    false
+}
+fn default_cursor_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_gemini_quota_alert_enabled() -> bool {
+    false
+}
+fn default_gemini_quota_alert_threshold() -> i32 {
+    20
+}
 
 impl Default for UserConfig {
     fn default() -> Self {
@@ -279,6 +327,8 @@ impl Default for UserConfig {
             ghcp_auto_refresh_minutes: default_ghcp_auto_refresh(),
             windsurf_auto_refresh_minutes: default_windsurf_auto_refresh(),
             kiro_auto_refresh_minutes: default_kiro_auto_refresh(),
+            cursor_auto_refresh_minutes: default_cursor_auto_refresh(),
+            gemini_auto_refresh_minutes: default_gemini_auto_refresh(),
             close_behavior: default_close_behavior(),
             minimize_behavior: default_minimize_behavior(),
             hide_dock_icon: default_hide_dock_icon(),
@@ -288,7 +338,9 @@ impl Default for UserConfig {
             vscode_app_path: default_vscode_app_path(),
             windsurf_app_path: default_windsurf_app_path(),
             kiro_app_path: default_kiro_app_path(),
+            cursor_app_path: default_cursor_app_path(),
             opencode_sync_on_switch: default_opencode_sync_on_switch(),
+            opencode_auth_overwrite_on_switch: default_opencode_auth_overwrite_on_switch(),
             codex_launch_on_switch: default_codex_launch_on_switch(),
             auto_switch_enabled: default_auto_switch_enabled(),
             auto_switch_threshold: default_auto_switch_threshold(),
@@ -302,6 +354,10 @@ impl Default for UserConfig {
             windsurf_quota_alert_threshold: default_windsurf_quota_alert_threshold(),
             kiro_quota_alert_enabled: default_kiro_quota_alert_enabled(),
             kiro_quota_alert_threshold: default_kiro_quota_alert_threshold(),
+            cursor_quota_alert_enabled: default_cursor_quota_alert_enabled(),
+            cursor_quota_alert_threshold: default_cursor_quota_alert_threshold(),
+            gemini_quota_alert_enabled: default_gemini_quota_alert_enabled(),
+            gemini_quota_alert_threshold: default_gemini_quota_alert_threshold(),
         }
     }
 }
@@ -380,6 +436,33 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             );
         }
 
+        if !obj.contains_key("cursor_auto_refresh_minutes") {
+            let inherited_refresh = obj
+                .get("kiro_auto_refresh_minutes")
+                .or_else(|| obj.get("windsurf_auto_refresh_minutes"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32)
+                .unwrap_or_else(default_cursor_auto_refresh);
+            obj.insert(
+                "cursor_auto_refresh_minutes".to_string(),
+                json!(inherited_refresh),
+            );
+        }
+
+        if !obj.contains_key("gemini_auto_refresh_minutes") {
+            let inherited_refresh = obj
+                .get("cursor_auto_refresh_minutes")
+                .or_else(|| obj.get("kiro_auto_refresh_minutes"))
+                .or_else(|| obj.get("windsurf_auto_refresh_minutes"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32)
+                .unwrap_or_else(default_gemini_auto_refresh);
+            obj.insert(
+                "gemini_auto_refresh_minutes".to_string(),
+                json!(inherited_refresh),
+            );
+        }
+
         if !obj.contains_key("hide_dock_icon") {
             let inherited_hide_dock_icon = obj
                 .get("minimize_behavior")
@@ -447,6 +530,30 @@ pub fn load_user_config() -> Result<UserConfig, String> {
         if !obj.contains_key("kiro_quota_alert_threshold") {
             obj.insert(
                 "kiro_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("cursor_quota_alert_enabled") {
+            obj.insert(
+                "cursor_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("cursor_quota_alert_threshold") {
+            obj.insert(
+                "cursor_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("gemini_quota_alert_enabled") {
+            obj.insert(
+                "gemini_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("gemini_quota_alert_threshold") {
+            obj.insert(
+                "gemini_quota_alert_threshold".to_string(),
                 json!(legacy_threshold),
             );
         }

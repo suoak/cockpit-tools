@@ -25,16 +25,20 @@ enum PlatformId {
     GitHubCopilot,
     Windsurf,
     Kiro,
+    Cursor,
+    Gemini,
 }
 
 impl PlatformId {
-    fn default_order() -> [Self; 5] {
+    fn default_order() -> [Self; 7] {
         [
             Self::Antigravity,
             Self::Codex,
             Self::GitHubCopilot,
             Self::Windsurf,
             Self::Kiro,
+            Self::Cursor,
+            Self::Gemini,
         ]
     }
 
@@ -45,6 +49,8 @@ impl PlatformId {
             crate::modules::tray_layout::PLATFORM_GITHUB_COPILOT => Some(Self::GitHubCopilot),
             crate::modules::tray_layout::PLATFORM_WINDSURF => Some(Self::Windsurf),
             crate::modules::tray_layout::PLATFORM_KIRO => Some(Self::Kiro),
+            crate::modules::tray_layout::PLATFORM_CURSOR => Some(Self::Cursor),
+            crate::modules::tray_layout::PLATFORM_GEMINI => Some(Self::Gemini),
             _ => None,
         }
     }
@@ -56,6 +62,8 @@ impl PlatformId {
             Self::GitHubCopilot => crate::modules::tray_layout::PLATFORM_GITHUB_COPILOT,
             Self::Windsurf => crate::modules::tray_layout::PLATFORM_WINDSURF,
             Self::Kiro => crate::modules::tray_layout::PLATFORM_KIRO,
+            Self::Cursor => crate::modules::tray_layout::PLATFORM_CURSOR,
+            Self::Gemini => crate::modules::tray_layout::PLATFORM_GEMINI,
         }
     }
 
@@ -66,6 +74,8 @@ impl PlatformId {
             Self::GitHubCopilot => "GitHub Copilot",
             Self::Windsurf => "Windsurf",
             Self::Kiro => "Kiro",
+            Self::Cursor => "Cursor",
+            Self::Gemini => "Gemini",
         }
     }
 
@@ -76,16 +86,8 @@ impl PlatformId {
             Self::GitHubCopilot => "github-copilot",
             Self::Windsurf => "windsurf",
             Self::Kiro => "kiro",
-        }
-    }
-
-    fn stable_rank(self) -> usize {
-        match self {
-            Self::Antigravity => 0,
-            Self::Codex => 1,
-            Self::GitHubCopilot => 2,
-            Self::Windsurf => 3,
-            Self::Kiro => 4,
+            Self::Cursor => "cursor",
+            Self::Gemini => "gemini",
         }
     }
 }
@@ -118,7 +120,7 @@ struct CopilotUsage {
     reset_ts: Option<i64>,
 }
 
-/// 创建系统托盘
+/// 创建系统托盘（完整菜单，包含账号数据加载）
 pub fn create_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<TrayIcon<R>, tauri::Error> {
     info!("[Tray] 正在创建系统托盘...");
 
@@ -134,6 +136,74 @@ pub fn create_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<TrayIcon<R>,
         .build(app)?;
 
     info!("[Tray] 系统托盘创建成功");
+    Ok(tray)
+}
+
+/// 创建骨架托盘（无账号文件 I/O，仅基础菜单项，用于快速启动）
+pub fn create_tray_skeleton<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<TrayIcon<R>, tauri::Error> {
+    info!("[Tray] 创建骨架托盘...");
+
+    let config = crate::modules::config::get_user_config();
+    let lang = &config.language;
+
+    let show_window = MenuItem::with_id(
+        app,
+        menu_ids::SHOW_WINDOW,
+        get_text("show_window", lang),
+        true,
+        None::<&str>,
+    )?;
+    let refresh_quota = MenuItem::with_id(
+        app,
+        menu_ids::REFRESH_QUOTA,
+        get_text("refresh_quota", lang),
+        true,
+        None::<&str>,
+    )?;
+    let settings = MenuItem::with_id(
+        app,
+        menu_ids::SETTINGS,
+        get_text("settings", lang),
+        true,
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(
+        app,
+        menu_ids::QUIT,
+        get_text("quit", lang),
+        true,
+        None::<&str>,
+    )?;
+    let loading = MenuItem::with_id(
+        app,
+        "tray_loading",
+        get_text("loading", lang),
+        false,
+        None::<&str>,
+    )?;
+
+    let menu = Menu::new(app)?;
+    menu.append(&show_window)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&loading)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&refresh_quota)?;
+    menu.append(&settings)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&quit)?;
+
+    let tray = TrayIconBuilder::with_id(TRAY_ID)
+        .icon(app.default_window_icon().unwrap().clone())
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .tooltip("Cockpit Tools")
+        .on_menu_event(handle_menu_event)
+        .on_tray_icon_event(handle_tray_event)
+        .build(app)?;
+
+    info!("[Tray] 骨架托盘创建完成，等待后台加载完整菜单");
     Ok(tray)
 }
 
@@ -245,11 +315,7 @@ fn resolve_tray_platforms() -> Vec<PlatformId> {
         return Vec::new();
     }
 
-    let ordered = if layout.sort_mode == crate::modules::tray_layout::SORT_MODE_MANUAL {
-        normalize_platform_order(&layout.ordered_platform_ids)
-    } else {
-        auto_sort_platforms_by_account_count()
-    };
+    let ordered = normalize_platform_order(&layout.ordered_platform_ids);
 
     ordered
         .into_iter()
@@ -284,48 +350,6 @@ fn normalize_platform_order(ids: &[String]) -> Vec<PlatformId> {
     }
 
     result
-}
-
-fn auto_sort_platforms_by_account_count() -> Vec<PlatformId> {
-    let counts = collect_platform_account_counts();
-    let mut platforms = PlatformId::default_order().to_vec();
-
-    platforms.sort_by(|a, b| {
-        let a_count = counts.get(a).copied().unwrap_or(0);
-        let b_count = counts.get(b).copied().unwrap_or(0);
-        b_count
-            .cmp(&a_count)
-            .then_with(|| a.stable_rank().cmp(&b.stable_rank()))
-    });
-
-    platforms
-}
-
-fn collect_platform_account_counts() -> HashMap<PlatformId, usize> {
-    let mut counts = HashMap::new();
-    counts.insert(
-        PlatformId::Antigravity,
-        crate::modules::account::list_accounts()
-            .map(|accounts| accounts.len())
-            .unwrap_or(0),
-    );
-    counts.insert(
-        PlatformId::Codex,
-        crate::modules::codex_account::list_accounts().len(),
-    );
-    counts.insert(
-        PlatformId::GitHubCopilot,
-        crate::modules::github_copilot_account::list_accounts().len(),
-    );
-    counts.insert(
-        PlatformId::Windsurf,
-        crate::modules::windsurf_account::list_accounts().len(),
-    );
-    counts.insert(
-        PlatformId::Kiro,
-        crate::modules::kiro_account::list_accounts().len(),
-    );
-    counts
 }
 
 fn build_platform_submenu<R: Runtime>(
@@ -375,6 +399,8 @@ fn get_account_display_info(platform: PlatformId, lang: &str) -> AccountDisplayI
         PlatformId::GitHubCopilot => build_github_copilot_display_info(lang),
         PlatformId::Windsurf => build_windsurf_display_info(lang),
         PlatformId::Kiro => build_kiro_display_info(lang),
+        PlatformId::Cursor => build_cursor_display_info(lang),
+        PlatformId::Gemini => build_gemini_display_info(lang),
     }
 }
 
@@ -704,6 +730,455 @@ fn build_kiro_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+fn build_cursor_display_info(lang: &str) -> AccountDisplayInfo {
+    let accounts = crate::modules::cursor_account::list_accounts();
+    let Some(account) = resolve_cursor_current_account(&accounts) else {
+        return AccountDisplayInfo {
+            account: format!("📧 {}", get_text("not_logged_in", lang)),
+            quota_lines: vec!["—".to_string()],
+        };
+    };
+
+    let mut quota_lines = Vec::new();
+    let usage = read_cursor_tray_usage(&account);
+    let reset_text = format_reset_time_from_ts(lang, usage.reset_ts);
+
+    if let Some(total_used) = usage.total_used_percent {
+        quota_lines.push(format_quota_line(
+            lang,
+            "Total",
+            &format_percent_text(total_used),
+            Some(&reset_text),
+        ));
+    }
+
+    if let Some(auto_used) = usage.auto_used_percent {
+        quota_lines.push(format_quota_line(
+            lang,
+            "Auto + Composer",
+            &format_percent_text(auto_used),
+            None,
+        ));
+    }
+
+    if let Some(api_used) = usage.api_used_percent {
+        quota_lines.push(format_quota_line(
+            lang,
+            "API",
+            &format_percent_text(api_used),
+            None,
+        ));
+    }
+
+    if let Some(on_demand_text) = usage.on_demand_text {
+        quota_lines.push(format!("On-Demand: {}", on_demand_text));
+    }
+
+    if quota_lines.is_empty() {
+        quota_lines.push(get_text("loading", lang));
+    }
+
+    AccountDisplayInfo {
+        account: format!(
+            "📧 {}",
+            first_non_empty(&[Some(account.email.as_str()), Some(account.id.as_str())])
+                .unwrap_or("—")
+        ),
+        quota_lines,
+    }
+}
+
+fn parse_gemini_remaining_percent(value: Option<&serde_json::Value>) -> Option<i32> {
+    let raw = value?;
+    if let Some(v) = raw.as_f64() {
+        if v.is_finite() {
+            return Some((v * 100.0).round().clamp(0.0, 100.0) as i32);
+        }
+    }
+    if let Some(text) = raw.as_str() {
+        if let Ok(v) = text.trim().parse::<f64>() {
+            if v.is_finite() {
+                return Some((v * 100.0).round().clamp(0.0, 100.0) as i32);
+            }
+        }
+    }
+    None
+}
+
+#[derive(Debug, Clone)]
+struct GeminiBucketRemaining {
+    model_id: String,
+    remaining_percent: i32,
+    reset_at: Option<i64>,
+}
+
+fn collect_gemini_bucket_remaining(
+    account: &crate::models::gemini::GeminiAccount,
+) -> Vec<GeminiBucketRemaining> {
+    let Some(raw) = account.gemini_usage_raw.as_ref() else {
+        return Vec::new();
+    };
+    let Some(buckets) = raw.get("buckets").and_then(|item| item.as_array()) else {
+        return Vec::new();
+    };
+
+    let mut values = Vec::new();
+    for bucket in buckets {
+        let model_id = bucket
+            .get("modelId")
+            .and_then(|item| item.as_str())
+            .map(|item| item.trim())
+            .filter(|item| !item.is_empty())
+            .map(|item| item.to_string());
+        let remaining = parse_gemini_remaining_percent(bucket.get("remainingFraction"));
+        let reset_at = bucket.get("resetTime").and_then(parse_timestamp_like);
+        let (Some(model_id), Some(remaining)) = (model_id, remaining) else {
+            continue;
+        };
+        values.push(GeminiBucketRemaining {
+            model_id,
+            remaining_percent: remaining,
+            reset_at,
+        });
+    }
+
+    values.sort_by(|a, b| a.model_id.cmp(&b.model_id));
+    values
+}
+
+fn pick_lowest_gemini_bucket<'a, F>(
+    buckets: &'a [GeminiBucketRemaining],
+    matcher: F,
+) -> Option<&'a GeminiBucketRemaining>
+where
+    F: Fn(&str) -> bool,
+{
+    let mut matched = buckets.iter().filter(|bucket| matcher(&bucket.model_id));
+    let mut best = matched.next()?;
+    for current in matched {
+        if current.remaining_percent < best.remaining_percent {
+            best = current;
+            continue;
+        }
+        if current.remaining_percent > best.remaining_percent {
+            continue;
+        }
+        match (best.reset_at, current.reset_at) {
+            (None, Some(_)) => best = current,
+            (Some(_), None) => {}
+            (Some(best_ts), Some(current_ts)) if current_ts < best_ts => best = current,
+            _ => {}
+        }
+    }
+    Some(best)
+}
+
+fn normalize_gemini_plan_label(raw_plan: &str) -> &'static str {
+    let lower = raw_plan.trim().to_lowercase();
+    if lower.is_empty() {
+        return "UNKNOWN";
+    }
+    if lower.contains("ultra") {
+        return "ULTRA";
+    }
+    if lower == "standard-tier" {
+        return "FREE";
+    }
+    if lower.contains("pro") || lower.contains("premium") {
+        return "PRO";
+    }
+    if lower == "free-tier" || lower.contains("free") {
+        return "FREE";
+    }
+    "UNKNOWN"
+}
+
+fn resolve_gemini_current_account(
+    accounts: &[crate::models::gemini::GeminiAccount],
+) -> Option<crate::models::gemini::GeminiAccount> {
+    if let Some(active_email) = crate::modules::gemini_account::get_local_active_email() {
+        if let Some(found) = accounts
+            .iter()
+            .find(|account| account.email.eq_ignore_ascii_case(&active_email))
+        {
+            return Some(found.clone());
+        }
+    }
+
+    accounts
+        .iter()
+        .max_by_key(|account| account.last_used.max(account.created_at))
+        .cloned()
+}
+
+fn build_gemini_display_info(lang: &str) -> AccountDisplayInfo {
+    let accounts = crate::modules::gemini_account::list_accounts();
+    let Some(account) = resolve_gemini_current_account(&accounts) else {
+        return AccountDisplayInfo {
+            account: format!("📧 {}", get_text("not_logged_in", lang)),
+            quota_lines: vec!["—".to_string()],
+        };
+    };
+
+    let mut quota_lines = Vec::new();
+
+    if let Some(plan) = first_non_empty(&[account.plan_name.as_deref(), account.tier_id.as_deref()])
+    {
+        quota_lines.push(format!("Plan: {}", normalize_gemini_plan_label(plan)));
+    }
+
+    let buckets = collect_gemini_bucket_remaining(&account);
+    let pro_bucket = pick_lowest_gemini_bucket(&buckets, |model_id| {
+        model_id.to_lowercase().contains("pro")
+    });
+    let flash_bucket = pick_lowest_gemini_bucket(&buckets, |model_id| {
+        model_id.to_lowercase().contains("flash")
+    });
+
+    for (label, bucket) in [("Pro", pro_bucket), ("Flash", flash_bucket)] {
+        let value_text = if let Some(item) = bucket {
+            format!("{}% {}", item.remaining_percent, get_text("left", lang))
+        } else {
+            "--".to_string()
+        };
+        let reset_text = if let Some(item) = bucket {
+            format_reset_time_from_ts(lang, item.reset_at)
+        } else {
+            get_text("reset_unknown", lang)
+        };
+        quota_lines.push(format_quota_line(
+            lang,
+            label,
+            &value_text,
+            Some(&reset_text),
+        ));
+    }
+
+    if quota_lines.is_empty() {
+        quota_lines.push(get_text("loading", lang));
+    }
+
+    AccountDisplayInfo {
+        account: format!(
+            "📧 {}",
+            first_non_empty(&[Some(account.email.as_str()), Some(account.id.as_str())])
+                .unwrap_or("—")
+        ),
+        quota_lines,
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct CursorTrayUsage {
+    total_used_percent: Option<i32>,
+    auto_used_percent: Option<i32>,
+    api_used_percent: Option<i32>,
+    reset_ts: Option<i64>,
+    on_demand_text: Option<String>,
+}
+
+fn clamp_cursor_percent(value: f64) -> i32 {
+    if !value.is_finite() {
+        return 0;
+    }
+    if value <= 0.0 {
+        return 0;
+    }
+    if value >= 100.0 {
+        return 100;
+    }
+    value.round() as i32
+}
+
+fn pick_cursor_number(value: Option<&serde_json::Value>, keys: &[&str]) -> Option<f64> {
+    let obj = value?.as_object()?;
+    for key in keys {
+        let Some(raw) = obj.get(*key) else {
+            continue;
+        };
+        if let Some(v) = raw.as_f64() {
+            if v.is_finite() {
+                return Some(v);
+            }
+            continue;
+        }
+        if let Some(text) = raw.as_str() {
+            if let Ok(parsed) = text.trim().parse::<f64>() {
+                if parsed.is_finite() {
+                    return Some(parsed);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn pick_cursor_bool(value: Option<&serde_json::Value>, keys: &[&str]) -> Option<bool> {
+    let obj = value?.as_object()?;
+    for key in keys {
+        let Some(raw) = obj.get(*key) else {
+            continue;
+        };
+        if let Some(flag) = raw.as_bool() {
+            return Some(flag);
+        }
+        if let Some(text) = raw.as_str() {
+            let normalized = text.trim().to_ascii_lowercase();
+            if normalized == "true" {
+                return Some(true);
+            }
+            if normalized == "false" {
+                return Some(false);
+            }
+        }
+    }
+    None
+}
+
+fn format_cursor_dollars(cents: f64) -> String {
+    format!("${:.2}", (cents / 100.0).max(0.0))
+}
+
+fn read_cursor_tray_usage(account: &crate::models::cursor::CursorAccount) -> CursorTrayUsage {
+    let Some(raw) = account.cursor_usage_raw.as_ref() else {
+        return CursorTrayUsage::default();
+    };
+    let raw_obj = match raw.as_object() {
+        Some(obj) => obj,
+        None => return CursorTrayUsage::default(),
+    };
+
+    let plan = raw_obj
+        .get("individualUsage")
+        .and_then(|value| value.as_object())
+        .and_then(|value| value.get("plan"))
+        .or_else(|| {
+            raw_obj
+                .get("individual_usage")
+                .and_then(|value| value.as_object())
+                .and_then(|value| value.get("plan"))
+        })
+        .or_else(|| raw_obj.get("planUsage"))
+        .or_else(|| raw_obj.get("plan_usage"));
+
+    let total_direct = pick_cursor_number(plan, &["totalPercentUsed", "total_percent_used"]);
+    let auto_direct = pick_cursor_number(plan, &["autoPercentUsed", "auto_percent_used"]);
+    let api_direct = pick_cursor_number(plan, &["apiPercentUsed", "api_percent_used"]);
+
+    let plan_used = pick_cursor_number(plan, &["used", "totalSpend", "total_spend"]);
+    let plan_limit = pick_cursor_number(plan, &["limit"]);
+    let total_ratio = match (plan_used, plan_limit) {
+        (Some(used), Some(limit)) if limit > 0.0 => Some((used / limit) * 100.0),
+        _ => None,
+    };
+
+    let individual_on_demand = raw_obj
+        .get("individualUsage")
+        .and_then(|value| value.as_object())
+        .and_then(|value| value.get("onDemand"))
+        .or_else(|| {
+            raw_obj
+                .get("individual_usage")
+                .and_then(|value| value.as_object())
+                .and_then(|value| value.get("onDemand"))
+        });
+    let team_on_demand = raw_obj
+        .get("teamUsage")
+        .and_then(|value| value.as_object())
+        .and_then(|value| value.get("onDemand"))
+        .or_else(|| {
+            raw_obj
+                .get("team_usage")
+                .and_then(|value| value.as_object())
+                .and_then(|value| value.get("onDemand"))
+        });
+    let spend_limit_usage = raw_obj
+        .get("spendLimitUsage")
+        .or_else(|| raw_obj.get("spend_limit_usage"));
+
+    let on_demand_obj = individual_on_demand.or(spend_limit_usage);
+    let on_demand_limit = pick_cursor_number(
+        on_demand_obj,
+        &[
+            "limit",
+            "individualLimit",
+            "individual_limit",
+            "pooledLimit",
+            "pooled_limit",
+        ],
+    );
+    let on_demand_used = pick_cursor_number(
+        on_demand_obj,
+        &[
+            "used",
+            "totalSpend",
+            "total_spend",
+            "individualUsed",
+            "individual_used",
+        ],
+    );
+    let team_on_demand_used = pick_cursor_number(team_on_demand, &["used"]);
+    let on_demand_enabled = pick_cursor_bool(individual_on_demand, &["enabled"]);
+
+    let limit_type = raw_obj
+        .get("limitType")
+        .or_else(|| raw_obj.get("limit_type"))
+        .or_else(|| {
+            spend_limit_usage
+                .and_then(|value| value.as_object())
+                .and_then(|value| value.get("limitType").or_else(|| value.get("limit_type")))
+        })
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_ascii_lowercase());
+    let is_team_limit = matches!(limit_type.as_deref(), Some("team"));
+
+    let on_demand_effective_used = if on_demand_used.unwrap_or(0.0) > 0.0 {
+        on_demand_used.unwrap_or(0.0)
+    } else if is_team_limit {
+        team_on_demand_used.unwrap_or(0.0)
+    } else {
+        on_demand_used.unwrap_or(0.0)
+    };
+
+    let has_on_demand_hint = on_demand_obj.is_some()
+        || on_demand_enabled.is_some()
+        || is_team_limit
+        || on_demand_limit.is_some();
+    let on_demand_text = if !has_on_demand_hint {
+        None
+    } else if let Some(limit) = on_demand_limit {
+        if limit > 0.0 {
+            let percent = clamp_cursor_percent((on_demand_effective_used / limit) * 100.0);
+            Some(format!(
+                "{} ({})",
+                format_percent_text(percent),
+                format_cursor_dollars(on_demand_effective_used)
+            ))
+        } else {
+            None
+        }
+    } else if on_demand_enabled == Some(true) && !is_team_limit {
+        Some("Unlimited".to_string())
+    } else {
+        Some("Disabled".to_string())
+    };
+
+    let reset_ts = raw_obj
+        .get("billingCycleEnd")
+        .or_else(|| raw_obj.get("billing_cycle_end"))
+        .and_then(|value| value.as_str())
+        .and_then(|text| chrono::DateTime::parse_from_rfc3339(text).ok())
+        .map(|value| value.timestamp());
+
+    CursorTrayUsage {
+        total_used_percent: total_direct.or(total_ratio).map(clamp_cursor_percent),
+        auto_used_percent: auto_direct.map(clamp_cursor_percent),
+        api_used_percent: api_direct.map(clamp_cursor_percent),
+        reset_ts,
+        on_demand_text,
+    }
+}
+
 fn resolve_github_copilot_current_account(
     accounts: &[crate::models::github_copilot::GitHubCopilotAccount],
 ) -> Option<crate::models::github_copilot::GitHubCopilotAccount> {
@@ -748,6 +1223,26 @@ fn resolve_kiro_current_account(
     accounts: &[crate::models::kiro::KiroAccount],
 ) -> Option<crate::models::kiro::KiroAccount> {
     if let Ok(settings) = crate::modules::kiro_instance::load_default_settings() {
+        if let Some(bind_id) = settings.bind_account_id {
+            let bind_id = bind_id.trim();
+            if !bind_id.is_empty() {
+                if let Some(account) = accounts.iter().find(|account| account.id == bind_id) {
+                    return Some(account.clone());
+                }
+            }
+        }
+    }
+
+    accounts
+        .iter()
+        .max_by_key(|account| account.last_used)
+        .cloned()
+}
+
+fn resolve_cursor_current_account(
+    accounts: &[crate::models::cursor::CursorAccount],
+) -> Option<crate::models::cursor::CursorAccount> {
+    if let Ok(settings) = crate::modules::cursor_instance::load_default_settings() {
         if let Some(bind_id) = settings.bind_account_id {
             let bind_id = bind_id.trim();
             if !bind_id.is_empty() {
@@ -1399,6 +1894,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", "zh-cn") => "加载中...".to_string(),
         ("reset", "zh-cn") => "重置".to_string(),
         ("reset_done", "zh-cn") => "已重置".to_string(),
+        ("reset_unknown", "zh-cn") => "重置时间未知".to_string(),
+        ("left", "zh-cn") => "剩余".to_string(),
         ("included", "zh-cn") => "包含".to_string(),
         ("ghcp_inline", "zh-cn") => "Inline".to_string(),
         ("ghcp_chat", "zh-cn") => "Chat".to_string(),
@@ -1415,6 +1912,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", "zh-tw") => "載入中...".to_string(),
         ("reset", "zh-tw") => "重置".to_string(),
         ("reset_done", "zh-tw") => "已重置".to_string(),
+        ("reset_unknown", "zh-tw") => "重置時間未知".to_string(),
+        ("left", "zh-tw") => "剩餘".to_string(),
         ("included", "zh-tw") => "已包含".to_string(),
         ("ghcp_inline", "zh-tw") => "Inline".to_string(),
         ("ghcp_chat", "zh-tw") => "Chat".to_string(),
@@ -1431,6 +1930,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", "en") => "Loading...".to_string(),
         ("reset", "en") => "Reset".to_string(),
         ("reset_done", "en") => "Reset done".to_string(),
+        ("reset_unknown", "en") => "Reset time unknown".to_string(),
+        ("left", "en") => "left".to_string(),
         ("included", "en") => "Included".to_string(),
         ("ghcp_inline", "en") => "Inline".to_string(),
         ("ghcp_chat", "en") => "Chat".to_string(),
@@ -1447,6 +1948,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", "ja") => "読み込み中...".to_string(),
         ("reset", "ja") => "リセット".to_string(),
         ("reset_done", "ja") => "リセット済み".to_string(),
+        ("reset_unknown", "ja") => "リセット時間不明".to_string(),
+        ("left", "ja") => "残り".to_string(),
         ("included", "ja") => "含まれる".to_string(),
         ("ghcp_inline", "ja") => "Inline".to_string(),
         ("ghcp_chat", "ja") => "Chat".to_string(),
@@ -1465,6 +1968,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", "ru") => "Загрузка...".to_string(),
         ("reset", "ru") => "Сброс".to_string(),
         ("reset_done", "ru") => "Сброс выполнен".to_string(),
+        ("reset_unknown", "ru") => "Время сброса неизвестно".to_string(),
+        ("left", "ru") => "осталось".to_string(),
         ("included", "ru") => "Включено".to_string(),
         ("ghcp_inline", "ru") => "Inline".to_string(),
         ("ghcp_chat", "ru") => "Chat".to_string(),
@@ -1481,6 +1986,8 @@ fn get_text(key: &str, lang: &str) -> String {
         ("loading", _) => "Loading...".to_string(),
         ("reset", _) => "Reset".to_string(),
         ("reset_done", _) => "Reset done".to_string(),
+        ("reset_unknown", _) => "Reset time unknown".to_string(),
+        ("left", _) => "left".to_string(),
         ("included", _) => "Included".to_string(),
         ("ghcp_inline", _) => "Inline".to_string(),
         ("ghcp_chat", _) => "Chat".to_string(),

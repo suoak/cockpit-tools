@@ -3,7 +3,6 @@ use crate::modules::{
     codex_account, codex_oauth, codex_quota, config, logger, opencode_auth, process,
 };
 use tauri::AppHandle;
-#[cfg(target_os = "macos")]
 use tauri::Emitter;
 
 /// 列出所有 Codex 账号
@@ -43,19 +42,23 @@ pub async fn switch_codex_account(
         ));
     }
 
+    let user_config = config::get_user_config();
     let mut opencode_updated = false;
-    match opencode_auth::replace_openai_entry_from_codex(&account) {
-        Ok(()) => {
-            opencode_updated = true;
+    if user_config.opencode_auth_overwrite_on_switch {
+        match opencode_auth::replace_openai_entry_from_codex(&account) {
+            Ok(()) => {
+                opencode_updated = true;
+            }
+            Err(e) => {
+                logger::log_warn(&format!("OpenCode auth.json 更新跳过: {}", e));
+            }
         }
-        Err(e) => {
-            logger::log_warn(&format!("OpenCode auth.json 更新跳过: {}", e));
-        }
+    } else {
+        logger::log_info("已关闭切换 Codex 时覆盖 OpenCode 登录信息");
     }
 
-    let user_config = config::get_user_config();
     if user_config.opencode_sync_on_switch {
-        if opencode_updated {
+        if user_config.opencode_auth_overwrite_on_switch && opencode_updated {
             if process::is_opencode_running() {
                 if let Err(e) = process::close_opencode(20) {
                     logger::log_warn(&format!("OpenCode 关闭失败: {}", e));
@@ -67,6 +70,8 @@ pub async fn switch_codex_account(
             {
                 logger::log_warn(&format!("OpenCode 启动失败: {}", e));
             }
+        } else if !user_config.opencode_auth_overwrite_on_switch {
+            logger::log_info("OpenCode 登录覆盖已关闭，跳过自动重启");
         } else {
             logger::log_info("OpenCode 未更新 auth.json，跳过启动/重启");
         }
@@ -74,29 +79,26 @@ pub async fn switch_codex_account(
         logger::log_info("已关闭 OpenCode 自动重启");
     }
 
-    #[cfg(target_os = "macos")]
-    {
-        if user_config.codex_launch_on_switch {
-            if process::is_codex_running() {
-                logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
-            }
-            match crate::commands::codex_instance::codex_start_instance("__default__".to_string())
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    logger::log_warn(&format!("Codex 启动失败: {}", e));
-                    if e.starts_with("APP_PATH_NOT_FOUND:") {
-                        let _ = app.emit(
-                            "app:path_missing",
-                            serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
-                        );
-                    }
+    if user_config.codex_launch_on_switch {
+        #[cfg(target_os = "macos")]
+        if process::is_codex_running() {
+            logger::log_info("检测到 Codex 正在运行，将按默认实例 PID 逻辑重启");
+        }
+        match crate::commands::codex_instance::codex_start_instance("__default__".to_string()).await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                logger::log_warn(&format!("Codex 启动失败: {}", e));
+                if e.starts_with("APP_PATH_NOT_FOUND:") {
+                    let _ = app.emit(
+                        "app:path_missing",
+                        serde_json::json!({ "app": "codex", "retry": { "kind": "default" } }),
+                    );
                 }
             }
-        } else {
-            logger::log_info("已关闭切换 Codex 时自动启动 Codex App");
         }
+    } else {
+        logger::log_info("已关闭切换 Codex 时自动启动 Codex App");
     }
 
     let _ = crate::modules::tray::update_tray_menu(&app);
@@ -131,6 +133,14 @@ pub fn import_codex_from_json(json_content: String) -> Result<Vec<CodexAccount>,
 #[tauri::command]
 pub fn export_codex_accounts(account_ids: Vec<String>) -> Result<String, String> {
     codex_account::export_accounts(&account_ids)
+}
+
+/// 从本地文件导入 Codex 账号
+#[tauri::command]
+pub fn import_codex_from_files(
+    file_paths: Vec<String>,
+) -> Result<codex_account::CodexFileImportResult, String> {
+    codex_account::import_from_files(file_paths)
 }
 
 /// 刷新单个账号配额

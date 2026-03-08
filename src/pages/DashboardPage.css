@@ -316,6 +316,16 @@
   flex: 0 1 auto; /* Allow shrinking but not growing infinitely */
 }
 
+.account-mini-subline {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Ensure tag stays visible and doesn't shrink */
 .tier-tag {
   flex-shrink: 0; 
@@ -327,6 +337,7 @@
   width: fit-content;
   text-transform: uppercase;
 }
+.tier-tag.raw-value { text-transform: none; }
 .tier-tag.pro, .tier-tag.plus { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
 .tier-tag.ultra, .tier-tag.team { background: rgba(219, 39, 119, 0.1); color: #db2777; }
 .tier-tag.free { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
@@ -455,6 +466,29 @@
   text-align: right;
   margin-top: 6px; /* Increased from 4px */
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-quota-meta-row {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.mini-left-text {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mini-left-text.high { color: var(--success); }
+.mini-left-text.medium { color: var(--warning); }
+.mini-left-text.low { color: var(--danger); }
+.mini-left-text.critical { color: var(--danger); }
+.mini-reset-time-inline {
+  color: var(--text-secondary);
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

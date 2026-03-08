@@ -222,7 +222,8 @@ pub async fn start_instance(instance_id: String) -> Result<InstanceProfileView, 
             let _ = modules::prepare_account_for_injection(account_id).await?;
             modules::instance::inject_account_to_profile(&default_dir, account_id)?;
         }
-        let pid = modules::process::start_antigravity()?;
+        let extra_args = modules::process::parse_extra_args(&default_settings.extra_args);
+        let pid = modules::process::start_antigravity_with_args("", &extra_args)?;
         let _ = modules::instance::update_default_pid(Some(pid))?;
         let running = modules::process::is_pid_running(pid);
         return Ok(InstanceProfileView {
@@ -358,15 +359,12 @@ pub async fn open_instance_window(instance_id: String) -> Result<(), String> {
         .find(|item| item.id == instance_id)
         .ok_or("实例不存在")?;
 
-    modules::process::focus_antigravity_instance(
-        instance.last_pid,
-        Some(&instance.user_data_dir),
-    )
-    .map_err(|err| {
-        format!(
-            "定位 Antigravity 实例窗口失败: instance_id={}, err={}",
-            instance.id, err
-        )
-    })?;
+    modules::process::focus_antigravity_instance(instance.last_pid, Some(&instance.user_data_dir))
+        .map_err(|err| {
+            format!(
+                "定位 Antigravity 实例窗口失败: instance_id={}, err={}",
+                instance.id, err
+            )
+        })?;
     Ok(())
 }

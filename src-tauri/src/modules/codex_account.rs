@@ -372,6 +372,19 @@ fn upsert_account_with_hints(
     Ok(account)
 }
 
+/// 更新索引中账号的 plan_type（供配额刷新时同步订阅标识）
+pub fn update_account_plan_type_in_index(
+    account_id: &str,
+    plan_type: &Option<String>,
+) -> Result<(), String> {
+    let mut index = load_account_index();
+    if let Some(summary) = index.accounts.iter_mut().find(|a| a.id == account_id) {
+        summary.plan_type = plan_type.clone();
+        save_account_index(&index)?;
+    }
+    Ok(())
+}
+
 /// 删除账号
 pub fn remove_account(account_id: &str) -> Result<(), String> {
     let mut index = load_account_index();
@@ -568,6 +581,43 @@ pub fn import_from_json(json_content: &str) -> Result<Vec<CodexAccount>, String>
         return Ok(vec![account]);
     }
 
+    // 尝试解析为单账号（顶层 token）或通用数组（支持混合对象）
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_content) {
+        match parsed {
+            serde_json::Value::Object(_) => {
+                if let Some((tokens, account_id_hint)) = extract_codex_tokens_from_value(&parsed) {
+                    let account = upsert_account_with_hints(tokens, account_id_hint, None)?;
+                    return Ok(vec![account]);
+                }
+
+                if let Ok(account) = serde_json::from_value::<CodexAccount>(parsed) {
+                    let imported = upsert_account(account.tokens)?;
+                    return Ok(vec![imported]);
+                }
+            }
+            serde_json::Value::Array(items) => {
+                let mut result = Vec::new();
+
+                for item in items {
+                    if let Some((tokens, account_id_hint)) = extract_codex_tokens_from_value(&item)
+                    {
+                        result.push(upsert_account_with_hints(tokens, account_id_hint, None)?);
+                        continue;
+                    }
+
+                    if let Ok(account) = serde_json::from_value::<CodexAccount>(item) {
+                        result.push(upsert_account(account.tokens)?);
+                    }
+                }
+
+                if !result.is_empty() {
+                    return Ok(result);
+                }
+            }
+            _ => {}
+        }
+    }
+
     // 尝试解析为账号数组
     if let Ok(accounts) = serde_json::from_str::<Vec<CodexAccount>>(json_content) {
         let mut result = Vec::new();
@@ -589,6 +639,239 @@ pub fn export_accounts(account_ids: &[String]) -> Result<String, String> {
         .collect();
 
     serde_json::to_string_pretty(&accounts).map_err(|e| format!("序列化失败: {}", e))
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct CodexFileImportResult {
+    pub imported: Vec<CodexAccount>,
+    pub failed: Vec<CodexFileImportFailure>,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct CodexFileImportFailure {
+    pub email: String,
+    pub error: String,
+}
+
+/// 从单个 JSON 值中提取 CodexTokens
+fn extract_codex_tokens_from_value(
+    obj: &serde_json::Value,
+) -> Option<(CodexTokens, Option<String>)> {
+    let obj = obj.as_object()?;
+
+    // 格式1: 顶层 access_token + id_token（用户导出格式）
+    if let (Some(id_token), Some(access_token)) = (
+        obj.get("id_token").and_then(|v| v.as_str()),
+        obj.get("access_token").and_then(|v| v.as_str()),
+    ) {
+        let refresh_token = obj
+            .get("refresh_token")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let account_id_hint = obj
+            .get("account_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        return Some((
+            CodexTokens {
+                id_token: id_token.to_string(),
+                access_token: access_token.to_string(),
+                refresh_token,
+            },
+            account_id_hint,
+        ));
+    }
+
+    // 格式2: 嵌套 tokens 对象（CodexAuthFile 或 CodexAccount 格式）
+    if let Some(tokens_obj) = obj.get("tokens").and_then(|v| v.as_object()) {
+        if let (Some(id_token), Some(access_token)) = (
+            tokens_obj.get("id_token").and_then(|v| v.as_str()),
+            tokens_obj.get("access_token").and_then(|v| v.as_str()),
+        ) {
+            let refresh_token = tokens_obj
+                .get("refresh_token")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let account_id_hint = tokens_obj
+                .get("account_id")
+                .and_then(|v| v.as_str())
+                .or_else(|| obj.get("account_id").and_then(|v| v.as_str()))
+                .map(|s| s.to_string());
+            return Some((
+                CodexTokens {
+                    id_token: id_token.to_string(),
+                    access_token: access_token.to_string(),
+                    refresh_token,
+                },
+                account_id_hint,
+            ));
+        }
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_codex_tokens_from_value;
+
+    #[test]
+    fn extract_tokens_from_flat_codex_json() {
+        let value = serde_json::json!({
+            "id_token": "id.jwt.token",
+            "access_token": "access.jwt.token",
+            "refresh_token": "rt_123",
+            "account_id": "acc_1",
+            "type": "codex",
+            "email": "demo@example.com"
+        });
+
+        let (tokens, account_id_hint) =
+            extract_codex_tokens_from_value(&value).expect("should extract tokens");
+
+        assert_eq!(tokens.id_token, "id.jwt.token");
+        assert_eq!(tokens.access_token, "access.jwt.token");
+        assert_eq!(tokens.refresh_token.as_deref(), Some("rt_123"));
+        assert_eq!(account_id_hint.as_deref(), Some("acc_1"));
+    }
+
+    #[test]
+    fn extract_tokens_from_nested_tokens_json() {
+        let value = serde_json::json!({
+            "tokens": {
+                "id_token": "id.jwt.token",
+                "access_token": "access.jwt.token",
+                "refresh_token": "rt_456"
+            },
+            "account_id": "acc_2"
+        });
+
+        let (tokens, account_id_hint) =
+            extract_codex_tokens_from_value(&value).expect("should extract tokens");
+
+        assert_eq!(tokens.id_token, "id.jwt.token");
+        assert_eq!(tokens.access_token, "access.jwt.token");
+        assert_eq!(tokens.refresh_token.as_deref(), Some("rt_456"));
+        assert_eq!(account_id_hint.as_deref(), Some("acc_2"));
+    }
+}
+
+/// 从本地文件导入 Codex 账号（支持多种 JSON 格式）
+pub fn import_from_files(file_paths: Vec<String>) -> Result<CodexFileImportResult, String> {
+    use std::path::Path;
+
+    if file_paths.is_empty() {
+        return Err("未选择任何文件".to_string());
+    }
+
+    logger::log_info(&format!(
+        "Codex: 开始从 {} 个文件导入账号...",
+        file_paths.len()
+    ));
+
+    // 收集所有候选: (CodexTokens, account_id_hint, label)
+    let mut candidates: Vec<(CodexTokens, Option<String>, String)> = Vec::new();
+
+    for file_path in &file_paths {
+        let path = Path::new(file_path);
+        let content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(e) => {
+                logger::log_error(&format!("读取文件失败 {:?}: {}", file_path, e));
+                continue;
+            }
+        };
+
+        // 从文件名推断 email 作为 label
+        let filename_label = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let parsed: serde_json::Value = match serde_json::from_str(&content) {
+            Ok(v) => v,
+            Err(e) => {
+                logger::log_error(&format!("解析 JSON 失败 {:?}: {}", file_path, e));
+                continue;
+            }
+        };
+
+        match &parsed {
+            serde_json::Value::Object(_) => {
+                if let Some((tokens, hint)) = extract_codex_tokens_from_value(&parsed) {
+                    candidates.push((tokens, hint, filename_label));
+                } else {
+                    logger::log_error(&format!("未找到有效 Token {:?}", file_path));
+                }
+            }
+            serde_json::Value::Array(arr) => {
+                for item in arr {
+                    if let Some((tokens, hint)) = extract_codex_tokens_from_value(item) {
+                        let label = item
+                            .get("email")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&filename_label)
+                            .to_string();
+                        candidates.push((tokens, hint, label));
+                    }
+                }
+            }
+            _ => {
+                logger::log_error(&format!("不支持的 JSON 格式 {:?}", file_path));
+            }
+        }
+    }
+
+    if candidates.is_empty() {
+        return Err("未找到有效的 Codex Token（需要 id_token 和 access_token）".to_string());
+    }
+
+    logger::log_info(&format!(
+        "Codex: 发现 {} 个候选账号，开始导入...",
+        candidates.len()
+    ));
+
+    let mut imported = Vec::new();
+    let mut failed: Vec<CodexFileImportFailure> = Vec::new();
+    let total = candidates.len();
+
+    for (index, (tokens, account_id_hint, label)) in candidates.into_iter().enumerate() {
+        // 发送进度事件
+        if let Some(app_handle) = crate::get_app_handle() {
+            use tauri::Emitter;
+            let _ = app_handle.emit(
+                "codex:file-import-progress",
+                serde_json::json!({
+                    "current": index + 1,
+                    "total": total,
+                    "email": &label,
+                }),
+            );
+        }
+
+        match upsert_account_with_hints(tokens, account_id_hint, None) {
+            Ok(account) => {
+                logger::log_info(&format!("Codex 导入成功: {}", account.email));
+                imported.push(account);
+            }
+            Err(e) => {
+                logger::log_error(&format!("Codex 导入失败 {}: {}", label, e));
+                failed.push(CodexFileImportFailure {
+                    email: label,
+                    error: e,
+                });
+            }
+        }
+    }
+
+    logger::log_info(&format!(
+        "Codex 文件导入完成，成功 {} 个，失败 {} 个",
+        imported.len(),
+        failed.len()
+    ));
+
+    Ok(CodexFileImportResult { imported, failed })
 }
 
 pub fn update_account_tags(account_id: &str, tags: Vec<String>) -> Result<CodexAccount, String> {

@@ -86,18 +86,17 @@ pub fn run() {
             {
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
-                app.handle()
-                    .plugin(tauri_plugin_process::init())?;
+                app.handle().plugin(tauri_plugin_process::init())?;
                 info!("[Updater] Tauri Updater + Process 插件已初始化");
             }
 
-            // 启动时同步：读取共享配置文件，与本地配置比较时间戳后合并
-            {
+            // 启动时同步设置合并（移至后台线程，不阻塞窗口显示）
+            std::thread::spawn(|| {
                 let current_config = modules::config::get_user_config();
                 if let Some(merged_language) = modules::sync_settings::merge_setting_on_startup(
                     "language",
                     &current_config.language,
-                    None, // 本地暂无更新时间记录，始终以共享文件为准
+                    None,
                 ) {
                     info!(
                         "[SyncSettings] 启动时合并语言设置: {} -> {}",
@@ -111,7 +110,7 @@ pub fn run() {
                         logger::log_error(&format!("[SyncSettings] 保存合并后的配置失败: {}", e));
                     }
                 }
-            }
+            });
 
             // 启动 WebSocket 服务（使用 Tauri 的 async runtime）
             tauri::async_runtime::spawn(async {
@@ -121,10 +120,18 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             apply_macos_activation_policy(&app.handle());
 
-            // 初始化系统托盘
-            if let Err(e) = modules::tray::create_tray(app.handle()) {
-                logger::log_error(&format!("[Tray] 创建系统托盘失败: {}", e));
+            // 创建骨架托盘（无账号文件 I/O，秒出）
+            if let Err(e) = modules::tray::create_tray_skeleton(app.handle()) {
+                logger::log_error(&format!("[Tray] 创建骨架托盘失败: {}", e));
             }
+
+            // 后台线程加载完整托盘菜单（含账号数据）
+            let tray_app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                if let Err(e) = modules::tray::update_tray_menu(&tray_app_handle) {
+                    logger::log_error(&format!("[Tray] 后台更新托盘菜单失败: {}", e));
+                }
+            });
 
             Ok(())
         })
@@ -204,6 +211,7 @@ pub fn run() {
             commands::import::import_fingerprints_from_json,
             commands::import::import_from_local,
             commands::import::import_from_json,
+            commands::import::import_from_files,
             commands::import::export_accounts,
             // System Commands
             commands::system::open_data_folder,
@@ -239,6 +247,7 @@ pub fn run() {
             commands::update::save_update_settings,
             commands::update::save_pending_update_notes,
             commands::update::check_version_jump,
+            commands::update::update_log,
             // Announcement Commands
             commands::announcement::announcement_get_state,
             commands::announcement::announcement_mark_as_read,
@@ -262,6 +271,7 @@ pub fn run() {
             commands::codex::import_codex_from_local,
             commands::codex::import_codex_from_json,
             commands::codex::export_codex_accounts,
+            commands::codex::import_codex_from_files,
             commands::codex::refresh_codex_quota,
             commands::codex::refresh_all_codex_quotas,
             commands::codex::refresh_current_codex_quota,
@@ -330,6 +340,60 @@ pub fn run() {
             commands::kiro::update_kiro_account_tags,
             commands::kiro::get_kiro_accounts_index_path,
             commands::kiro::inject_kiro_to_vscode,
+            // Cursor Commands
+            commands::cursor::list_cursor_accounts,
+            commands::cursor::delete_cursor_account,
+            commands::cursor::delete_cursor_accounts,
+            commands::cursor::import_cursor_from_json,
+            commands::cursor::import_cursor_from_local,
+            commands::cursor::export_cursor_accounts,
+            commands::cursor::refresh_cursor_token,
+            commands::cursor::refresh_all_cursor_tokens,
+            commands::cursor::add_cursor_account_with_token,
+            commands::cursor::update_cursor_account_tags,
+            commands::cursor::get_cursor_accounts_index_path,
+            commands::cursor::cursor_oauth_login_start,
+            commands::cursor::cursor_oauth_login_complete,
+            commands::cursor::cursor_oauth_login_cancel,
+            commands::cursor::inject_cursor_account,
+            // Gemini Commands
+            commands::gemini::list_gemini_accounts,
+            commands::gemini::delete_gemini_account,
+            commands::gemini::delete_gemini_accounts,
+            commands::gemini::import_gemini_from_json,
+            commands::gemini::import_gemini_from_local,
+            commands::gemini::export_gemini_accounts,
+            commands::gemini::refresh_gemini_token,
+            commands::gemini::refresh_all_gemini_tokens,
+            commands::gemini::gemini_oauth_login_start,
+            commands::gemini::gemini_oauth_login_complete,
+            commands::gemini::gemini_oauth_login_cancel,
+            commands::gemini::add_gemini_account_with_token,
+            commands::gemini::update_gemini_account_tags,
+            commands::gemini::get_gemini_accounts_index_path,
+            commands::gemini::inject_gemini_account,
+            // Gemini Instance Commands
+            commands::gemini_instance::gemini_get_instance_defaults,
+            commands::gemini_instance::gemini_list_instances,
+            commands::gemini_instance::gemini_create_instance,
+            commands::gemini_instance::gemini_update_instance,
+            commands::gemini_instance::gemini_delete_instance,
+            commands::gemini_instance::gemini_start_instance,
+            commands::gemini_instance::gemini_stop_instance,
+            commands::gemini_instance::gemini_open_instance_window,
+            commands::gemini_instance::gemini_close_all_instances,
+            commands::gemini_instance::gemini_get_instance_launch_command,
+            commands::gemini_instance::gemini_execute_instance_launch_command,
+            // Cursor Instance Commands
+            commands::cursor_instance::cursor_get_instance_defaults,
+            commands::cursor_instance::cursor_list_instances,
+            commands::cursor_instance::cursor_create_instance,
+            commands::cursor_instance::cursor_update_instance,
+            commands::cursor_instance::cursor_delete_instance,
+            commands::cursor_instance::cursor_start_instance,
+            commands::cursor_instance::cursor_stop_instance,
+            commands::cursor_instance::cursor_open_instance_window,
+            commands::cursor_instance::cursor_close_all_instances,
             // Windsurf Instance Commands
             commands::windsurf_instance::windsurf_get_instance_defaults,
             commands::windsurf_instance::windsurf_list_instances,

@@ -6,6 +6,8 @@ export type Page =
   | 'github-copilot'
   | 'windsurf'
   | 'kiro'
+  | 'cursor'
+  | 'gemini'
   | 'codex-instances'
   | 'instances'
   | 'accounts'

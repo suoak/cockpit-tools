@@ -8,13 +8,13 @@ English · [简体中文](README.md)
 [![GitHub issues](https://img.shields.io/github/issues/jlcodes99/cockpit-tools)](https://github.com/jlcodes99/cockpit-tools/issues)
 [![License](https://img.shields.io/github/license/jlcodes99/cockpit-tools)](https://github.com/jlcodes99/cockpit-tools)
 
-A **universal AI IDE account management tool**, currently supporting **Antigravity**, **Codex**, **GitHub Copilot**, **Windsurf**, and **Kiro**, with multi-instance parallel workflows.
+A **universal AI IDE account management tool**, currently supporting **Antigravity**, **Codex**, **GitHub Copilot**, **Windsurf**, **Kiro**, **Cursor**, and **Gemini**, with multi-instance parallel workflows.
 
 > Designed to help users efficiently manage multiple AI IDE accounts, this tool supports one-click switching, quota monitoring, wake-up tasks, and multi-instance parallel runs, helping you fully utilize resources from different accounts.
 
-**Features**: One-click Switch · Multi-account Management · Multi-instance · Quota Monitoring · Wake-up Tasks · Device Fingerprints · Plugin Integration · GitHub Copilot Management · Windsurf Management · Kiro Management
+**Features**: One-click Switch · Multi-account Management · Multi-instance · Quota Monitoring · Wake-up Tasks · Device Fingerprints · Plugin Integration · GitHub Copilot Management · Windsurf Management · Kiro Management · Cursor Management · Gemini Management
 
-**Languages**: Supports 16 languages
+**Languages**: Supports 17 languages
 
 🇺🇸 English · 🇨🇳 简体中文 · 繁體中文 · 🇯🇵 日本語 · 🇩🇪 Deutsch · 🇪🇸 Español · 🇫🇷 Français · 🇮🇹 Italiano · 🇰🇷 한국어 · 🇧🇷 Português · 🇷🇺 Русский · 🇹🇷 Türkçe · 🇵🇱 Polski · 🇨🇿 Čeština · 🇸🇦 العربية · 🇻🇳 Tiếng Việt
 
@@ -26,7 +26,7 @@ A **universal AI IDE account management tool**, currently supporting **Antigravi
 
 A brand new visual dashboard providing a one-stop status overview:
 
-- **Five-Platform Support**: Simultaneously displays Antigravity, Codex, GitHub Copilot, Windsurf, and Kiro account status
+- **Seven-Platform Support**: Simultaneously displays Antigravity, Codex, GitHub Copilot, Windsurf, Kiro, Cursor, and Gemini account status
 - **Quota Monitoring**: Real-time view of remaining quotas and reset times for each model
 - **Quick Actions**: One-click refresh, one-click wake-up
 - **Visual Progress**: Intuitive progress bars showing quota consumption
@@ -119,7 +119,30 @@ Manage Kiro instances with isolated profiles and lifecycle controls.
 - **Quick Lifecycle**: Start/stop/force stop instances
 - **Window Control**: Open instance windows and close all instances
 
-### 7. General Settings
+### 7. Cursor Account Management
+
+- **Account Import**: OAuth, Token/JSON import, and local import
+- **Quota View**: Shows Total Usage, Auto + Composer, API Usage, On-Demand, and cycle information
+- **Batch Operations**: Tags and bulk actions
+- **Switch Injection**: Supports injecting and launching Cursor after account switch
+
+#### 7.1 Cursor Multi-Instance
+
+Manage Cursor instances with isolated profiles and lifecycle controls.
+
+- **Isolated Profiles**: Each instance uses its own user data directory
+- **Quick Lifecycle**: Start/stop/force stop instances
+- **Window Control**: Open instance windows and close all instances
+
+### 8. Gemini Account Management
+
+- **Account Import**: OAuth, Token/JSON import, and local import
+- **Quota View**: Shows Total Usage, Auto + Composer, API Usage, On-Demand, and cycle information
+- **Batch Operations**: Tags and bulk actions
+- **Switch Injection**: Supports injecting Gemini local credentials after account switch (`~/.gemini`)
+- **Platform Limitation**: Multi-instance management is not supported yet
+
+### 9. General Settings
 
 - **Personalized Settings**: Theme switching, language settings, auto-refresh interval
 
@@ -135,7 +158,8 @@ These are the most common security questions answered directly:
 - **Data is mainly stored on your machine**:
   - `~/.antigravity_cockpit`: Antigravity accounts, configs, WebSocket status, etc.
   - `~/.codex`: official Codex current login `auth.json`
-  - local app data folder under `com.antigravity.cockpit-tools`: Codex / GitHub Copilot / Windsurf / Kiro multi-account index data, etc.
+  - `~/.gemini`: Gemini local session files (for example `oauth_creds.json`, `google_accounts.json`, `settings.json`)
+  - local app data folder under `com.antigravity.cockpit-tools`: Codex / GitHub Copilot / Windsurf / Kiro / Cursor / Gemini multi-account index data, etc.
 - **WebSocket is local-only by default**: binds to `127.0.0.1`, default port `19528`; you can disable it or change the port in Settings.
 - **When network access happens**: OAuth login, token refresh, quota fetching, update checks, and other official API requests.
 - **Practical safety tips**:
@@ -159,8 +183,10 @@ If you want a stable setup with minimal tuning, follow the "Recommended" values.
 | GitHub Copilot Auto Refresh | Periodically updates GitHub Copilot quota | 5-10 minutes | Same as above |
 | Windsurf Auto Refresh | Periodically updates Windsurf quota | 5-10 minutes | Same as above |
 | Kiro Auto Refresh | Periodically updates Kiro quota | 5-10 minutes | Same as above |
+| Cursor Auto Refresh | Periodically updates Cursor quota | 5-10 minutes | Same as above |
+| Gemini Auto Refresh | Periodically updates Gemini quota | 5-10 minutes | Same as above |
 | Data Directory | Where account/config files are stored | Keep default | Only for troubleshooting or backups |
-| Antigravity/Codex/VS Code/Windsurf/Kiro/OpenCode App Path | Manually set executable path | Leave empty (auto-detect) | Change only if auto-detect fails or you use custom install paths |
+| Antigravity/Codex/VS Code/Windsurf/Kiro/Cursor/OpenCode App Path | Manually set executable path | Leave empty (auto-detect) | Change only if auto-detect fails or you use custom install paths |
 | Auto-restart OpenCode on Codex switch | Sync OpenCode auth after Codex switch | ON if you use OpenCode; otherwise OFF | Enable for frequent Codex switching with OpenCode |
 
 Notes:
@@ -266,6 +292,12 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=jlcodes99/cockpit-tools&type=Date)](https://star-history.com/#jlcodes99/cockpit-tools&Date)
 
 ---
 

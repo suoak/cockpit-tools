@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import type { InstanceStoreState } from '../../stores/createInstanceStore';
+import type { InstanceProfile } from '../../types/instance';
 import { InstancesManager } from '../InstancesManager';
 
 type AccountLike = {
@@ -9,7 +10,7 @@ type AccountLike = {
   email: string;
 };
 
-type InstancesAppType = 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro';
+type InstancesAppType = 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor' | 'gemini';
 
 interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   instanceStore: InstanceStoreState;
@@ -24,6 +25,8 @@ interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   unsupportedTitleDefault: string;
   unsupportedDescKey: string;
   unsupportedDescDefault: string;
+  onInstanceStarted?: (instance: InstanceProfile) => void | Promise<void>;
+  resolveStartSuccessMessage?: (instance: InstanceProfile) => string;
 }
 
 export function PlatformInstancesContent<TAccount extends AccountLike>({
@@ -39,6 +42,8 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
   unsupportedTitleDefault,
   unsupportedDescKey,
   unsupportedDescDefault,
+  onInstanceStarted,
+  resolveStartSuccessMessage,
 }: PlatformInstancesContentProps<TAccount>) {
   const { t } = useTranslation();
 
@@ -67,6 +72,8 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
         renderAccountBadge={renderAccountBadge}
         getAccountSearchText={getAccountSearchText}
         appType={appType}
+        onInstanceStarted={onInstanceStarted}
+        resolveStartSuccessMessage={resolveStartSuccessMessage}
       />
     </div>
   );

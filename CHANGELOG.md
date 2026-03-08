@@ -7,6 +7,144 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.11.2] - 2026-03-08
+
+### Fixed
+- **Antigravity default-instance custom launch args now take effect**: launching the default Antigravity instance now parses and passes saved `extra_args` to the actual process start command.
+- **Remote debugging launch flags can now be applied from Cockpit settings**: flags such as `--remote-debugging-port=9333` are no longer silently dropped in the default-instance start path.
+
+---
+## [0.11.1] - 2026-03-08
+
+### Changed
+- **Gemini import now validates token state immediately**: JSON import and local `~/.gemini` import now trigger a post-import token refresh, so account metadata is synchronized right after import.
+- **Gemini refresh state is now persisted on every outcome**: refresh failures now write `status=error` plus `status_reason` to the account record, and successful refreshes clear the error status.
+
+### Fixed
+- **Gemini refresh failures no longer stay as log-only signals**: failed manual or batch refresh attempts are now persisted to account status fields for consistent UI visibility.
+
+---
+## [0.11.0] - 2026-03-08
+
+### Added
+- **Gemini platform full integration across backend and frontend**: Added Gemini models/commands/modules/OAuth on Tauri side, plus account pages, services, stores, icons, navigation, and platform metadata wiring on frontend.
+- **Gemini account lifecycle support**: Added OAuth login, Access Token/JSON import, local `~/.gemini` import, quota refresh, tag management, account export, and local credential injection for account switching.
+- **Gemini multi-instance management**: Added Gemini instance store/commands with default and custom profile directories, account binding/injection, launch command generation, and one-click terminal execution.
+- **Gemini settings and runtime integration**: Added `gemini_auto_refresh_minutes`, Gemini quota-alert enable/threshold config, and integrated Gemini into Settings, Quick Settings, auto-refresh scheduler, dashboard, and tray/runtime surfaces.
+- **Gemini docs and i18n coverage**: Updated README (EN/ZH) and locale keys for Gemini overview, instance workflows, switching, importing, and flow notices.
+
+### Changed
+- **Post-switch UX now supports provider-specific success actions**: `useProviderAccountsPage` now exposes an inject-success callback; Gemini overview uses it to open a launch-command modal immediately after switching.
+- **Gemini launch semantics aligned with default-instance behavior**: Default-instance launch command now uses plain `gemini`; custom instances keep `GEMINI_CLI_HOME=... gemini`.
+- **Gemini launch modal wording updated for generic use**: Launch dialog title now uses “Launch Instance” instead of a multi-instance-specific label.
+- **Gemini instance UI simplified to match actual CLI behavior**: Removed runtime-state/PID/stop expectations in Gemini instance list and aligned default-instance edit behavior with real launch semantics.
+- **Shared platform/presentation pipeline expanded for Gemini**: Added Gemini to shared platform typing/navigation/meta and unified Gemini account plan/quota presentation in reusable account view helpers.
+
+---
+## [0.10.1] - 2026-03-07
+
+### Added
+- **Cursor platform end-to-end integration**: Added full Cursor account and multi-instance support across backend commands/modules, frontend pages/stores/services, side navigation, tabs, dashboard cards, and tray integration.
+- **Cursor account management capability set**: Added OAuth (PKCE), Token/JSON import, local `state.vscdb` import, account export, and account injection back to Cursor profile data for switching.
+- **Cursor quota and subscription pipeline**: Added official refresh chain (`usage-summary`, `GetUserMeta`, Stripe profile endpoints), including Total/Auto/API/On-Demand metrics and team-limit parsing.
+- **Cursor settings and automation wiring**: Added Cursor app path, auto-refresh interval, and quota-alert enable/threshold in both Settings and Quick Settings, and integrated Cursor into global auto-refresh.
+- **Cross-platform existing-directory instance mode**: Added `existingDir` initialization mode for Antigravity/Codex/GitHub Copilot/Windsurf/Kiro/Cursor to register existing local directories as instances.
+- **Fingerprint preview autofill support**: Added preview-current-profile autofill/writeback for missing fields and frontend field-level auto-generated indicators.
+
+### Changed
+- **App framework now includes Cursor globally**: added Cursor routing/page mounting, dashboard current/recommended account card actions, platform typing/navigation expansion, and platform metadata wiring.
+- **System tray startup and rendering path was upgraded**: tray now boots with a lightweight skeleton menu first and asynchronously loads full account-driven menus; Cursor tray summaries and platform ordering are included.
+- **Startup blocking work was reduced**: settings merge and log cleanup were moved to background threads; i18n startup preloads `en` resources and uses an explicit loading shell before app mount.
+- **Settings/Quick Settings/config schema expanded**: added `cursor_auto_refresh_minutes`, `cursor_app_path`, `cursor_quota_alert_enabled`, and `cursor_quota_alert_threshold`, with backward-compatible config normalization.
+- **Instance workflow enhancements across providers**: Antigravity/Codex/GitHub Copilot/Windsurf/Kiro/Cursor now validate and support `existingDir` creation mode in backend and frontend forms.
+- **Codex account presentation expanded**: added auth metadata parsing (`Signed in with <provider>`, ID details) and a dedicated Code Review quota metric in cards/tables.
+- **Plan/tier badge styling unified**: introduced shared `--plan-*` design tokens and switched account/instance pages to common badge color mapping.
+- **Localization coverage was expanded for new Cursor flows**: updated locale keys across supported language packs for Cursor pages, OAuth/import flow, `existingDir` instance mode, quick settings, and quota display copy.
+
+### Fixed
+- **Provider account dedup correctness improved**: GitHub Copilot and Windsurf now deduplicate by `github_id`; Kiro avoids email-only merges when `user_id` presence conflicts.
+- **Kiro account deduplication issue fixed**: Fixed the Kiro account merge path (`b045e1e2`) where different user identities could be incorrectly merged under the same email and cause account overwrite.
+- **Fingerprint preview data consistency improved**: reading current profile now autofills missing fingerprint fields, returns generated-field markers, and attempts writeback to storage.
+- **Path-missing guidance chain now covers Cursor fully**: `APP_PATH_NOT_FOUND:cursor` is handled by unified set/reset/detect/retry flow.
+
+---
+## [0.10.0] - 2026-03-07
+
+### Added
+- **Cursor platform end-to-end integration**: Added full Cursor account and multi-instance support across backend commands/modules, frontend pages/stores/services, side navigation, tabs, dashboard cards, and tray integration.
+- **Cursor account management capability set**: Added OAuth (PKCE), Token/JSON import, local `state.vscdb` import, account export, and account injection back to Cursor profile data for switching.
+- **Cursor quota and subscription pipeline**: Added official refresh chain (`usage-summary`, `GetUserMeta`, Stripe profile endpoints), including Total/Auto/API/On-Demand metrics and team-limit parsing.
+- **Cursor settings and automation wiring**: Added Cursor app path, auto-refresh interval, and quota-alert enable/threshold in both Settings and Quick Settings, and integrated Cursor into global auto-refresh.
+- **Cross-platform existing-directory instance mode**: Added `existingDir` initialization mode for Antigravity/Codex/GitHub Copilot/Windsurf/Kiro/Cursor to register existing local directories as instances.
+- **Fingerprint preview autofill support**: Added preview-current-profile autofill/writeback for missing fields and frontend field-level auto-generated indicators.
+
+### Changed
+- **App framework now includes Cursor globally**: added Cursor routing/page mounting, dashboard current/recommended account card actions, platform typing/navigation expansion, and platform metadata wiring.
+- **System tray startup and rendering path was upgraded**: tray now boots with a lightweight skeleton menu first and asynchronously loads full account-driven menus; Cursor tray summaries and platform ordering are included.
+- **Startup blocking work was reduced**: settings merge and log cleanup were moved to background threads; i18n startup preloads `en` resources and uses an explicit loading shell before app mount.
+- **Settings/Quick Settings/config schema expanded**: added `cursor_auto_refresh_minutes`, `cursor_app_path`, `cursor_quota_alert_enabled`, and `cursor_quota_alert_threshold`, with backward-compatible config normalization.
+- **Instance workflow enhancements across providers**: Antigravity/Codex/GitHub Copilot/Windsurf/Kiro/Cursor now validate and support `existingDir` creation mode in backend and frontend forms.
+- **Codex account presentation expanded**: added auth metadata parsing (`Signed in with <provider>`, ID details) and a dedicated Code Review quota metric in cards/tables.
+- **Plan/tier badge styling unified**: introduced shared `--plan-*` design tokens and switched account/instance pages to common badge color mapping.
+- **Localization coverage was expanded for new Cursor flows**: updated locale keys across supported language packs for Cursor pages, OAuth/import flow, `existingDir` instance mode, quick settings, and quota display copy.
+
+### Fixed
+- **Provider account dedup correctness improved**: GitHub Copilot and Windsurf now deduplicate by `github_id`; Kiro avoids email-only merges when `user_id` presence conflicts.
+- **Fingerprint preview data consistency improved**: reading current profile now autofills missing fingerprint fields, returns generated-field markers, and attempts writeback to storage.
+- **Path-missing guidance chain now covers Cursor fully**: `APP_PATH_NOT_FOUND:cursor` is handled by unified set/reset/detect/retry flow.
+
+---
+## [0.9.17] - 2026-03-06
+
+### Changed
+- **Windows Codex path reset detection is now Store-first and drive-aware**: Path reset now scans `C:\Program Files\WindowsApps\OpenAI.Codex_*\app\Codex.exe` and `<Drive>:\WindowsApps\OpenAI.Codex_*\app\Codex.exe` across drives, selects the highest package version, and falls back to Appx `InstallLocation\app\Codex.exe` when direct scan misses.
+- **Startup auto app-path probing was removed**: The app no longer runs automatic app-path detection during startup; path detection now runs on explicit reset or launch-missing-path flows.
+- **Announcement delivery remains non-intrusive**: New announcements continue to use unread badge indication and no longer force-open the detail modal.
+
+### Fixed
+- **Windows Codex default launch now works with configured path**: Added Windows default-instance launch flow for Codex so launch/switch-triggered start can execute when `codex_app_path` is configured.
+- **Instance actions no longer stay disabled after stop**: After stopping an instance, row actions are re-enabled in-place without requiring page navigation refresh.
+- **Restored macOS Codex multi-instance behavior after 0.9.16 regression**: Reverted the 0.9.16 Codex single-instance restriction impact on macOS, restoring multi-instance launch/control flow to the v0.9.15 behavior baseline.
+- **Restored Codex PID recognition on macOS instance rows**: Brought back instance-home-based process matching so running Codex instances can be identified and displayed with PID correctly.
+
+---
+## [0.9.16] - 2026-03-05
+
+### Added
+- **Windows Codex desktop control management**: Added first-class Windows support for Codex desktop process control, including launch, stop, focus, and restart flow (close first, then reopen).
+- **Windows Codex auto path detection for Store installs**: Added Appx-based path detection via `OpenAI.Codex` `InstallLocation\\app\\Codex.exe`, so Cockpit can resolve Codex executable path in Microsoft Store installation scenarios.
+
+### Changed
+- **Announcement delivery is now non-intrusive by default**: New announcements no longer force-open the detail modal; unread items are indicated by the red badge only and are opened manually from Announcement Center.
+- **Codex account identity display is now compact and single-line**: Codex account cards/tables now show `Signed in with <provider> | Account ID: <id>` in one line, and workspace name is removed from default account identity display to reduce UI noise.
+- **Codex code review quota label is fixed to English**: The code review quota metric now always uses `Code Review` as the display label.
+- **Windows Codex control model aligned to official single-instance lock**: Codex multi-instance is now explicitly marked unsupported on Windows/macOS in Codex instance management, with clear UI/backend reason text, and operations are constrained to single-instance control semantics.
+
+---
+## [0.9.15] - 2026-03-04
+
+### Changed
+- **Release publication now waits for full pipeline completion**: The release workflow now creates draft releases first and only marks them as `latest` after matrix builds, merged updater `latest.json`, checksum upload, and Homebrew cask update all succeed. This prevents in-app update prompts from appearing before release artifacts are fully ready.
+
+---
+## [0.9.14] - 2026-03-04
+
+### Added
+- **Floating sidebar quick-update action**: Added a compact action above the sidebar that follows updater lifecycle states (`Update` / `Downloading %` / `Restart`), so users can continue update flow without reopening settings pages.
+
+### Changed
+- **Updater retry and failure handling hardened**: Added retry-with-backoff plus retryable/non-retryable error classification for update check/download, with retry status feedback and sanitized error details in UI/logs.
+- **Update check baseline interval changed to 1 hour**: Default update-check interval is now 1 hour, and legacy 6h/24h interval values are migrated to 1 hour automatically when settings are loaded.
+- **macOS process probe path for desktop clients was switched to `ps`-first matching**: Antigravity/VS Code/Codex/Kiro/Windsurf process discovery now prioritizes command-line probing and keeps app-root path comparison, reducing protected-directory touches while improving process match stability for instance operations.
+- **Antigravity macOS multi-instance startup behavior was tightened**: Non-default instances now launch via `open -n` without `--reuse-window`, and startup includes a short PID resolve polling window (up to 6s) for the target `user-data-dir`.
+- **Codex quota refresh now synchronizes plan metadata back to account index**: `plan_type` is now synced from refreshed `id_token` and quota usage response into account summary index, so subscription badges can update without re-import.
+
+### Fixed
+- **Reopened update dialog now preserves prepared-update restart state**: If the same version is already downloaded, reopening the update dialog now stays in `Ready to restart` state instead of falling back to `Update now`.
+- **Manual dialog restart now reuses unified apply-update pipeline**: `Restart now` in the update dialog now follows the same install/relaunch path as silent updates, preventing state divergence between update entry points.
+- **GitHub Copilot instance injection no longer fails on macOS due to wrong Safe Storage key priority**: VS Code/Copilot injection now prefers Code-family Keychain entries before Antigravity entries, preventing `AES-CBC decryption failed: Unpad Error` when decrypting existing `github.auth`.
+
+---
 ## [0.9.13] - 2026-03-03
 
 ### Added

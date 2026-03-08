@@ -15,6 +15,8 @@ interface GeneralConfig {
   ghcp_auto_refresh_minutes: number;
   windsurf_auto_refresh_minutes: number;
   kiro_auto_refresh_minutes: number;
+  cursor_auto_refresh_minutes: number;
+  gemini_auto_refresh_minutes: number;
   close_behavior: string;
   opencode_app_path: string;
   antigravity_app_path: string;
@@ -22,7 +24,9 @@ interface GeneralConfig {
   vscode_app_path: string;
   windsurf_app_path: string;
   kiro_app_path: string;
+  cursor_app_path: string;
   opencode_sync_on_switch: boolean;
+  opencode_auth_overwrite_on_switch: boolean;
   codex_launch_on_switch: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
@@ -36,22 +40,30 @@ interface GeneralConfig {
   windsurf_quota_alert_threshold: number;
   kiro_quota_alert_enabled: boolean;
   kiro_quota_alert_threshold: number;
+  cursor_quota_alert_enabled: boolean;
+  cursor_quota_alert_threshold: number;
+  gemini_quota_alert_enabled: boolean;
+  gemini_quota_alert_threshold: number;
 }
 
-export type QuickSettingsType = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro';
+export type QuickSettingsType = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro' | 'cursor' | 'gemini';
 
 type QuotaAlertEnabledKey =
   | 'quota_alert_enabled'
   | 'codex_quota_alert_enabled'
   | 'ghcp_quota_alert_enabled'
   | 'windsurf_quota_alert_enabled'
-  | 'kiro_quota_alert_enabled';
+  | 'kiro_quota_alert_enabled'
+  | 'cursor_quota_alert_enabled'
+  | 'gemini_quota_alert_enabled';
 type QuotaAlertThresholdKey =
   | 'quota_alert_threshold'
   | 'codex_quota_alert_threshold'
   | 'ghcp_quota_alert_threshold'
   | 'windsurf_quota_alert_threshold'
-  | 'kiro_quota_alert_threshold';
+  | 'kiro_quota_alert_threshold'
+  | 'cursor_quota_alert_threshold'
+  | 'gemini_quota_alert_threshold';
 
 interface QuickSettingsPopoverProps {
   type: QuickSettingsType;
@@ -133,6 +145,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'github_copilot': return 'ghcp_auto_refresh_minutes';
       case 'windsurf': return 'windsurf_auto_refresh_minutes';
       case 'kiro': return 'kiro_auto_refresh_minutes';
+      case 'cursor': return 'cursor_auto_refresh_minutes';
+      case 'gemini': return 'gemini_auto_refresh_minutes';
     }
   };
 
@@ -151,6 +165,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           ghcpAutoRefreshMinutes: merged.ghcp_auto_refresh_minutes,
           windsurfAutoRefreshMinutes: merged.windsurf_auto_refresh_minutes,
           kiroAutoRefreshMinutes: merged.kiro_auto_refresh_minutes,
+          cursorAutoRefreshMinutes: merged.cursor_auto_refresh_minutes,
+          geminiAutoRefreshMinutes: merged.gemini_auto_refresh_minutes,
           closeBehavior: merged.close_behavior,
           opencodeAppPath: merged.opencode_app_path,
           antigravityAppPath: merged.antigravity_app_path,
@@ -158,7 +174,9 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           vscodeAppPath: merged.vscode_app_path,
           windsurfAppPath: merged.windsurf_app_path,
           kiroAppPath: merged.kiro_app_path,
+          cursorAppPath: merged.cursor_app_path,
           opencodeSyncOnSwitch: merged.opencode_sync_on_switch,
+          opencodeAuthOverwriteOnSwitch: merged.opencode_auth_overwrite_on_switch,
           codexLaunchOnSwitch: merged.codex_launch_on_switch,
           autoSwitchEnabled: merged.auto_switch_enabled,
           autoSwitchThreshold: merged.auto_switch_threshold,
@@ -172,6 +190,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           windsurfQuotaAlertThreshold: merged.windsurf_quota_alert_threshold,
           kiroQuotaAlertEnabled: merged.kiro_quota_alert_enabled,
           kiroQuotaAlertThreshold: merged.kiro_quota_alert_threshold,
+          cursorQuotaAlertEnabled: merged.cursor_quota_alert_enabled,
+          cursorQuotaAlertThreshold: merged.cursor_quota_alert_threshold,
+          geminiQuotaAlertEnabled: merged.gemini_quota_alert_enabled,
+          geminiQuotaAlertThreshold: merged.gemini_quota_alert_threshold,
         });
         window.dispatchEvent(new Event('config-updated'));
       } catch (err) {
@@ -183,7 +205,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     [config, saving]
   );
 
-  const handlePickAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro') => {
+  const handlePickAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor') => {
     try {
       const selected = await open({ multiple: false, directory: false });
       const path = Array.isArray(selected) ? selected[0] : selected;
@@ -198,7 +220,9 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
               ? 'vscode_app_path'
               : target === 'windsurf'
                 ? 'windsurf_app_path'
-                : 'kiro_app_path';
+                : target === 'cursor'
+                  ? 'cursor_app_path'
+                  : 'kiro_app_path';
 
       saveConfig({ [key]: path });
     } catch (err) {
@@ -206,7 +230,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     }
   };
 
-  const handleResetAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro') => {
+  const handleResetAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor') => {
     if (pathDetecting) return;
     setPathDetecting(true);
     try {
@@ -221,7 +245,9 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
               ? 'vscode_app_path'
               : target === 'windsurf'
                 ? 'windsurf_app_path'
-                : 'kiro_app_path';
+                : target === 'cursor'
+                  ? 'cursor_app_path'
+                  : 'kiro_app_path';
       saveConfig({ [key]: path });
     } catch (err) {
       console.error('Failed to reset path:', err);
@@ -242,6 +268,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.windsurf.title', 'Windsurf 设置');
       case 'kiro':
         return t('quickSettings.kiro.title', 'Kiro 设置');
+      case 'cursor':
+        return t('quickSettings.cursor.title', 'Cursor 设置');
+      case 'gemini':
+        return t('quickSettings.gemini.title', 'Gemini 设置');
     }
   };
 
@@ -259,6 +289,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'windsurf_quota_alert_enabled';
       case 'kiro':
         return 'kiro_quota_alert_enabled';
+      case 'cursor':
+        return 'cursor_quota_alert_enabled';
+      case 'gemini':
+        return 'gemini_quota_alert_enabled';
       default:
         return 'quota_alert_enabled';
     }
@@ -274,6 +308,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'windsurf_quota_alert_threshold';
       case 'kiro':
         return 'kiro_quota_alert_threshold';
+      case 'cursor':
+        return 'cursor_quota_alert_threshold';
+      case 'gemini':
+        return 'gemini_quota_alert_threshold';
       default:
         return 'quota_alert_threshold';
     }
@@ -291,8 +329,14 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.windsurfRefreshInterval', '配额自动刷新');
       case 'kiro':
         return t('quickSettings.kiroRefreshInterval', '配额自动刷新');
+      case 'cursor':
+        return t('quickSettings.cursorRefreshInterval', '配额自动刷新');
+      case 'gemini':
+        return t('quickSettings.geminiRefreshInterval', '配额自动刷新');
     }
   };
+
+  const showAppPathSection = type !== 'gemini';
 
   const getAppPath = (): string => {
     if (!config) return '';
@@ -307,6 +351,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return config.windsurf_app_path;
       case 'kiro':
         return config.kiro_app_path;
+      case 'cursor':
+        return config.cursor_app_path;
+      case 'gemini':
+        return '';
     }
   };
 
@@ -322,10 +370,14 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.windsurf.appPath', 'Windsurf 路径');
       case 'kiro':
         return t('quickSettings.kiro.appPath', 'Kiro 路径');
+      case 'cursor':
+        return t('quickSettings.cursor.appPath', 'Cursor 路径');
+      case 'gemini':
+        return t('quickSettings.gemini.appPath', 'Gemini CLI 路径');
     }
   };
 
-  const getAppTarget = (): 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' => {
+  const getAppTarget = (): 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor' => {
     switch (type) {
       case 'antigravity':
         return 'antigravity';
@@ -337,6 +389,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'windsurf';
       case 'kiro':
         return 'kiro';
+      case 'cursor':
+        return 'cursor';
+      case 'gemini':
+        return 'antigravity';
     }
   };
 
@@ -563,55 +619,59 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
             </div>
 
             {/* ─── App Path ─── */}
-            <div className="qs-section">
-              <div className="qs-section-header">
-                <FolderOpen size={15} />
-                <span>{getAppPathLabel()}</span>
-              </div>
-              <div className="qs-path-control">
-                <input
-                  type="text"
-                  className="qs-path-input"
-                  value={getAppPath()}
-                  placeholder={t('settings.general.codexAppPathPlaceholder', '默认路径')}
-                  onChange={(e) => {
-                    const key =
-                      type === 'antigravity'
-                        ? 'antigravity_app_path'
-                        : type === 'codex'
-                          ? 'codex_app_path'
-                          : type === 'github_copilot'
-                            ? 'vscode_app_path'
-                            : type === 'windsurf'
-                              ? 'windsurf_app_path'
-                              : 'kiro_app_path';
-                    saveConfig({ [key]: e.target.value });
-                  }}
-                />
-                <div className="qs-path-actions">
-                  <button
-                    className="qs-btn"
-                    onClick={() => handlePickAppPath(getAppTarget())}
-                    disabled={pathDetecting}
-                    title={t('settings.general.codexPathSelect', '选择')}
-                  >
-                    {t('settings.general.codexPathSelect', '选择')}
-                  </button>
-                  <button
-                    className="qs-btn"
-                    onClick={() => handleResetAppPath(getAppTarget())}
-                    disabled={pathDetecting}
-                    title={
-                      pathDetecting
-                        ? t('common.loading', '加载中...')
-                        : t('settings.general.codexPathReset', '恢复默认')
-                    }
-                  >
-                    <RefreshCw size={12} className={pathDetecting ? 'spin' : undefined} />
-                  </button>
+            {showAppPathSection && (
+              <div className="qs-section">
+                <div className="qs-section-header">
+                  <FolderOpen size={15} />
+                  <span>{getAppPathLabel()}</span>
+                </div>
+                <div className="qs-path-control">
+                  <input
+                    type="text"
+                    className="qs-path-input"
+                    value={getAppPath()}
+                    placeholder={t('settings.general.codexAppPathPlaceholder', '默认路径')}
+                    onChange={(e) => {
+                      const key =
+                        type === 'antigravity'
+                          ? 'antigravity_app_path'
+                          : type === 'codex'
+                            ? 'codex_app_path'
+                            : type === 'github_copilot'
+                              ? 'vscode_app_path'
+                              : type === 'windsurf'
+                                ? 'windsurf_app_path'
+                                : type === 'cursor'
+                                  ? 'cursor_app_path'
+                                  : 'kiro_app_path';
+                      saveConfig({ [key]: e.target.value });
+                    }}
+                  />
+                  <div className="qs-path-actions">
+                    <button
+                      className="qs-btn"
+                      onClick={() => handlePickAppPath(getAppTarget())}
+                      disabled={pathDetecting}
+                      title={t('settings.general.codexPathSelect', '选择')}
+                    >
+                      {t('settings.general.codexPathSelect', '选择')}
+                    </button>
+                    <button
+                      className="qs-btn"
+                      onClick={() => handleResetAppPath(getAppTarget())}
+                      disabled={pathDetecting}
+                      title={
+                        pathDetecting
+                          ? t('common.loading', '加载中...')
+                          : t('settings.general.codexPathReset', '恢复默认')
+                      }
+                    >
+                      <RefreshCw size={12} className={pathDetecting ? 'spin' : undefined} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* ─── Codex: opencode sync ─── */}
             {type === 'codex' && (
@@ -641,13 +701,38 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                 <div className="qs-row">
                   <div className="qs-row-label">
                     <Zap size={15} />
-                    <span>{t('settings.general.opencodeRestart', '切换时同步 OpenCode')}</span>
+                    <span>
+                      {t(
+                        'settings.general.opencodeAuthOverwrite',
+                        '切换 Codex 时覆盖 OpenCode 登录信息'
+                      )}
+                    </span>
+                  </div>
+                  <div className="qs-row-control">
+                    <label className="qs-switch">
+                      <input
+                        type="checkbox"
+                        checked={config.opencode_auth_overwrite_on_switch}
+                        onChange={(e) =>
+                          saveConfig({ opencode_auth_overwrite_on_switch: e.target.checked })
+                        }
+                      />
+                      <span className="qs-switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="qs-row">
+                  <div className="qs-row-label">
+                    <Zap size={15} />
+                    <span>{t('settings.general.opencodeRestart', '切换时自动重启 OpenCode')}</span>
                   </div>
                   <div className="qs-row-control">
                     <label className="qs-switch">
                       <input
                         type="checkbox"
                         checked={config.opencode_sync_on_switch}
+                        disabled={!config.opencode_auth_overwrite_on_switch}
                         onChange={(e) => saveConfig({ opencode_sync_on_switch: e.target.checked })}
                       />
                       <span className="qs-switch-slider"></span>
