@@ -1073,7 +1073,7 @@
       "comingSoon": "マルチインスタンス機能は近日公開",
       "comingSoonDesc": "異なるアカウントで複数のCodex.appインスタンスを同時に実行できます。お楽しみに。",
       "unsupported": {
-        "desc": "Codexマルチインスタンスは現在macOSでのみ利用可能です。"
+        "desc": "Codex のマルチインスタンス機能は現在 macOS と Windows で利用できます。"
       },
       "quota": {
         "hourly": "5時間",
@@ -1086,9 +1086,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (すべての Codex プロセス)"
         },
         "force": {
-          "principle": "CODEX_HOME でプロセスを一致させて強制終了（SIGKILL / taskkill /F）し、その後ターゲットインスタンスを起動します。",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (CODEX_HOME に一致するもの)"
+          "principle": "--user-data-dir でプロセスを一致させて強制終了（SIGKILL / taskkill /F）し、その後ターゲットインスタンスを起動します。",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (--user-data-dir に一致するもの)"
         }
       }
     },

@@ -1073,7 +1073,7 @@
       "comingSoon": "Мульти-инстанс скоро",
       "comingSoonDesc": "Запускайте несколько экземпляров Codex.app с разными аккаунтами одновременно.",
       "unsupported": {
-        "desc": "Мульти-инстанс Codex в настоящее время доступен только на macOS."
+        "desc": "Режим нескольких экземпляров Codex сейчас доступен на macOS и Windows."
       },
       "quota": {
         "hourly": "5ч",
@@ -1086,9 +1086,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (все процессы Codex)"
         },
         "force": {
-          "principle": "Идентифицирует процессы по CODEX_HOME и принудительно завершает их (SIGKILL / taskkill /F), затем запускает целевой инстанс.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (совпадение по CODEX_HOME)"
+          "principle": "Идентифицирует процессы по --user-data-dir и принудительно завершает их (SIGKILL / taskkill /F), затем запускает целевой инстанс.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (совпадение по --user-data-dir)"
         }
       }
     },

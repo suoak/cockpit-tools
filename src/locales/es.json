@@ -1073,7 +1073,7 @@
       "comingSoon": "Multi-Instancia Próximamente",
       "comingSoonDesc": "Ejecute múltiples instancias de Codex.app con diferentes cuentas simultáneamente.",
       "unsupported": {
-        "desc": "La multi-instancia de Codex solo está disponible en macOS actualmente."
+        "desc": "La función de múltiples instancias de Codex está disponible actualmente en macOS y Windows."
       },
       "quota": {
         "hourly": "5h",
@@ -1086,9 +1086,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (todos los procesos de Codex)"
         },
         "force": {
-          "principle": "Identifica procesos mediante CODEX_HOME y los detiene por la fuerza (SIGKILL / taskkill /F), luego inicia la instancia de destino.",
-          "commandMac": "MacOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (coincidencia con CODEX_HOME)"
+          "principle": "Identifica procesos mediante --user-data-dir y los detiene por la fuerza (SIGKILL / taskkill /F), luego inicia la instancia de destino.",
+          "commandMac": "MacOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (coincidencia con --user-data-dir)"
         }
       }
     },

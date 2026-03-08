@@ -1073,7 +1073,7 @@
       "comingSoon": "Multi-Istanza In Arrivo",
       "comingSoonDesc": "Esegui più istanze Codex.app con account diversi contemporaneamente.",
       "unsupported": {
-        "desc": "La multi-istanza Codex è attualmente disponibile solo su macOS."
+        "desc": "La funzionalità multi-istanza di Codex è attualmente disponibile su macOS e Windows."
       },
       "quota": {
         "hourly": "5 ore",
@@ -1086,9 +1086,9 @@
           "commandWin": "Windows: taskkill /F /PID <pid> (tutti i processi Codex)"
         },
         "force": {
-          "principle": "Identifica i processi tramite CODEX_HOME e li chiude forzatamente (SIGKILL / taskkill /F), quindi avvia l'istanza di destinazione.",
-          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (corrispondenza CODEX_HOME)"
+          "principle": "Identifica i processi tramite --user-data-dir e li chiude forzatamente (SIGKILL / taskkill /F), quindi avvia l'istanza di destinazione.",
+          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (corrispondenza --user-data-dir)"
         }
       }
     },
