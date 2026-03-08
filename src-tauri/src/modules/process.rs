@@ -1878,18 +1878,6 @@ fn resolve_codex_launch_path() -> Result<std::path::PathBuf, String> {
     Err(app_path_missing_error("codex"))
 }
 
-#[cfg(not(target_os = "macos"))]
-fn resolve_codex_launch_path() -> Result<std::path::PathBuf, String> {
-    if let Some(custom) = normalize_custom_path(Some(&config::get_user_config().codex_app_path)) {
-        if let Some(exec) = resolve_macos_exec_path(&custom, "Codex") {
-            return Ok(exec);
-        }
-        return Err(app_path_missing_error("codex"));
-    }
-
-    Err(app_path_missing_error("codex"))
-}
-
 pub fn detect_and_save_app_path(app: &str, force: bool) -> Option<String> {
     let current = config::get_user_config();
     match app {
