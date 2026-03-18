@@ -218,45 +218,32 @@ jobs:
       # Step 4: Strip MSI installer metadata (SummaryInformation stream)
       - name: Strip MSI installer metadata (Windows)
         if: matrix.platform == 'windows-latest'
-        shell: pwsh
+        shell: python
         run: |
-          $msiDir = "src-tauri\target\release\bundle\msi"
-          $installers = Get-ChildItem -Path $msiDir -Filter "*.msi" -ErrorAction SilentlyContinue
-          if (-not $installers) {
-            Write-Host "[ERROR] No MSI installer found in $msiDir"
-            Get-ChildItem -Path $msiDir -ErrorAction SilentlyContinue
-            exit 1
-          }
-          foreach ($installer in $installers) {
-            Write-Host "[INFO] Stripping MSI SummaryInformation from $($installer.Name)..."
-            $installer_path = $installer.FullName
+          import glob
+          import os
+          import msilib
 
-            # Use WindowsInstaller.Installer via reflection-friendly approach
-            $wi = New-Object -ComObject WindowsInstaller.Installer
-            $wiType = $wi.GetType()
+          msi_dir = r"src-tauri\target\release\bundle\msi"
+          msi_files = glob.glob(os.path.join(msi_dir, "*.msi"))
+          if not msi_files:
+              print(f"[ERROR] No MSI installer found in {msi_dir}")
+              raise SystemExit(1)
 
-            # OpenDatabase: 1 = msiOpenDatabaseModeTransact
-            $db = $wiType.InvokeMember("OpenDatabase", [System.Reflection.BindingFlags]::InvokeMethod, $null, $wi, @($installer_path, 1))
-            $dbType = $db.GetType()
-
-            # SummaryInformation: arg = max property count to update
-            $si = $dbType.InvokeMember("SummaryInformation", [System.Reflection.BindingFlags]::InvokeMethod, $null, $db, @(20))
-            $siType = $si.GetType()
-
-            # PID constants: 2=Title 3=Subject 4=Author 5=Keywords 6=Comments
-            #                8=LastAuthor 9=RevNumber 18=AppName
-            foreach ($pid in @(2, 3, 4, 5, 6, 8, 9, 18)) {
-              $siType.InvokeMember("Property", [System.Reflection.BindingFlags]::SetProperty, $null, $si, @($pid, ""))
-            }
-
-            $siType.InvokeMember("Persist", [System.Reflection.BindingFlags]::InvokeMethod, $null, $si, @())
-            $dbType.InvokeMember("Commit", [System.Reflection.BindingFlags]::InvokeMethod, $null, $db, @())
-
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($si) | Out-Null
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($db) | Out-Null
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wi) | Out-Null
-            Write-Host "[SUCCESS] MSI metadata stripped from $($installer.Name)"
-          }
+          for msi_path in msi_files:
+              print(f"[INFO] Stripping MSI SummaryInformation from {os.path.basename(msi_path)}...")
+              db = msilib.OpenDatabase(msi_path, msilib.MSIDBOPEN_TRANSACT)
+              si = db.GetSummaryInformation(20)
+              # PID constants: 2=Title 3=Subject 4=Author 5=Keywords 6=Comments
+              #                8=LastAuthor 9=RevNumber 18=AppName
+              for pid in [2, 3, 4, 5, 6, 8, 9, 18]:
+                  try:
+                      si.SetProperty(pid, "")
+                  except Exception:
+                      pass
+              si.Persist()
+              db.Commit()
+              print(f"[SUCCESS] MSI metadata stripped from {os.path.basename(msi_path)}")
 
       # Step 5: Create release and upload artifacts
       - name: Create Release (Windows)
@@ -266,16 +253,17 @@ jobs:
           tag_name: "v${{ steps.app_version.outputs.VERSION }}"
           name: "Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
           body: ${{ steps.release_notes.outputs.body }}
-          draft: false
+          draft: true
           prerelease: false
           files: |
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
 
   rebuild-latest-json:
     name: Rebuild merged latest.json
     needs: release
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     env:
@@ -292,7 +280,11 @@ jobs:
       - name: Determine version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -e "console.log(require('./package.json').version)")"
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Download release assets (retry)
@@ -371,16 +363,23 @@ jobs:
       - release
       - rebuild-latest-json
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     env:
       GH_REPO: ${{ github.repository }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Determine version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -e "console.log(require('./package.json').version)")"
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Download release assets (retry)
@@ -438,7 +437,7 @@ jobs:
       - rebuild-latest-json
       - upload-checksums
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
       pull-requests: write
@@ -452,7 +451,11 @@ jobs:
       - name: Determine version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -e "console.log(require('./package.json').version)")"
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Download universal DMG from GitHub Releases (retry)
@@ -530,14 +533,21 @@ jobs:
       - release
       - rebuild-latest-json
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Determine version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -e "console.log(require('./package.json').version)")"
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Publish draft release
