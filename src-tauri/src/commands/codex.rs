@@ -3,9 +3,7 @@ use crate::modules::{
     codex_account, codex_oauth, codex_quota, config, logger, opencode_auth, process,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::AppHandle;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter};
 
 static CODEX_POST_REFRESH_CHECK_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
