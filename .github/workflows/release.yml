@@ -216,34 +216,71 @@ jobs:
         run: npx tauri bundle --bundles msi
 
       # Step 4: Strip MSI installer metadata (SummaryInformation stream)
+      # Uses Windows Installer API via inline C# to clear metadata PIDs.
       - name: Strip MSI installer metadata (Windows)
         if: matrix.platform == 'windows-latest'
-        shell: python
+        shell: pwsh
         run: |
-          import glob
-          import os
-          import msilib
+          $msiDir = "src-tauri\target\release\bundle\msi"
+          $installers = Get-ChildItem -Path $msiDir -Filter "*.msi" -ErrorAction SilentlyContinue
+          if (-not $installers) {
+            Write-Host "[ERROR] No MSI installer found in $msiDir"
+            Get-ChildItem -Path $msiDir -ErrorAction SilentlyContinue
+            exit 1
+          }
 
-          msi_dir = r"src-tauri\target\release\bundle\msi"
-          msi_files = glob.glob(os.path.join(msi_dir, "*.msi"))
-          if not msi_files:
-              print(f"[ERROR] No MSI installer found in {msi_dir}")
-              raise SystemExit(1)
+          $csharpCode = @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class MsiMetadataStripper {
+              [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+              private static extern uint MsiOpenDatabase(string szDatabasePath, IntPtr szPersist, out IntPtr phDatabase);
+              [DllImport("msi.dll")]
+              private static extern uint MsiGetSummaryInformation(IntPtr hDatabase, string szDatabasePath, uint uiUpdateCount, out IntPtr phSummaryInfo);
+              [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+              private static extern uint MsiSummaryInfoSetProperty(IntPtr hSummaryInfo, uint uiProperty, uint uiDataType, int iValue, IntPtr pftValue, string szValue);
+              [DllImport("msi.dll")]
+              private static extern uint MsiSummaryInfoPersist(IntPtr hSummaryInfo);
+              [DllImport("msi.dll")]
+              private static extern uint MsiDatabaseCommit(IntPtr hDatabase);
+              [DllImport("msi.dll")]
+              private static extern uint MsiCloseHandle(IntPtr hAny);
+              private const uint VT_LPSTR = 30;
+              private static readonly uint[] STRING_PIDS = { 2, 3, 4, 5, 6, 8, 9, 18 };
+              public static string Strip(string msiPath) {
+                  IntPtr hDb = IntPtr.Zero;
+                  IntPtr hSi = IntPtr.Zero;
+                  try {
+                      uint r = MsiOpenDatabase(msiPath, new IntPtr(1), out hDb);
+                      if (r != 0) return "MsiOpenDatabase failed: " + r;
+                      r = MsiGetSummaryInformation(hDb, null, 20, out hSi);
+                      if (r != 0) return "MsiGetSummaryInformation failed: " + r;
+                      foreach (uint pid in STRING_PIDS) {
+                          MsiSummaryInfoSetProperty(hSi, pid, VT_LPSTR, 0, IntPtr.Zero, "");
+                      }
+                      r = MsiSummaryInfoPersist(hSi);
+                      if (r != 0) return "MsiSummaryInfoPersist failed: " + r;
+                      r = MsiDatabaseCommit(hDb);
+                      if (r != 0) return "MsiDatabaseCommit failed: " + r;
+                      return "OK";
+                  } finally {
+                      if (hSi != IntPtr.Zero) MsiCloseHandle(hSi);
+                      if (hDb != IntPtr.Zero) MsiCloseHandle(hDb);
+                  }
+              }
+          }
+"@
+          Add-Type -TypeDefinition $csharpCode -Language CSharp
 
-          for msi_path in msi_files:
-              print(f"[INFO] Stripping MSI SummaryInformation from {os.path.basename(msi_path)}...")
-              db = msilib.OpenDatabase(msi_path, msilib.MSIDBOPEN_TRANSACT)
-              si = db.GetSummaryInformation(20)
-              # PID constants: 2=Title 3=Subject 4=Author 5=Keywords 6=Comments
-              #                8=LastAuthor 9=RevNumber 18=AppName
-              for pid in [2, 3, 4, 5, 6, 8, 9, 18]:
-                  try:
-                      si.SetProperty(pid, "")
-                  except Exception:
-                      pass
-              si.Persist()
-              db.Commit()
-              print(f"[SUCCESS] MSI metadata stripped from {os.path.basename(msi_path)}")
+          foreach ($installer in $installers) {
+            Write-Host "[INFO] Stripping MSI SummaryInformation from $($installer.Name)..."
+            $result = [MsiMetadataStripper]::Strip($installer.FullName)
+            if ($result -ne "OK") {
+              Write-Host "[ERROR] $result"
+              exit 1
+            }
+            Write-Host "[SUCCESS] MSI metadata stripped from $($installer.Name)"
+          }
 
       # Step 5: Create release and upload artifacts
       - name: Create Release (Windows)
