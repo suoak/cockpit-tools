@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "تأكيد",
     "cancel": "إلغاء",
@@ -564,7 +564,7 @@
       "firewallHint": "إذا تعذر الوصول إلى الرابط، فتحقق من إعدادات جدار الحماية في النظام."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "حل احترافي لإدارة الحسابات",
       "author": "المؤلف الرئيسي",
       "wechat": "حساب WeChat الرسمي",

@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "Potvrdit",
     "cancel": "Zrušit",
@@ -564,7 +564,7 @@
       "firewallHint": "Pokud URL není dostupná, zkontrolujte nastavení systémového firewallu."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "Profesionální řešení pro správu účtů",
       "author": "Autor",
       "wechat": "WeChat",

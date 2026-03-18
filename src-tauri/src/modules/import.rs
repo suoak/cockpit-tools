@@ -1,4 +1,4 @@
-use crate::models;
+﻿use crate::models;
 use crate::modules;
 use crate::utils;
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,7 @@ const EXTENSION_SECRET_STORAGE_KEYS: [&str; 2] = [
 ];
 const EXTENSION_SECRET_STORAGE_EXTENSION_IDS: [&str; 2] = [
     "jlcodes.antigravity-cockpit",
-    "jlcodes99.antigravity-cockpit",
+    "suoak.antigravity-cockpit",
 ];
 
 #[derive(Debug, Deserialize)]

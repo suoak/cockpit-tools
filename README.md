@@ -1,4 +1,4 @@
-# SC-Cockpit Tools
+﻿# SC-Cockpit Tools
 
 [English](README.en.md) · 简体中文
 
@@ -277,7 +277,7 @@ Codex 同样支持多账号多实例并行运行。比如同时打开两个 Code
 
 ### 选项 A: 手动下载 (推荐)
 
-前往 [GitHub Releases](https://github.com/jlcodes99/cockpit-tools/releases) 下载对应系统的安装包：
+前往 [GitHub Releases](https://github.com/suoak/cockpit-tools/releases) 下载对应系统的安装包：
 
 *   **macOS**: `.dmg` (Apple Silicon & Intel)
 *   **Windows**: `.msi` (推荐) 或 `.exe`
@@ -288,7 +288,7 @@ Codex 同样支持多账号多实例并行运行。比如同时打开两个 Code
 > 需要先安装 Homebrew。
 
 ```bash
-brew tap jlcodes99/cockpit-tools https://github.com/jlcodes99/cockpit-tools
+brew tap suoak/cockpit-tools https://github.com/suoak/cockpit-tools
 brew install --cask cockpit-tools
 ```
 
@@ -357,7 +357,7 @@ npm run tauri build
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=jlcodes99/cockpit-tools&type=Date)](https://star-history.com/#jlcodes99/cockpit-tools&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=suoak/cockpit-tools&type=Date)](https://star-history.com/#suoak/cockpit-tools&Date)
 
 ---
 

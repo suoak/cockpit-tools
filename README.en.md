@@ -1,12 +1,12 @@
-# SC-Cockpit Tools
+﻿# SC-Cockpit Tools
 
 English · [简体中文](README.md)
 
-[![GitHub stars](https://img.shields.io/github/stars/jlcodes99/cockpit-tools?style=flat&color=gold)](https://github.com/jlcodes99/cockpit-tools)
-[![GitHub downloads](https://img.shields.io/github/downloads/jlcodes99/cockpit-tools/total?style=flat&color=blue)](https://github.com/jlcodes99/cockpit-tools/releases)
-[![GitHub release](https://img.shields.io/github/v/release/jlcodes99/cockpit-tools?style=flat)](https://github.com/jlcodes99/cockpit-tools/releases)
-[![GitHub issues](https://img.shields.io/github/issues/jlcodes99/cockpit-tools)](https://github.com/jlcodes99/cockpit-tools/issues)
-[![License](https://img.shields.io/github/license/jlcodes99/cockpit-tools)](https://github.com/jlcodes99/cockpit-tools)
+[![GitHub stars](https://img.shields.io/github/stars/suoak/cockpit-tools?style=flat&color=gold)](https://github.com/suoak/cockpit-tools)
+[![GitHub downloads](https://img.shields.io/github/downloads/suoak/cockpit-tools/total?style=flat&color=blue)](https://github.com/suoak/cockpit-tools/releases)
+[![GitHub release](https://img.shields.io/github/v/release/suoak/cockpit-tools?style=flat)](https://github.com/suoak/cockpit-tools/releases)
+[![GitHub issues](https://img.shields.io/github/issues/suoak/cockpit-tools)](https://github.com/suoak/cockpit-tools/issues)
+[![License](https://img.shields.io/github/license/suoak/cockpit-tools)](https://github.com/suoak/cockpit-tools)
 
 A **universal AI IDE account management tool**, currently supporting **Antigravity**, **Codex**, **GitHub Copilot**, **Windsurf**, **Kiro**, **Cursor**, **Gemini Cli**, **CodeBuddy**, **CodeBuddy CN**, **Qoder**, and **Trae**, with multi-instance parallel workflows.
 
@@ -282,7 +282,7 @@ Notes:
 
 ### Option A: Manual Download (Recommended)
 
-Go to [GitHub Releases](https://github.com/jlcodes99/cockpit-tools/releases) to download the package for your system:
+Go to [GitHub Releases](https://github.com/suoak/cockpit-tools/releases) to download the package for your system:
 
 *   **macOS**: `.dmg` (Apple Silicon & Intel)
 *   **Windows**: `.msi` (Recommended) or `.exe`
@@ -293,7 +293,7 @@ Go to [GitHub Releases](https://github.com/jlcodes99/cockpit-tools/releases) to 
 > Homebrew is required.
 
 ```bash
-brew tap jlcodes99/cockpit-tools https://github.com/jlcodes99/cockpit-tools
+brew tap suoak/cockpit-tools https://github.com/suoak/cockpit-tools
 brew install --cask cockpit-tools
 ```
 
@@ -362,7 +362,7 @@ npm run tauri build
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=jlcodes99/cockpit-tools&type=Date)](https://star-history.com/#jlcodes99/cockpit-tools&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=suoak/cockpit-tools&type=Date)](https://star-history.com/#suoak/cockpit-tools&Date)
 
 ---
 

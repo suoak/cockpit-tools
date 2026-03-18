@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "確認",
     "cancel": "取消",
@@ -564,7 +564,7 @@
       "firewallHint": "若網址無法存取，請檢查系統防火牆設定。"
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "專業帳號管理解決方案",
       "author": "主作者",
       "wechat": "微信公眾號",

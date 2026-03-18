@@ -10,7 +10,7 @@
       "content": "感谢你选择 SC-Cockpit Tools。\n\n这个桌面端目前可以帮助你：\n�?统一管理 Antigravity、Codex、GitHub Copilot、Windsurf、Kiro 账号\n�?实时查看模型配额与重置时间\n�?快速切换当前账号并支持批量刷新\n�?管理设备指纹与多开实例\n�?使用唤醒任务与账号验证能力\n\n如果你有建议或问题，欢迎随时反馈�?,
       "action": {
         "type": "url",
-        "target": "https://github.com/jlcodes99/cockpit-tools/issues",
+        "target": "https://github.com/suoak/cockpit-tools/issues",
         "label": "反馈建议"
       },
       "targetVersions": "*",
@@ -135,7 +135,7 @@
       "content": "SC-Cockpit Tools 最近已升级�?v0.9.0，核心变化如下：\n�?Antigravity账号支持一键发起账号有效性验证（可按模型批量验证，进度实时可见，结果可回查）\n�?Antigravity唤醒/验证链路已对齐Antigravity官方APP实现：本地网�?+ 官方 Language Server 协议\n�?403 场景新增快捷处理：立即验证、复制验证地址、复制调试信息\n建议升级�?v0.9.0 及以上版本，以获得更稳定的使用体验�?,
       "action": {
         "type": "url",
-        "target": "https://github.com/jlcodes99/cockpit-tools/releases/latest",
+        "target": "https://github.com/suoak/cockpit-tools/releases/latest",
         "label": "下载最新版"
       },
       "targetVersions": "*",
@@ -276,7 +276,7 @@
       "content": "�?v0.9.12 开始，SC-Cockpit Tools 已支持应用内更新。\n\n你现在可以：\n�?在应用内直接检查并下载新版本，无需再跳转浏览器手动下载安装包\n�?在“设�?> 通用”开启后台自动更新，检测到新版本后会静默下载，重启应用后自动生效\n�?更新完成后的首次启动会展示更新说明，方便快速了解改动\n\n若自动更新流程异常，仍可使用手动下载作为兜底方案�?,
       "action": {
         "type": "url",
-        "target": "https://github.com/jlcodes99/cockpit-tools/releases/latest",
+        "target": "https://github.com/suoak/cockpit-tools/releases/latest",
         "label": "查看最新版�?
       },
       "targetVersions": "*",

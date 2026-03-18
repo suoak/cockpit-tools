@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "Potwierdź",
     "cancel": "Anuluj",
@@ -564,7 +564,7 @@
       "firewallHint": "Jeśli URL jest niedostępny, sprawdź ustawienia zapory systemowej."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "Profesjonalne rozwiązanie do zarządzania kontami",
       "author": "Autor",
       "wechat": "WeChat",

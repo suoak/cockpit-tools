@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "確認",
     "cancel": "キャンセル",
@@ -564,7 +564,7 @@
       "firewallHint": "URL にアクセスできない場合は、システムのファイアウォール設定を確認してください。"
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "プロフェッショナルなアカウント管理ソリューション",
       "author": "著者",
       "wechat": "WeChat 公衆号",

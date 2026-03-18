@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "Onayla",
     "cancel": "İptal",
@@ -564,7 +564,7 @@
       "firewallHint": "URL erişilemiyorsa sistem güvenlik duvarı ayarlarını kontrol edin."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "Profesyonel Hesap Yönetimi Çözümü",
       "author": "Yazar",
       "wechat": "WeChat",

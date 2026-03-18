@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -564,7 +564,7 @@
       "firewallHint": "If the URL is unreachable, check your system firewall settings."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "Professional Account Management Solution",
       "author": "Author",
       "wechat": "WeChat",

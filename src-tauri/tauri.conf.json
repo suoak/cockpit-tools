@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Cockpit Tools",
+  "productName": "SC-Cockpit Tools",
   "version": "0.16.0",
   "identifier": "com.jlcodes.cockpit-tools",
   "build": {
@@ -13,7 +13,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "Cockpit Tools",
+        "title": "SC-Cockpit Tools",
         "width": 1250,
         "height": 800,
         "minWidth": 900,

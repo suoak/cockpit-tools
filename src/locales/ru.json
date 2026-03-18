@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "confirm": "Подтвердить",
     "cancel": "Отмена",
@@ -564,7 +564,7 @@
       "firewallHint": "Если URL недоступен, проверьте настройки системного брандмауэра."
     },
     "about": {
-      "appName": "SC-SC-Cockpit Tools",
+      "appName": "SC-Cockpit Tools",
       "slogan": "Профессиональное решение для управления аккаунтами",
       "author": "Автор",
       "wechat": "Вичат",
