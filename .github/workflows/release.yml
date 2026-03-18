@@ -245,7 +245,7 @@ jobs:
           $csharpCode += '    [DllImport("msi.dll")]' + "`n"
           $csharpCode += '    private static extern uint MsiCloseHandle(IntPtr hAny);' + "`n"
           $csharpCode += '    private const uint VT_LPSTR = 30;' + "`n"
-          $csharpCode += '    private static readonly uint[] STRING_PIDS = { 2, 3, 4, 5, 6, 8, 9, 18 };' + "`n"
+          $csharpCode += '    private static readonly uint[] STRING_PIDS = { 2, 3, 4, 5, 6, 8, 18 };' + "`n"
           $csharpCode += '    public static string Strip(string msiPath) {' + "`n"
           $csharpCode += '        IntPtr hDb = IntPtr.Zero;' + "`n"
           $csharpCode += '        IntPtr hSi = IntPtr.Zero;' + "`n"
