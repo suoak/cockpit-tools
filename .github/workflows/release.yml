@@ -229,7 +229,7 @@ jobs:
             exit 1
           }
 
-          $csharpCode = @"
+          $csharpCode = @'
           using System;
           using System.Runtime.InteropServices;
           public class MsiMetadataStripper {
@@ -269,7 +269,7 @@ jobs:
                   }
               }
           }
-"@
+'@
           Add-Type -TypeDefinition $csharpCode -Language CSharp
 
           foreach ($installer in $installers) {
