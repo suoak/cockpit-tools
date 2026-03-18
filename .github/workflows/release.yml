@@ -229,25 +229,29 @@ jobs:
           }
           foreach ($installer in $installers) {
             Write-Host "[INFO] Stripping MSI SummaryInformation from $($installer.Name)..."
-            # MSI metadata lives in the COM SummaryInformation stream, not PE VERSIONINFO.
-            # Use the Windows Installer COM API to clear it.
             $installer_path = $installer.FullName
+
+            # Use WindowsInstaller.Installer via reflection-friendly approach
             $wi = New-Object -ComObject WindowsInstaller.Installer
-            $db = $wi.OpenDatabase($installer_path, 1)  # 1 = msiOpenDatabaseModeTransact
-            $si = $db.SummaryInformation(20)
+            $wiType = $wi.GetType()
+
+            # OpenDatabase: 1 = msiOpenDatabaseModeTransact
+            $db = $wiType.InvokeMember("OpenDatabase", [System.Reflection.BindingFlags]::InvokeMethod, $null, $wi, @($installer_path, 1))
+            $dbType = $db.GetType()
+
+            # SummaryInformation: arg = max property count to update
+            $si = $dbType.InvokeMember("SummaryInformation", [System.Reflection.BindingFlags]::InvokeMethod, $null, $db, @(20))
+            $siType = $si.GetType()
+
             # PID constants: 2=Title 3=Subject 4=Author 5=Keywords 6=Comments
-            #                 7=Template 8=LastAuthor 9=RevNumber 12=CreatedDate
-            #                 13=LastSavedDate 14=PageCount 15=WordCount 18=AppName
-            $si.SetProperty(2, "")   # Title
-            $si.SetProperty(3, "")   # Subject
-            $si.SetProperty(4, "")   # Author
-            $si.SetProperty(5, "")   # Keywords
-            $si.SetProperty(6, "")   # Comments
-            $si.SetProperty(8, "")   # LastAuthor
-            $si.SetProperty(9, "")   # RevNumber (GUID) - clear
-            $si.SetProperty(18, "")  # AppName (creating tool)
-            $si.Persist()
-            $db.Commit()
+            #                8=LastAuthor 9=RevNumber 18=AppName
+            foreach ($pid in @(2, 3, 4, 5, 6, 8, 9, 18)) {
+              $siType.InvokeMember("Property", [System.Reflection.BindingFlags]::SetProperty, $null, $si, @($pid, ""))
+            }
+
+            $siType.InvokeMember("Persist", [System.Reflection.BindingFlags]::InvokeMethod, $null, $si, @())
+            $dbType.InvokeMember("Commit", [System.Reflection.BindingFlags]::InvokeMethod, $null, $db, @())
+
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($si) | Out-Null
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($db) | Out-Null
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wi) | Out-Null
