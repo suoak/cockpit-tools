@@ -229,47 +229,46 @@ jobs:
             exit 1
           }
 
-          $csharpCode = @'
-          using System;
-          using System.Runtime.InteropServices;
-          public class MsiMetadataStripper {
-              [DllImport("msi.dll", CharSet = CharSet.Unicode)]
-              private static extern uint MsiOpenDatabase(string szDatabasePath, IntPtr szPersist, out IntPtr phDatabase);
-              [DllImport("msi.dll")]
-              private static extern uint MsiGetSummaryInformation(IntPtr hDatabase, string szDatabasePath, uint uiUpdateCount, out IntPtr phSummaryInfo);
-              [DllImport("msi.dll", CharSet = CharSet.Unicode)]
-              private static extern uint MsiSummaryInfoSetProperty(IntPtr hSummaryInfo, uint uiProperty, uint uiDataType, int iValue, IntPtr pftValue, string szValue);
-              [DllImport("msi.dll")]
-              private static extern uint MsiSummaryInfoPersist(IntPtr hSummaryInfo);
-              [DllImport("msi.dll")]
-              private static extern uint MsiDatabaseCommit(IntPtr hDatabase);
-              [DllImport("msi.dll")]
-              private static extern uint MsiCloseHandle(IntPtr hAny);
-              private const uint VT_LPSTR = 30;
-              private static readonly uint[] STRING_PIDS = { 2, 3, 4, 5, 6, 8, 9, 18 };
-              public static string Strip(string msiPath) {
-                  IntPtr hDb = IntPtr.Zero;
-                  IntPtr hSi = IntPtr.Zero;
-                  try {
-                      uint r = MsiOpenDatabase(msiPath, new IntPtr(1), out hDb);
-                      if (r != 0) return "MsiOpenDatabase failed: " + r;
-                      r = MsiGetSummaryInformation(hDb, null, 20, out hSi);
-                      if (r != 0) return "MsiGetSummaryInformation failed: " + r;
-                      foreach (uint pid in STRING_PIDS) {
-                          MsiSummaryInfoSetProperty(hSi, pid, VT_LPSTR, 0, IntPtr.Zero, "");
-                      }
-                      r = MsiSummaryInfoPersist(hSi);
-                      if (r != 0) return "MsiSummaryInfoPersist failed: " + r;
-                      r = MsiDatabaseCommit(hDb);
-                      if (r != 0) return "MsiDatabaseCommit failed: " + r;
-                      return "OK";
-                  } finally {
-                      if (hSi != IntPtr.Zero) MsiCloseHandle(hSi);
-                      if (hDb != IntPtr.Zero) MsiCloseHandle(hDb);
-                  }
-              }
-          }
-'@
+          $csharpCode = 'using System;' + "`n"
+          $csharpCode += 'using System.Runtime.InteropServices;' + "`n"
+          $csharpCode += 'public class MsiMetadataStripper {' + "`n"
+          $csharpCode += '    [DllImport("msi.dll", CharSet = CharSet.Unicode)]' + "`n"
+          $csharpCode += '    private static extern uint MsiOpenDatabase(string szDatabasePath, IntPtr szPersist, out IntPtr phDatabase);' + "`n"
+          $csharpCode += '    [DllImport("msi.dll")]' + "`n"
+          $csharpCode += '    private static extern uint MsiGetSummaryInformation(IntPtr hDatabase, string szDatabasePath, uint uiUpdateCount, out IntPtr phSummaryInfo);' + "`n"
+          $csharpCode += '    [DllImport("msi.dll", CharSet = CharSet.Unicode)]' + "`n"
+          $csharpCode += '    private static extern uint MsiSummaryInfoSetProperty(IntPtr hSummaryInfo, uint uiProperty, uint uiDataType, int iValue, IntPtr pftValue, string szValue);' + "`n"
+          $csharpCode += '    [DllImport("msi.dll")]' + "`n"
+          $csharpCode += '    private static extern uint MsiSummaryInfoPersist(IntPtr hSummaryInfo);' + "`n"
+          $csharpCode += '    [DllImport("msi.dll")]' + "`n"
+          $csharpCode += '    private static extern uint MsiDatabaseCommit(IntPtr hDatabase);' + "`n"
+          $csharpCode += '    [DllImport("msi.dll")]' + "`n"
+          $csharpCode += '    private static extern uint MsiCloseHandle(IntPtr hAny);' + "`n"
+          $csharpCode += '    private const uint VT_LPSTR = 30;' + "`n"
+          $csharpCode += '    private static readonly uint[] STRING_PIDS = { 2, 3, 4, 5, 6, 8, 9, 18 };' + "`n"
+          $csharpCode += '    public static string Strip(string msiPath) {' + "`n"
+          $csharpCode += '        IntPtr hDb = IntPtr.Zero;' + "`n"
+          $csharpCode += '        IntPtr hSi = IntPtr.Zero;' + "`n"
+          $csharpCode += '        try {' + "`n"
+          $csharpCode += '            uint r = MsiOpenDatabase(msiPath, new IntPtr(1), out hDb);' + "`n"
+          $csharpCode += '            if (r != 0) return "MsiOpenDatabase failed: " + r;' + "`n"
+          $csharpCode += '            r = MsiGetSummaryInformation(hDb, null, 20, out hSi);' + "`n"
+          $csharpCode += '            if (r != 0) return "MsiGetSummaryInformation failed: " + r;' + "`n"
+          $csharpCode += '            foreach (uint pid in STRING_PIDS) {' + "`n"
+          $csharpCode += '                MsiSummaryInfoSetProperty(hSi, pid, VT_LPSTR, 0, IntPtr.Zero, "");' + "`n"
+          $csharpCode += '            }' + "`n"
+          $csharpCode += '            r = MsiSummaryInfoPersist(hSi);' + "`n"
+          $csharpCode += '            if (r != 0) return "MsiSummaryInfoPersist failed: " + r;' + "`n"
+          $csharpCode += '            r = MsiDatabaseCommit(hDb);' + "`n"
+          $csharpCode += '            if (r != 0) return "MsiDatabaseCommit failed: " + r;' + "`n"
+          $csharpCode += '            return "OK";' + "`n"
+          $csharpCode += '        } finally {' + "`n"
+          $csharpCode += '            if (hSi != IntPtr.Zero) MsiCloseHandle(hSi);' + "`n"
+          $csharpCode += '            if (hDb != IntPtr.Zero) MsiCloseHandle(hDb);' + "`n"
+          $csharpCode += '        }' + "`n"
+          $csharpCode += '    }' + "`n"
+          $csharpCode += '}' + "`n"
+
           Add-Type -TypeDefinition $csharpCode -Language CSharp
 
           foreach ($installer in $installers) {
