@@ -4,12 +4,17 @@ import { createPortal } from 'react-dom';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { Settings, RefreshCw, FolderOpen, Zap, X } from 'lucide-react';
+import {
+  isCodexCodeReviewQuotaVisibleByDefault,
+  persistCodexCodeReviewQuotaVisible,
+} from '../utils/codexPreferences';
 import './QuickSettingsPopover.css';
 
 /** GeneralConfig from backend */
 interface GeneralConfig {
   language: string;
   theme: string;
+  ui_scale: number;
   auto_refresh_minutes: number;
   codex_auto_refresh_minutes: number;
   ghcp_auto_refresh_minutes: number;
@@ -17,7 +22,14 @@ interface GeneralConfig {
   kiro_auto_refresh_minutes: number;
   cursor_auto_refresh_minutes: number;
   gemini_auto_refresh_minutes: number;
+  codebuddy_auto_refresh_minutes: number;
+  codebuddy_cn_auto_refresh_minutes: number;
+  qoder_auto_refresh_minutes: number;
+  trae_auto_refresh_minutes: number;
+  workbuddy_auto_refresh_minutes: number;
   close_behavior: string;
+  minimize_behavior?: 'dock_and_tray' | 'tray_only';
+  hide_dock_icon?: boolean;
   opencode_app_path: string;
   antigravity_app_path: string;
   codex_app_path: string;
@@ -25,15 +37,25 @@ interface GeneralConfig {
   windsurf_app_path: string;
   kiro_app_path: string;
   cursor_app_path: string;
+  codebuddy_app_path: string;
+  codebuddy_cn_app_path: string;
+  qoder_app_path: string;
+  trae_app_path: string;
+  workbuddy_app_path: string;
   opencode_sync_on_switch: boolean;
   opencode_auth_overwrite_on_switch: boolean;
   codex_launch_on_switch: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
+  codex_auto_switch_enabled: boolean;
+  codex_auto_switch_primary_threshold: number;
+  codex_auto_switch_secondary_threshold: number;
   quota_alert_enabled: boolean;
   quota_alert_threshold: number;
   codex_quota_alert_enabled: boolean;
   codex_quota_alert_threshold: number;
+  codex_quota_alert_primary_threshold: number;
+  codex_quota_alert_secondary_threshold: number;
   ghcp_quota_alert_enabled: boolean;
   ghcp_quota_alert_threshold: number;
   windsurf_quota_alert_enabled: boolean;
@@ -44,9 +66,31 @@ interface GeneralConfig {
   cursor_quota_alert_threshold: number;
   gemini_quota_alert_enabled: boolean;
   gemini_quota_alert_threshold: number;
+  codebuddy_quota_alert_enabled: boolean;
+  codebuddy_quota_alert_threshold: number;
+  codebuddy_cn_quota_alert_enabled: boolean;
+  codebuddy_cn_quota_alert_threshold: number;
+  qoder_quota_alert_enabled: boolean;
+  qoder_quota_alert_threshold: number;
+  trae_quota_alert_enabled: boolean;
+  trae_quota_alert_threshold: number;
+  workbuddy_quota_alert_enabled: boolean;
+  workbuddy_quota_alert_threshold: number;
 }
 
-export type QuickSettingsType = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro' | 'cursor' | 'gemini';
+export type QuickSettingsType =
+  | 'antigravity'
+  | 'codex'
+  | 'github_copilot'
+  | 'windsurf'
+  | 'kiro'
+  | 'cursor'
+  | 'gemini'
+  | 'codebuddy'
+  | 'codebuddy_cn'
+  | 'qoder'
+  | 'trae'
+  | 'workbuddy';
 
 type QuotaAlertEnabledKey =
   | 'quota_alert_enabled'
@@ -55,7 +99,12 @@ type QuotaAlertEnabledKey =
   | 'windsurf_quota_alert_enabled'
   | 'kiro_quota_alert_enabled'
   | 'cursor_quota_alert_enabled'
-  | 'gemini_quota_alert_enabled';
+  | 'gemini_quota_alert_enabled'
+  | 'codebuddy_quota_alert_enabled'
+  | 'codebuddy_cn_quota_alert_enabled'
+  | 'qoder_quota_alert_enabled'
+  | 'trae_quota_alert_enabled'
+  | 'workbuddy_quota_alert_enabled';
 type QuotaAlertThresholdKey =
   | 'quota_alert_threshold'
   | 'codex_quota_alert_threshold'
@@ -63,7 +112,17 @@ type QuotaAlertThresholdKey =
   | 'windsurf_quota_alert_threshold'
   | 'kiro_quota_alert_threshold'
   | 'cursor_quota_alert_threshold'
-  | 'gemini_quota_alert_threshold';
+  | 'gemini_quota_alert_threshold'
+  | 'codebuddy_quota_alert_threshold'
+  | 'codebuddy_cn_quota_alert_threshold'
+  | 'qoder_quota_alert_threshold'
+  | 'trae_quota_alert_threshold'
+  | 'workbuddy_quota_alert_threshold';
+type CodexWindowThresholdKey =
+  | 'codex_auto_switch_primary_threshold'
+  | 'codex_auto_switch_secondary_threshold'
+  | 'codex_quota_alert_primary_threshold'
+  | 'codex_quota_alert_secondary_threshold';
 
 interface QuickSettingsPopoverProps {
   type: QuickSettingsType;
@@ -75,12 +134,20 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const [config, setConfig] = useState<GeneralConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [pathDetecting, setPathDetecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [refreshEditing, setRefreshEditing] = useState(false);
   const [thresholdEditing, setThresholdEditing] = useState(false);
   const [quotaAlertThresholdEditing, setQuotaAlertThresholdEditing] = useState(false);
   const [customRefresh, setCustomRefresh] = useState('');
   const [customThreshold, setCustomThreshold] = useState('');
   const [quotaAlertCustomThreshold, setQuotaAlertCustomThreshold] = useState('');
+  const [codexAutoSwitchPrimaryCustomThreshold, setCodexAutoSwitchPrimaryCustomThreshold] = useState('');
+  const [codexAutoSwitchSecondaryCustomThreshold, setCodexAutoSwitchSecondaryCustomThreshold] = useState('');
+  const [codexQuotaAlertPrimaryCustomThreshold, setCodexQuotaAlertPrimaryCustomThreshold] = useState('');
+  const [codexQuotaAlertSecondaryCustomThreshold, setCodexQuotaAlertSecondaryCustomThreshold] = useState('');
+  const [codexShowCodeReviewQuota, setCodexShowCodeReviewQuota] = useState(
+    isCodexCodeReviewQuotaVisibleByDefault,
+  );
   const modalRef = useRef<HTMLDivElement>(null);
   const refreshPresets = ['-1', '2', '5', '10', '15'];
   const thresholdPresets = ['0', '20', '40', '60'];
@@ -89,6 +156,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   useEffect(() => {
     if (isOpen) {
       loadConfig();
+      setCodexShowCodeReviewQuota(isCodexCodeReviewQuotaVisibleByDefault());
     }
   }, [isOpen]);
 
@@ -124,6 +192,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
 
   const loadConfig = async () => {
     try {
+      setError(null);
       const cfg = await invoke<GeneralConfig>('get_general_config');
       setConfig(cfg);
       // 非预设值通过下拉中的动态选项展示，不默认进入输入态
@@ -133,8 +202,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       setCustomRefresh('');
       setCustomThreshold('');
       setQuotaAlertCustomThreshold('');
+      setCodexAutoSwitchPrimaryCustomThreshold(String(cfg.codex_auto_switch_primary_threshold));
+      setCodexAutoSwitchSecondaryCustomThreshold(String(cfg.codex_auto_switch_secondary_threshold));
+      setCodexQuotaAlertPrimaryCustomThreshold(String(cfg.codex_quota_alert_primary_threshold));
+      setCodexQuotaAlertSecondaryCustomThreshold(String(cfg.codex_quota_alert_secondary_threshold));
     } catch (err) {
       console.error('Failed to load config:', err);
+      setError(t('quickSettings.error.loadFailed', {
+        error: String(err),
+        defaultValue: '加载配置失败：{{error}}',
+      }));
     }
   };
 
@@ -147,6 +224,12 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'kiro': return 'kiro_auto_refresh_minutes';
       case 'cursor': return 'cursor_auto_refresh_minutes';
       case 'gemini': return 'gemini_auto_refresh_minutes';
+      case 'codebuddy': return 'codebuddy_auto_refresh_minutes';
+      case 'codebuddy_cn': return 'codebuddy_cn_auto_refresh_minutes';
+      case 'qoder': return 'qoder_auto_refresh_minutes';
+      case 'trae': return 'trae_auto_refresh_minutes';
+      case 'workbuddy': return 'workbuddy_auto_refresh_minutes';
+      default: return 'auto_refresh_minutes';
     }
   };
 
@@ -160,6 +243,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         await invoke('save_general_config', {
           language: merged.language,
           theme: merged.theme,
+          uiScale: merged.ui_scale,
           autoRefreshMinutes: merged.auto_refresh_minutes,
           codexAutoRefreshMinutes: merged.codex_auto_refresh_minutes,
           ghcpAutoRefreshMinutes: merged.ghcp_auto_refresh_minutes,
@@ -167,7 +251,13 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           kiroAutoRefreshMinutes: merged.kiro_auto_refresh_minutes,
           cursorAutoRefreshMinutes: merged.cursor_auto_refresh_minutes,
           geminiAutoRefreshMinutes: merged.gemini_auto_refresh_minutes,
+          codebuddyAutoRefreshMinutes: merged.codebuddy_auto_refresh_minutes,
+          codebuddyCnAutoRefreshMinutes: merged.codebuddy_cn_auto_refresh_minutes,
+          qoderAutoRefreshMinutes: merged.qoder_auto_refresh_minutes,
+          traeAutoRefreshMinutes: merged.trae_auto_refresh_minutes,
           closeBehavior: merged.close_behavior,
+          minimizeBehavior: merged.minimize_behavior,
+          hideDockIcon: merged.hide_dock_icon,
           opencodeAppPath: merged.opencode_app_path,
           antigravityAppPath: merged.antigravity_app_path,
           codexAppPath: merged.codex_app_path,
@@ -175,15 +265,25 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           windsurfAppPath: merged.windsurf_app_path,
           kiroAppPath: merged.kiro_app_path,
           cursorAppPath: merged.cursor_app_path,
+          codebuddyAppPath: merged.codebuddy_app_path,
+          codebuddyCnAppPath: merged.codebuddy_cn_app_path,
+          qoderAppPath: merged.qoder_app_path,
+          traeAppPath: merged.trae_app_path,
+          workbuddyAppPath: merged.workbuddy_app_path,
           opencodeSyncOnSwitch: merged.opencode_sync_on_switch,
           opencodeAuthOverwriteOnSwitch: merged.opencode_auth_overwrite_on_switch,
           codexLaunchOnSwitch: merged.codex_launch_on_switch,
           autoSwitchEnabled: merged.auto_switch_enabled,
           autoSwitchThreshold: merged.auto_switch_threshold,
+          codexAutoSwitchEnabled: merged.codex_auto_switch_enabled,
+          codexAutoSwitchPrimaryThreshold: merged.codex_auto_switch_primary_threshold,
+          codexAutoSwitchSecondaryThreshold: merged.codex_auto_switch_secondary_threshold,
           quotaAlertEnabled: merged.quota_alert_enabled,
           quotaAlertThreshold: merged.quota_alert_threshold,
           codexQuotaAlertEnabled: merged.codex_quota_alert_enabled,
           codexQuotaAlertThreshold: merged.codex_quota_alert_threshold,
+          codexQuotaAlertPrimaryThreshold: merged.codex_quota_alert_primary_threshold,
+          codexQuotaAlertSecondaryThreshold: merged.codex_quota_alert_secondary_threshold,
           ghcpQuotaAlertEnabled: merged.ghcp_quota_alert_enabled,
           ghcpQuotaAlertThreshold: merged.ghcp_quota_alert_threshold,
           windsurfQuotaAlertEnabled: merged.windsurf_quota_alert_enabled,
@@ -194,10 +294,22 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           cursorQuotaAlertThreshold: merged.cursor_quota_alert_threshold,
           geminiQuotaAlertEnabled: merged.gemini_quota_alert_enabled,
           geminiQuotaAlertThreshold: merged.gemini_quota_alert_threshold,
+          codebuddyQuotaAlertEnabled: merged.codebuddy_quota_alert_enabled,
+          codebuddyQuotaAlertThreshold: merged.codebuddy_quota_alert_threshold,
+          codebuddyCnQuotaAlertEnabled: merged.codebuddy_cn_quota_alert_enabled,
+          codebuddyCnQuotaAlertThreshold: merged.codebuddy_cn_quota_alert_threshold,
+          qoderQuotaAlertEnabled: merged.qoder_quota_alert_enabled,
+          qoderQuotaAlertThreshold: merged.qoder_quota_alert_threshold,
+          traeQuotaAlertEnabled: merged.trae_quota_alert_enabled,
+          traeQuotaAlertThreshold: merged.trae_quota_alert_threshold,
         });
         window.dispatchEvent(new Event('config-updated'));
       } catch (err) {
         console.error('Failed to save config:', err);
+        setError(t('quickSettings.error.saveFailed', {
+          error: String(err),
+          defaultValue: '保存配置失败：{{error}}',
+        }));
       } finally {
         setSaving(false);
       }
@@ -205,7 +317,20 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     [config, saving]
   );
 
-  const handlePickAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor') => {
+  const handlePickAppPath = async (
+    target:
+      | 'antigravity'
+      | 'codex'
+      | 'vscode'
+      | 'windsurf'
+      | 'kiro'
+      | 'cursor'
+      | 'codebuddy'
+      | 'codebuddy_cn'
+      | 'qoder'
+      | 'trae'
+      | 'workbuddy',
+  ) => {
     try {
       const selected = await open({ multiple: false, directory: false });
       const path = Array.isArray(selected) ? selected[0] : selected;
@@ -222,15 +347,42 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                 ? 'windsurf_app_path'
                 : target === 'cursor'
                   ? 'cursor_app_path'
-                  : 'kiro_app_path';
+                  : target === 'codebuddy'
+                    ? 'codebuddy_app_path'
+                    : target === 'codebuddy_cn'
+                      ? 'codebuddy_cn_app_path'
+                    : target === 'qoder'
+                      ? 'qoder_app_path'
+                    : target === 'trae'
+                      ? 'trae_app_path'
+                    : target === 'workbuddy'
+                      ? 'workbuddy_app_path'
+                      : 'kiro_app_path';
 
       saveConfig({ [key]: path });
     } catch (err) {
       console.error('Failed to pick path:', err);
+      setError(t('quickSettings.error.pickPathFailed', {
+        error: String(err),
+        defaultValue: '选择路径失败：{{error}}',
+      }));
     }
   };
 
-  const handleResetAppPath = async (target: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor') => {
+  const handleResetAppPath = async (
+    target:
+      | 'antigravity'
+      | 'codex'
+      | 'vscode'
+      | 'windsurf'
+      | 'kiro'
+      | 'cursor'
+      | 'codebuddy'
+      | 'codebuddy_cn'
+      | 'qoder'
+      | 'trae'
+      | 'workbuddy',
+  ) => {
     if (pathDetecting) return;
     setPathDetecting(true);
     try {
@@ -247,32 +399,59 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                 ? 'windsurf_app_path'
                 : target === 'cursor'
                   ? 'cursor_app_path'
-                  : 'kiro_app_path';
+                  : target === 'codebuddy'
+                    ? 'codebuddy_app_path'
+                    : target === 'codebuddy_cn'
+                      ? 'codebuddy_cn_app_path'
+                    : target === 'qoder'
+                      ? 'qoder_app_path'
+                    : target === 'trae'
+                      ? 'trae_app_path'
+                    : target === 'workbuddy'
+                      ? 'workbuddy_app_path'
+                      : 'kiro_app_path';
       saveConfig({ [key]: path });
     } catch (err) {
       console.error('Failed to reset path:', err);
+      setError(t('quickSettings.error.resetPathFailed', {
+        error: String(err),
+        defaultValue: '重置路径失败：{{error}}',
+      }));
     } finally {
       setPathDetecting(false);
     }
   };
 
   const getTitle = () => {
-    switch (type) {
-      case 'antigravity':
-        return t('quickSettings.antigravity.title', 'Antigravity 设置');
-      case 'codex':
-        return t('quickSettings.codex.title', 'Codex 设置');
-      case 'github_copilot':
-        return t('quickSettings.githubCopilot.title', 'GitHub Copilot 设置');
-      case 'windsurf':
-        return t('quickSettings.windsurf.title', 'Windsurf 设置');
-      case 'kiro':
-        return t('quickSettings.kiro.title', 'Kiro 设置');
-      case 'cursor':
-        return t('quickSettings.cursor.title', 'Cursor 设置');
-      case 'gemini':
-        return t('quickSettings.gemini.title', 'Gemini 设置');
-    }
+    const platformLabel = (() => {
+      switch (type) {
+        case 'antigravity':
+          return 'Antigravity';
+        case 'codex':
+          return 'Codex';
+        case 'github_copilot':
+          return 'GitHub Copilot';
+        case 'windsurf':
+          return 'Windsurf';
+        case 'kiro':
+          return 'Kiro';
+        case 'cursor':
+          return 'Cursor';
+        case 'gemini':
+          return 'Gemini Cli';
+        case 'codebuddy':
+          return 'CodeBuddy';
+        case 'codebuddy_cn':
+          return 'CodeBuddy CN';
+        case 'qoder':
+          return 'Qoder';
+        case 'trae':
+          return 'Trae';
+        case 'workbuddy':
+          return 'Workbuddy';
+      }
+    })();
+    return `${platformLabel} ${t('nav.settings', '设置')}`;
   };
 
   const getRefreshKey = (): keyof GeneralConfig => {
@@ -293,6 +472,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'cursor_quota_alert_enabled';
       case 'gemini':
         return 'gemini_quota_alert_enabled';
+      case 'codebuddy':
+        return 'codebuddy_quota_alert_enabled';
+      case 'codebuddy_cn':
+        return 'codebuddy_cn_quota_alert_enabled';
+      case 'qoder':
+        return 'qoder_quota_alert_enabled';
+      case 'trae':
+        return 'trae_quota_alert_enabled';
+      case 'workbuddy':
+        return 'workbuddy_quota_alert_enabled';
       default:
         return 'quota_alert_enabled';
     }
@@ -312,6 +501,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'cursor_quota_alert_threshold';
       case 'gemini':
         return 'gemini_quota_alert_threshold';
+      case 'codebuddy':
+        return 'codebuddy_quota_alert_threshold';
+      case 'codebuddy_cn':
+        return 'codebuddy_cn_quota_alert_threshold';
+      case 'qoder':
+        return 'qoder_quota_alert_threshold';
+      case 'trae':
+        return 'trae_quota_alert_threshold';
+      case 'workbuddy':
+        return 'workbuddy_quota_alert_threshold';
       default:
         return 'quota_alert_threshold';
     }
@@ -333,6 +532,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.cursorRefreshInterval', '配额自动刷新');
       case 'gemini':
         return t('quickSettings.geminiRefreshInterval', '配额自动刷新');
+      case 'codebuddy':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
+      case 'codebuddy_cn':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
+      case 'qoder':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
+      case 'trae':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
+      case 'workbuddy':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
     }
   };
 
@@ -355,6 +564,18 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return config.cursor_app_path;
       case 'gemini':
         return '';
+      case 'codebuddy':
+        return config.codebuddy_app_path;
+      case 'codebuddy_cn':
+        return config.codebuddy_cn_app_path;
+      case 'qoder':
+        return config.qoder_app_path;
+      case 'trae':
+        return config.trae_app_path;
+      case 'workbuddy':
+        return config.workbuddy_app_path;
+      default:
+        return '';
     }
   };
 
@@ -373,11 +594,32 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'cursor':
         return t('quickSettings.cursor.appPath', 'Cursor 路径');
       case 'gemini':
-        return t('quickSettings.gemini.appPath', 'Gemini CLI 路径');
+        return t('quickSettings.gemini.appPath', 'Gemini Cli 路径');
+      case 'codebuddy':
+        return t('quickSettings.codebuddy.appPath', 'CodeBuddy 路径');
+      case 'codebuddy_cn':
+        return t('quickSettings.codebuddyCn.appPath', 'CodeBuddy CN 路径');
+      case 'qoder':
+        return t('quickSettings.qoder.appPath', 'Qoder 路径');
+      case 'trae':
+        return t('quickSettings.trae.appPath', 'Trae 路径');
+      case 'workbuddy':
+        return t('quickSettings.workbuddy.appPath', 'Workbuddy 路径');
     }
   };
 
-  const getAppTarget = (): 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor' => {
+  const getAppTarget = ():
+    | 'antigravity'
+    | 'codex'
+    | 'vscode'
+    | 'windsurf'
+    | 'kiro'
+    | 'cursor'
+    | 'codebuddy'
+    | 'codebuddy_cn'
+    | 'qoder'
+    | 'trae'
+    | 'workbuddy' => {
     switch (type) {
       case 'antigravity':
         return 'antigravity';
@@ -393,6 +635,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'cursor';
       case 'gemini':
         return 'antigravity';
+      case 'codebuddy':
+        return 'codebuddy';
+      case 'codebuddy_cn':
+        return 'codebuddy_cn';
+      case 'qoder':
+        return 'qoder';
+      case 'trae':
+        return 'trae';
+      case 'workbuddy':
+        return 'workbuddy';
     }
   };
 
@@ -408,6 +660,18 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const quotaAlertThresholdValue = config ? Number(config[quotaAlertThresholdKey]) : 20;
   const isQuotaAlertThresholdPreset = thresholdPresets.includes(String(quotaAlertThresholdValue));
   const showQuotaAlertThresholdInput = quotaAlertThresholdEditing;
+  const codexAutoSwitchPrimaryThresholdValue = config
+    ? Number(config.codex_auto_switch_primary_threshold)
+    : 20;
+  const codexAutoSwitchSecondaryThresholdValue = config
+    ? Number(config.codex_auto_switch_secondary_threshold)
+    : 20;
+  const codexQuotaAlertPrimaryThresholdValue = config
+    ? Number(config.codex_quota_alert_primary_threshold)
+    : 20;
+  const codexQuotaAlertSecondaryThresholdValue = config
+    ? Number(config.codex_quota_alert_secondary_threshold)
+    : 20;
 
   const handleRefreshSelectChange = (val: string) => {
     if (val === 'custom') {
@@ -478,84 +742,227 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     setQuotaAlertThresholdEditing(false);
   };
 
-  /** 共用的配额预警 enable + threshold 控件 */
-  const renderQuotaAlertControls = () => (
-    <>
-      <div className="qs-row" style={{ marginTop: type === 'antigravity' ? 10 : 0 }}>
-        <div className="qs-row-label">
-          <span>{t('quickSettings.quotaAlert.enable', '超额预警')}</span>
-        </div>
-        <div className="qs-row-control">
-          <label className="qs-switch">
-            <input
-              type="checkbox"
-              checked={quotaAlertEnabledValue}
-              onChange={(e) =>
-                saveConfig({ [quotaAlertEnabledKey]: e.target.checked } as Partial<GeneralConfig>)
-              }
-            />
-            <span className="qs-switch-slider"></span>
-          </label>
-        </div>
-      </div>
+  const handleCodexWindowThresholdInputChange = (
+    rawValue: string,
+    setCustomValue: (value: string) => void,
+  ) => {
+    setCustomValue(rawValue.replace(/[^\d]/g, '').slice(0, 3));
+  };
 
-      {quotaAlertEnabledValue && (
-        <div className="qs-field-group" style={{ animation: 'qsFadeUp 0.2s ease both' }}>
-          <div className="qs-row">
-            <div className="qs-row-label">
-              <span>{t('quickSettings.quotaAlert.threshold', '预警阈值')}</span>
-            </div>
-            <div className="qs-row-control">
-              {showQuotaAlertThresholdInput ? (
-                <div className="qs-inline-input">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="qs-select qs-select--input-mode qs-select--with-unit"
-                    value={quotaAlertCustomThreshold}
-                    placeholder={t('quickSettings.inputPercent', '输入百分比')}
-                    onChange={(e) => setQuotaAlertCustomThreshold(e.target.value.replace(/[^\d]/g, ''))}
-                    onBlur={handleQuotaAlertCustomThresholdApply}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleQuotaAlertCustomThresholdApply();
-                      }
-                    }}
-                  />
-                  <span className="qs-input-unit">%</span>
+  const handleCodexWindowCustomThresholdApply = (
+    customValue: string,
+    setCustomValue: (value: string) => void,
+    key: CodexWindowThresholdKey,
+    fallbackValue: number,
+  ) => {
+    const parsed = parseInt(customValue, 10);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+      saveConfig({ [key]: parsed } as Partial<GeneralConfig>);
+      setCustomValue(String(parsed));
+      return;
+    }
+    setCustomValue(String(fallbackValue));
+  };
+
+  /** 共用的配额预警 enable + threshold 控件 */
+  const renderQuotaAlertControls = () => {
+    const isCodexAlert = type === 'codex';
+    return (
+      <>
+        <div className="qs-row" style={{ marginTop: type === 'antigravity' ? 10 : 0 }}>
+          <div className="qs-row-label">
+            <span>{t('quickSettings.quotaAlert.enable', '超额预警')}</span>
+          </div>
+          <div className="qs-row-control">
+            <label className="qs-switch">
+              <input
+                type="checkbox"
+                checked={quotaAlertEnabledValue}
+                onChange={(e) =>
+                  saveConfig({ [quotaAlertEnabledKey]: e.target.checked } as Partial<GeneralConfig>)
+                }
+              />
+              <span className="qs-switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        {quotaAlertEnabledValue && (
+          <div className="qs-field-group" style={{ animation: 'qsFadeUp 0.2s ease both' }}>
+            {isCodexAlert ? (
+              <>
+                <div className="qs-row">
+                  <div className="qs-row-label">
+                    <span>
+                      primary_window ({t('codex.quota.hourly', '5小时配额')}) {t('quickSettings.quotaAlert.threshold', '预警阈值')}
+                    </span>
+                  </div>
+                  <div className="qs-row-control">
+                    <div className="qs-inline-input">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="qs-select qs-select--input-mode qs-select--with-unit"
+                        value={codexQuotaAlertPrimaryCustomThreshold}
+                        placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                        onChange={(e) =>
+                          handleCodexWindowThresholdInputChange(
+                            e.target.value,
+                            setCodexQuotaAlertPrimaryCustomThreshold,
+                          )
+                        }
+                        onBlur={() =>
+                          handleCodexWindowCustomThresholdApply(
+                            codexQuotaAlertPrimaryCustomThreshold,
+                            setCodexQuotaAlertPrimaryCustomThreshold,
+                            'codex_quota_alert_primary_threshold',
+                            codexQuotaAlertPrimaryThresholdValue,
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCodexWindowCustomThresholdApply(
+                              codexQuotaAlertPrimaryCustomThreshold,
+                              setCodexQuotaAlertPrimaryCustomThreshold,
+                              'codex_quota_alert_primary_threshold',
+                              codexQuotaAlertPrimaryThresholdValue,
+                            );
+                          }
+                        }}
+                      />
+                      <span className="qs-input-unit">%</span>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <select
-                  className="qs-select"
-                  value={String(quotaAlertThresholdValue)}
-                  onChange={(e) => handleQuotaAlertThresholdSelectChange(e.target.value)}
-                >
-                  {!isQuotaAlertThresholdPreset && (
-                    <option value={String(quotaAlertThresholdValue)}>
-                      {quotaAlertThresholdValue}%
-                    </option>
+
+                <div className="qs-hint" style={{ marginTop: 0, marginBottom: 4 }}>
+                  {t('quickSettings.codexWindow.orDivider', 'OR（命中任一即触发）')}
+                </div>
+
+                <div className="qs-row">
+                  <div className="qs-row-label">
+                    <span>
+                      secondary_window ({t('codex.quota.weekly', '周配额')}) {t('quickSettings.quotaAlert.threshold', '预警阈值')}
+                    </span>
+                  </div>
+                  <div className="qs-row-control">
+                    <div className="qs-inline-input">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="qs-select qs-select--input-mode qs-select--with-unit"
+                        value={codexQuotaAlertSecondaryCustomThreshold}
+                        placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                        onChange={(e) =>
+                          handleCodexWindowThresholdInputChange(
+                            e.target.value,
+                            setCodexQuotaAlertSecondaryCustomThreshold,
+                          )
+                        }
+                        onBlur={() =>
+                          handleCodexWindowCustomThresholdApply(
+                            codexQuotaAlertSecondaryCustomThreshold,
+                            setCodexQuotaAlertSecondaryCustomThreshold,
+                            'codex_quota_alert_secondary_threshold',
+                            codexQuotaAlertSecondaryThresholdValue,
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCodexWindowCustomThresholdApply(
+                              codexQuotaAlertSecondaryCustomThreshold,
+                              setCodexQuotaAlertSecondaryCustomThreshold,
+                              'codex_quota_alert_secondary_threshold',
+                              codexQuotaAlertSecondaryThresholdValue,
+                            );
+                          }
+                        }}
+                      />
+                      <span className="qs-input-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="qs-row">
+                <div className="qs-row-label">
+                  <span>{t('quickSettings.quotaAlert.threshold', '预警阈值')}</span>
+                </div>
+                <div className="qs-row-control">
+                  {showQuotaAlertThresholdInput ? (
+                    <div className="qs-inline-input">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="qs-select qs-select--input-mode qs-select--with-unit"
+                        value={quotaAlertCustomThreshold}
+                        placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                        onChange={(e) => setQuotaAlertCustomThreshold(e.target.value.replace(/[^\d]/g, ''))}
+                        onBlur={handleQuotaAlertCustomThresholdApply}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleQuotaAlertCustomThresholdApply();
+                          }
+                        }}
+                      />
+                      <span className="qs-input-unit">%</span>
+                    </div>
+                  ) : (
+                    <select
+                      className="qs-select"
+                      value={String(quotaAlertThresholdValue)}
+                      onChange={(e) => handleQuotaAlertThresholdSelectChange(e.target.value)}
+                    >
+                      {!isQuotaAlertThresholdPreset && (
+                        <option value={String(quotaAlertThresholdValue)}>
+                          {quotaAlertThresholdValue}%
+                        </option>
+                      )}
+                      <option value="0">0%</option>
+                      <option value="20">20%</option>
+                      <option value="40">40%</option>
+                      <option value="60">60%</option>
+                      <option value="custom">{t('quickSettings.customInput', '自定义')}</option>
+                    </select>
                   )}
-                  <option value="0">0%</option>
-                  <option value="20">20%</option>
-                  <option value="40">40%</option>
-                  <option value="60">60%</option>
-                  <option value="custom">{t('quickSettings.customInput', '自定义')}</option>
-                </select>
+                </div>
+              </div>
+            )}
+            <div className="qs-hint" style={{ marginTop: 6 }}>
+              {t(
+                'quickSettings.quotaAlert.hint',
+                '当当前账号任意模型配额低于阈值时，发送原生通知并在页面提示快捷切号。'
+              )}
+              {isCodexAlert && (
+                <>
+                  <div>
+                    {t(
+                      'quickSettings.codexWindow.primaryWindowMeaning',
+                      'primary_window 一般指 5 小时配额；免费用户下 primary_window 可能对应周配额，不同订阅可能不同。'
+                    )}
+                  </div>
+                  <div>
+                    {`primary_window <= ${codexQuotaAlertPrimaryThresholdValue}% OR secondary_window <= ${codexQuotaAlertSecondaryThresholdValue}%`}
+                  </div>
+                </>
               )}
             </div>
           </div>
-          <div className="qs-hint" style={{ marginTop: 6 }}>
-            {t(
-              'quickSettings.quotaAlert.hint',
-              '当当前账号任意模型配额低于阈值时，发送原生通知并在页面提示快捷切号。'
-            )}
-          </div>
-        </div>
-      )}
-    </>
-  );
+        )}
+      </>
+    );
+  };
+
+  const handleCodexCodeReviewQuotaToggle = (checked: boolean) => {
+    setCodexShowCodeReviewQuota(checked);
+    persistCodexCodeReviewQuotaVisible(checked);
+  };
 
   const overlayContent = isOpen ? (
     <div className="qs-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
@@ -566,6 +973,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
             <X size={16} />
           </button>
         </div>
+
+        {/* 错误提示 */}
+        {error && (
+          <div className="qs-error">
+            {error}
+            <button className="qs-error-close" onClick={() => setError(null)} aria-label={t('common.close')}>
+              <X size={12} />
+            </button>
+          </div>
+        )}
 
         {config && (
           <div className="qs-body">
@@ -640,9 +1057,17 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                             : type === 'github_copilot'
                               ? 'vscode_app_path'
                               : type === 'windsurf'
-                                ? 'windsurf_app_path'
+                              ? 'windsurf_app_path'
                                 : type === 'cursor'
                                   ? 'cursor_app_path'
+                                  : type === 'codebuddy'
+                                    ? 'codebuddy_app_path'
+                                    : type === 'codebuddy_cn'
+                                      ? 'codebuddy_cn_app_path'
+                                    : type === 'qoder'
+                                      ? 'qoder_app_path'
+                                    : type === 'trae'
+                                      ? 'trae_app_path'
                                   : 'kiro_app_path';
                       saveConfig({ [key]: e.target.value });
                     }}
@@ -738,6 +1163,161 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                       <span className="qs-switch-slider"></span>
                     </label>
                   </div>
+                </div>
+
+                <div className="qs-row">
+                  <div className="qs-row-label">
+                    <Zap size={15} />
+                    <span>{t('codex.list.showCodeReviewQuota', '显示 Code Review 配额')}</span>
+                  </div>
+                  <div className="qs-row-control">
+                    <label className="qs-switch">
+                      <input
+                        type="checkbox"
+                        checked={codexShowCodeReviewQuota}
+                        onChange={(e) => handleCodexCodeReviewQuotaToggle(e.target.checked)}
+                      />
+                      <span className="qs-switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  className="qs-field-group"
+                  style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--border-light)' }}
+                >
+                  <div className="qs-row">
+                    <div className="qs-row-label">
+                      <Zap size={15} />
+                      <span>{t('quickSettings.autoSwitch.enable', '启用自动切号')}</span>
+                    </div>
+                    <div className="qs-row-control">
+                      <label className="qs-switch">
+                        <input
+                          type="checkbox"
+                          checked={config.codex_auto_switch_enabled}
+                          onChange={(e) => saveConfig({ codex_auto_switch_enabled: e.target.checked })}
+                        />
+                        <span className="qs-switch-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {config.codex_auto_switch_enabled && (
+                    <div className="qs-field-group" style={{ animation: 'qsFadeUp 0.2s ease both' }}>
+                      <div className="qs-row">
+                        <div className="qs-row-label">
+                          <span>
+                            primary_window ({t('codex.quota.hourly', '5小时配额')}) {t('quickSettings.autoSwitch.threshold', '切号阈值')}
+                          </span>
+                        </div>
+                        <div className="qs-row-control">
+                          <div className="qs-inline-input">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="qs-select qs-select--input-mode qs-select--with-unit"
+                              value={codexAutoSwitchPrimaryCustomThreshold}
+                              placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                              onChange={(e) =>
+                                handleCodexWindowThresholdInputChange(
+                                  e.target.value,
+                                  setCodexAutoSwitchPrimaryCustomThreshold,
+                                )
+                              }
+                              onBlur={() =>
+                                handleCodexWindowCustomThresholdApply(
+                                  codexAutoSwitchPrimaryCustomThreshold,
+                                  setCodexAutoSwitchPrimaryCustomThreshold,
+                                  'codex_auto_switch_primary_threshold',
+                                  codexAutoSwitchPrimaryThresholdValue,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleCodexWindowCustomThresholdApply(
+                                    codexAutoSwitchPrimaryCustomThreshold,
+                                    setCodexAutoSwitchPrimaryCustomThreshold,
+                                    'codex_auto_switch_primary_threshold',
+                                    codexAutoSwitchPrimaryThresholdValue,
+                                  );
+                                }
+                              }}
+                            />
+                            <span className="qs-input-unit">%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="qs-hint" style={{ marginTop: 0, marginBottom: 4 }}>
+                        {t('quickSettings.codexWindow.orDivider', 'OR（命中任一即触发）')}
+                      </div>
+
+                      <div className="qs-row">
+                        <div className="qs-row-label">
+                          <span>
+                            secondary_window ({t('codex.quota.weekly', '周配额')}) {t('quickSettings.autoSwitch.threshold', '切号阈值')}
+                          </span>
+                        </div>
+                        <div className="qs-row-control">
+                          <div className="qs-inline-input">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="qs-select qs-select--input-mode qs-select--with-unit"
+                              value={codexAutoSwitchSecondaryCustomThreshold}
+                              placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                              onChange={(e) =>
+                                handleCodexWindowThresholdInputChange(
+                                  e.target.value,
+                                  setCodexAutoSwitchSecondaryCustomThreshold,
+                                )
+                              }
+                              onBlur={() =>
+                                handleCodexWindowCustomThresholdApply(
+                                  codexAutoSwitchSecondaryCustomThreshold,
+                                  setCodexAutoSwitchSecondaryCustomThreshold,
+                                  'codex_auto_switch_secondary_threshold',
+                                  codexAutoSwitchSecondaryThresholdValue,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleCodexWindowCustomThresholdApply(
+                                    codexAutoSwitchSecondaryCustomThreshold,
+                                    setCodexAutoSwitchSecondaryCustomThreshold,
+                                    'codex_auto_switch_secondary_threshold',
+                                    codexAutoSwitchSecondaryThresholdValue,
+                                  );
+                                }
+                              }}
+                            />
+                            <span className="qs-input-unit">%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="qs-hint">
+                        {t(
+                          'quickSettings.autoSwitch.hint',
+                          '当任意模型配额低于阈值时，自动切换到配额最高的账号。'
+                        )}
+                        <div>
+                          {t(
+                            'quickSettings.codexWindow.primaryWindowMeaning',
+                            'primary_window 一般指 5 小时配额；免费用户下 primary_window 可能对应周配额，不同订阅可能不同。'
+                          )}
+                        </div>
+                        <div>
+                          {`primary_window <= ${codexAutoSwitchPrimaryThresholdValue}% OR secondary_window <= ${codexAutoSwitchSecondaryThresholdValue}%`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

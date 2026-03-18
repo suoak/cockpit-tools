@@ -7,10 +7,53 @@ import { useWindsurfAccountStore } from '../stores/useWindsurfAccountStore';
 import { useKiroAccountStore } from '../stores/useKiroAccountStore';
 import { useCursorAccountStore } from '../stores/useCursorAccountStore';
 import { useGeminiAccountStore } from '../stores/useGeminiAccountStore';
-import { usePlatformLayoutStore } from '../stores/usePlatformLayoutStore';
+import { useCodebuddyAccountStore } from '../stores/useCodebuddyAccountStore';
+import { useCodebuddyCnAccountStore } from '../stores/useCodebuddyCnAccountStore';
+import { useQoderAccountStore } from '../stores/useQoderAccountStore';
+import { useTraeAccountStore } from '../stores/useTraeAccountStore';
+import { useWorkbuddyAccountStore } from '../stores/useWorkbuddyAccountStore';
+import {
+  parseGroupEntryId,
+  PlatformLayoutEntryId,
+  resolveEntryDefaultPlatformId,
+  resolveEntryPlatformIds,
+  resolveGroupChildName,
+  usePlatformLayoutStore,
+} from '../stores/usePlatformLayoutStore';
 import { Page } from '../types/navigation';
 import { Users, CheckCircle2, Sparkles, RotateCw, Play, Github, HelpCircle } from 'lucide-react';
 import { Account } from '../types/account';
+import {
+  CodebuddyAccount,
+  getCodebuddyAccountDisplayEmail,
+  getCodebuddyPlanBadge,
+  getCodebuddyPlanBadgeClass,
+  getCodebuddyResourceSummary,
+  getCodebuddyExtraCreditSummary,
+  getCodebuddyUsage,
+  getCodebuddyQuotaDisplayItems,
+  getCodebuddyOfficialQuotaModel,
+} from '../types/codebuddy';
+import {
+  QoderAccount,
+  getQoderAccountDisplayEmail,
+  getQoderPlanBadge,
+  getQoderSubscriptionInfo,
+} from '../types/qoder';
+import {
+  TraeAccount,
+  getTraeAccountDisplayEmail,
+  getTraePlanBadge,
+  getTraePlanBadgeClass,
+  getTraeUsage,
+} from '../types/trae';
+import {
+  WorkbuddyAccount,
+  getWorkbuddyAccountDisplayEmail,
+  getWorkbuddyPlanBadge,
+  getWorkbuddyQuotaDisplayItems,
+  getWorkbuddyOfficialQuotaModel,
+} from '../types/workbuddy';
 import { CodexAccount } from '../types/codex';
 import { GitHubCopilotAccount } from '../types/githubCopilot';
 import {
@@ -37,6 +80,10 @@ import { WindsurfIcon } from '../components/icons/WindsurfIcon';
 import { KiroIcon } from '../components/icons/KiroIcon';
 import { CursorIcon } from '../components/icons/CursorIcon';
 import { GeminiIcon } from '../components/icons/GeminiIcon';
+import { CodebuddyIcon } from '../components/icons/CodebuddyIcon';
+import { QoderIcon } from '../components/icons/QoderIcon';
+import { TraeIcon } from '../components/icons/TraeIcon';
+import { WorkbuddyIcon } from '../components/icons/WorkbuddyIcon';
 import { PlatformId, PLATFORM_PAGE_MAP } from '../types/platform';
 import { getPlatformLabel, renderPlatformIcon } from '../utils/platformMeta';
 import { isPrivacyModeEnabledByDefault, maskSensitiveValue } from '../utils/privacy';
@@ -61,7 +108,14 @@ const WINDSURF_CURRENT_ACCOUNT_ID_KEY = 'agtools.windsurf.current_account_id';
 const KIRO_CURRENT_ACCOUNT_ID_KEY = 'agtools.kiro.current_account_id';
 const CURSOR_CURRENT_ACCOUNT_ID_KEY = 'agtools.cursor.current_account_id';
 const GEMINI_CURRENT_ACCOUNT_ID_KEY = 'agtools.gemini.current_account_id';
+const CODEBUDDY_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddy.current_account_id';
+const CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddycn.current_account_id';
+const QODER_CURRENT_ACCOUNT_ID_KEY = 'agtools.qoder.current_account_id';
+const TRAE_CURRENT_ACCOUNT_ID_KEY = 'agtools.trae.current_account_id';
+const WORKBUDDY_CURRENT_ACCOUNT_ID_KEY = 'agtools.workbuddy.current_account_id';
 const DASHBOARD_DEFERRED_PREFETCH_DELAY_MS = 1200;
+const DASHBOARD_DEFERRED_PREFETCH_BATCH_SIZE = 3;
+const DASHBOARD_DEFERRED_PREFETCH_BATCH_DELAY_MS = 250;
 let dashboardStartupPrefetched = false;
 
 function toFiniteNumber(value: number | null | undefined): number | null {
@@ -69,11 +123,21 @@ function toFiniteNumber(value: number | null | undefined): number | null {
 }
 
 export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTriggerClick }: DashboardPageProps) {
-  const { t } = useTranslation();
-  const { orderedPlatformIds, hiddenPlatformIds } = usePlatformLayoutStore();
+  const { t, i18n } = useTranslation();
+  // 类型适配器，将 i18next 的 t 函数转换为简单的 (key, defaultValue?) => string 签名
+  const tSimple = (key: string, defaultValue?: string) => t(key, defaultValue ?? key);
+  const { orderedEntryIds, hiddenEntryIds, platformGroups } = usePlatformLayoutStore();
+  const hiddenEntrySet = useMemo(() => new Set(hiddenEntryIds), [hiddenEntryIds]);
+  const visibleEntryOrder = useMemo(
+    () => orderedEntryIds.filter((entryId) => !hiddenEntrySet.has(entryId)),
+    [orderedEntryIds, hiddenEntrySet],
+  );
   const visiblePlatformOrder = useMemo(
-    () => orderedPlatformIds.filter((platformId) => !hiddenPlatformIds.includes(platformId)),
-    [orderedPlatformIds, hiddenPlatformIds],
+    () =>
+      visibleEntryOrder
+        .map((entryId) => resolveEntryDefaultPlatformId(entryId, platformGroups))
+        .filter((platformId): platformId is PlatformId => !!platformId),
+    [visibleEntryOrder, platformGroups],
   );
   const [privacyModeEnabled, setPrivacyModeEnabled] = React.useState<boolean>(() =>
     isPrivacyModeEnabledByDefault()
@@ -159,6 +223,36 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     switchAccount: switchGeminiAccount,
   } = useGeminiAccountStore();
 
+  const {
+    accounts: codebuddyAccounts,
+    fetchAccounts: fetchCodebuddyAccounts,
+    switchAccount: switchCodebuddyAccount,
+  } = useCodebuddyAccountStore();
+
+  const {
+    accounts: codebuddyCnAccounts,
+    fetchAccounts: fetchCodebuddyCnAccounts,
+    switchAccount: switchCodebuddyCnAccount,
+  } = useCodebuddyCnAccountStore();
+
+  const {
+    accounts: qoderAccounts,
+    fetchAccounts: fetchQoderAccounts,
+    switchAccount: switchQoderAccount,
+  } = useQoderAccountStore();
+
+  const {
+    accounts: traeAccounts,
+    fetchAccounts: fetchTraeAccounts,
+    switchAccount: switchTraeAccount,
+  } = useTraeAccountStore();
+
+  const {
+    accounts: workbuddyAccounts,
+    fetchAccounts: fetchWorkbuddyAccounts,
+    switchAccount: switchWorkbuddyAccount,
+  } = useWorkbuddyAccountStore();
+
   const agCurrentId = agCurrent?.id;
   const codexCurrentId = codexCurrent?.id;
 
@@ -175,6 +269,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
   React.useEffect(() => {
     let disposed = false;
     let deferredTimer: number | null = null;
+    let deferredBatchTimer: number | null = null;
 
     const loadDisplayGroups = () => {
       getDisplayGroups()
@@ -192,19 +287,46 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     void Promise.allSettled([fetchAgAccounts(), fetchAgCurrent()]);
     loadDisplayGroups();
 
+    const deferredTasks: Array<() => Promise<unknown>> = [
+      fetchCodexAccounts,
+      fetchCodexCurrent,
+      fetchGitHubCopilotAccounts,
+      fetchWindsurfAccounts,
+      fetchKiroAccounts,
+      fetchCursorAccounts,
+      fetchGeminiAccounts,
+      fetchCodebuddyAccounts,
+      fetchCodebuddyCnAccounts,
+      fetchQoderAccounts,
+      fetchTraeAccounts,
+      fetchWorkbuddyAccounts,
+    ];
+
     const loadDeferredPlatforms = () => {
       if (disposed) {
         return;
       }
-      void Promise.allSettled([
-        fetchCodexAccounts(),
-        fetchCodexCurrent(),
-        fetchGitHubCopilotAccounts(),
-        fetchWindsurfAccounts(),
-        fetchKiroAccounts(),
-        fetchCursorAccounts(),
-        fetchGeminiAccounts(),
-      ]);
+
+      let nextTaskIndex = 0;
+      const runNextBatch = () => {
+        if (disposed || nextTaskIndex >= deferredTasks.length) {
+          return;
+        }
+
+        const batch = deferredTasks.slice(
+          nextTaskIndex,
+          nextTaskIndex + DASHBOARD_DEFERRED_PREFETCH_BATCH_SIZE,
+        );
+        nextTaskIndex += batch.length;
+
+        void Promise.allSettled(batch.map((task) => task()));
+
+        if (nextTaskIndex < deferredTasks.length) {
+          deferredBatchTimer = window.setTimeout(runNextBatch, DASHBOARD_DEFERRED_PREFETCH_BATCH_DELAY_MS);
+        }
+      };
+
+      runNextBatch();
     };
 
     if (!dashboardStartupPrefetched) {
@@ -219,6 +341,9 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       if (deferredTimer !== null) {
         window.clearTimeout(deferredTimer);
       }
+      if (deferredBatchTimer !== null) {
+        window.clearTimeout(deferredBatchTimer);
+      }
     };
   }, []);
 
@@ -232,7 +357,12 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
         windsurfAccounts.length +
         kiroAccounts.length +
         cursorAccounts.length +
-        geminiAccounts.length,
+        geminiAccounts.length +
+        codebuddyAccounts.length +
+        codebuddyCnAccounts.length +
+        qoderAccounts.length +
+        traeAccounts.length +
+        workbuddyAccounts.length,
       antigravity: agAccounts.length,
       codex: codexAccounts.length,
       githubCopilot: githubCopilotAccounts.length,
@@ -240,8 +370,13 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       kiro: kiroAccounts.length,
       cursor: cursorAccounts.length,
       gemini: geminiAccounts.length,
+      codebuddy: codebuddyAccounts.length,
+      codebuddy_cn: codebuddyCnAccounts.length,
+      qoder: qoderAccounts.length,
+      trae: traeAccounts.length,
+      workbuddy: workbuddyAccounts.length,
     };
-  }, [agAccounts, codexAccounts, githubCopilotAccounts, windsurfAccounts, kiroAccounts, cursorAccounts, geminiAccounts]);
+  }, [agAccounts, codexAccounts, githubCopilotAccounts, windsurfAccounts, kiroAccounts, cursorAccounts, geminiAccounts, codebuddyAccounts, codebuddyCnAccounts, qoderAccounts, traeAccounts, workbuddyAccounts]);
 
   // Refresh States
   const [refreshing, setRefreshing] = React.useState<Set<string>>(new Set());
@@ -281,6 +416,41 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       return null;
     }
   });
+  const [codebuddyCurrentId, setCodebuddyCurrentId] = React.useState<string | null>(() => {
+    try {
+      return localStorage.getItem(CODEBUDDY_CURRENT_ACCOUNT_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [codebuddyCnCurrentId, setCodebuddyCnCurrentId] = React.useState<string | null>(() => {
+    try {
+      return localStorage.getItem(CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [qoderCurrentId, setQoderCurrentId] = React.useState<string | null>(() => {
+    try {
+      return localStorage.getItem(QODER_CURRENT_ACCOUNT_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [traeCurrentId, setTraeCurrentId] = React.useState<string | null>(() => {
+    try {
+      return localStorage.getItem(TRAE_CURRENT_ACCOUNT_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [workbuddyCurrentId, setWorkbuddyCurrentId] = React.useState<string | null>(() => {
+    try {
+      return localStorage.getItem(WORKBUDDY_CURRENT_ACCOUNT_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
   const [cardRefreshing, setCardRefreshing] = React.useState<{
     ag: boolean;
     codex: boolean;
@@ -289,6 +459,11 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     kiro: boolean;
     cursor: boolean;
     gemini: boolean;
+    codebuddy: boolean;
+    codebuddyCn: boolean;
+    qoder: boolean;
+    trae: boolean;
+    workbuddy: boolean;
   }>({
     ag: false,
     codex: false,
@@ -297,6 +472,11 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     kiro: false,
     cursor: false,
     gemini: false,
+    codebuddy: false,
+    codebuddyCn: false,
+    qoder: false,
+    trae: false,
+    workbuddy: false,
   });
 
   // Refresh Handlers
@@ -607,6 +787,251 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     }
   };
 
+  const handleRefreshCodebuddy = async (accountId: string) => {
+    if (refreshing.has(accountId)) return;
+    setRefreshing((prev) => new Set(prev).add(accountId));
+    try {
+      await useCodebuddyAccountStore.getState().refreshToken(accountId);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleRefreshCodebuddyCn = async (accountId: string) => {
+    if (refreshing.has(accountId)) return;
+    setRefreshing((prev) => new Set(prev).add(accountId));
+    try {
+      await useCodebuddyCnAccountStore.getState().refreshToken(accountId);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleRefreshQoder = async (accountId: string) => {
+    if (refreshing.has(accountId)) return;
+    setRefreshing((prev) => new Set(prev).add(accountId));
+    try {
+      await useQoderAccountStore.getState().refreshToken(accountId);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleRefreshTrae = async (accountId: string) => {
+    if (refreshing.has(accountId)) return;
+    setRefreshing((prev) => new Set(prev).add(accountId));
+    try {
+      await useTraeAccountStore.getState().refreshToken(accountId);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleRefreshWorkbuddy = async (accountId: string) => {
+    if (refreshing.has(accountId)) return;
+    setRefreshing((prev) => new Set(prev).add(accountId));
+    try {
+      await useWorkbuddyAccountStore.getState().refreshToken(accountId);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleRefreshCodebuddyCard = async () => {
+    if (cardRefreshing.codebuddy) return;
+    setCardRefreshing((prev) => ({ ...prev, codebuddy: true }));
+    const idsToRefresh = [codebuddyCurrent?.id, codebuddyRecommended?.id].filter(Boolean) as string[];
+    try {
+      for (const id of idsToRefresh) {
+        await useCodebuddyAccountStore.getState().refreshToken(id);
+      }
+    } catch (error) {
+      console.error('Card refresh failed:', error);
+    } finally {
+      setCardRefreshing((prev) => ({ ...prev, codebuddy: false }));
+    }
+  };
+
+  const handleRefreshCodebuddyCnCard = async () => {
+    if (cardRefreshing.codebuddyCn) return;
+    setCardRefreshing((prev) => ({ ...prev, codebuddyCn: true }));
+    const idsToRefresh = [codebuddyCnCurrent?.id, codebuddyCnRecommended?.id].filter(Boolean) as string[];
+    try {
+      for (const id of idsToRefresh) {
+        await useCodebuddyCnAccountStore.getState().refreshToken(id);
+      }
+    } catch (error) {
+      console.error('Card refresh failed:', error);
+    } finally {
+      setCardRefreshing((prev) => ({ ...prev, codebuddyCn: false }));
+    }
+  };
+
+  const handleRefreshQoderCard = async () => {
+    if (cardRefreshing.qoder) return;
+    setCardRefreshing((prev) => ({ ...prev, qoder: true }));
+    const idsToRefresh = [qoderCurrent?.id, qoderRecommended?.id].filter(Boolean) as string[];
+    try {
+      for (const id of idsToRefresh) {
+        await useQoderAccountStore.getState().refreshToken(id);
+      }
+    } catch (error) {
+      console.error('Card refresh failed:', error);
+    } finally {
+      setCardRefreshing((prev) => ({ ...prev, qoder: false }));
+    }
+  };
+
+  const handleRefreshTraeCard = async () => {
+    if (cardRefreshing.trae) return;
+    setCardRefreshing((prev) => ({ ...prev, trae: true }));
+    const idsToRefresh = [traeCurrent?.id, traeRecommended?.id].filter(Boolean) as string[];
+    try {
+      for (const id of idsToRefresh) {
+        await useTraeAccountStore.getState().refreshToken(id);
+      }
+    } catch (error) {
+      console.error('Card refresh failed:', error);
+    } finally {
+      setCardRefreshing((prev) => ({ ...prev, trae: false }));
+    }
+  };
+
+  const handleRefreshWorkbuddyCard = async () => {
+    if (cardRefreshing.workbuddy) return;
+    setCardRefreshing((prev) => ({ ...prev, workbuddy: true }));
+    const idsToRefresh = [workbuddyCurrent?.id, workbuddyRecommended?.id].filter(Boolean) as string[];
+    try {
+      for (const id of idsToRefresh) {
+        await useWorkbuddyAccountStore.getState().refreshToken(id);
+      }
+    } catch (error) {
+      console.error('Card refresh failed:', error);
+    } finally {
+      setCardRefreshing((prev) => ({ ...prev, workbuddy: false }));
+    }
+  };
+
+  const handleSwitchCodebuddy = async (accountId: string) => {
+    if (switching.has(accountId)) return;
+    setSwitching((prev) => new Set(prev).add(accountId));
+    try {
+      await switchCodebuddyAccount(accountId);
+      setCodebuddyCurrentId(accountId);
+      localStorage.setItem(CODEBUDDY_CURRENT_ACCOUNT_ID_KEY, accountId);
+    } catch (error) {
+      console.error('Switch failed:', error);
+    } finally {
+      setSwitching((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleSwitchCodebuddyCn = async (accountId: string) => {
+    if (switching.has(accountId)) return;
+    setSwitching((prev) => new Set(prev).add(accountId));
+    try {
+      await switchCodebuddyCnAccount(accountId);
+      setCodebuddyCnCurrentId(accountId);
+      localStorage.setItem(CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY, accountId);
+    } catch (error) {
+      console.error('Switch failed:', error);
+    } finally {
+      setSwitching((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleSwitchQoder = async (accountId: string) => {
+    if (switching.has(accountId)) return;
+    setSwitching((prev) => new Set(prev).add(accountId));
+    try {
+      await switchQoderAccount(accountId);
+      setQoderCurrentId(accountId);
+      localStorage.setItem(QODER_CURRENT_ACCOUNT_ID_KEY, accountId);
+    } catch (error) {
+      console.error('Switch failed:', error);
+    } finally {
+      setSwitching((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleSwitchTrae = async (accountId: string) => {
+    if (switching.has(accountId)) return;
+    setSwitching((prev) => new Set(prev).add(accountId));
+    try {
+      await switchTraeAccount(accountId);
+      setTraeCurrentId(accountId);
+      localStorage.setItem(TRAE_CURRENT_ACCOUNT_ID_KEY, accountId);
+    } catch (error) {
+      console.error('Switch failed:', error);
+    } finally {
+      setSwitching((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleSwitchWorkbuddy = async (accountId: string) => {
+    if (switching.has(accountId)) return;
+    setSwitching((prev) => new Set(prev).add(accountId));
+    try {
+      await switchWorkbuddyAccount(accountId);
+      setWorkbuddyCurrentId(accountId);
+      localStorage.setItem(WORKBUDDY_CURRENT_ACCOUNT_ID_KEY, accountId);
+    } catch (error) {
+      console.error('Switch failed:', error);
+    } finally {
+      setSwitching((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
   // Antigravity Recommendation Logic
   const agRecommended = useMemo(() => {
     if (agAccounts.length <= 1) return null;
@@ -758,6 +1183,111 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     setKiroCurrentId(null);
     localStorage.removeItem(KIRO_CURRENT_ACCOUNT_ID_KEY);
   }, [kiroAccounts, kiroCurrentId]);
+
+  const codebuddyCurrent = useMemo(() => {
+    if (codebuddyAccounts.length === 0) return null;
+    if (codebuddyCurrentId) {
+      const current = codebuddyAccounts.find((account) => account.id === codebuddyCurrentId);
+      if (current) return current;
+    }
+    return codebuddyAccounts.reduce((prev, curr) => {
+      const prevScore = prev.last_used || prev.created_at || 0;
+      const currScore = curr.last_used || curr.created_at || 0;
+      return currScore > prevScore ? curr : prev;
+    });
+  }, [codebuddyAccounts, codebuddyCurrentId]);
+
+  const codebuddyCnCurrent = useMemo(() => {
+    if (codebuddyCnAccounts.length === 0) return null;
+    if (codebuddyCnCurrentId) {
+      const current = codebuddyCnAccounts.find((account) => account.id === codebuddyCnCurrentId);
+      if (current) return current;
+    }
+    return codebuddyCnAccounts.reduce((prev, curr) => {
+      const prevScore = prev.last_used || prev.created_at || 0;
+      const currScore = curr.last_used || curr.created_at || 0;
+      return currScore > prevScore ? curr : prev;
+    });
+  }, [codebuddyCnAccounts, codebuddyCnCurrentId]);
+
+  const qoderCurrent = useMemo(() => {
+    if (qoderAccounts.length === 0) return null;
+    if (qoderCurrentId) {
+      const current = qoderAccounts.find((account) => account.id === qoderCurrentId);
+      if (current) return current;
+    }
+    return qoderAccounts.reduce((prev, curr) => {
+      const prevScore = prev.last_used || prev.created_at || 0;
+      const currScore = curr.last_used || curr.created_at || 0;
+      return currScore > prevScore ? curr : prev;
+    });
+  }, [qoderAccounts, qoderCurrentId]);
+
+  const traeCurrent = useMemo(() => {
+    if (traeAccounts.length === 0) return null;
+    if (traeCurrentId) {
+      const current = traeAccounts.find((account) => account.id === traeCurrentId);
+      if (current) return current;
+    }
+    return traeAccounts.reduce((prev, curr) => {
+      const prevScore = prev.last_used || prev.created_at || 0;
+      const currScore = curr.last_used || curr.created_at || 0;
+      return currScore > prevScore ? curr : prev;
+    });
+  }, [traeAccounts, traeCurrentId]);
+
+  const workbuddyCurrent = useMemo(() => {
+    if (workbuddyAccounts.length === 0) return null;
+    if (workbuddyCurrentId) {
+      const current = workbuddyAccounts.find((account) => account.id === workbuddyCurrentId);
+      if (current) return current;
+    }
+    return workbuddyAccounts.reduce((prev, curr) => {
+      const prevScore = prev.last_used || prev.created_at || 0;
+      const currScore = curr.last_used || curr.created_at || 0;
+      return currScore > prevScore ? curr : prev;
+    });
+  }, [workbuddyAccounts, workbuddyCurrentId]);
+
+  React.useEffect(() => {
+    if (!codebuddyCurrentId) return;
+    const exists = codebuddyAccounts.some((account) => account.id === codebuddyCurrentId);
+    if (exists) return;
+    setCodebuddyCurrentId(null);
+    localStorage.removeItem(CODEBUDDY_CURRENT_ACCOUNT_ID_KEY);
+  }, [codebuddyAccounts, codebuddyCurrentId]);
+
+  React.useEffect(() => {
+    if (!codebuddyCnCurrentId) return;
+    const exists = codebuddyCnAccounts.some((account) => account.id === codebuddyCnCurrentId);
+    if (exists) return;
+    setCodebuddyCnCurrentId(null);
+    localStorage.removeItem(CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY);
+  }, [codebuddyCnAccounts, codebuddyCnCurrentId]);
+
+  React.useEffect(() => {
+    if (!qoderCurrentId) return;
+    const exists = qoderAccounts.some((account) => account.id === qoderCurrentId);
+    if (exists) return;
+    setQoderCurrentId(null);
+    localStorage.removeItem(QODER_CURRENT_ACCOUNT_ID_KEY);
+  }, [qoderAccounts, qoderCurrentId]);
+
+  React.useEffect(() => {
+    if (!traeCurrentId) return;
+    const exists = traeAccounts.some((account) => account.id === traeCurrentId);
+    if (exists) return;
+    setTraeCurrentId(null);
+    localStorage.removeItem(TRAE_CURRENT_ACCOUNT_ID_KEY);
+  }, [traeAccounts, traeCurrentId]);
+
+  React.useEffect(() => {
+    if (!workbuddyCurrentId) return;
+    const exists = workbuddyAccounts.some((account) => account.id === workbuddyCurrentId);
+    if (exists) return;
+    setWorkbuddyCurrentId(null);
+    localStorage.removeItem(WORKBUDDY_CURRENT_ACCOUNT_ID_KEY);
+  }, [workbuddyAccounts, workbuddyCurrentId]);
 
   const githubCopilotRecommended = useMemo(() => {
     if (githubCopilotAccounts.length <= 1) return null;
@@ -933,6 +1463,157 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       return candidateScore.freshness > bestScore.freshness ? candidate : best;
     });
   }, [geminiAccounts, geminiCurrent?.id]);
+
+  const codebuddyRecommended = useMemo(() => {
+    if (codebuddyAccounts.length <= 1) return null;
+    const currentId = codebuddyCurrent?.id;
+    const others = codebuddyAccounts.filter((a) => a.id !== currentId);
+    if (others.length === 0) return null;
+
+    const getScore = (account: CodebuddyAccount) => {
+      const resource = getCodebuddyResourceSummary(account);
+      const extra = getCodebuddyExtraCreditSummary(account);
+      const remain = resource?.remainPercent ?? (extra.remainPercent ?? -1);
+      return {
+        remainPercent: remain,
+        freshness: account.last_used || account.created_at || 0,
+      };
+    };
+
+    return others.reduce((best, candidate) => {
+      const bestScore = getScore(best);
+      const candidateScore = getScore(candidate);
+      if (candidateScore.remainPercent !== bestScore.remainPercent) {
+        return candidateScore.remainPercent > bestScore.remainPercent ? candidate : best;
+      }
+      return candidateScore.freshness > bestScore.freshness ? candidate : best;
+    });
+  }, [codebuddyAccounts, codebuddyCurrent?.id]);
+
+
+  const codebuddyCnRecommended = useMemo(() => {
+    if (codebuddyCnAccounts.length <= 1) return null;
+    const currentId = codebuddyCnCurrent?.id;
+    const others = codebuddyCnAccounts.filter((a) => a.id !== currentId);
+    if (others.length === 0) return null;
+
+    const getScore = (account: CodebuddyAccount) => {
+      const model = getCodebuddyOfficialQuotaModel(account);
+      // 只使用基础包进行计算，不包含加量包
+      const baseResources = model.resources.filter(r => r.total > 0 || r.remain > 0);
+
+      // 计算平均剩余百分比（剩余越多越好）
+      let avgRemainPercent = -1;
+      if (baseResources.length > 0) {
+        const totalRemainPercent = baseResources.reduce((sum, r) => {
+          const pct = r.remainPercent ?? (r.total > 0 ? Math.max(0, (r.remain / r.total) * 100) : 0);
+          return sum + pct;
+        }, 0);
+        avgRemainPercent = totalRemainPercent / baseResources.length;
+      }
+
+      return {
+        remaining: avgRemainPercent, // 剩余百分比越高越好
+        freshness: account.last_used || account.created_at || 0,
+      };
+    };
+
+    return others.reduce((best, candidate) => {
+      const bestScore = getScore(best);
+      const candidateScore = getScore(candidate);
+      if (candidateScore.remaining !== bestScore.remaining) {
+        return candidateScore.remaining > bestScore.remaining ? candidate : best;
+      }
+      return candidateScore.freshness > bestScore.freshness ? candidate : best;
+    });
+  }, [codebuddyCnAccounts, codebuddyCnCurrent?.id]);
+
+  const qoderRecommended = useMemo(() => {
+    if (qoderAccounts.length <= 1) return null;
+    const currentId = qoderCurrent?.id;
+    const others = qoderAccounts.filter((a) => a.id !== currentId);
+    if (others.length === 0) return null;
+
+    const getScore = (account: QoderAccount) => {
+      const sub = getQoderSubscriptionInfo(account);
+      const usedPercent = sub.totalUsagePercentage ?? sub.userQuota.percentage ?? 101;
+      return {
+        remaining: 100 - usedPercent,
+        freshness: account.last_used || account.created_at || 0,
+      };
+    };
+
+    return others.reduce((best, candidate) => {
+      const bestScore = getScore(best);
+      const candidateScore = getScore(candidate);
+      if (candidateScore.remaining !== bestScore.remaining) {
+        return candidateScore.remaining > bestScore.remaining ? candidate : best;
+      }
+      return candidateScore.freshness > bestScore.freshness ? candidate : best;
+    });
+  }, [qoderAccounts, qoderCurrent?.id]);
+
+  const traeRecommended = useMemo(() => {
+    if (traeAccounts.length <= 1) return null;
+    const currentId = traeCurrent?.id;
+    const others = traeAccounts.filter((a) => a.id !== currentId);
+    if (others.length === 0) return null;
+
+    const getScore = (account: TraeAccount) => {
+      const usage = getTraeUsage(account);
+      const usedPercent = usage.usedPercent ?? 101;
+      return {
+        remaining: 100 - usedPercent,
+        freshness: account.last_used || account.created_at || 0,
+      };
+    };
+
+    return others.reduce((best, candidate) => {
+      const bestScore = getScore(best);
+      const candidateScore = getScore(candidate);
+      if (candidateScore.remaining !== bestScore.remaining) {
+        return candidateScore.remaining > bestScore.remaining ? candidate : best;
+      }
+      return candidateScore.freshness > bestScore.freshness ? candidate : best;
+    });
+  }, [traeAccounts, traeCurrent?.id]);
+
+  const workbuddyRecommended = useMemo(() => {
+    if (workbuddyAccounts.length <= 1) return null;
+    const currentId = workbuddyCurrent?.id;
+    const others = workbuddyAccounts.filter((a) => a.id !== currentId);
+    if (others.length === 0) return null;
+
+    const getScore = (account: WorkbuddyAccount) => {
+      const model = getWorkbuddyOfficialQuotaModel(account);
+      // 只使用基础包进行计算，不包含加量包
+      const baseResources = model.resources.filter(r => r.total > 0 || r.remain > 0);
+
+      // 计算平均剩余百分比（剩余越多越好）
+      let avgRemainPercent = -1;
+      if (baseResources.length > 0) {
+        const totalRemainPercent = baseResources.reduce((sum, r) => {
+          const pct = r.remainPercent ?? (r.total > 0 ? Math.max(0, (r.remain / r.total) * 100) : 0);
+          return sum + pct;
+        }, 0);
+        avgRemainPercent = totalRemainPercent / baseResources.length;
+      }
+
+      return {
+        remaining: avgRemainPercent, // 剩余百分比越高越好
+        freshness: account.last_used || account.created_at || 0,
+      };
+    };
+
+    return others.reduce((best, candidate) => {
+      const bestScore = getScore(best);
+      const candidateScore = getScore(candidate);
+      if (candidateScore.remaining !== bestScore.remaining) {
+        return candidateScore.remaining > bestScore.remaining ? candidate : best;
+      }
+      return candidateScore.freshness > bestScore.freshness ? candidate : best;
+    });
+  }, [workbuddyAccounts, workbuddyCurrent?.id]);
 
   // Render Helpers
   const renderAgAccountContent = (account: Account | null) => {
@@ -1556,6 +2237,396 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     );
   };
 
+  const renderCodebuddyAccountContent = (account: CodebuddyAccount | null) => {
+    if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
+
+    const displayName = getCodebuddyAccountDisplayEmail(account);
+    const badge = getCodebuddyPlanBadge(account);
+    const badgeClass = getCodebuddyPlanBadgeClass(badge);
+    const usage = getCodebuddyUsage(account);
+    const isRefreshing = refreshing.has(account.id);
+    const isSwitching = switching.has(account.id);
+    const locale = i18n.language || 'zh-CN';
+    const usageStatusText = !usage.dosageNotifyCode
+      ? '--'
+      : usage.isNormal
+        ? t('codebuddy.usageNormal', '正常')
+        : locale.startsWith('zh')
+          ? (usage.dosageNotifyZh || usage.dosageNotifyCode)
+          : (usage.dosageNotifyEn || usage.dosageNotifyCode);
+    const usageStatusClass = !usage.dosageNotifyCode ? '' : (usage.isNormal ? 'high' : 'critical');
+
+    return (
+      <div className="account-mini-card">
+        <div className="account-mini-header">
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(displayName)}>
+              {maskAccountText(displayName)}
+            </span>
+            <span className={`tier-tag ${badgeClass} raw-value`}>{badge}</span>
+          </div>
+        </div>
+
+        <div className="account-mini-quotas">
+          <div className="mini-quota-row-stacked">
+            <div className="mini-quota-header">
+              <span className="model-name">{t('codebuddy.usage', '用量状态')}</span>
+              <span className={usageStatusClass ? `model-pct ${usageStatusClass}` : 'no-data-text'}>
+                {usageStatusText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="account-mini-actions icon-only-row">
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshCodebuddy(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={isRefreshing || isSwitching}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleSwitchCodebuddy(account.id)}
+            title={t('dashboard.switch', '切换')}
+            disabled={isSwitching}
+          >
+            {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCodebuddyCnAccountContent = (account: CodebuddyAccount | null) => {
+    if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
+
+    const displayName = getCodebuddyAccountDisplayEmail(account);
+    const badge = getCodebuddyPlanBadge(account);
+    const badgeClass = getCodebuddyPlanBadgeClass(badge);
+    const isRefreshing = refreshing.has(account.id);
+    const isSwitching = switching.has(account.id);
+    const quotaItems = getCodebuddyQuotaDisplayItems(account, tSimple);
+
+    // 格式化配额数字
+    const formatQuotaNumber = (value: number) => {
+      if (!Number.isFinite(value)) return '0';
+      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Math.max(0, value));
+    };
+
+    // 格式化刷新时间（只显示年月日）
+    const formatRefreshDate = (timestamp: number | null) => {
+      if (!timestamp) return null;
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    };
+
+    return (
+      <div className="account-mini-card">
+        <div className="account-mini-header">
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(displayName)}>
+              {maskAccountText(displayName)}
+            </span>
+            <span className={`tier-tag ${badgeClass} raw-value`}>{badge}</span>
+          </div>
+        </div>
+
+        <div className="account-mini-quotas quota-scroll-container">
+          {quotaItems.length > 0 ? (
+            quotaItems.map((item) => (
+              <div key={item.key} className="quota-item-row">
+                <div className="quota-item-header">
+                  <span className="quota-package-name" title={item.label}>{item.label}</span>
+                  <span className="quota-usage-text">{formatQuotaNumber(item.used)} / {formatQuotaNumber(item.total)}</span>
+                </div>
+                <div className="quota-item-bar-track">
+                  <div
+                    className={`quota-item-bar ${item.quotaClass}`}
+                    style={{ width: `${item.usedPercent}%` }}
+                  />
+                </div>
+                <div className="quota-item-footer">
+                  <span className="quota-remain-text">{t('common.shared.remaining', '剩余')}: {formatQuotaNumber(item.remain)}</span>
+                  {item.refreshAt && (
+                    <span className="quota-refresh-time">{t('dashboard.refreshTime', '刷新时间')}: {formatRefreshDate(item.refreshAt)}</span>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <span className="no-data-text">{t('dashboard.noData', '暂无数据')}</span>
+          )}
+        </div>
+
+        <div className="account-mini-actions icon-only-row">
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshCodebuddyCn(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={isRefreshing || isSwitching}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleSwitchCodebuddyCn(account.id)}
+            title={t('dashboard.switch', '切换')}
+            disabled={isSwitching}
+          >
+            {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderQoderAccountContent = (account: QoderAccount | null) => {
+    if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
+
+    const displayName = getQoderAccountDisplayEmail(account);
+    const planTag = getQoderPlanBadge(account);
+    const sub = getQoderSubscriptionInfo(account);
+    const isRefreshing = refreshing.has(account.id);
+    const isSwitching = switching.has(account.id);
+
+    const usedPercent = sub.totalUsagePercentage ?? sub.userQuota.percentage ?? null;
+    const remainPercent = usedPercent != null ? Math.max(0, Math.min(100, Math.round(100 - usedPercent))) : null;
+    const quotaClass = remainPercent != null ? (remainPercent <= 10 ? 'low' : remainPercent <= 30 ? 'medium' : 'high') : '';
+    const hasAddOn = sub.addOnQuota.total != null && sub.addOnQuota.total > 0;
+    const addOnRemain = hasAddOn ? (sub.addOnQuota.remaining ?? 0) : 0;
+    const addOnTotal = hasAddOn ? (sub.addOnQuota.total ?? 0) : 0;
+    const addOnPercent = addOnTotal > 0 ? Math.round((addOnRemain / addOnTotal) * 100) : 0;
+    const addOnClass = addOnPercent <= 10 ? 'low' : addOnPercent <= 30 ? 'medium' : 'high';
+
+    return (
+      <div className="account-mini-card">
+        <div className="account-mini-header">
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(displayName)}>
+              {maskAccountText(displayName)}
+            </span>
+            <span className="tier-tag plan-badge raw-value">{planTag}</span>
+          </div>
+        </div>
+
+        <div className="account-mini-quotas">
+          {remainPercent != null ? (
+            <div className="mini-quota-row-stacked">
+              <div className="mini-quota-header">
+                <span className="model-name">{t('qoder.columns.credits', 'Credits')}</span>
+                <span className={`model-pct ${quotaClass}`}>
+                  {remainPercent}% {t('common.shared.remaining', '剩余')}
+                </span>
+              </div>
+              <div className="mini-progress-track">
+                <div
+                  className={`mini-progress-bar ${quotaClass}`}
+                  style={{ width: `${remainPercent}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <span className="no-data-text">{t('dashboard.noData', '暂无数据')}</span>
+          )}
+          {hasAddOn && (
+            <div className="mini-quota-row-stacked">
+              <div className="mini-quota-header">
+                <span className="model-name">{t('qoder.columns.addOn', 'Add-on')}</span>
+                <span className={`model-pct ${addOnClass}`}>
+                  {addOnRemain}/{addOnTotal}
+                </span>
+              </div>
+              <div className="mini-progress-track">
+                <div
+                  className={`mini-progress-bar ${addOnClass}`}
+                  style={{ width: `${addOnPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="account-mini-actions icon-only-row">
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshQoder(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={isRefreshing || isSwitching}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleSwitchQoder(account.id)}
+            title={t('dashboard.switch', '切换')}
+            disabled={isSwitching}
+          >
+            {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTraeAccountContent = (account: TraeAccount | null) => {
+    if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
+
+    const displayName = getTraeAccountDisplayEmail(account);
+    const planTag = getTraePlanBadge(account);
+    const planClass = getTraePlanBadgeClass(planTag);
+    const usage = getTraeUsage(account);
+    const isRefreshing = refreshing.has(account.id);
+    const isSwitching = switching.has(account.id);
+
+    const usedPercent = usage.usedPercent;
+    const remainPercent = usedPercent != null ? Math.max(0, Math.min(100, 100 - Math.round(usedPercent))) : null;
+    const quotaClass = remainPercent != null ? (remainPercent <= 10 ? 'low' : remainPercent <= 30 ? 'medium' : 'high') : '';
+    const spentText = usage.spentUsd != null && usage.totalUsd != null
+      ? `$${usage.spentUsd.toFixed(2)} / $${usage.totalUsd.toFixed(2)}`
+      : null;
+
+    return (
+      <div className="account-mini-card">
+        <div className="account-mini-header">
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(displayName)}>
+              {maskAccountText(displayName)}
+            </span>
+            <span className={`tier-tag plan-badge plan-${planClass} raw-value`}>{planTag}</span>
+          </div>
+        </div>
+
+        <div className="account-mini-quotas">
+          {remainPercent != null ? (
+            <div className="mini-quota-row-stacked">
+              <div className="mini-quota-header">
+                <span className="model-name">{t('trae.columns.usage', 'Usage')}</span>
+                <span className={`model-pct ${quotaClass}`}>
+                  {remainPercent}% {t('common.shared.remaining', '剩余')}
+                </span>
+              </div>
+              <div className="mini-progress-track">
+                <div
+                  className={`mini-progress-bar ${quotaClass}`}
+                  style={{ width: `${remainPercent}%` }}
+                />
+              </div>
+              {spentText && (
+                <div className="mini-reset-time">{spentText}</div>
+              )}
+            </div>
+          ) : (
+            <span className="no-data-text">{t('dashboard.noData', '暂无数据')}</span>
+          )}
+        </div>
+
+        <div className="account-mini-actions icon-only-row">
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshTrae(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={isRefreshing || isSwitching}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleSwitchTrae(account.id)}
+            title={t('dashboard.switch', '切换')}
+            disabled={isSwitching}
+          >
+            {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWorkbuddyAccountContent = (account: WorkbuddyAccount | null) => {
+    if (!account) return <div className="empty-slot">{t('dashboard.noAccount', '无账号')}</div>;
+
+    const displayName = getWorkbuddyAccountDisplayEmail(account);
+    const badge = getWorkbuddyPlanBadge(account);
+    const isRefreshing = refreshing.has(account.id);
+    const isSwitching = switching.has(account.id);
+    const quotaItems = getWorkbuddyQuotaDisplayItems(account, tSimple);
+
+    // 格式化配额数字
+    const formatQuotaNumber = (value: number) => {
+      if (!Number.isFinite(value)) return '0';
+      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Math.max(0, value));
+    };
+
+    // 格式化刷新时间（只显示年月日）
+    const formatRefreshDate = (timestamp: number | null) => {
+      if (!timestamp) return null;
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    };
+
+    return (
+      <div className="account-mini-card">
+        <div className="account-mini-header">
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(displayName)}>
+              {maskAccountText(displayName)}
+            </span>
+            <span className="tier-tag plan-badge raw-value">{badge}</span>
+          </div>
+        </div>
+
+        <div className="account-mini-quotas quota-scroll-container">
+          {quotaItems.length > 0 ? (
+            quotaItems.map((item) => (
+              <div key={item.key} className="quota-item-row">
+                <div className="quota-item-header">
+                  <span className="quota-package-name" title={item.label}>{item.label}</span>
+                  <span className="quota-usage-text">{formatQuotaNumber(item.used)} / {formatQuotaNumber(item.total)}</span>
+                </div>
+                <div className="quota-item-bar-track">
+                  <div
+                    className={`quota-item-bar ${item.quotaClass}`}
+                    style={{ width: `${item.usedPercent}%` }}
+                  />
+                </div>
+                <div className="quota-item-footer">
+                  <span className="quota-remain-text">{t('common.shared.remaining', '剩余')}: {formatQuotaNumber(item.remain)}</span>
+                  {item.refreshAt && (
+                    <span className="quota-refresh-time">{t('dashboard.refreshTime', '刷新时间')}: {formatRefreshDate(item.refreshAt)}</span>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <span className="no-data-text">{t('dashboard.noData', '暂无数据')}</span>
+          )}
+        </div>
+
+        <div className="account-mini-actions icon-only-row">
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshWorkbuddy(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={isRefreshing || isSwitching}
+          >
+            <RotateCw size={14} className={isRefreshing ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleSwitchWorkbuddy(account.id)}
+            title={t('dashboard.switch', '切换')}
+            disabled={isSwitching}
+          >
+            {isSwitching ? <RotateCw size={14} className="loading-spinner" /> : <Play size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const platformCounts: Record<PlatformId, number> = {
     antigravity: stats.antigravity,
     codex: stats.codex,
@@ -1564,7 +2635,22 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     kiro: stats.kiro,
     cursor: stats.cursor,
     gemini: stats.gemini,
+    codebuddy: stats.codebuddy,
+    codebuddy_cn: stats.codebuddy_cn,
+    qoder: stats.qoder,
+    trae: stats.trae,
+    workbuddy: stats.workbuddy,
   };
+
+  const entryCounts = useMemo(() => {
+    const result = new Map<PlatformLayoutEntryId, number>();
+    for (const entryId of visibleEntryOrder) {
+      const platformIds = resolveEntryPlatformIds(entryId, platformGroups);
+      const count = platformIds.reduce((sum, platformId) => sum + (platformCounts[platformId] ?? 0), 0);
+      result.set(entryId, count);
+    }
+    return result;
+  }, [visibleEntryOrder, platformGroups, platformCounts]);
 
   const visibleCardPlatformIds = visiblePlatformOrder;
   const isSinglePlatformMode = visibleCardPlatformIds.length === 1;
@@ -1847,7 +2933,7 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
           <div className="main-card-header">
             <div className="header-title">
               <GeminiIcon style={{ width: 18, height: 18 }} />
-              <h3>{t('nav.gemini', 'Gemini')}</h3>
+              <h3>Gemini Cli</h3>
             </div>
             <button
               className="header-action-btn"
@@ -1885,7 +2971,255 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
       );
     }
 
-    return null;
+    if (platformId === 'codebuddy') {
+      return (
+        <div className="main-card windsurf-card" key={platformId}>
+          <div className="main-card-header">
+            <div className="header-title">
+              <CodebuddyIcon style={{ width: 18, height: 18 }} />
+              <h3>{getPlatformLabel(platformId, t)}</h3>
+            </div>
+            <button
+              className="header-action-btn"
+              onClick={handleRefreshCodebuddyCard}
+              disabled={cardRefreshing.codebuddy}
+              title={t('common.refresh', '刷新')}
+            >
+              <RotateCw size={14} className={cardRefreshing.codebuddy ? 'loading-spinner' : ''} />
+              <span>{t('common.refresh', '刷新')}</span>
+            </button>
+          </div>
+
+          <div className="split-content">
+            <div className="split-half current-half">
+              <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+              {renderCodebuddyAccountContent(codebuddyCurrent)}
+            </div>
+
+            <div className="split-divider"></div>
+
+            <div className="split-half recommend-half">
+              <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+              {codebuddyRecommended ? (
+                renderCodebuddyAccountContent(codebuddyRecommended)
+              ) : (
+                <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+              )}
+            </div>
+          </div>
+
+          <button className="card-footer-action" onClick={() => onNavigate('codebuddy')}>
+            {t('dashboard.viewAllAccounts', '查看所有账号')}
+          </button>
+        </div>
+      );
+    }
+
+    if (platformId === 'codebuddy_cn') {
+      return (
+        <div className="main-card windsurf-card" key={platformId}>
+          <div className="main-card-header">
+            <div className="header-title">
+              <CodebuddyIcon style={{ width: 18, height: 18 }} />
+              <h3>{getPlatformLabel(platformId, t)}</h3>
+            </div>
+            <button
+              className="header-action-btn"
+              onClick={handleRefreshCodebuddyCnCard}
+              disabled={cardRefreshing.codebuddyCn}
+              title={t('common.refresh', '刷新')}
+            >
+              <RotateCw size={14} className={cardRefreshing.codebuddyCn ? 'loading-spinner' : ''} />
+              <span>{t('common.refresh', '刷新')}</span>
+            </button>
+          </div>
+
+          <div className="split-content">
+            <div className="split-half current-half">
+              <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+              {renderCodebuddyCnAccountContent(codebuddyCnCurrent)}
+            </div>
+
+            <div className="split-divider"></div>
+
+            <div className="split-half recommend-half">
+              <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+              {codebuddyCnRecommended ? (
+                renderCodebuddyCnAccountContent(codebuddyCnRecommended)
+              ) : (
+                <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+              )}
+            </div>
+          </div>
+
+          <button className="card-footer-action" onClick={() => onNavigate('codebuddy-cn')}>
+            {t('dashboard.viewAllAccounts', '查看所有账号')}
+          </button>
+        </div>
+      );
+    }
+
+    if (platformId === 'qoder') {
+      return (
+        <div className="main-card windsurf-card" key={platformId}>
+          <div className="main-card-header">
+            <div className="header-title">
+              <QoderIcon style={{ width: 18, height: 18 }} />
+              <h3>{getPlatformLabel(platformId, t)}</h3>
+            </div>
+            <button
+              className="header-action-btn"
+              onClick={handleRefreshQoderCard}
+              disabled={cardRefreshing.qoder}
+              title={t('common.refresh', '刷新')}
+            >
+              <RotateCw size={14} className={cardRefreshing.qoder ? 'loading-spinner' : ''} />
+              <span>{t('common.refresh', '刷新')}</span>
+            </button>
+          </div>
+
+          <div className="split-content">
+            <div className="split-half current-half">
+              <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+              {renderQoderAccountContent(qoderCurrent)}
+            </div>
+
+            <div className="split-divider"></div>
+
+            <div className="split-half recommend-half">
+              <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+              {qoderRecommended ? (
+                renderQoderAccountContent(qoderRecommended)
+              ) : (
+                <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+              )}
+            </div>
+          </div>
+
+          <button className="card-footer-action" onClick={() => onNavigate('qoder')}>
+            {t('dashboard.viewAllAccounts', '查看所有账号')}
+          </button>
+        </div>
+      );
+    }
+
+    if (platformId === 'trae') {
+      return (
+        <div className="main-card windsurf-card" key={platformId}>
+          <div className="main-card-header">
+            <div className="header-title">
+              <TraeIcon style={{ width: 18, height: 18 }} />
+              <h3>{getPlatformLabel(platformId, t)}</h3>
+            </div>
+            <button
+              className="header-action-btn"
+              onClick={handleRefreshTraeCard}
+              disabled={cardRefreshing.trae}
+              title={t('common.refresh', '刷新')}
+            >
+              <RotateCw size={14} className={cardRefreshing.trae ? 'loading-spinner' : ''} />
+              <span>{t('common.refresh', '刷新')}</span>
+            </button>
+          </div>
+
+          <div className="split-content">
+            <div className="split-half current-half">
+              <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+              {renderTraeAccountContent(traeCurrent)}
+            </div>
+
+            <div className="split-divider"></div>
+
+            <div className="split-half recommend-half">
+              <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+              {traeRecommended ? (
+                renderTraeAccountContent(traeRecommended)
+              ) : (
+                <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+              )}
+            </div>
+          </div>
+
+          <button className="card-footer-action" onClick={() => onNavigate('trae')}>
+            {t('dashboard.viewAllAccounts', '查看所有账号')}
+          </button>
+        </div>
+      );
+    }
+
+    if (platformId === 'workbuddy') {
+      return (
+        <div className="main-card windsurf-card" key={platformId}>
+          <div className="main-card-header">
+            <div className="header-title">
+              <WorkbuddyIcon style={{ width: 18, height: 18 }} />
+              <h3>{getPlatformLabel(platformId, t)}</h3>
+            </div>
+            <button
+              className="header-action-btn"
+              onClick={handleRefreshWorkbuddyCard}
+              disabled={cardRefreshing.workbuddy}
+              title={t('common.refresh', '刷新')}
+            >
+              <RotateCw size={14} className={cardRefreshing.workbuddy ? 'loading-spinner' : ''} />
+              <span>{t('common.refresh', '刷新')}</span>
+            </button>
+          </div>
+
+          <div className="split-content">
+            <div className="split-half current-half">
+              <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+              {renderWorkbuddyAccountContent(workbuddyCurrent)}
+            </div>
+
+            <div className="split-divider"></div>
+
+            <div className="split-half recommend-half">
+              <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+              {workbuddyRecommended ? (
+                renderWorkbuddyAccountContent(workbuddyRecommended)
+              ) : (
+                <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+              )}
+            </div>
+          </div>
+
+          <button className="card-footer-action" onClick={() => onNavigate('workbuddy')}>
+            {t('dashboard.viewAllAccounts', '查看所有账号')}
+          </button>
+        </div>
+      );
+    }
+
+    // Generic fallback for any unknown/future platform
+    return (
+      <div className="main-card windsurf-card" key={platformId}>
+        <div className="main-card-header">
+          <div className="header-title">
+            {renderPlatformIcon(platformId, 18)}
+            <h3>{getPlatformLabel(platformId, t)}</h3>
+          </div>
+        </div>
+
+        <div className="split-content">
+          <div className="split-half current-half">
+            <span className="half-label"><CheckCircle2 size={12} /> {t('dashboard.current', '当前账户')}</span>
+            <div className="empty-slot-text">{t('dashboard.noData', '暂无数据')}</div>
+          </div>
+
+          <div className="split-divider"></div>
+
+          <div className="split-half recommend-half">
+            <span className="half-label"><Sparkles size={12} /> {t('dashboard.recommended', '推荐账号')}</span>
+            <div className="empty-slot-text">{t('dashboard.noRecommendation', '暂无更好推荐')}</div>
+          </div>
+        </div>
+
+        <button className="card-footer-action" onClick={() => onNavigate(PLATFORM_PAGE_MAP[platformId])}>
+          {t('dashboard.viewAllAccounts', '查看所有账号')}
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -1920,7 +3254,23 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
           </div>
         </div>
 
-        {visiblePlatformOrder.map((platformId) => {
+        {visibleEntryOrder.map((entryId) => {
+          const platformId = resolveEntryDefaultPlatformId(entryId, platformGroups);
+          if (!platformId) {
+            return null;
+          }
+          const groupId = parseGroupEntryId(entryId);
+          const group = groupId ? platformGroups.find((item) => item.id === groupId) : null;
+          const groupChildLabels = group
+            ? group.platformIds.map((childPlatformId) =>
+                resolveGroupChildName(group, childPlatformId, getPlatformLabel(childPlatformId, t)),
+              )
+            : [];
+          const groupExtraCount = Math.max(groupChildLabels.length - 1, 0);
+          const groupTooltip = groupChildLabels.join(', ');
+          const label = group
+            ? group.name
+            : getPlatformLabel(platformId, t);
           const iconClass =
             platformId === 'antigravity'
               ? 'success'
@@ -1938,10 +3288,19 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
           return (
             <button
               className="stat-card stat-card-button"
-              key={platformId}
+              key={entryId}
               onClick={() => onNavigate(PLATFORM_PAGE_MAP[platformId])}
-              title={t('dashboard.switchTo', '切换到此账号')}
+              title={
+                groupExtraCount > 0
+                  ? `${t('dashboard.switchTo', '切换到此账号')} · ${groupTooltip}`
+                  : t('dashboard.switchTo', '切换到此账号')
+              }
             >
+              {groupExtraCount > 0 && (
+                <span className="stat-group-more-badge stat-group-more-badge-corner" title={groupTooltip} aria-label={groupTooltip}>
+                  +{groupExtraCount}
+                </span>
+              )}
               <div
                 className={`stat-icon-bg ${iconClass} stat-icon-trigger`}
                 onClick={(event) => {
@@ -1950,11 +3309,20 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
                   onEasterEggTriggerClick();
                 }}
               >
-                {renderPlatformIcon(platformId, 24)}
+                {group?.iconKind === 'custom' && group.iconCustomDataUrl ? (
+                  <img
+                    src={group.iconCustomDataUrl}
+                    alt={label}
+                    className="dashboard-group-icon"
+                    style={{ width: 24, height: 24 }}
+                  />
+                ) : (
+                  renderPlatformIcon(group?.iconPlatformId ?? platformId, 24)
+                )}
               </div>
               <div className="stat-info">
-                <span className="stat-label">{getPlatformLabel(platformId, t)}</span>
-                <span className="stat-value">{platformCounts[platformId]}</span>
+                <span className="stat-label">{label}</span>
+                <span className="stat-value">{entryCounts.get(entryId) ?? 0}</span>
               </div>
             </button>
           );

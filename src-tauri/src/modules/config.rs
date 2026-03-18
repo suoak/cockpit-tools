@@ -9,6 +9,8 @@ use std::sync::{OnceLock, RwLock};
 
 /// 默认 WebSocket 端口
 pub const DEFAULT_WS_PORT: u16 = 19528;
+/// 默认网页查询服务端口
+pub const DEFAULT_REPORT_PORT: u16 = 18081;
 
 /// 端口尝试范围（从配置端口开始，最多尝试 100 个）
 pub const PORT_RANGE: u16 = 100;
@@ -44,12 +46,24 @@ pub struct UserConfig {
     /// WebSocket 首选端口（用户配置的，实际可能不同）
     #[serde(default = "default_ws_port")]
     pub ws_port: u16,
+    /// 网页查询服务是否启用
+    #[serde(default = "default_report_enabled")]
+    pub report_enabled: bool,
+    /// 网页查询服务首选端口
+    #[serde(default = "default_report_port")]
+    pub report_port: u16,
+    /// 网页查询服务访问令牌
+    #[serde(default = "default_report_token")]
+    pub report_token: String,
     /// 界面语言
     #[serde(default = "default_language")]
     pub language: String,
     /// 应用主题
     #[serde(default = "default_theme")]
     pub theme: String,
+    /// 界面缩放比例
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: f64,
     /// 自动刷新间隔（分钟），-1 表示禁用
     #[serde(default = "default_auto_refresh")]
     pub auto_refresh_minutes: i32,
@@ -71,6 +85,18 @@ pub struct UserConfig {
     /// Gemini 自动刷新间隔（分钟），-1 表示禁用
     #[serde(default = "default_gemini_auto_refresh")]
     pub gemini_auto_refresh_minutes: i32,
+    /// CodeBuddy 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_codebuddy_auto_refresh")]
+    pub codebuddy_auto_refresh_minutes: i32,
+    /// CodeBuddy CN 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_codebuddy_cn_auto_refresh")]
+    pub codebuddy_cn_auto_refresh_minutes: i32,
+    /// Qoder 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_qoder_auto_refresh")]
+    pub qoder_auto_refresh_minutes: i32,
+    /// Trae 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_trae_auto_refresh")]
+    pub trae_auto_refresh_minutes: i32,
     /// 窗口关闭行为
     #[serde(default = "default_close_behavior")]
     pub close_behavior: CloseWindowBehavior,
@@ -101,6 +127,21 @@ pub struct UserConfig {
     /// Cursor 启动路径（为空则使用默认路径）
     #[serde(default = "default_cursor_app_path")]
     pub cursor_app_path: String,
+    /// CodeBuddy 启动路径（为空则使用默认路径）
+    #[serde(default = "default_codebuddy_app_path")]
+    pub codebuddy_app_path: String,
+    /// CodeBuddy CN 启动路径（为空则使用默认路径）
+    #[serde(default = "default_codebuddy_cn_app_path")]
+    pub codebuddy_cn_app_path: String,
+    /// Qoder 启动路径（为空则使用默认路径）
+    #[serde(default = "default_qoder_app_path")]
+    pub qoder_app_path: String,
+    /// Trae 启动路径（为空则使用默认路径）
+    #[serde(default = "default_trae_app_path")]
+    pub trae_app_path: String,
+    /// WorkBuddy 启动路径（为空则使用默认路径）
+    #[serde(default = "default_workbuddy_app_path")]
+    pub workbuddy_app_path: String,
     /// 切换 Codex 时是否自动重启 OpenCode
     #[serde(default = "default_opencode_sync_on_switch")]
     pub opencode_sync_on_switch: bool,
@@ -116,6 +157,15 @@ pub struct UserConfig {
     /// 自动切号阈值（百分比），任意模型配额低于此值触发
     #[serde(default = "default_auto_switch_threshold")]
     pub auto_switch_threshold: i32,
+    /// 是否启用 Codex 自动切号
+    #[serde(default = "default_codex_auto_switch_enabled")]
+    pub codex_auto_switch_enabled: bool,
+    /// Codex primary_window 自动切号阈值（百分比）
+    #[serde(default = "default_codex_auto_switch_primary_threshold")]
+    pub codex_auto_switch_primary_threshold: i32,
+    /// Codex secondary_window 自动切号阈值（百分比）
+    #[serde(default = "default_codex_auto_switch_secondary_threshold")]
+    pub codex_auto_switch_secondary_threshold: i32,
     /// 是否启用配额预警通知
     #[serde(default = "default_quota_alert_enabled")]
     pub quota_alert_enabled: bool,
@@ -128,6 +178,12 @@ pub struct UserConfig {
     /// Codex 配额预警阈值（百分比）
     #[serde(default = "default_codex_quota_alert_threshold")]
     pub codex_quota_alert_threshold: i32,
+    /// Codex primary_window 配额预警阈值（百分比）
+    #[serde(default = "default_codex_quota_alert_primary_threshold")]
+    pub codex_quota_alert_primary_threshold: i32,
+    /// Codex secondary_window 配额预警阈值（百分比）
+    #[serde(default = "default_codex_quota_alert_secondary_threshold")]
+    pub codex_quota_alert_secondary_threshold: i32,
     /// 是否启用 GitHub Copilot 配额预警通知
     #[serde(default = "default_ghcp_quota_alert_enabled")]
     pub ghcp_quota_alert_enabled: bool,
@@ -158,6 +214,36 @@ pub struct UserConfig {
     /// Gemini 配额预警阈值（百分比）
     #[serde(default = "default_gemini_quota_alert_threshold")]
     pub gemini_quota_alert_threshold: i32,
+    /// 是否启用 CodeBuddy 配额预警通知
+    #[serde(default = "default_codebuddy_quota_alert_enabled")]
+    pub codebuddy_quota_alert_enabled: bool,
+    /// CodeBuddy 配额预警阈值（百分比）
+    #[serde(default = "default_codebuddy_quota_alert_threshold")]
+    pub codebuddy_quota_alert_threshold: i32,
+    /// 是否启用 CodeBuddy CN 配额预警通知
+    #[serde(default = "default_codebuddy_cn_quota_alert_enabled")]
+    pub codebuddy_cn_quota_alert_enabled: bool,
+    /// CodeBuddy CN 配额预警阈值（百分比）
+    #[serde(default = "default_codebuddy_cn_quota_alert_threshold")]
+    pub codebuddy_cn_quota_alert_threshold: i32,
+    /// 是否启用 Qoder 配额预警通知
+    #[serde(default = "default_qoder_quota_alert_enabled")]
+    pub qoder_quota_alert_enabled: bool,
+    /// Qoder 配额预警阈值（百分比）
+    #[serde(default = "default_qoder_quota_alert_threshold")]
+    pub qoder_quota_alert_threshold: i32,
+    /// 是否启用 Trae 配额预警通知
+    #[serde(default = "default_trae_quota_alert_enabled")]
+    pub trae_quota_alert_enabled: bool,
+    /// Trae 配额预警阈值（百分比）
+    #[serde(default = "default_trae_quota_alert_threshold")]
+    pub trae_quota_alert_threshold: i32,
+    /// 是否启用 WorkBuddy 配额预警通知
+    #[serde(default = "default_workbuddy_quota_alert_enabled")]
+    pub workbuddy_quota_alert_enabled: bool,
+    /// WorkBuddy 配额预警阈值（百分比）
+    #[serde(default = "default_workbuddy_quota_alert_threshold")]
+    pub workbuddy_quota_alert_threshold: i32,
 }
 
 /// 窗口关闭行为
@@ -200,11 +286,23 @@ fn default_ws_enabled() -> bool {
 fn default_ws_port() -> u16 {
     DEFAULT_WS_PORT
 }
+fn default_report_enabled() -> bool {
+    false
+}
+fn default_report_port() -> u16 {
+    DEFAULT_REPORT_PORT
+}
+fn default_report_token() -> String {
+    "change-this-token".to_string()
+}
 fn default_language() -> String {
     "zh-cn".to_string()
 }
 fn default_theme() -> String {
     "system".to_string()
+}
+fn default_ui_scale() -> f64 {
+    1.0
 }
 fn default_auto_refresh() -> i32 {
     10
@@ -226,7 +324,19 @@ fn default_cursor_auto_refresh() -> i32 {
 } // 默认 10 分钟
 fn default_gemini_auto_refresh() -> i32 {
     10
-} // 默认 10 分钟
+}
+fn default_codebuddy_auto_refresh() -> i32 {
+    10
+}
+fn default_codebuddy_cn_auto_refresh() -> i32 {
+    10
+}
+fn default_qoder_auto_refresh() -> i32 {
+    10
+}
+fn default_trae_auto_refresh() -> i32 {
+    10
+}
 fn default_close_behavior() -> CloseWindowBehavior {
     CloseWindowBehavior::Ask
 }
@@ -257,6 +367,21 @@ fn default_kiro_app_path() -> String {
 fn default_cursor_app_path() -> String {
     String::new()
 }
+fn default_codebuddy_app_path() -> String {
+    String::new()
+}
+fn default_codebuddy_cn_app_path() -> String {
+    String::new()
+}
+fn default_qoder_app_path() -> String {
+    String::new()
+}
+fn default_trae_app_path() -> String {
+    String::new()
+}
+fn default_workbuddy_app_path() -> String {
+    String::new()
+}
 fn default_opencode_sync_on_switch() -> bool {
     true
 }
@@ -272,6 +397,15 @@ fn default_auto_switch_enabled() -> bool {
 fn default_auto_switch_threshold() -> i32 {
     5
 }
+fn default_codex_auto_switch_enabled() -> bool {
+    false
+}
+fn default_codex_auto_switch_primary_threshold() -> i32 {
+    20
+}
+fn default_codex_auto_switch_secondary_threshold() -> i32 {
+    20
+}
 fn default_quota_alert_enabled() -> bool {
     false
 }
@@ -282,6 +416,12 @@ fn default_codex_quota_alert_enabled() -> bool {
     false
 }
 fn default_codex_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_codex_quota_alert_primary_threshold() -> i32 {
+    20
+}
+fn default_codex_quota_alert_secondary_threshold() -> i32 {
     20
 }
 fn default_ghcp_quota_alert_enabled() -> bool {
@@ -314,14 +454,48 @@ fn default_gemini_quota_alert_enabled() -> bool {
 fn default_gemini_quota_alert_threshold() -> i32 {
     20
 }
+fn default_codebuddy_quota_alert_enabled() -> bool {
+    false
+}
+fn default_codebuddy_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_codebuddy_cn_quota_alert_enabled() -> bool {
+    false
+}
+fn default_codebuddy_cn_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_qoder_quota_alert_enabled() -> bool {
+    false
+}
+fn default_qoder_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_trae_quota_alert_enabled() -> bool {
+    false
+}
+fn default_trae_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_workbuddy_quota_alert_enabled() -> bool {
+    false
+}
+fn default_workbuddy_quota_alert_threshold() -> i32 {
+    20
+}
 
 impl Default for UserConfig {
     fn default() -> Self {
         Self {
             ws_enabled: true,
             ws_port: DEFAULT_WS_PORT,
+            report_enabled: default_report_enabled(),
+            report_port: default_report_port(),
+            report_token: default_report_token(),
             language: default_language(),
             theme: default_theme(),
+            ui_scale: default_ui_scale(),
             auto_refresh_minutes: default_auto_refresh(),
             codex_auto_refresh_minutes: default_codex_auto_refresh(),
             ghcp_auto_refresh_minutes: default_ghcp_auto_refresh(),
@@ -329,6 +503,10 @@ impl Default for UserConfig {
             kiro_auto_refresh_minutes: default_kiro_auto_refresh(),
             cursor_auto_refresh_minutes: default_cursor_auto_refresh(),
             gemini_auto_refresh_minutes: default_gemini_auto_refresh(),
+            codebuddy_auto_refresh_minutes: default_codebuddy_auto_refresh(),
+            codebuddy_cn_auto_refresh_minutes: default_codebuddy_cn_auto_refresh(),
+            qoder_auto_refresh_minutes: default_qoder_auto_refresh(),
+            trae_auto_refresh_minutes: default_trae_auto_refresh(),
             close_behavior: default_close_behavior(),
             minimize_behavior: default_minimize_behavior(),
             hide_dock_icon: default_hide_dock_icon(),
@@ -339,15 +517,25 @@ impl Default for UserConfig {
             windsurf_app_path: default_windsurf_app_path(),
             kiro_app_path: default_kiro_app_path(),
             cursor_app_path: default_cursor_app_path(),
+            codebuddy_app_path: default_codebuddy_app_path(),
+            codebuddy_cn_app_path: default_codebuddy_cn_app_path(),
+            qoder_app_path: default_qoder_app_path(),
+            trae_app_path: default_trae_app_path(),
+            workbuddy_app_path: default_workbuddy_app_path(),
             opencode_sync_on_switch: default_opencode_sync_on_switch(),
             opencode_auth_overwrite_on_switch: default_opencode_auth_overwrite_on_switch(),
             codex_launch_on_switch: default_codex_launch_on_switch(),
             auto_switch_enabled: default_auto_switch_enabled(),
             auto_switch_threshold: default_auto_switch_threshold(),
+            codex_auto_switch_enabled: default_codex_auto_switch_enabled(),
+            codex_auto_switch_primary_threshold: default_codex_auto_switch_primary_threshold(),
+            codex_auto_switch_secondary_threshold: default_codex_auto_switch_secondary_threshold(),
             quota_alert_enabled: default_quota_alert_enabled(),
             quota_alert_threshold: default_quota_alert_threshold(),
             codex_quota_alert_enabled: default_codex_quota_alert_enabled(),
             codex_quota_alert_threshold: default_codex_quota_alert_threshold(),
+            codex_quota_alert_primary_threshold: default_codex_quota_alert_primary_threshold(),
+            codex_quota_alert_secondary_threshold: default_codex_quota_alert_secondary_threshold(),
             ghcp_quota_alert_enabled: default_ghcp_quota_alert_enabled(),
             ghcp_quota_alert_threshold: default_ghcp_quota_alert_threshold(),
             windsurf_quota_alert_enabled: default_windsurf_quota_alert_enabled(),
@@ -358,6 +546,16 @@ impl Default for UserConfig {
             cursor_quota_alert_threshold: default_cursor_quota_alert_threshold(),
             gemini_quota_alert_enabled: default_gemini_quota_alert_enabled(),
             gemini_quota_alert_threshold: default_gemini_quota_alert_threshold(),
+            codebuddy_quota_alert_enabled: default_codebuddy_quota_alert_enabled(),
+            codebuddy_quota_alert_threshold: default_codebuddy_quota_alert_threshold(),
+            codebuddy_cn_quota_alert_enabled: default_codebuddy_cn_quota_alert_enabled(),
+            codebuddy_cn_quota_alert_threshold: default_codebuddy_cn_quota_alert_threshold(),
+            qoder_quota_alert_enabled: default_qoder_quota_alert_enabled(),
+            qoder_quota_alert_threshold: default_qoder_quota_alert_threshold(),
+            trae_quota_alert_enabled: default_trae_quota_alert_enabled(),
+            trae_quota_alert_threshold: default_trae_quota_alert_threshold(),
+            workbuddy_quota_alert_enabled: default_workbuddy_quota_alert_enabled(),
+            workbuddy_quota_alert_threshold: default_workbuddy_quota_alert_threshold(),
         }
     }
 }
@@ -463,6 +661,46 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             );
         }
 
+        if !obj.contains_key("qoder_auto_refresh_minutes") {
+            let inherited_refresh = obj
+                .get("gemini_auto_refresh_minutes")
+                .or_else(|| obj.get("cursor_auto_refresh_minutes"))
+                .or_else(|| obj.get("kiro_auto_refresh_minutes"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32)
+                .unwrap_or_else(default_qoder_auto_refresh);
+            obj.insert(
+                "qoder_auto_refresh_minutes".to_string(),
+                json!(inherited_refresh),
+            );
+        }
+
+        if !obj.contains_key("codebuddy_cn_auto_refresh_minutes") {
+            let inherited_refresh = obj
+                .get("codebuddy_auto_refresh_minutes")
+                .or_else(|| obj.get("gemini_auto_refresh_minutes"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32)
+                .unwrap_or_else(default_codebuddy_cn_auto_refresh);
+            obj.insert(
+                "codebuddy_cn_auto_refresh_minutes".to_string(),
+                json!(inherited_refresh),
+            );
+        }
+
+        if !obj.contains_key("trae_auto_refresh_minutes") {
+            let inherited_refresh = obj
+                .get("qoder_auto_refresh_minutes")
+                .or_else(|| obj.get("gemini_auto_refresh_minutes"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32)
+                .unwrap_or_else(default_trae_auto_refresh);
+            obj.insert(
+                "trae_auto_refresh_minutes".to_string(),
+                json!(inherited_refresh),
+            );
+        }
+
         if !obj.contains_key("hide_dock_icon") {
             let inherited_hide_dock_icon = obj
                 .get("minimize_behavior")
@@ -475,6 +713,19 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             );
         }
 
+        if !obj.contains_key("report_enabled") {
+            obj.insert(
+                "report_enabled".to_string(),
+                json!(default_report_enabled()),
+            );
+        }
+        if !obj.contains_key("report_port") {
+            obj.insert("report_port".to_string(), json!(default_report_port()));
+        }
+        if !obj.contains_key("report_token") {
+            obj.insert("report_token".to_string(), json!(default_report_token()));
+        }
+
         let legacy_enabled = obj
             .get("quota_alert_enabled")
             .and_then(|v| v.as_bool())
@@ -484,6 +735,15 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             .and_then(|v| v.as_i64())
             .map(|v| v as i32)
             .unwrap_or_else(default_quota_alert_threshold);
+        let legacy_auto_switch_enabled = obj
+            .get("codex_auto_switch_enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or_else(default_codex_auto_switch_enabled);
+        let legacy_auto_switch_threshold = obj
+            .get("codex_auto_switch_primary_threshold")
+            .and_then(|v| v.as_i64())
+            .map(|v| v as i32)
+            .unwrap_or_else(default_codex_auto_switch_primary_threshold);
 
         if !obj.contains_key("codex_quota_alert_enabled") {
             obj.insert(
@@ -495,6 +755,41 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             obj.insert(
                 "codex_quota_alert_threshold".to_string(),
                 json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("codex_auto_switch_enabled") {
+            obj.insert(
+                "codex_auto_switch_enabled".to_string(),
+                json!(legacy_auto_switch_enabled),
+            );
+        }
+        if !obj.contains_key("codex_auto_switch_primary_threshold") {
+            obj.insert(
+                "codex_auto_switch_primary_threshold".to_string(),
+                json!(legacy_auto_switch_threshold),
+            );
+        }
+        if !obj.contains_key("codex_auto_switch_secondary_threshold") {
+            obj.insert(
+                "codex_auto_switch_secondary_threshold".to_string(),
+                json!(legacy_auto_switch_threshold),
+            );
+        }
+        let codex_legacy_threshold = obj
+            .get("codex_quota_alert_threshold")
+            .and_then(|v| v.as_i64())
+            .map(|v| v as i32)
+            .unwrap_or(legacy_threshold);
+        if !obj.contains_key("codex_quota_alert_primary_threshold") {
+            obj.insert(
+                "codex_quota_alert_primary_threshold".to_string(),
+                json!(codex_legacy_threshold),
+            );
+        }
+        if !obj.contains_key("codex_quota_alert_secondary_threshold") {
+            obj.insert(
+                "codex_quota_alert_secondary_threshold".to_string(),
+                json!(codex_legacy_threshold),
             );
         }
         if !obj.contains_key("ghcp_quota_alert_enabled") {
@@ -557,6 +852,66 @@ pub fn load_user_config() -> Result<UserConfig, String> {
                 json!(legacy_threshold),
             );
         }
+        if !obj.contains_key("codebuddy_quota_alert_enabled") {
+            obj.insert(
+                "codebuddy_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("codebuddy_quota_alert_threshold") {
+            obj.insert(
+                "codebuddy_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("codebuddy_cn_quota_alert_enabled") {
+            obj.insert(
+                "codebuddy_cn_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("codebuddy_cn_quota_alert_threshold") {
+            obj.insert(
+                "codebuddy_cn_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("qoder_quota_alert_enabled") {
+            obj.insert(
+                "qoder_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("qoder_quota_alert_threshold") {
+            obj.insert(
+                "qoder_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("trae_quota_alert_enabled") {
+            obj.insert(
+                "trae_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("trae_quota_alert_threshold") {
+            obj.insert(
+                "trae_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("workbuddy_quota_alert_enabled") {
+            obj.insert(
+                "workbuddy_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("workbuddy_quota_alert_threshold") {
+            obj.insert(
+                "workbuddy_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
     }
 
     serde_json::from_value(value).map_err(|e| format!("解析配置文件失败: {}", e))
@@ -583,8 +938,8 @@ pub fn save_user_config(config: &UserConfig) -> Result<(), String> {
     }
 
     crate::modules::logger::log_info(&format!(
-        "[Config] 用户配置已保存: ws_enabled={}, ws_port={}",
-        config.ws_enabled, config.ws_port
+        "[Config] 用户配置已保存: ws_enabled={}, ws_port={}, report_enabled={}, report_port={}",
+        config.ws_enabled, config.ws_port, config.report_enabled, config.report_port
     ));
 
     Ok(())

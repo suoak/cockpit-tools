@@ -59,6 +59,10 @@ const SALT: &[u8] = b"saltysalt";
 enum SafeStorageReadMode {
     Default,
     AntigravityOnly,
+    CodeBuddyOnly,
+    CodeBuddyCnOnly,
+    QoderOnly,
+    WorkBuddyOnly,
 }
 
 // PBKDF2-HMAC-SHA1(1 iteration, key = "peanuts", salt = "saltysalt")
@@ -73,66 +77,41 @@ const LINUX_EMPTY_KEY: [u8; 16] = [
     0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a, 0xc5, 0x41, 0x87, 0xfa, 0x48, 0x18, 0xd1, 0x7f,
 ];
 
-fn get_vscode_data_root() -> Result<PathBuf, String> {
-    #[cfg(target_os = "windows")]
-    {
-        let appdata = std::env::var("APPDATA")
-            .map_err(|_| "Cannot read APPDATA environment variable".to_string())?;
-        return Ok(PathBuf::from(appdata).join("Code"));
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let home = dirs::home_dir().ok_or("Cannot locate home directory".to_string())?;
-        return Ok(home
-            .join("Library")
-            .join("Application Support")
-            .join("Code"));
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(xdg_config_home) = std::env::var("XDG_CONFIG_HOME") {
-            let trimmed = xdg_config_home.trim();
-            if !trimmed.is_empty() {
-                return Ok(PathBuf::from(trimmed).join("Code"));
-            }
-        }
-        let home = dirs::home_dir().ok_or("Cannot locate home directory".to_string())?;
-        return Ok(home.join(".config").join("Code"));
-    }
-
-    #[allow(unreachable_code)]
-    Err("Unsupported platform".to_string())
-}
-
 fn resolve_vscode_data_root(user_data_dir: Option<&str>) -> Result<PathBuf, String> {
-    if let Some(raw) = user_data_dir {
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            return Ok(PathBuf::from(trimmed));
+    crate::modules::vscode_paths::resolve_vscode_data_root(user_data_dir).map_err(|err| {
+        if err == "GitHub Copilot 仅支持 macOS、Windows 和 Linux" {
+            "Unsupported platform".to_string()
+        } else {
+            err
         }
-    }
-    get_vscode_data_root()
+    })
 }
 
 fn get_vscode_db_path_from_data_root(data_root: &Path) -> Result<PathBuf, String> {
-    let path = data_root
-        .join("User")
-        .join("globalStorage")
-        .join("state.vscdb");
+    let path = crate::modules::vscode_paths::vscode_state_db_path(data_root);
     if path.exists() {
         Ok(path)
     } else {
-        Err(format!("VS Code database not found: {}", path.display()))
+        let attempted = crate::modules::vscode_paths::vscode_data_root_candidates()
+            .ok()
+            .filter(|candidates| candidates.iter().any(|candidate| candidate == data_root))
+            .map(|candidates| {
+                candidates
+                    .iter()
+                    .map(|candidate| {
+                        crate::modules::vscode_paths::vscode_state_db_path(candidate)
+                            .display()
+                            .to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            });
+        if let Some(paths) = attempted {
+            Err(format!("VS Code database not found. Tried: {}", paths))
+        } else {
+            Err(format!("VS Code database not found: {}", path.display()))
+        }
     }
-}
-
-/// Get the path to VS Code's state.vscdb.
-#[allow(dead_code)]
-pub fn get_vscode_db_path() -> Result<PathBuf, String> {
-    let data_root = resolve_vscode_data_root(None)?;
-    get_vscode_db_path_from_data_root(&data_root)
 }
 
 fn build_secret_storage_item_key(extension_id: &str, key: &str) -> String {
@@ -144,11 +123,29 @@ fn build_secret_storage_item_key(extension_id: &str, key: &str) -> String {
 
 #[cfg(target_os = "windows")]
 fn get_local_state_path(data_root: &Path) -> Result<PathBuf, String> {
-    let path = data_root.join("Local State");
+    let path = crate::modules::vscode_paths::vscode_local_state_path(data_root);
     if path.exists() {
         Ok(path)
     } else {
-        Err(format!("VS Code Local State not found: {}", path.display()))
+        let attempted = crate::modules::vscode_paths::vscode_data_root_candidates()
+            .ok()
+            .filter(|candidates| candidates.iter().any(|candidate| candidate == data_root))
+            .map(|candidates| {
+                candidates
+                    .iter()
+                    .map(|candidate| {
+                        crate::modules::vscode_paths::vscode_local_state_path(candidate)
+                            .display()
+                            .to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            });
+        if let Some(paths) = attempted {
+            Err(format!("VS Code Local State not found. Tried: {}", paths))
+        } else {
+            Err(format!("VS Code Local State not found: {}", path.display()))
+        }
     }
 }
 
@@ -158,7 +155,14 @@ fn get_windows_encryption_key(data_root: Option<&Path>) -> Result<Vec<u8>, Strin
     let root = if let Some(path) = data_root {
         path
     } else {
-        owned_root = get_vscode_data_root()?;
+        owned_root = crate::modules::vscode_paths::resolve_vscode_data_root_for_state_db()
+            .map_err(|err| {
+                if err == "GitHub Copilot 仅支持 macOS、Windows 和 Linux" {
+                    "Unsupported platform".to_string()
+                } else {
+                    err
+                }
+            })?;
         owned_root.as_path()
     };
     let path = get_local_state_path(root)?;
@@ -355,6 +359,84 @@ fn build_macos_safe_storage_candidates(
         ];
     }
 
+    if matches!(mode, SafeStorageReadMode::CodeBuddyOnly) {
+        return vec![
+            (
+                "CodeBuddy Safe Storage".to_string(),
+                Some("CodeBuddy".to_string()),
+            ),
+            (
+                "CodeBuddy Safe Storage".to_string(),
+                Some("codebuddy".to_string()),
+            ),
+            (
+                "CodeBuddy Safe Storage".to_string(),
+                Some("CodeBuddy Key".to_string()),
+            ),
+            ("CodeBuddy Safe Storage".to_string(), None),
+            (
+                "CodeBuddy Safe Storage".to_string(),
+                Some("CodeBuddy Safe Storage".to_string()),
+            ),
+        ];
+    }
+
+    if matches!(mode, SafeStorageReadMode::CodeBuddyCnOnly) {
+        return vec![
+            (
+                "CodeBuddy CN Safe Storage".to_string(),
+                Some("CodeBuddy CN".to_string()),
+            ),
+            (
+                "CodeBuddy CN Safe Storage".to_string(),
+                Some("codebuddy cn".to_string()),
+            ),
+            (
+                "CodeBuddy CN Safe Storage".to_string(),
+                Some("CodeBuddy CN Key".to_string()),
+            ),
+            ("CodeBuddy CN Safe Storage".to_string(), None),
+            (
+                "CodeBuddy CN Safe Storage".to_string(),
+                Some("CodeBuddy CN Safe Storage".to_string()),
+            ),
+        ];
+    }
+
+    if matches!(mode, SafeStorageReadMode::QoderOnly) {
+        return vec![
+            ("Qoder Safe Storage".to_string(), Some("Qoder".to_string())),
+            ("Qoder Safe Storage".to_string(), Some("qoder".to_string())),
+            ("Qoder Safe Storage".to_string(), None),
+            (
+                "Qoder Safe Storage".to_string(),
+                Some("Qoder Safe Storage".to_string()),
+            ),
+        ];
+    }
+
+    if matches!(mode, SafeStorageReadMode::WorkBuddyOnly) {
+        return vec![
+            (
+                "WorkBuddy Safe Storage".to_string(),
+                Some("WorkBuddy".to_string()),
+            ),
+            (
+                "WorkBuddy Safe Storage".to_string(),
+                Some("workbuddy".to_string()),
+            ),
+            (
+                "WorkBuddy Safe Storage".to_string(),
+                Some("WorkBuddy Key".to_string()),
+            ),
+            ("WorkBuddy Safe Storage".to_string(), None),
+            (
+                "WorkBuddy Safe Storage".to_string(),
+                Some("WorkBuddy Safe Storage".to_string()),
+            ),
+        ];
+    }
+
     let mut app_names: Vec<String> = Vec::new();
     if let Some(root) = data_root {
         if let Some(name) = root.file_name().and_then(|value| value.to_str()) {
@@ -368,9 +450,16 @@ fn build_macos_safe_storage_candidates(
     // Default mode is used by VS Code / GitHub Copilot injection path.
     // Keep this list strictly VS Code-family to avoid cross-platform key probing.
     app_names.extend(
-        ["Code", "Visual Studio Code", "Code - OSS", "VSCodium"]
-            .iter()
-            .map(|value| value.to_string()),
+        [
+            "Code",
+            "Code - Insiders",
+            "Visual Studio Code",
+            "Visual Studio Code - Insiders",
+            "Code - OSS",
+            "VSCodium",
+        ]
+        .iter()
+        .map(|value| value.to_string()),
     );
 
     let mut candidates: Vec<(String, Option<String>)> = Vec::new();
@@ -440,8 +529,29 @@ fn run_command_get_trimmed(program: &str, args: &[&str]) -> Option<String> {
 }
 
 #[cfg(target_os = "linux")]
-fn get_linux_v11_key() -> Option<[u8; 16]> {
-    let app_names = ["code", "Code", "code-oss", "Code - OSS", "VSCodium"];
+fn get_linux_v11_key(mode: SafeStorageReadMode) -> Option<[u8; 16]> {
+    let app_names: &[&str] = match mode {
+        SafeStorageReadMode::CodeBuddyOnly => &["CodeBuddy", "codebuddy"],
+        SafeStorageReadMode::CodeBuddyCnOnly => &[
+            "CodeBuddy CN",
+            "codebuddy cn",
+            "codebuddy-cn",
+            "codebuddycn",
+        ],
+        SafeStorageReadMode::QoderOnly => &["Qoder", "qoder"],
+        SafeStorageReadMode::WorkBuddyOnly => {
+            &["WorkBuddy", "workbuddy", "workbuddy-cn", "workbuddycn"]
+        }
+        _ => &[
+            "code",
+            "Code",
+            "code-insiders",
+            "Code - Insiders",
+            "code-oss",
+            "Code - OSS",
+            "VSCodium",
+        ],
+    };
 
     for app in app_names {
         if let Some(password) =
@@ -454,6 +564,7 @@ fn get_linux_v11_key() -> Option<[u8; 16]> {
     None
 }
 
+#[allow(unused_variables)]
 fn decrypt_secret_payload_with_mode(
     encrypted: &[u8],
     data_root: Option<&Path>,
@@ -479,7 +590,7 @@ fn decrypt_secret_payload_with_mode(
     {
         match detect_prefix(encrypted) {
             Some("v11") => {
-                let key = get_linux_v11_key().ok_or(
+                let key = get_linux_v11_key(mode).ok_or(
                     "Cannot load Linux secret storage key for VS Code (v11 payload)".to_string(),
                 )?;
                 match decrypt_cbc_prefixed(encrypted, V11_PREFIX, &key) {
@@ -515,37 +626,50 @@ fn encrypt_secret_payload(
     preferred_prefix: Option<&str>,
     data_root: Option<&Path>,
 ) -> Result<Vec<u8>, String> {
+    encrypt_secret_payload_with_mode(
+        plaintext,
+        preferred_prefix,
+        data_root,
+        SafeStorageReadMode::Default,
+    )
+}
+
+fn encrypt_secret_payload_with_mode(
+    plaintext: &[u8],
+    preferred_prefix: Option<&str>,
+    data_root: Option<&Path>,
+    mode: SafeStorageReadMode,
+) -> Result<Vec<u8>, String> {
     #[cfg(not(target_os = "linux"))]
     let _ = preferred_prefix;
 
-    #[cfg(target_os = "linux")]
-    let _ = data_root;
-
     #[cfg(target_os = "windows")]
     {
+        let _ = mode;
         let key = get_windows_encryption_key(data_root)?;
         return encrypt_windows_gcm_v10(&key, plaintext);
     }
 
     #[cfg(target_os = "macos")]
     {
-        let password = get_macos_safe_storage_password(data_root, SafeStorageReadMode::Default)?;
+        let password = get_macos_safe_storage_password(data_root, mode)?;
         let key = pbkdf2_sha1_key(&password, 1003);
         return encrypt_cbc_prefixed(V10_PREFIX, &key, plaintext);
     }
 
     #[cfg(target_os = "linux")]
     {
+        let _ = data_root;
         let target_prefix = if let Some(prefix) = preferred_prefix {
             prefix
-        } else if get_linux_v11_key().is_some() {
+        } else if get_linux_v11_key(mode).is_some() {
             "v11"
         } else {
             "v10"
         };
 
         if target_prefix == "v11" {
-            let key = get_linux_v11_key().ok_or(
+            let key = get_linux_v11_key(mode).ok_or(
                 "Cannot load Linux secret storage key for VS Code (v11 payload)".to_string(),
             )?;
             return encrypt_cbc_prefixed(V11_PREFIX, &key, plaintext);
@@ -556,7 +680,7 @@ fn encrypt_secret_payload(
 
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
-        let _ = (plaintext, preferred_prefix, data_root);
+        let _ = (plaintext, preferred_prefix, data_root, mode);
         Err("Unsupported platform".to_string())
     }
 }
@@ -674,28 +798,6 @@ fn decode_secret_storage_value_with_mode(
     Ok(raw_value.to_string())
 }
 
-#[allow(dead_code)]
-fn decode_secret_storage_value(
-    raw_value: &str,
-    data_root: Option<&Path>,
-) -> Result<String, String> {
-    decode_secret_storage_value_with_mode(raw_value, data_root, SafeStorageReadMode::Default)
-}
-
-#[allow(dead_code)]
-fn read_secret_storage_value_with_data_root(
-    data_root: &Path,
-    extension_id: &str,
-    key: &str,
-) -> Result<Option<String>, String> {
-    read_secret_storage_value_with_data_root_and_mode(
-        data_root,
-        extension_id,
-        key,
-        SafeStorageReadMode::Default,
-    )
-}
-
 fn read_secret_storage_value_with_data_root_and_mode(
     data_root: &Path,
     extension_id: &str,
@@ -741,16 +843,6 @@ fn read_secret_storage_value_with_data_root_and_mode(
     }
 }
 
-#[allow(dead_code)]
-pub fn read_vscode_secret_storage_value(
-    extension_id: &str,
-    key: &str,
-    user_data_dir: Option<&str>,
-) -> Result<Option<String>, String> {
-    let data_root = resolve_vscode_data_root(user_data_dir)?;
-    read_secret_storage_value_with_data_root(&data_root, extension_id, key)
-}
-
 pub fn read_antigravity_secret_storage_value(
     extension_id: &str,
     key: &str,
@@ -763,6 +855,109 @@ pub fn read_antigravity_secret_storage_value(
         key,
         SafeStorageReadMode::AntigravityOnly,
     )
+}
+
+pub fn read_codebuddy_secret_storage_value(
+    extension_id: &str,
+    key: &str,
+    user_data_dir: Option<&str>,
+) -> Result<Option<String>, String> {
+    let data_root = resolve_vscode_data_root(user_data_dir)?;
+    read_secret_storage_value_with_data_root_and_mode(
+        &data_root,
+        extension_id,
+        key,
+        SafeStorageReadMode::CodeBuddyOnly,
+    )
+}
+
+pub fn read_codebuddy_cn_secret_storage_value(
+    extension_id: &str,
+    key: &str,
+    user_data_dir: Option<&str>,
+) -> Result<Option<String>, String> {
+    let data_root = resolve_vscode_data_root(user_data_dir)?;
+    read_secret_storage_value_with_data_root_and_mode(
+        &data_root,
+        extension_id,
+        key,
+        SafeStorageReadMode::CodeBuddyCnOnly,
+    )
+}
+
+pub fn read_workbuddy_secret_storage_value(
+    extension_id: &str,
+    key: &str,
+    user_data_dir: Option<&str>,
+) -> Result<Option<String>, String> {
+    let data_root = resolve_vscode_data_root(user_data_dir)?;
+    read_secret_storage_value_with_data_root_and_mode(
+        &data_root,
+        extension_id,
+        key,
+        SafeStorageReadMode::WorkBuddyOnly,
+    )
+}
+
+fn resolve_data_root_from_state_db_path(db_path: &Path) -> Result<&Path, String> {
+    db_path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .ok_or_else(|| {
+            format!(
+                "Cannot determine data root from db path: {}",
+                db_path.display()
+            )
+        })
+}
+
+fn read_secret_storage_value_by_db_path_and_mode(
+    db_path: &Path,
+    db_key: &str,
+    mode: SafeStorageReadMode,
+) -> Result<Option<String>, String> {
+    if !db_path.exists() {
+        return Ok(None);
+    }
+
+    let data_root = resolve_data_root_from_state_db_path(db_path)?;
+    let conn = Connection::open(db_path).map_err(|e| {
+        format!(
+            "Failed to open VS Code database {}: {}",
+            db_path.display(),
+            e
+        )
+    })?;
+
+    let raw_value: Option<String> = match conn.query_row(
+        "SELECT value FROM ItemTable WHERE key = ?1",
+        [db_key],
+        |row| row.get(0),
+    ) {
+        Ok(value) => Some(value),
+        Err(rusqlite::Error::QueryReturnedNoRows) => None,
+        Err(err) => {
+            return Err(format!(
+                "Failed to query VS Code secret key '{}': {}",
+                db_key, err
+            ))
+        }
+    };
+
+    match raw_value {
+        Some(value) => {
+            decode_secret_storage_value_with_mode(&value, Some(data_root), mode).map(Some)
+        }
+        None => Ok(None),
+    }
+}
+
+pub fn read_qoder_secret_storage_value_by_db_path(
+    db_path: &Path,
+    db_key: &str,
+) -> Result<Option<String>, String> {
+    read_secret_storage_value_by_db_path_and_mode(db_path, db_key, SafeStorageReadMode::QoderOnly)
 }
 
 fn load_existing_sessions(
@@ -840,4 +1035,124 @@ pub fn inject_copilot_token_for_user_data_dir(
 ) -> Result<String, String> {
     let data_root = resolve_vscode_data_root(Some(user_data_dir))?;
     inject_copilot_token_with_data_root(&data_root, username, token, github_user_id)
+}
+
+pub fn inject_secret_to_state_db_for_codebuddy(
+    db_path: &std::path::Path,
+    db_key: &str,
+    plaintext: &str,
+) -> Result<(), String> {
+    inject_secret_to_state_db_with_mode(
+        db_path,
+        db_key,
+        plaintext,
+        SafeStorageReadMode::CodeBuddyOnly,
+    )
+}
+
+pub fn inject_secret_to_state_db_for_codebuddy_cn(
+    db_path: &std::path::Path,
+    db_key: &str,
+    plaintext: &str,
+) -> Result<(), String> {
+    inject_secret_to_state_db_with_mode(
+        db_path,
+        db_key,
+        plaintext,
+        SafeStorageReadMode::CodeBuddyCnOnly,
+    )
+}
+
+pub fn inject_secret_to_state_db_for_qoder(
+    db_path: &std::path::Path,
+    db_key: &str,
+    plaintext: &str,
+) -> Result<(), String> {
+    inject_secret_to_state_db_with_mode(db_path, db_key, plaintext, SafeStorageReadMode::QoderOnly)
+}
+
+#[allow(dead_code)]
+pub fn inject_secret_to_state_db_for_workbuddy(
+    db_path: &std::path::Path,
+    db_key: &str,
+    plaintext: &str,
+) -> Result<(), String> {
+    inject_secret_to_state_db_with_mode(
+        db_path,
+        db_key,
+        plaintext,
+        SafeStorageReadMode::WorkBuddyOnly,
+    )
+}
+
+fn inject_secret_to_state_db_with_mode(
+    db_path: &std::path::Path,
+    db_key: &str,
+    plaintext: &str,
+    mode: SafeStorageReadMode,
+) -> Result<(), String> {
+    let data_root = db_path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .ok_or_else(|| {
+            format!(
+                "Cannot determine data root from db path: {}",
+                db_path.display()
+            )
+        })?;
+
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create state.vscdb parent dir: {}", e))?;
+    }
+
+    let conn = rusqlite::Connection::open(db_path)
+        .map_err(|e| format!("Failed to open state.vscdb: {}", e))?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value TEXT)",
+        [],
+    )
+    .map_err(|e| format!("Failed to init ItemTable: {}", e))?;
+
+    let existing_prefix: Option<String> = match conn.query_row(
+        "SELECT value FROM ItemTable WHERE key = ?",
+        [db_key],
+        |row| row.get::<_, String>(0),
+    ) {
+        Ok(val) => {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&val) {
+                if let Ok(bytes) = decode_buffer_data(&parsed) {
+                    detect_prefix(&bytes).map(|s| s.to_string())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    };
+
+    let encrypted = encrypt_secret_payload_with_mode(
+        plaintext.as_bytes(),
+        existing_prefix.as_deref(),
+        Some(data_root),
+        mode,
+    )?;
+
+    let buffer_json = serde_json::json!({
+        "type": "Buffer",
+        "data": encrypted
+    });
+    let buffer_str = serde_json::to_string(&buffer_json)
+        .map_err(|e| format!("Failed to serialize Buffer: {}", e))?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
+        rusqlite::params![db_key, buffer_str],
+    )
+    .map_err(|e| format!("Failed to write to state.vscdb: {}", e))?;
+
+    Ok(())
 }

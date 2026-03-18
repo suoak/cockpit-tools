@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Add-on prompt credits",
         "credits": "制作人员",
         "email": "邮箱",
-        "promptCredits": "User Prompt credits"
+        "promptCredits": "User Prompt credits",
+        "creditPackage": "附加 Credits",
+        "sharedCreditPackage": "共享资源包",
+        "account": "账号",
+        "createdAt": "创建时间"
       },
       "empty": {
         "title": "暂无账号"
@@ -49,7 +53,17 @@
         "label": "导入",
         "importing": "正在导入...",
         "pickFile": "选择 JSON 文件导入",
-        "orJson": "或从 JSON 文件导入"
+        "orJson": "或从 JSON 文件导入",
+        "progress": {
+          "overallLine": "总体进度 {{percent}}%（{{completedPlatforms}}/{{totalPlatforms}} 平台，{{processedAccounts}}/{{totalAccounts}} 账号已处理）",
+          "currentPlatformLine": "正在导入：{{platform}}（{{count}} 个账号）",
+          "currentStatusLine": "当前平台状态：{{status}}",
+          "platformDetailsTitle": "平台详情",
+          "statusProcessing": "处理中...",
+          "statusRunning": "导入中...",
+          "statusSkipped": "已跳过",
+          "statusPending": "待导入"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "正在准备授权信息...",
         "retry": "重新生成授权信息",
         "timeoutRetry": "刷新授权链接",
-        "waiting": "等待授权完成..."
+        "waiting": "等待授权完成...",
+        "manualCallbackLabel": "手动输入回调地址",
+        "manualCallbackPlaceholder": "粘贴完整回调地址，例如：http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "刷新全部",
       "refreshQuota": "刷新配额",
@@ -104,7 +120,7 @@
       "addModal": {
         "import": "本地导入",
         "oauth": "OAuth 授权",
-        "token": "令牌/JSON"
+        "token": "Token / JSON"
       },
       "overview": {
         "title": "账号总览"
@@ -141,39 +157,74 @@
       "usage": {
         "resetLine": "Allowance resets {{dateText}}.",
         "resetUnknown": "Allowance resets -"
+      },
+      "updated": {
+        "label": "更新于 {{relative}}前"
       }
     }
   },
   "nav": {
-    "overview": "Antigravity 账号",
+    "overview": "Antigravity",
     "accounts": "账号管理",
     "wakeup": "唤醒任务",
     "fingerprints": "设备指纹",
     "settings": "设置",
-    "codex": "Codex 账号",
+    "codex": "Codex",
+    "codebuddy": "CodeBuddy",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
-    "gemini": "Gemini",
+    "gemini": "Gemini Cli",
     "dashboard": "仪表盘",
     "morePlatforms": "更多平台",
     "instances": "多开实例",
     "manual": "使用手册",
     "quickUpdate": {
       "update": "更新",
-      "restart": "重启"
-    }
+      "restart": "重启",
+      "installing": "安装中"
+    },
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "平台布局",
     "sidebarSelected": "侧边栏已选择 {{count}}/{{max}}",
     "reset": "恢复默认",
     "tip": "拖拽可排序；最多选择两个平台显示在侧边栏。若只选择一个，侧边栏只显示一个。",
+    "tipWithGroups": "拖拽可排序；最多选择两个入口显示在侧边栏。分组子级不参与侧边栏/仪表盘开关，仅用于菜单栏与默认平台切换。",
+    "addGroup": "新建分组",
+    "editGroup": "编辑",
+    "deleteGroup": "删除分组",
+    "groupBadge": "分组",
     "sidebarToggle": "侧边栏显示",
     "dashboardToggle": "仪表盘显示",
     "trayToggle": "菜单栏显示",
+    "groupDefault": "默认平台",
+    "groupName": "分组名称",
+    "groupNamePlaceholder": "例如：CodeBuddy 套件",
+    "groupIcon": "分组图标",
+    "groupIconFromPlatform": "平台图标",
+    "groupIconCustom": "自定义图片",
+    "groupIconPreview": "图标预览",
+    "groupChildren": "子级平台",
+    "groupNameRequired": "请输入分组名称",
+    "groupChildrenRequired": "至少选择一个子平台",
+    "groupCustomIconRequired": "请上传自定义图标",
+    "groupSwitchLabel": "切换同组平台",
     "hiddenBadge": "已隐藏",
     "openFromMore": "管理平台布局",
-    "dragHandleLabel": "拖拽排序"
+    "dragHandleLabel": "拖拽排序",
+    "collapseAllChildren": "收起全部子级",
+    "expandAllChildren": "展开全部子级",
+    "addChildPlatform": "添加子级平台",
+    "collapseChildren": "收起子级",
+    "expandChildren": "展开子级",
+    "noAvailableChildren": "暂无可添加的平台",
+    "customIconDeleteConfirm": "确认删除这个自定义图标吗？",
+    "editChildPlatform": "编辑子级平台",
+    "setAsDefaultInGroup": "设为分组内默认平台",
+    "removeFromGroup": "移出分组"
   },
   "privacy": {
     "hideSensitive": "隐藏邮箱",
@@ -376,6 +427,8 @@
       "themeLight": "浅色 (Light)",
       "themeDark": "深色 (Dark)",
       "themeSystem": "跟随系统",
+      "uiScale": "界面缩放",
+      "uiScaleDesc": "调整界面缩放比例",
       "accountManagement": "账号管理",
       "autoRefresh": "Antigravity 自动刷新配额",
       "codexAutoRefresh": "Codex 自动刷新配额",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "独立控制程序坞图标显示状态，不受窗口最小化行为影响",
       "hideDockIconOff": "否（显示Dock图标）",
       "hideDockIconOn": "是（隐藏Dock图标）",
-      "storageTitle": "目录与存储",
       "dataDir": "数据目录",
       "dataDirDesc": "账号与配置文件的存储位置。",
       "fpDir": "Antigravity存储目录",
@@ -453,13 +505,34 @@
       "kiroAppPathPlaceholder": "默认路径",
       "kiroPathSelect": "选择",
       "kiroPathReset": "重置默认",
+      "codebuddySettingsTitle": "CodeBuddy 设置",
+      "codebuddyAutoRefresh": "CodeBuddy 自动刷新配额",
+      "codebuddyAutoRefreshDesc": "后台自动更新频率",
+      "codebuddyAppPath": "CodeBuddy 启动路径",
+      "codebuddyAppPathDesc": "留空则使用默认路径",
+      "codebuddyAppPathPlaceholder": "默认路径",
+      "codebuddyPathSelect": "选择",
+      "codebuddyPathReset": "重置默认",
       "cursorPathReset": "重置默认",
       "codexLaunchOnSwitch": "切换 Codex 时自动启动 Codex App",
       "codexLaunchOnSwitchDesc": "切换账号后自动启动或重启 Codex App",
       "autoUpdate": "后台自动更新",
       "autoUpdateDesc": "检测到新版本时，在后台静默更新；完成后提示重启。",
       "autoUpdateOff": "关闭（手动更新）",
-      "autoUpdateOn": "开启（静默更新）"
+      "autoUpdateOn": "开启（静默更新）",
+      "qoderPathReset": "重置默认",
+      "traeAutoRefresh": "Trae 自动刷新配额",
+      "traeAutoRefreshDesc": "后台自动更新频率",
+      "traeAppPath": "Trae 启动路径",
+      "traeAppPathDesc": "留空则使用默认路径",
+      "traeAppPathPlaceholder": "默认路径",
+      "traePathSelect": "选择",
+      "traePathReset": "重置默认",
+      "workbuddyAppPath": "WorkBuddy 启动路径",
+      "workbuddyAppPathDesc": "留空则使用默认路径",
+      "workbuddyAppPathPlaceholder": "默认路径",
+      "workbuddyPathSelect": "选择",
+      "workbuddyPathReset": "重置默认"
     },
     "network": {
       "apiTitle": "反重力驾驶舱 API",
@@ -473,7 +546,22 @@
       "restartRequired": "配置已更改，请重启应用以使新端口生效",
       "saveSuccess": "设置已保存！",
       "saveSuccessRestart": "设置已保存！由于端口配置已更改，请重启应用以生效。",
-      "saveFailed": "保存失败: {{error}}"
+      "saveFailed": "保存失败: {{error}}",
+      "reportTitle": "网页查询服务",
+      "reportService": "HTTP 报表服务",
+      "reportServiceDesc": "提供带 token 的 HTTP 查询接口，用于查看用量摘要",
+      "reportPort": "报表端口",
+      "reportPortDesc": "默认为 {{port}}，修改后需重启应用",
+      "reportToken": "访问 Token",
+      "reportTokenDesc": "访问 /report 时必须携带，请妥善保管",
+      "reportTokenRequired": "启用网页查询服务时，访问 Token 不能为空。",
+      "generateToken": "生成",
+      "reportUrlPreview": "地址预览",
+      "reportUrlPreviewDesc": "支持 format=md / format=yaml，也支持 render=true 网页渲染",
+      "reportUrlRaw": "原始输出",
+      "reportUrlRendered": "网页渲染",
+      "firewallHintTitle": "防火墙提示",
+      "firewallHint": "如果访问不了，请检查系统防火墙设置。"
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "AI 积分"
     },
     "empty": {
       "title": "暂无账号",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "全部 ({{count}})",
       "pro": "专业版 ({{count}})",
-      "ultra": "超 ({{count}})",
-      "free": "免费（{{count}}）"
+      "ultra": "超 ({{count}})"
     },
     "sortLabel": "排序",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "按 {{group}} 重置时间",
       "descTooltip": "当前：降序，点击切换为升序",
       "ascTooltip": "当前：升序，点击切换为降序",
-      "toggleDirection": "切换排序方向"
+      "toggleDirection": "切换排序方向",
+      "plan": "按套餐",
+      "quota": "按配额"
     },
     "filterTags": "标签筛选",
     "filterTagsCount": "标签",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} 个失败: {{failList}}",
       "refreshingQuota": "刷新配额中 {{done}}/{{total}}（可关闭此弹窗，后台继续刷新）",
       "quotaRefreshDone": "配额刷新完成"
+    },
+    "groups": {
+      "manageTitle": "分组管理",
+      "title": "账号分组",
+      "create": "创建",
+      "newPlaceholder": "输入分组名称...",
+      "empty": "暂无分组，创建一个开始使用吧",
+      "accountCount": "{{count}} 个账号",
+      "rename": "重命名",
+      "addToGroup": "移入分组",
+      "createAndAdd": "新建分组并添加...",
+      "removeFromGroup": "移出分组",
+      "allGroups": "全部分组",
+      "noGroups": "暂无分组",
+      "noGroupsDesc": "创建分组来批量管理你的账号",
+      "manage": "管理",
+      "error": {
+        "duplicate": "分组名称已存在",
+        "createFailed": "创建分组失败：{{error}}",
+        "renameFailed": "重命名分组失败：{{error}}",
+        "deleteFailed": "删除分组失败：{{error}}",
+        "addFailed": "添加到分组失败：{{error}}",
+        "createAndAddFailed": "新建分组并添加失败：{{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "任务名称",
       "taskStatus": "任务状态",
       "triggerMode": "唤醒方式",
-      "triggerModeHint": "1. 定时：按照设定时间触发。\\n2. Crontab：使用表达式定义。\\n3. 配额重置：额度满后触发一次。",
+      "triggerModeHint": "1. 定时：按照设定时间触发。\n2. Crontab：使用表达式定义。\n3. 配额重置：额度满后触发一次。",
       "modeScheduled": "📅 定时触发",
       "modeCrontab": "🧩 定时任务",
       "modeQuotaReset": "🔄 配额重置",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "查看详情",
     "hideErrorDetails": "收起详情",
     "autoUpdateFailedAfterRetries": "自动更新失败，已重试 {{count}} 次。您可以稍后重试或手动下载安装。",
-    "updateCancelled": "更新已取消。"
+    "updateCancelled": "更新已取消。",
+    "cancelDownload": "取消下载",
+    "installing": "安装中...",
+    "authorizing": "等待系统授权安装...",
+    "installFailed": "系统安装失败，请稍后重试或手动下载安装。",
+    "restartRequiredAfterInstall": "更新已安装，请手动重启应用完成切换。"
   },
   "closeDialog": {
     "title": "关闭窗口",
@@ -1100,6 +1220,9 @@
     "switched": "已切换至 {{email}}",
     "switchFailed": "切换失败: {{error}}",
     "current": "当前",
+    "account": {
+      "personal": "个人账户"
+    },
     "empty": {
       "description": "点击\"添加账号\"开始管理您的 Codex 账号"
     },
@@ -1141,7 +1264,8 @@
     "quotaError": {
       "badge": "配额异常",
       "generic": "配额刷新失败，请稍后重试",
-      "deactivatedWorkspace": "工作区已停用，请切换账号或重新授权"
+      "deactivatedWorkspace": "工作区已停用，请切换账号或重新授权",
+      "requestFailedManualRetry": "请求失败，请手动重试：{{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1273,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "显示 Code Review 配额"
     },
     "time": {
       "today": "今天 {{time}}",
@@ -1180,6 +1307,99 @@
     "noAvailableTags": "暂无可用标签",
     "clearFilter": "清空筛选",
     "editTags": "编辑标签"
+  },
+  "codebuddy": {
+    "title": "CodeBuddy 账号管理",
+    "noAccounts": "暂无 CodeBuddy 账号",
+    "addAccount": "添加 CodeBuddy 账号",
+    "flowNotice": {
+      "title": "CodeBuddy 账号管理说明（点击展开/收起）",
+      "desc": "切换账号需读取 CodeBuddy 本地认证存储并调用系统凭据服务进行加解密，数据仅在本地处理。",
+      "permission": "权限范围：读取 CodeBuddy 认证数据库 (state.vscdb)，调用系统凭据能力（macOS Keychain / Windows DPAPI / Linux Secret Service）进行解密/回写。",
+      "network": "网络范围：OAuth 授权登录与 Token 刷新需联网请求 codebuddy.ai；配额查询需调用计费 API。不上传本地密钥或凭证。"
+    },
+    "nickname": "昵称",
+    "enterprise": "企业",
+    "usage": "用量状态",
+    "creditsBalance": "积分余额",
+    "usageNormal": "正常",
+    "oauthWaiting": "等待授权完成...",
+    "oauthDesc": "点击下方按钮将在浏览器中打开 CodeBuddy 授权页面。",
+    "oauthDescWebview": "点击下方按钮将在内置 WebView 中打开 CodeBuddy 授权页面。",
+    "oauthFeature": {
+      "oauth": {
+        "title": "仅授权 IDE 登录信息",
+        "item1": "在浏览器完成 OAuth 后即可添加账号并用于 IDE 切换。",
+        "item2": "授权完成后会自动刷新资源包配额数据。",
+        "item3": "账号卡片将按资源包展示额度、进度和刷新/到期时间。"
+      }
+    },
+    "oauthWebviewTab": "WebView 授权",
+    "oauthOpenWebview": "在 WebView 中打开",
+    "oauthOpenWebviewIncognito": "在无痕 WebView 中打开",
+    "oauthOpenWebviewFailed": "打开 WebView 失败：{{error}}",
+    "oauthOpenBrowserFallback": "在浏览器中打开（备用）",
+    "oauthOpenBrowserFailed": "打开浏览器失败：{{error}}",
+    "oauthWebviewProgressHint": "WebView 顶部显示横向步骤条，便于定位卡住步骤。",
+    "oauthFlow": {
+      "prepare": "准备授权链接",
+      "authorize": "访问授权链接并确认授权",
+      "bind": "轮询授权结果并绑定账号",
+      "retryPrepare": "重新生成授权链接",
+      "retryAuthorize": "重新请求授权链接",
+      "retryBind": "重新轮询授权结果",
+      "error": "流程异常：{{error}}"
+    },
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 准备授权链接",
+        "authorize": "2 访问授权链接并确认授权",
+        "bind": "3 轮询授权结果并绑定账号",
+        "complete": "5 已完成（请手动关闭）"
+      },
+      "status": {
+        "loginConfirm": "请在页面中完成登录并确认授权。"
+      }
+    },
+    "tokenDesc": "粘贴 CodeBuddy 的 access token：",
+    "jsonDesc": "选择包含 CodeBuddy 账号的 JSON 文件：",
+    "import": {
+      "localDesc": "支持从本机 CodeBuddy 客户端或 JSON 文件导入账号数据。",
+      "localClient": "从本机 CodeBuddy 导入"
+    },
+    "search": "搜索 CodeBuddy 账号...",
+    "quotaQuery": {
+      "failedRefreshCompact": "配额查询失败",
+      "sectionTitle": "配额查询",
+      "empty": "暂无可用配额数据",
+      "packageUnknown": "套餐信息未知",
+      "quotaLabel": "剩余配额",
+      "updatedAt": "下次刷新时间：{{time}}",
+      "cycleRange": "周期：{{start}} - {{end}}",
+      "cycleUnknown": "周期信息暂无",
+      "expireAt": "到期时间：{{time}}",
+      "expireUnknown": "到期时间：暂无",
+      "packageTitle": {
+        "base": "基础体验包",
+        "activity": "活动赠送包"
+      }
+    },
+    "extraCredit": {
+      "title": "加量包"
+    },
+    "oauthUrlInputPlaceholder": "可手动输入授权地址",
+    "oauthInvalidUrl": "授权链接格式不正确，请输入完整 URL。",
+    "oauthGotoWebview": "让已打开 WebView 跳转到输入地址",
+    "oauthGotoWebviewSuccess": "已请求 WebView 跳转到输入地址。",
+    "oauthGotoWebviewFailed": "WebView 跳转失败：{{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "在此输入网址并在当前 WebView 跳转",
+    "oauthWebviewInlineGo": "跳转",
+    "oauthSuccessClosePrompt": "账号添加完成，是否关闭 WebView？\n点击“关闭 WebView”将立即关闭；点击“稍后再说”保持当前页面不关闭。",
+    "oauthSuccessCloseTitle": "账号添加完成",
+    "oauthSuccessCloseNowLabel": "关闭 WebView",
+    "oauthSuccessCloseLaterLabel": "稍后再说",
+    "oauthSuccessCloseNowStatus": "✅ 账号添加完成，窗口即将关闭…",
+    "oauthSuccessCloseLaterStatus": "✅ 账号添加完成，已保持当前页面打开。"
   },
   "githubCopilot": {
     "title": "GitHub Copilot 账号管理",
@@ -1287,7 +1507,8 @@
       "errorInfo": "错误信息",
       "filePath": "文件位置",
       "helpText": "请打开文件夹手动修复或删除该文件，然后重新启动应用。",
-      "openFolder": "打开文件夹"
+      "openFolder": "打开文件夹",
+      "openFolderFailed": "打开文件夹失败：{{error}}"
     }
   },
   "quickSettings": {
@@ -1339,11 +1560,36 @@
       "appPath": "Cursor 路径"
     },
     "cursorRefreshInterval": "配额自动刷新",
-    "gemini": {
-      "title": "Gemini 设置",
-      "appPath": "Gemini CLI 路径"
+    "codebuddy": {
+      "title": "CodeBuddy 设置",
+      "appPath": "CodeBuddy 路径"
     },
-    "geminiRefreshInterval": "配额自动刷新"
+    "gemini": {
+      "title": "Gemini Cli 设置",
+      "appPath": "Gemini Cli 路径"
+    },
+    "geminiRefreshInterval": "配额自动刷新",
+    "error": {
+      "loadFailed": "加载配置失败：{{error}}",
+      "saveFailed": "保存配置失败：{{error}}",
+      "pickPathFailed": "选择路径失败：{{error}}",
+      "resetPathFailed": "重置路径失败：{{error}}"
+    },
+    "qoder": {
+      "title": "Qoder 设置",
+      "appPath": "Qoder 路径"
+    },
+    "trae": {
+      "title": "Trae 设置",
+      "appPath": "Trae 路径"
+    },
+    "codebuddyCn": {
+      "appPath": "CodeBuddy CN 路径"
+    },
+    "workbuddy": {
+      "title": "WorkBuddy 设置",
+      "appPath": "WorkBuddy 路径"
+    }
   },
   "quotaAlert": {
     "bannerText": "账号 {{email}} 触发配额预警（阈值 {{threshold}}%，最低 {{lowest}}%，模型：{{models}}）",
@@ -1526,7 +1772,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "切换到 Gemini",
+    "injectToGemini": "切换到 Gemini Cli",
     "updated": {
       "label": "更新于 {{relative}}前"
     },
@@ -1539,10 +1785,10 @@
       "resetsUnknown": "重置时间未知",
       "onDemand": "按需使用"
     },
-    "title": "Gemini 账号管理",
+    "title": "Gemini Cli 账号管理",
     "instances": {
-      "unsupported": "Gemini 暂不支持多开实例管理。",
-      "unsupportedDescPlatform": "Gemini 多开实例仅支持 macOS、Windows 和 Linux。",
+      "unsupported": "Gemini Cli 暂不支持多开实例管理。",
+      "unsupportedDescPlatform": "Gemini Cli 多开实例仅支持 macOS、Windows 和 Linux。",
       "launchDialogTitle": "启动实例",
       "launchHint": "可复制命令手动执行，或点击下方按钮直接在终端执行。",
       "runInTerminal": "终端执行"
@@ -1551,28 +1797,28 @@
       "success": "切号成功"
     },
     "empty": {
-      "description": "点击\"添加账号\"开始管理您的 Gemini 账号"
+      "description": "点击\"添加账号\"开始管理您的 Gemini Cli 账号"
     },
     "addModal": {
-      "title": "添加 Gemini 账号"
+      "title": "添加 Gemini Cli 账号"
     },
     "oauth": {
-      "desc": "点击下方按钮，在浏览器中完成 Gemini OAuth 授权登录。"
+      "desc": "点击下方按钮，在浏览器中完成 Gemini Cli OAuth 授权登录。"
     },
     "token": {
-      "desc": "粘贴您的 Gemini Access Token（JWT）或导出的 JSON 数据。",
+      "desc": "粘贴您的 Gemini Cli Access Token（JWT）或导出的 JSON 数据。",
       "formatHint": "必填字段与示例（点击展开）",
       "formatRequired": "单条 Token 直接粘贴 JWT；批量导入使用 JSON 数组格式",
       "singleExample": "单条示例（JWT）",
       "batchExample": "批量示例（JSON）"
     },
     "import": {
-      "localDesc": "支持从本机 Gemini 配置目录（~/.gemini）或 JSON 文件导入账号数据。",
-      "localClient": "从本机 Gemini 导入"
+      "localDesc": "支持从本机 Gemini Cli 配置目录（~/.gemini）或 JSON 文件导入账号数据。",
+      "localClient": "从本机 Gemini Cli 导入"
     },
     "flowNotice": {
-      "title": "Gemini 账号管理说明（点击展开/收起）",
-      "desc": "支持从本机 Gemini 配置目录导入、粘贴 JWT 令牌或 OAuth 授权登录来管理 Gemini 账号。",
+      "title": "Gemini Cli 账号管理说明（点击展开/收起）",
+      "desc": "支持从本机 Gemini Cli 配置目录导入、粘贴 JWT 令牌或 OAuth 授权登录来管理 Gemini Cli 账号。",
       "reason": "权限范围：读取并写入默认 ~/.gemini 或实例目录（GEMINI_CLI_HOME/.gemini）下的 oauth_creds.json、google_accounts.json、settings.json，用于账号导入与本地凭证注入（切号）。",
       "storage": "网络请求范围：OAuth 与刷新会调用 Google/Gemini 官方接口（如 oauth2.googleapis.com、googleapis.com）；仅发送认证与配额所需字段，不向第三方服务器上传账号文件。"
     }
@@ -1896,6 +2142,205 @@
       },
       "summary": "用于定时运行唤醒任务和批量验证结果，帮助你持续跟踪账号可用性与状态。",
       "title": "唤醒任务与验证"
+    }
+  },
+  "qoder": {
+    "title": "Qoder 账号管理",
+    "flowNotice": {
+      "title": "Qoder 账号接入说明（点击展开/收起）",
+      "desc": "当前支持官方 CLI device login 授权、本地导入、JSON 导入、切号注入、多开实例绑定与配额概览。浏览器授权无需保持 Qoder 运行；切号注入按 Qoder 客户端真实落盘规则写回。",
+      "permission": "权限范围：读取 Qoder 本地认证存储、用户信息与机器标识缓存（如 machine_token.json、cache/id），用于官方授权登录、本地导入、账号切换与会话注入；所有数据仅在本机处理。",
+      "network": "网络范围：OAuth 授权登录会在浏览器中打开 Qoder 官方 device login 页面，并轮询 Qoder 官方 OpenAPI 完成授权；配额查询通过 Qoder API 获取用量数据。不上传本地密钥、凭证或原始存储内容。"
+    },
+    "oauth": {
+      "hint": "点击下方按钮，在浏览器中完成 Qoder 官方授权。该流程走官方 CLI device login 链路，无需保持 Qoder 运行。",
+      "copyLoginUrl": "复制登录链接"
+    },
+    "usageOverview": {
+      "title": "用量概览",
+      "viewDetails": "查看详情",
+      "includedCredits": "套餐内 Credits",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "升级套餐以提升每月额度",
+      "upgradeAction": "升级"
+    },
+    "comingSoon": {
+      "title": "Qoder 账号接入准备中",
+      "desc": "当前版本已支持 Qoder 多开实例、平台管理与菜单栏入口，账号登录与配额面板将在后续版本开放。"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Qoder 多开实例仅支持 macOS、Windows 和 Linux。"
+      }
+    },
+    "addModal": {
+      "title": "添加 Qoder 账号"
+    },
+    "import": {
+      "localDesc": "从本机 Qoder 客户端读取当前登录状态（包含用户信息、套餐与 Credits 使用情况）。"
+    }
+  },
+  "trae": {
+    "title": "Trae 账号管理",
+    "empty": {
+      "description": "点击“添加账号”开始管理您的 Trae 账号，也可以从本机 Trae 数据或 JSON 文件导入。"
+    },
+    "addModal": {
+      "title": "添加 Trae 账号"
+    },
+    "oauth": {
+      "desc": "点击下方按钮，在浏览器中完成 Trae OAuth 授权登录。"
+    },
+    "import": {
+      "localDesc": "支持从本机 Trae 配置目录读取当前登录账号、套餐信息和配额缓存数据。",
+      "jsonTab": "JSON 文件"
+    },
+    "quota": {
+      "usedOfTotal": "${{used}} / ${{total}}",
+      "usageUnknown": "用量：--",
+      "resetAt": "订阅重置：{{date}}",
+      "resetUnknown": "订阅重置：--",
+      "statusUnknown": "状态：--",
+      "statusNormal": "状态：正常",
+      "statusExhaustedFree": "状态：用量已耗尽，建议升级方案",
+      "statusExhaustedPro": "状态：用量已耗尽，建议升级方案或开启超额自动扣费",
+      "bonusUsed": "Bonus：+{{amount}}",
+      "bonusIncluded": "Bonus：已包含",
+      "bonusEmpty": "Bonus：--",
+      "packageConsuming": "用量包：消耗中",
+      "packageAvailable": "用量包：可用",
+      "packageEmpty": "用量包：--",
+      "payAsYouGoConsuming": "超额自动扣费：消耗中",
+      "payAsYouGoEnabled": "超额自动扣费：已开启",
+      "payAsYouGoEmpty": "超额自动扣费：--"
+    },
+    "flowNotice": {
+      "title": "Trae 账号接入说明（点击展开/收起）",
+      "desc": "支持官方 OAuth 授权、本机导入、JSON 导入与本地注入切号；切号过程按 Trae 客户端真实落盘规则写回。",
+      "permission": "权限范围：读取并写入本机 Trae 配置目录中的 storage.json 登录相关字段，用于账号导入、切号注入与套餐信息展示；所有数据仅在本机处理。",
+      "network": "网络范围：OAuth 登录、令牌刷新和套餐查询会请求 Trae 官方接口；不会向第三方服务上传本地账号文件或原始存储内容。"
+    }
+  },
+  "codebuddyCn": {
+    "title": "CodeBuddy CN 账号管理",
+    "noAccounts": "暂无 CodeBuddy CN 账号",
+    "addAccount": "添加 CodeBuddy CN 账号",
+    "search": "搜索 CodeBuddy CN 账号...",
+    "oauthDesc": "点击下方按钮将在浏览器中打开 CodeBuddy CN 授权页面。",
+    "tokenDesc": "粘贴 CodeBuddy CN 的 access token：",
+    "flowNotice": {
+      "title": "CodeBuddy CN 账号管理说明（点击展开/收起）",
+      "desc": "切换账号需读取 CodeBuddy CN 本地认证存储并调用系统凭据服务进行加解密，数据仅在本地处理。",
+      "permission": "权限范围：读取 CodeBuddy CN 认证数据库 (state.vscdb)，调用系统凭据能力（macOS Keychain / Windows DPAPI / Linux Secret Service）进行解密/回写。",
+      "network": "网络范围：OAuth 授权登录与 Token 刷新需联网请求 codebuddy.cn 与 copilot.tencent.com；资源包配额刷新需调用计费 API。不上传本地密钥或凭证。"
+    },
+    "import": {
+      "localDesc": "支持从本机 CodeBuddy CN 客户端或 JSON 文件导入账号数据。",
+      "localClient": "从本机 CodeBuddy CN 导入"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "CodeBuddy CN 多开实例仅支持 macOS、Windows 和 Linux。"
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "WorkBuddy 账号管理",
+    "noAccounts": "暂无 WorkBuddy 账号",
+    "addAccount": "添加 WorkBuddy 账号",
+    "flowNotice": {
+      "title": "WorkBuddy 账号管理说明（点击展开/收起）",
+      "desc": "切换账号需读取 WorkBuddy 本地认证存储并调用系统凭据服务进行加解密，数据仅在本地处理。",
+      "permission": "权限范围：读取 WorkBuddy 认证数据库 (state.vscdb)，调用系统凭据能力（macOS Keychain / Windows DPAPI / Linux Secret Service）进行解密/回写。",
+      "network": "网络范围：OAuth 授权登录与 Token 刷新需联网请求 WorkBuddy；配额查询需调用计费 API。不上传本地密钥或凭证。"
+    },
+    "nickname": "昵称",
+    "enterprise": "企业",
+    "usage": "用量状态",
+    "creditsBalance": "积分余额",
+    "usageNormal": "正常",
+    "oauthWaiting": "等待授权完成...",
+    "oauthDesc": "点击下方按钮将在浏览器中打开 WorkBuddy 授权页面。",
+    "oauthDescWebview": "点击下方按钮将在内置 WebView 中打开 WorkBuddy 授权页面。",
+    "oauthFeature": {
+      "oauth": {
+        "title": "仅授权 IDE 登录信息",
+        "item1": "在浏览器完成 OAuth 后即可添加账号并用于 IDE 切换。",
+        "item2": "授权完成后会自动刷新资源包配额数据。",
+        "item3": "账号卡片将按资源包展示额度、进度和刷新/到期时间。"
+      }
+    },
+    "oauthWebviewTab": "WebView 授权",
+    "oauthOpenWebview": "在 WebView 中打开",
+    "oauthOpenWebviewIncognito": "在无痕 WebView 中打开",
+    "oauthOpenWebviewFailed": "打开 WebView 失败：{{error}}",
+    "oauthOpenBrowserFallback": "在浏览器中打开（备用）",
+    "oauthOpenBrowserFailed": "打开浏览器失败：{{error}}",
+    "oauthWebviewProgressHint": "WebView 顶部显示横向步骤条，便于定位卡住步骤。",
+    "oauthFlow": {
+      "prepare": "准备授权链接",
+      "authorize": "访问授权链接并确认授权",
+      "bind": "轮询授权结果并绑定账号",
+      "retryPrepare": "重新生成授权链接",
+      "retryAuthorize": "重新请求授权链接",
+      "retryBind": "重新轮询授权结果",
+      "error": "流程异常：{{error}}"
+    },
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 准备授权链接",
+        "authorize": "2 访问授权链接并确认授权",
+        "bind": "3 轮询授权结果并绑定账号",
+        "complete": "5 已完成（请手动关闭）"
+      },
+      "status": {
+        "loginConfirm": "请在页面中完成登录并确认授权。"
+      }
+    },
+    "tokenDesc": "粘贴 WorkBuddy 的 access token：",
+    "jsonDesc": "选择包含 WorkBuddy 账号的 JSON 文件：",
+    "import": {
+      "localDesc": "支持从本机 WorkBuddy 客户端或 JSON 文件导入账号数据。",
+      "localClient": "从本机 WorkBuddy 导入"
+    },
+    "search": "搜索 WorkBuddy 账号...",
+    "quotaQuery": {
+      "failedRefreshCompact": "配额查询失败",
+      "sectionTitle": "配额查询",
+      "empty": "暂无可用配额数据",
+      "packageUnknown": "套餐信息未知",
+      "quotaLabel": "剩余配额",
+      "updatedAt": "下次刷新时间：{{time}}",
+      "cycleRange": "周期：{{start}} - {{end}}",
+      "cycleUnknown": "周期信息暂无",
+      "expireAt": "到期时间：{{time}}",
+      "expireUnknown": "到期时间：暂无",
+      "packageTitle": {
+        "base": "基础体验包",
+        "activity": "活动赠送包"
+      }
+    },
+    "extraCredit": {
+      "title": "加量包"
+    },
+    "oauthUrlInputPlaceholder": "可手动输入授权地址",
+    "oauthInvalidUrl": "授权链接格式不正确，请输入完整 URL。",
+    "oauthGotoWebview": "让已打开 WebView 跳转到输入地址",
+    "oauthGotoWebviewSuccess": "已请求 WebView 跳转到输入地址。",
+    "oauthGotoWebviewFailed": "WebView 跳转失败：{{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "在此输入网址并在当前 WebView 跳转",
+    "oauthWebviewInlineGo": "跳转",
+    "oauthSuccessClosePrompt": "账号添加完成，是否关闭 WebView？\n点击“关闭 WebView”将立即关闭；点击“稍后再说”保持当前页面不关闭。",
+    "oauthSuccessCloseTitle": "账号添加完成",
+    "oauthSuccessCloseNowLabel": "关闭 WebView",
+    "oauthSuccessCloseLaterLabel": "稍后再说",
+    "oauthSuccessCloseNowStatus": "✅ 账号添加完成，窗口即将关闭…",
+    "oauthSuccessCloseLaterStatus": "✅ 账号添加完成，已保持当前页面打开。",
+    "instances": {
+      "unsupported": {
+        "descPlatform": "WorkBuddy 多开实例仅支持 macOS、Windows 和 Linux。"
+      }
     }
   }
 }

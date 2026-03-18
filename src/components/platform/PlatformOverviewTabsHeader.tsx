@@ -1,14 +1,36 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Github, Layers, HelpCircle } from 'lucide-react';
+import { Bot, Github, Layers, HelpCircle } from 'lucide-react';
 import { CodexIcon } from '../icons/CodexIcon';
 import { WindsurfIcon } from '../icons/WindsurfIcon';
 import { KiroIcon } from '../icons/KiroIcon';
 import { CursorIcon } from '../icons/CursorIcon';
 import { GeminiIcon } from '../icons/GeminiIcon';
+import { CodebuddyIcon } from '../icons/CodebuddyIcon';
+import { QoderIcon } from '../icons/QoderIcon';
+import { WorkbuddyIcon } from '../icons/WorkbuddyIcon';
+import { PlatformId } from '../../types/platform';
+import {
+  findGroupByPlatform,
+  resolveGroupChildName,
+  usePlatformLayoutStore,
+} from '../../stores/usePlatformLayoutStore';
+import { getPlatformLabel } from '../../utils/platformMeta';
+import { PlatformGroupSwitcher } from './PlatformGroupSwitcher';
 
 export type PlatformOverviewTab = 'overview' | 'instances';
-export type PlatformOverviewHeaderId = 'codex' | 'github-copilot' | 'windsurf' | 'kiro' | 'cursor' | 'gemini';
+export type PlatformOverviewHeaderId =
+  | 'codex'
+  | 'github-copilot'
+  | 'windsurf'
+  | 'kiro'
+  | 'cursor'
+  | 'gemini'
+  | 'codebuddy'
+  | 'codebuddy_cn'
+  | 'qoder'
+  | 'trae'
+  | 'workbuddy';
 
 interface PlatformOverviewTabsHeaderProps {
   platform: PlatformOverviewHeaderId;
@@ -17,8 +39,7 @@ interface PlatformOverviewTabsHeaderProps {
 }
 
 interface PlatformOverviewConfig {
-  titleKey: string;
-  titleDefault: string;
+  platformLabel: string;
   overviewIcon: ReactNode;
 }
 
@@ -30,34 +51,48 @@ interface TabSpec {
 
 const CONFIGS: Record<PlatformOverviewHeaderId, PlatformOverviewConfig> = {
   codex: {
-    titleKey: 'codex.title',
-    titleDefault: 'Codex 账号管理',
+    platformLabel: 'Codex',
     overviewIcon: <CodexIcon className="tab-icon" />,
   },
   'github-copilot': {
-    titleKey: 'githubCopilot.title',
-    titleDefault: 'GitHub Copilot 账号管理',
+    platformLabel: 'GitHub Copilot',
     overviewIcon: <Github className="tab-icon" />,
   },
   windsurf: {
-    titleKey: 'windsurf.title',
-    titleDefault: 'Windsurf 账号管理',
+    platformLabel: 'Windsurf',
     overviewIcon: <WindsurfIcon className="tab-icon" />,
   },
   kiro: {
-    titleKey: 'kiro.title',
-    titleDefault: 'Kiro 账号管理',
+    platformLabel: 'Kiro',
     overviewIcon: <KiroIcon className="tab-icon" />,
   },
   cursor: {
-    titleKey: 'cursor.title',
-    titleDefault: 'Cursor 账号管理',
+    platformLabel: 'Cursor',
     overviewIcon: <CursorIcon className="tab-icon" />,
   },
   gemini: {
-    titleKey: 'gemini.title',
-    titleDefault: 'Gemini 账号管理',
+    platformLabel: 'Gemini Cli',
     overviewIcon: <GeminiIcon className="tab-icon" />,
+  },
+  codebuddy: {
+    platformLabel: 'CodeBuddy',
+    overviewIcon: <CodebuddyIcon className="tab-icon" />,
+  },
+  codebuddy_cn: {
+    platformLabel: 'CodeBuddy CN',
+    overviewIcon: <CodebuddyIcon className="tab-icon" />,
+  },
+  qoder: {
+    platformLabel: 'Qoder',
+    overviewIcon: <QoderIcon className="tab-icon" />,
+  },
+  trae: {
+    platformLabel: 'Trae',
+    overviewIcon: <Bot className="tab-icon" />,
+  },
+  workbuddy: {
+    platformLabel: 'WorkBuddy',
+    overviewIcon: <WorkbuddyIcon className="tab-icon" />,
   },
 };
 
@@ -67,7 +102,36 @@ export function PlatformOverviewTabsHeader({
   onTabChange,
 }: PlatformOverviewTabsHeaderProps) {
   const { t } = useTranslation();
+  const { platformGroups } = usePlatformLayoutStore();
   const config = CONFIGS[platform];
+  const currentPlatformId = platform as PlatformId;
+  const currentGroup = useMemo(
+    () => findGroupByPlatform(platformGroups, currentPlatformId),
+    [platformGroups, currentPlatformId],
+  );
+  const switchablePlatforms = currentGroup ? currentGroup.platformIds : [currentPlatformId];
+  const currentPlatformLabel = getPlatformLabel(currentPlatformId, t);
+  const currentDisplayName = useMemo(
+    () =>
+      currentGroup
+        ? resolveGroupChildName(currentGroup, currentPlatformId, currentPlatformLabel || config.platformLabel)
+        : currentPlatformLabel || config.platformLabel,
+    [currentGroup, currentPlatformId, currentPlatformLabel, config.platformLabel],
+  );
+  const switchOptions = useMemo(
+    () =>
+      switchablePlatforms.map((platformId) => {
+        const platformName = currentGroup
+          ? resolveGroupChildName(currentGroup, platformId, getPlatformLabel(platformId, t))
+          : getPlatformLabel(platformId, t);
+        return {
+          platformId,
+          label: platformName,
+        };
+      }),
+    [switchablePlatforms, currentGroup, t],
+  );
+  const headerTitle = `${config.platformLabel} ${t('settings.general.accountManagement', '账号管理')}`;
   const tabs: TabSpec[] = [
     {
       key: 'overview',
@@ -91,20 +155,27 @@ export function PlatformOverviewTabsHeader({
   return (
     <>
       <div className="page-header">
-        <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {t(config.titleKey, config.titleDefault)}
+        <div className="platform-header-title">
+          <div className="page-title">{headerTitle}</div>
           <button
-            className="btn btn-secondary icon-only"
+            className="btn btn-secondary icon-only platform-header-help"
             onClick={() => window.dispatchEvent(new CustomEvent('app-request-navigate', { detail: 'manual' }))}
             title={t('manual.navTitle', '功能使用手册')}
-            style={{ padding: '6px', borderRadius: '50%', background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}
           >
             <HelpCircle size={18} />
           </button>
         </div>
         <div className="page-subtitle">{subtitle}</div>
       </div>
-      <div className="page-tabs-row page-tabs-center">
+      <div className="page-tabs-row page-tabs-center page-tabs-row-with-leading">
+        <div className="page-tabs-leading">
+          <PlatformGroupSwitcher
+            currentPlatformId={currentPlatformId}
+            currentLabel={currentDisplayName}
+            options={switchOptions}
+            currentGroupId={currentGroup?.id ?? null}
+          />
+        </div>
         <div className="page-tabs filter-tabs">
           {tabs.map((tab) => (
             <button

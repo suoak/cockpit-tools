@@ -31,8 +31,11 @@ import * as codexService from '../services/codexService';
 import { TagEditModal } from '../components/TagEditModal';
 import { ExportJsonModal } from '../components/ExportJsonModal';
 import {
+  hasCodexAccountStructure,
   formatCodexLoginProvider,
   getCodexAuthMetadata,
+  hasCodexAccountName,
+  isCodexTeamLikePlan,
   type CodexQuotaErrorInfo,
 } from '../types/codex';
 import { buildCodexAccountPresentation } from '../presentation/platformAccountPresentation';
@@ -45,6 +48,10 @@ import { CodexInstancesContent } from './CodexInstancesPage';
 import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
 import type { CodexAccount } from '../types/codex';
+import {
+  CODEX_CODE_REVIEW_QUOTA_VISIBILITY_CHANGED_EVENT,
+  isCodexCodeReviewQuotaVisibleByDefault,
+} from '../utils/codexPreferences';
 
 const CODEX_TOKEN_SINGLE_EXAMPLE = `{
   "tokens": {
@@ -117,7 +124,16 @@ export function CodexAccountsPage() {
     formatDate, normalizeTag,
   } = page;
 
-  const { accounts, loading, currentAccount, fetchAccounts, fetchCurrentAccount, switchAccount, refreshQuota } = store;
+  const {
+    accounts,
+    loading,
+    currentAccount,
+    fetchAccounts,
+    fetchCurrentAccount,
+    switchAccount,
+    refreshQuota,
+    hydrateAccountProfilesIfNeeded,
+  } = store;
 
   // ─── Codex-specific: OAuth via Tauri events ──────────────────────────
 
@@ -126,7 +142,14 @@ export function CodexAccountsPage() {
   const [oauthPrepareError, setOauthPrepareError] = useState<string | null>(null);
   const [oauthPortInUse, setOauthPortInUse] = useState<number | null>(null);
   const [oauthTimeoutInfo, setOauthTimeoutInfo] = useState<{ loginId?: string; callbackUrl?: string; timeoutSeconds?: number } | null>(null);
+  const [oauthCallbackInput, setOauthCallbackInput] = useState('');
+  const [oauthCallbackSubmitting, setOauthCallbackSubmitting] = useState(false);
+  const [oauthCallbackError, setOauthCallbackError] = useState<string | null>(null);
+  const [oauthTokenExchangeRetryVisible, setOauthTokenExchangeRetryVisible] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [showCodeReviewQuota, setShowCodeReviewQuota] = useState<boolean>(
+    isCodexCodeReviewQuotaVisibleByDefault,
+  );
 
   const showAddModalRef = useRef(showAddModal);
   const addTabRef = useRef(addTab);
@@ -152,6 +175,23 @@ export function CodexAccountsPage() {
     fetchCurrentAccount();
   }, [fetchAccounts, fetchCurrentAccount]);
 
+  useEffect(() => {
+    const syncCodeReviewVisibility = () => {
+      setShowCodeReviewQuota(isCodexCodeReviewQuotaVisibleByDefault());
+    };
+
+    window.addEventListener(
+      CODEX_CODE_REVIEW_QUOTA_VISIBILITY_CHANGED_EVENT,
+      syncCodeReviewVisibility as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        CODEX_CODE_REVIEW_QUOTA_VISIBILITY_CHANGED_EVENT,
+        syncCodeReviewVisibility as EventListener,
+      );
+    };
+  }, []);
+
   // Hook provides setAddStatus/setAddMessage but we need refs to page's versions
   const { setAddStatus, setAddMessage, resetAddModalState, setShowAddModal } = page;
 
@@ -159,6 +199,9 @@ export function CodexAccountsPage() {
     console.error('[CodexOAuth] 准备授权链接失败', { error: String(e) });
     oauthActiveRef.current = false;
     setOauthTimeoutInfo(null);
+    setOauthCallbackSubmitting(false);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     const match = String(e).match(/CODEX_OAUTH_PORT_IN_USE:(\d+)/);
     if (match) {
       const port = Number(match[1]);
@@ -175,18 +218,34 @@ export function CodexAccountsPage() {
     await fetchCurrentAccount();
     setAddStatus('success');
     setAddMessage(t('common.shared.oauth.success', '授权成功'));
+    oauthActiveRef.current = false;
+    oauthCompletingRef.current = false;
+    oauthLoginIdRef.current = null;
+    setOauthUrl('');
+    setOauthUrlCopied(false);
+    setOauthPrepareError(null);
+    setOauthPortInUse(null);
+    setOauthTimeoutInfo(null);
+    setOauthCallbackInput('');
+    setOauthCallbackSubmitting(false);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     setTimeout(() => {
       setShowAddModal(false);
       resetAddModalState();
     }, 1200);
   }, [fetchAccounts, fetchCurrentAccount, t, oauthLog, setAddStatus, setAddMessage, setShowAddModal, resetAddModalState]);
 
-  const completeOauthError = useCallback((e: unknown) => {
+  const completeOauthError = useCallback((e: unknown, allowTokenExchangeRetry = false) => {
     setAddStatus('error');
     setAddMessage(t('common.shared.oauth.failed', '授权失败') + ': ' + String(e));
+    setOauthTokenExchangeRetryVisible(allowTokenExchangeRetry);
   }, [t, setAddStatus, setAddMessage]);
 
   const isOauthTimeoutState = useMemo(() => !!oauthTimeoutInfo, [oauthTimeoutInfo]);
+  const isOauthTokenExchangeErrorState = useMemo(() => {
+    return addStatus === 'error' && oauthTokenExchangeRetryVisible;
+  }, [addStatus, oauthTokenExchangeRetryVisible]);
 
   useEffect(() => {
     let unlistenExtension: UnlistenFn | undefined;
@@ -207,7 +266,7 @@ export function CodexAccountsPage() {
         await codexService.completeCodexOAuthLogin(loginId);
         await completeOauthSuccess();
       } catch (e) {
-        completeOauthError(e);
+        completeOauthError(e, true);
       } finally {
         oauthCompletingRef.current = false;
       }
@@ -223,6 +282,9 @@ export function CodexAccountsPage() {
       setOauthPortInUse(null);
       setOauthTimeoutInfo(payload);
       setOauthPrepareError(null);
+      setOauthCallbackSubmitting(false);
+      setOauthCallbackError(null);
+      setOauthTokenExchangeRetryVisible(false);
       setAddStatus('idle');
       setAddMessage('');
     }).then((fn) => { if (disposed) fn(); else unlistenTimeout = fn; });
@@ -233,13 +295,25 @@ export function CodexAccountsPage() {
   const prepareOauthUrl = useCallback(() => {
     if (!showAddModalRef.current || addTabRef.current !== 'oauth') return;
     if (oauthActiveRef.current) return;
+    const attemptSeq = ++oauthAttemptSeqRef.current;
     oauthActiveRef.current = true;
     setOauthPrepareError(null);
     setOauthPortInUse(null);
     setOauthTimeoutInfo(null);
+    setOauthCallbackInput('');
+    setOauthCallbackSubmitting(false);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
 
     codexService.startCodexOAuthLogin()
       .then(({ loginId, authUrl }) => {
+        if (attemptSeq !== oauthAttemptSeqRef.current) {
+          if (loginId) {
+            codexService.cancelCodexOAuthLogin(loginId).catch(() => { });
+          }
+          oauthLog('忽略过期 OAuth start 响应', { loginId, attemptSeq });
+          return;
+        }
         oauthLoginIdRef.current = loginId ?? null;
         if (typeof authUrl === 'string' && authUrl.length > 0 && showAddModalRef.current && addTabRef.current === 'oauth') {
           setOauthUrl(authUrl);
@@ -247,8 +321,17 @@ export function CodexAccountsPage() {
           oauthActiveRef.current = false;
         }
       })
-      .catch((e) => handleOauthPrepareError(e));
-  }, [handleOauthPrepareError]);
+      .catch((e) => {
+        if (attemptSeq !== oauthAttemptSeqRef.current) {
+          oauthLog('忽略过期 OAuth start 异常回调', {
+            attemptSeq,
+            error: String(e),
+          });
+          return;
+        }
+        handleOauthPrepareError(e);
+      });
+  }, [handleOauthPrepareError, oauthLog]);
 
   useEffect(() => {
     if (!showAddModal || addTab !== 'oauth' || oauthUrl || oauthTimeoutInfo) return;
@@ -257,15 +340,58 @@ export function CodexAccountsPage() {
 
   useEffect(() => {
     if (showAddModal && addTab === 'oauth') return;
-    if (!oauthActiveRef.current) return;
     const loginId = oauthLoginIdRef.current ?? undefined;
-    codexService.cancelCodexOAuthLogin(loginId).catch(() => { });
+    const hasOauthUiResidue = Boolean(oauthUrl)
+      || Boolean(oauthTimeoutInfo)
+      || oauthCallbackInput.length > 0
+      || oauthCallbackSubmitting
+      || Boolean(oauthCallbackError)
+      || Boolean(oauthPrepareError)
+      || oauthPortInUse !== null
+      || oauthUrlCopied;
+    if (!loginId && !oauthActiveRef.current && !oauthCompletingRef.current && !hasOauthUiResidue) return;
+    oauthAttemptSeqRef.current += 1;
+    if (loginId) {
+      codexService.cancelCodexOAuthLogin(loginId).catch(() => { });
+    }
     oauthActiveRef.current = false;
+    oauthCompletingRef.current = false;
     oauthLoginIdRef.current = null;
     setOauthUrl('');
     setOauthUrlCopied(false);
     setOauthTimeoutInfo(null);
-  }, [showAddModal, addTab]);
+    setOauthCallbackInput('');
+    setOauthCallbackSubmitting(false);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
+  }, [
+    showAddModal,
+    addTab,
+    oauthUrl,
+    oauthTimeoutInfo,
+    oauthCallbackInput,
+    oauthCallbackSubmitting,
+    oauthCallbackError,
+    oauthPrepareError,
+    oauthPortInUse,
+    oauthUrlCopied,
+    oauthTokenExchangeRetryVisible,
+  ]);
+
+  useEffect(
+    () => () => {
+      oauthAttemptSeqRef.current += 1;
+      const loginId = oauthLoginIdRef.current ?? undefined;
+      if (loginId) {
+        oauthLog('页面卸载，准备取消授权流程', { loginId });
+        codexService.cancelCodexOAuthLogin(loginId).catch(() => { });
+      }
+      oauthActiveRef.current = false;
+      oauthCompletingRef.current = false;
+      oauthLoginIdRef.current = null;
+    },
+    [oauthLog],
+  );
 
   const handleCopyOauthUrl = async () => {
     if (!oauthUrl) return;
@@ -290,12 +416,67 @@ export function CodexAccountsPage() {
     setOauthPortInUse(null);
     setOauthUrl('');
     setOauthUrlCopied(false);
+    setOauthCallbackInput('');
+    setOauthCallbackSubmitting(false);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     prepareOauthUrl();
   };
 
   const handleOpenOauthUrl = async () => {
     if (!oauthUrl) return;
     try { await openUrl(oauthUrl); } catch { await navigator.clipboard.writeText(oauthUrl).catch(() => { }); setOauthUrlCopied(true); setTimeout(() => setOauthUrlCopied(false), 1200); }
+  };
+
+  const handleSubmitOauthCallbackUrl = async () => {
+    const callbackUrl = oauthCallbackInput.trim();
+    if (!callbackUrl) return;
+    const loginId = oauthLoginIdRef.current;
+    if (!loginId) {
+      setOauthCallbackError(t('common.shared.oauth.failed', '授权失败'));
+      return;
+    }
+
+    setOauthCallbackSubmitting(true);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
+    oauthCompletingRef.current = true;
+    let tokenExchangeStarted = false;
+    try {
+      await codexService.submitCodexOAuthCallbackUrl(loginId, callbackUrl);
+      setAddStatus('loading');
+      setAddMessage(t('codex.oauth.exchanging', '正在交换令牌...'));
+      tokenExchangeStarted = true;
+      await codexService.completeCodexOAuthLogin(loginId);
+      await completeOauthSuccess();
+    } catch (e) {
+      completeOauthError(e, tokenExchangeStarted);
+      setOauthCallbackError(String(e).replace(/^Error:\s*/, ''));
+    } finally {
+      oauthCompletingRef.current = false;
+      setOauthCallbackSubmitting(false);
+    }
+  };
+
+  const handleRetryOauthTokenExchange = async () => {
+    const loginId = oauthLoginIdRef.current;
+    if (!loginId || oauthCompletingRef.current) return;
+    setOauthCallbackSubmitting(true);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
+    setAddStatus('loading');
+    setAddMessage(t('codex.oauth.exchanging', '正在交换令牌...'));
+    oauthCompletingRef.current = true;
+    try {
+      await codexService.completeCodexOAuthLogin(loginId);
+      await completeOauthSuccess();
+    } catch (e) {
+      completeOauthError(e, true);
+      setOauthCallbackError(String(e).replace(/^Error:\s*/, ''));
+    } finally {
+      oauthCompletingRef.current = false;
+      setOauthCallbackSubmitting(false);
+    }
   };
 
   // ─── Codex-specific: Switch / Import ─────────────────────────────────
@@ -418,10 +599,21 @@ export function CodexAccountsPage() {
   const resolveQuotaErrorMeta = useCallback((quotaError?: CodexQuotaErrorInfo) => {
     if (!quotaError?.message) return { statusCode: '', errorCode: '', displayText: '', rawMessage: '' };
     const rawMessage = quotaError.message;
+    const normalizedRawMessage = rawMessage.trim();
+    const lowerRawMessage = normalizedRawMessage.toLowerCase();
+    const requestErrorIndex = lowerRawMessage.indexOf('error sending request');
+    const requestErrorMessage =
+      requestErrorIndex >= 0
+        ? normalizedRawMessage.slice(requestErrorIndex).trim()
+        : normalizedRawMessage;
     const statusCode = rawMessage.match(/API 返回错误\s+(\d{3})/i)?.[1] || rawMessage.match(/status[=: ]+(\d{3})/i)?.[1] || '';
     const errorCode = quotaError.code || rawMessage.match(/\[error_code:([^\]]+)\]/)?.[1] || '';
-    return { statusCode, errorCode, displayText: errorCode || rawMessage, rawMessage };
-  }, []);
+    const displayText = errorCode
+      || (requestErrorIndex >= 0
+        ? t('codex.quotaError.requestFailedManualRetry', { error: requestErrorMessage })
+        : normalizedRawMessage);
+    return { statusCode, errorCode, displayText, rawMessage };
+  }, [t]);
 
   const accountPresentations = useMemo(() => {
     const map = new Map<string, ReturnType<typeof buildCodexAccountPresentation>>();
@@ -457,12 +649,30 @@ export function CodexAccountsPage() {
         chatgptAccountId: string;
         signedInWithText: string;
         userId: string;
+        accountContextText: string;
       }
     >();
     const noneText = t('common.none', '暂无');
 
     accounts.forEach((account) => {
       const metadata = getCodexAuthMetadata(account);
+      const organizationId = (account.organization_id || '').trim();
+      const matchedWorkspace = organizationId
+        ? metadata.workspaces.find((workspace) => (workspace.id || '').trim() === organizationId)
+        : null;
+      const defaultWorkspace = metadata.workspaces.find((workspace) => workspace.is_default);
+      const fallbackWorkspace = matchedWorkspace || defaultWorkspace || metadata.workspaces[0] || null;
+      const workspaceTitle = fallbackWorkspace?.title?.trim() || '';
+      const accountName = (account.account_name || '').trim();
+      const structure = (account.account_structure || '').trim().toLowerCase();
+      const isTeamLikePlan = isCodexTeamLikePlan(account.plan_type);
+      const isPersonalStructure = structure.includes('personal');
+      const accountContextText =
+        isPersonalStructure
+          ? t('codex.account.personal', '个人账户')
+          : !structure && !isTeamLikePlan
+            ? t('codex.account.personal', '个人账户')
+            : accountName || workspaceTitle || '';
       const loginProvider =
         formatCodexLoginProvider(metadata.authProvider) ||
         t('kiro.account.providerUnknown', 'Unknown');
@@ -475,6 +685,7 @@ export function CodexAccountsPage() {
         chatgptAccountId: (metadata.chatgptAccountId || account.account_id || '').trim() || noneText,
         signedInWithText,
         userId,
+        accountContextText,
       });
     });
 
@@ -490,6 +701,7 @@ export function CodexAccountsPage() {
           defaultValue: 'Signed in with {{provider}}',
         }),
         userId: t('common.none', '暂无'),
+        accountContextText: '',
       },
     [accountMetaMap, t],
   );
@@ -560,21 +772,17 @@ export function CodexAccountsPage() {
     return Array.from(groups.entries()).sort(([a], [b]) => { if (a === untaggedKey) return 1; if (b === untaggedKey) return -1; return a.localeCompare(b); });
   }, [filteredAccounts, groupByTag, normalizeTag, tagFilter, untaggedKey]);
 
-  const quotaColumnLabels = useMemo(() => {
-    const source = filteredAccounts.length > 0 ? filteredAccounts : accounts;
-    const allItems = source.map((a) => resolvePresentation(a).quotaItems);
-    const firstWithWindows = allItems.find((items) => items.length > 0) ?? [];
-    const firstWithSecondary = allItems.find((items) => items.length > 1) ?? [];
-    const firstWithCodeReview = allItems.find((items) =>
-      items.some((item) => item.key === 'code_review'),
-    );
-    const codeReview = firstWithCodeReview?.find((item) => item.key === 'code_review');
-    return {
-      primary: firstWithWindows[0]?.label ?? '5h',
-      secondary: firstWithSecondary[1]?.label ?? (firstWithWindows.length > 0 ? '—' : 'Weekly'),
-      codeReview: codeReview?.label ?? 'Code Review',
-    };
-  }, [accounts, filteredAccounts, resolvePresentation]);
+  useEffect(() => {
+    const teamAccountIds = filteredAccounts
+      .filter(
+        (account) =>
+          !hasCodexAccountStructure(account) ||
+          (isCodexTeamLikePlan(account.plan_type) && !hasCodexAccountName(account)),
+      )
+      .map((account) => account.id);
+    if (teamAccountIds.length === 0) return;
+    void hydrateAccountProfilesIfNeeded(teamAccountIds);
+  }, [filteredAccounts, hydrateAccountProfilesIfNeeded]);
 
   const resolveGroupLabel = (groupKey: string) => groupKey === untaggedKey ? t('accounts.defaultGroup', '默认分组') : groupKey;
 
@@ -587,7 +795,9 @@ export function CodexAccountsPage() {
       const isCurrent = currentAccount?.id === account.id;
       const planClass = presentation.planClass || 'unknown';
       const isSelected = selected.has(account.id);
-      const quotaItems = presentation.quotaItems;
+      const quotaItems = showCodeReviewQuota
+        ? presentation.quotaItems
+        : presentation.quotaItems.filter((item) => item.key !== 'code_review');
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
       const accountIdText =
@@ -607,6 +817,13 @@ export function CodexAccountsPage() {
             {hasQuotaError && (<span className="codex-status-pill quota-error" title={quotaErrorMeta.rawMessage}><CircleAlert size={12} />{quotaErrorMeta.statusCode || t('codex.quotaError.badge', '配额异常')}</span>)}
             <span className={`tier-badge ${planClass}`}>{presentation.planLabel}</span>
           </div>
+          {meta.accountContextText && (
+            <div className="account-sub-line">
+              <span className="codex-login-subline" title={meta.accountContextText}>
+                Team Name：{meta.accountContextText}
+              </span>
+            </div>
+          )}
           <div className="account-sub-line">
             <span className="codex-login-subline" title={signInLine}>
               {meta.signedInWithText} | {accountIdLabel}: {maskAccountText(accountIdText)}
@@ -653,9 +870,9 @@ export function CodexAccountsPage() {
       const meta = resolveAccountMeta(account);
       const isCurrent = currentAccount?.id === account.id;
       const planClass = presentation.planClass || 'unknown';
-      const primaryWindow = presentation.quotaItems.find((item) => item.key === 'primary') ?? presentation.quotaItems[0];
-      const secondaryWindow = presentation.quotaItems.find((item) => item.key === 'secondary') ?? presentation.quotaItems[1];
-      const codeReviewWindow = presentation.quotaItems.find((item) => item.key === 'code_review');
+      const quotaItems = showCodeReviewQuota
+        ? presentation.quotaItems
+        : presentation.quotaItems.filter((item) => item.key !== 'code_review');
       const quotaErrorMeta = resolveQuotaErrorMeta(account.quota_error);
       const hasQuotaError = Boolean(quotaErrorMeta.rawMessage);
       const accountIdText =
@@ -668,6 +885,13 @@ export function CodexAccountsPage() {
           <td><input type="checkbox" checked={selected.has(account.id)} onChange={() => toggleSelect(account.id)} /></td>
           <td><div className="account-cell"><div className="account-main-line"><span className="account-email-text" title={maskAccountText(presentation.displayName)}>{maskAccountText(presentation.displayName)}</span>
             {isCurrent && <span className="mini-tag current">{t('codex.current', '当前')}</span>}</div>
+            {meta.accountContextText && (
+              <div className="account-sub-line codex-account-meta-inline">
+                <span className="codex-login-subline" title={meta.accountContextText}>
+                  Team Name：{meta.accountContextText}
+                </span>
+              </div>
+            )}
             <div className="account-sub-line codex-account-meta-inline">
               <span className="codex-login-subline" title={signInLine}>
                 {meta.signedInWithText} | {accountIdLabel}: {maskAccountText(accountIdText)}
@@ -675,16 +899,23 @@ export function CodexAccountsPage() {
             </div>
             {hasQuotaError && (<div className="account-sub-line"><span className="codex-status-pill quota-error" title={quotaErrorMeta.rawMessage}><CircleAlert size={12} />{quotaErrorMeta.statusCode || t('codex.quotaError.badge', '配额异常')}</span></div>)}</div></td>
           <td><span className={`tier-badge ${planClass}`}>{presentation.planLabel}</span></td>
-          <td>{primaryWindow ? (<div className="quota-item"><div className="quota-header"><span className="quota-name">{primaryWindow.label}</span><span className={`quota-value ${primaryWindow.quotaClass}`}>{primaryWindow.valueText}</span></div>
-            <div className="quota-progress-track"><div className={`quota-progress-bar ${primaryWindow.quotaClass}`} style={{ width: `${primaryWindow.percentage}%` }} /></div>
-            {primaryWindow.resetText && (<div className="quota-footer"><span className="quota-reset">{primaryWindow.resetText}</span></div>)}</div>) : (<div className="quota-empty">—</div>)}</td>
-          <td>{secondaryWindow ? (<div className="quota-item"><div className="quota-header"><span className="quota-name">{secondaryWindow.label}</span><span className={`quota-value ${secondaryWindow.quotaClass}`}>{secondaryWindow.valueText}</span></div>
-            <div className="quota-progress-track"><div className={`quota-progress-bar ${secondaryWindow.quotaClass}`} style={{ width: `${secondaryWindow.percentage}%` }} /></div>
-            {secondaryWindow.resetText && (<div className="quota-footer"><span className="quota-reset">{secondaryWindow.resetText}</span></div>)}</div>) : (<div className="quota-empty">—</div>)}
-            {hasQuotaError && (<div className="quota-error-inline table" title={quotaErrorMeta.rawMessage}><CircleAlert size={12} /><span>{quotaErrorMeta.displayText}</span></div>)}</td>
-          <td>{codeReviewWindow ? (<div className="quota-item"><div className="quota-header"><span className="quota-name">{codeReviewWindow.label}</span><span className={`quota-value ${codeReviewWindow.quotaClass}`}>{codeReviewWindow.valueText}</span></div>
-            <div className="quota-progress-track"><div className={`quota-progress-bar ${codeReviewWindow.quotaClass}`} style={{ width: `${codeReviewWindow.percentage}%` }} /></div>
-            {codeReviewWindow.resetText && (<div className="quota-footer"><span className="quota-reset">{codeReviewWindow.resetText}</span></div>)}</div>) : (<div className="quota-empty">—</div>)}</td>
+          <td>
+            <div className="quota-grid">
+              {quotaItems.map((item) => (
+                <div key={item.key} className="quota-item">
+                  <div className="quota-header"><span className="quota-name">{item.label}</span><span className={`quota-value ${item.quotaClass}`}>{item.valueText}</span></div>
+                  <div className="quota-progress-track"><div className={`quota-progress-bar ${item.quotaClass}`} style={{ width: `${item.percentage}%` }} /></div>
+                  {item.resetText && (<div className="quota-footer"><span className="quota-reset">{item.resetText}</span></div>)}
+                </div>
+              ))}
+              {quotaItems.length === 0 && (
+                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                  {t('common.shared.quota.noData', '暂无配额数据')}
+                </span>
+              )}
+            </div>
+            {hasQuotaError && (<div className="quota-error-inline table" title={quotaErrorMeta.rawMessage}><CircleAlert size={12} /><span>{quotaErrorMeta.displayText}</span></div>)}
+          </td>
           <td className="sticky-action-cell table-action-cell"><div className="action-buttons">
             <button className="action-btn" onClick={() => openTagModal(account.id)} title={t('accounts.editTags', '编辑标签')}><Tag size={14} /></button>
             <button className={`action-btn ${!isCurrent ? 'success' : ''}`} onClick={() => handleSwitch(account.id)} disabled={!!switching} title={t('codex.switch', '切换')}>
@@ -792,14 +1023,14 @@ export function CodexAccountsPage() {
           <div className="account-table-container grouped"><table className="account-table"><thead><tr>
             <th style={{ width: 40 }}><input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} /></th>
             <th style={{ width: 260 }}>{t('common.shared.columns.email', '账号')}</th><th style={{ width: 140 }}>{t('common.shared.columns.plan', '订阅')}</th>
-            <th>{quotaColumnLabels.primary}</th><th>{quotaColumnLabels.secondary}</th><th>{quotaColumnLabels.codeReview}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
-            <tbody>{groupedAccounts.map(([gk, ga]) => (<Fragment key={gk}><tr className="tag-group-row"><td colSpan={7}><div className="tag-group-header"><span className="tag-group-title">{resolveGroupLabel(gk)}</span><span className="tag-group-count">{ga.length}</span></div></td></tr>
+            <th>{t('accounts.columns.quota', '配额状态')}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
+            <tbody>{groupedAccounts.map(([gk, ga]) => (<Fragment key={gk}><tr className="tag-group-row"><td colSpan={5}><div className="tag-group-header"><span className="tag-group-title">{resolveGroupLabel(gk)}</span><span className="tag-group-count">{ga.length}</span></div></td></tr>
               {renderTableRows(ga, gk)}</Fragment>))}</tbody></table></div>
         ) : (
           <div className="account-table-container"><table className="account-table"><thead><tr>
             <th style={{ width: 40 }}><input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} /></th>
             <th style={{ width: 260 }}>{t('common.shared.columns.email', '账号')}</th><th style={{ width: 140 }}>{t('common.shared.columns.plan', '订阅')}</th>
-            <th>{quotaColumnLabels.primary}</th><th>{quotaColumnLabels.secondary}</th><th>{quotaColumnLabels.codeReview}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
+            <th>{t('accounts.columns.quota', '配额状态')}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
             <tbody>{renderTableRows(filteredAccounts)}</tbody></table></div>
         )}
 
@@ -814,12 +1045,35 @@ export function CodexAccountsPage() {
             {addTab === 'oauth' && (<div className="add-section">
               <p className="section-desc">{t('codex.oauth.desc', '通过 OpenAI 官方 OAuth 授权您的 Codex 账号。')}</p>
               {oauthPrepareError ? (<div className="add-status error"><CircleAlert size={16} /><span>{oauthPrepareError}</span>
-                {oauthPortInUse && (<button className="btn btn-sm btn-outline" onClick={handleReleaseOauthPort}>{t('codex.oauth.portInUseAction', 'Close port and retry')}</button>)}
+              {oauthPortInUse && (<button className="btn btn-sm btn-outline" onClick={handleReleaseOauthPort}>{t('codex.oauth.portInUseAction', 'Close port and retry')}</button>)}
                 {!oauthPortInUse && oauthTimeoutInfo && (<button className="btn btn-sm btn-outline" onClick={handleRetryOauthAfterTimeout}>{t('codex.oauth.timeoutRetry', '刷新授权链接')}</button>)}</div>
               ) : oauthUrl ? (<div className="oauth-url-section">
-                <div className="oauth-url-box"><input type="text" value={oauthUrl} readOnly /><button onClick={handleCopyOauthUrl}>{oauthUrlCopied ? <Check size={16} /> : <Copy size={16} />}</button></div>
+                <div className="oauth-link">
+                  <label>{t('accounts.oauth.linkLabel', '授权链接')}</label>
+                  <div className="oauth-url-box"><input type="text" value={oauthUrl} readOnly /><button onClick={handleCopyOauthUrl}>{oauthUrlCopied ? <Check size={16} /> : <Copy size={16} />}</button></div>
+                </div>
                 <button className="btn btn-primary btn-full" onClick={isOauthTimeoutState ? handleRetryOauthAfterTimeout : handleOpenOauthUrl}>
                   {isOauthTimeoutState ? <RefreshCw size={16} /> : <Globe size={16} />}{isOauthTimeoutState ? t('codex.oauth.timeoutRetry', '刷新授权链接') : t('common.shared.oauth.openBrowser', 'Open in Browser')}</button>
+                <div className="oauth-link">
+                  <label>{t('common.shared.oauth.manualCallbackLabel', '手动输入回调地址')}</label>
+                  <div className="oauth-url-box oauth-manual-input">
+                    <input
+                      type="text"
+                      value={oauthCallbackInput}
+                      onChange={(e) => setOauthCallbackInput(e.target.value)}
+                      placeholder={t('common.shared.oauth.manualCallbackPlaceholder', '粘贴完整回调地址，例如：http://localhost:1455/auth/callback?code=...&state=...')}
+                    />
+                    <button
+                      className="oauth-copy-button"
+                      onClick={() => void handleSubmitOauthCallbackUrl()}
+                      disabled={oauthCallbackSubmitting || !oauthCallbackInput.trim()}
+                    >
+                      {oauthCallbackSubmitting ? <RefreshCw size={16} className="loading-spinner" /> : <Check size={16} />}
+                      {t('accounts.oauth.continue', '我已授权，继续')}
+                    </button>
+                  </div>
+                </div>
+                {oauthCallbackError && (<div className="add-status error"><CircleAlert size={16} /><span>{oauthCallbackError}</span></div>)}
                 {isOauthTimeoutState && (<div className="add-status error"><CircleAlert size={16} /><span>{t('codex.oauth.timeout', '授权超时，请点击"刷新授权链接"后重试。')}</span></div>)}
                 <p className="oauth-hint">{t('common.shared.oauth.hint', 'Once authorized, this window will update automatically')}</p></div>
               ) : (<div className="oauth-loading"><RefreshCw size={24} className="loading-spinner" /><span>{t('codex.oauth.preparing', '正在准备授权链接...')}</span></div>)}</div>)}
@@ -840,7 +1094,28 @@ export function CodexAccountsPage() {
               <p className="section-desc">{t('modals.import.fromFilesDesc')}</p>
               <button className="btn btn-secondary btn-full" onClick={handleImportFromFiles} disabled={importing}>
                 {importing ? <RefreshCw size={16} className="loading-spinner" /> : <FileUp size={16} />}{t('modals.import.fromFiles')}</button></div>)}
-            {addStatus !== 'idle' && (<div className={`add-status ${addStatus}`}>{addStatus === 'success' ? <Check size={16} /> : addStatus === 'loading' ? <RefreshCw size={16} className="loading-spinner" /> : <CircleAlert size={16} />}<span>{addMessage}</span></div>)}
+            {addStatus !== 'idle' && (
+              <div className={`add-status ${addStatus}`}>
+                {addStatus === 'success'
+                  ? <Check size={16} />
+                  : addStatus === 'loading'
+                    ? <RefreshCw size={16} className="loading-spinner" />
+                    : <CircleAlert size={16} />}
+                <span>{addMessage}</span>
+                {addTab === 'oauth' && addStatus === 'error' && isOauthTokenExchangeErrorState && oauthLoginIdRef.current && (
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => void handleRetryOauthTokenExchange()}
+                    disabled={oauthCallbackSubmitting}
+                  >
+                    {oauthCallbackSubmitting
+                      ? <RefreshCw size={14} className="loading-spinner" />
+                      : <RotateCw size={14} />}
+                    {t('accounts.oauth.continue')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div></div>)}
 

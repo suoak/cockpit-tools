@@ -148,6 +148,17 @@ function isAllowedEnglishReuse(key, value) {
   const normalized = value.trim();
   if (!normalized) return true;
 
+  const allowedBrandKeys = new Set([
+    'nav.codebuddy',
+    'nav.codebuddyCn',
+    'nav.gemini',
+    'nav.qoder',
+  ]);
+
+  if (allowedBrandKeys.has(key)) {
+    return true;
+  }
+
   const allowedExactValues = new Set([
     'OAuth',
     'Token / JSON',
@@ -161,6 +172,7 @@ function isAllowedEnglishReuse(key, value) {
     'WeChat',
     'WeChat Pay',
     'Windsurf',
+    'Trae',
     'Crontab',
     '🧩 Crontab',
     'min',
@@ -649,7 +661,7 @@ function generateReport(
     report += '| Key | 英文值（基准） | 复用语言 |\n';
     report += '|-----|----------------|---------|\n';
     for (const issue of englishReuseIssues) {
-      const safeValue = issue.value.replace(/\|/g, '\\|');
+      const safeValue = issue.value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
       report += `| \`${issue.key}\` | ${safeValue} | ${issue.locales.join(', ')} |\n`;
     }
     report += '\n';
@@ -666,8 +678,8 @@ function generateReport(
     report += '| suffix | 文案值（en-US） | 平台 | 当前 key | 建议 common key |\n';
     report += '|--------|----------------|------|----------|------------------|\n';
     for (const issue of platformCommonIssues) {
-      const safeValue = issue.value.replace(/\|/g, '\\|');
-      const safeKeys = issue.keys.join(', ').replace(/\|/g, '\\|');
+      const safeValue = issue.value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+      const safeKeys = issue.keys.join(', ').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
       report += `| \`${issue.suffix}\` | ${safeValue} | ${issue.roots.join(', ')} | ${safeKeys} | \`${issue.suggestedCommonKey}\` |\n`;
     }
     report += '\n';

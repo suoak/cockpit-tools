@@ -7,6 +7,180 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.16.0] - 2026-03-18
+
+### Added
+- **Cross-platform account transfer center in Settings**: Added one-click export/import for all platforms with a unified JSON bundle schema, platform-level import progress, and modal/file workflows.
+- **Platform grouping and quick-switch UX across core surfaces**: Added editable platform groups (name, icon, default child, child-level metadata), group switcher in headers, grouped cards on dashboard, and grouped entry rendering in side navigation and layout modal.
+- **Custom group icon library with local persistence**: Added icon upload, reuse, and cleanup for group/child icons in platform layout configuration.
+
+### Changed
+- **Tray layout model now supports ordered entries plus platform groups**: tray persistence now stores `orderedEntryIds` + `platformGroups`, and tray menu rendering now understands grouped entries while keeping manual ordering and visibility controls.
+- **macOS app launch flow now aligns around LaunchServices `open -n -a` with PID probing for isolated instances**: Antigravity/Codex/VS Code/CodeBuddy/CodeBuddy CN/WorkBuddy plus Qoder/Trae/Cursor/Kiro/Windsurf start paths now use consistent launch semantics and post-launch PID matching for target profiles.
+- **Account refresh reliability improved with delayed retry across providers**: Antigravity quota refresh and multiple provider token/profile/quota refresh paths now perform one delayed retry with unified logs before surfacing failure.
+- **Codex OAuth add-account flow now supports in-place token-exchange retry**: OAuth error state now exposes a retry action for token exchange without restarting the full authorization flow.
+- **Settings, dashboard, and navigation visuals were updated for grouped-platform operations**: added new layout/modal/switcher/transfer styles and supporting locale keys across all supported languages.
+
+---
+## [0.15.1] - 2026-03-16
+
+### Changed
+- **Codex auto-switch and quota alerts now support independent `primary_window`/`secondary_window` thresholds end-to-end**: backend config normalization, candidate selection, cooldown keys, and post-refresh checks now evaluate dual thresholds and can switch accounts before alerting when a better candidate exists.
+- **Codex Quick Settings now expose dual-window controls for auto-switch and quota alerts**: added dedicated percentage inputs for `primary_window` and `secondary_window`, plus combined OR-condition hints and modal threshold display.
+- **Codex quota refresh scheduling now includes a 60-second current-account refresh when auto-switch or quota alerts are enabled**: improves trigger timeliness without changing existing full-refresh interval behavior.
+- **Default-instance launches triggered by switching now pass saved extra args for Antigravity and Codex**: switch flows and the default Codex instance start path now reuse configured `extra_args` instead of dropping them.
+- **Codex refresh flows now always update current-account state after refresh**: manual and batch refresh paths now hydrate both account list and current account for consistent UI state.
+- **Windows main window default width increased to 1250**: provides more horizontal space for account and quick-settings content.
+
+---
+## [0.15.0] - 2026-03-15
+
+### Added
+- **WorkBuddy platform full integration with account sync and instance management**: Added WorkBuddy backend/frontend modules, OAuth/Token/JSON/local import flows, account switching via local credential injection, dashboard/settings/quick-settings/tray integration, and bidirectional account sync with CodeBuddy CN.
+- **Token-protected HTTP usage report service with optional HTML rendering**: Added configurable `/report` endpoint (`report_enabled` + port + token) that aggregates multi-platform quota summaries and supports raw Markdown/YAML output plus `render=true` HTML view for browser inspection.
+
+### Changed
+- **CodeBuddy, CodeBuddy CN, and WorkBuddy runtime flows are now structurally aligned**: Moved cross-platform sync/injection paths into WorkBuddy domain modules, unified command registration, and reduced duplicated maintenance paths.
+- **Account injection/startup reliability and operator guidance are improved**: CodeBuddy/CodeBuddy CN/WorkBuddy instance injection now includes post-write verification and clearer “sign in manually first” guidance for keychain/state-db failure cases.
+- **Rendered report readability and staleness metadata are enhanced**: Report pages now group rows more clearly, show human-readable local timestamps, and expose delayed-refresh/stale-data notes directly in report metadata.
+
+### Contributors
+- `PR #213` by `@lihongjing-2023`: WorkBuddy platform integration and account sync.
+- `PR #212` by `@lovitus`: tokenized web report service and rendered report improvements.
+
+---
+## [0.14.5] - 2026-03-15
+
+### Changed
+- **Startup work after upgrade is now lighter and more staggered**: boot now renders immediately with built-in `en`/`zh-CN` resources instead of blocking first paint on async language loading, auto-refresh timer setup is deferred, dashboard platform prefetch is batched, and frontend vendor/update chunks are split more aggressively to reduce first-launch stalls after larger upgrades.
+
+### Fixed
+- **Codex account refresh now recovers from backend-invalidated auth tokens**: quota refresh and account-profile checks now detect `401 token_invalidated`, force one refresh-token exchange, persist the rotated tokens, and retry the official ChatGPT usage/account-check endpoints instead of surfacing a false “sign in again” failure while the same account can still be used in the official client.
+- **Codex default instance launch on macOS no longer reuses another running isolated instance**: when a non-default Codex instance is already open, starting the default instance now forces a fresh LaunchServices app instance so the default profile opens instead of just focusing the existing isolated window.
+
+---
+## [0.14.4] - 2026-03-14
+
+### Fixed
+- **Cursor account list now self-heals from local account files when index is missing or corrupted**: listing now recovers accounts from `cursor_accounts/*.json`, rewrites `cursor_accounts.json`, and keeps accounts/tags visible instead of showing an empty list when only the index file is damaged.
+- **Cursor account list now uses the same index lock as write operations**: `list_accounts` is serialized with import/delete/update paths to reduce race windows during concurrent index access.
+
+---
+## [0.14.3] - 2026-03-14
+
+### Fixed
+- **OAuth add-account dialogs now reliably re-open for repeated sign-ins across platforms**: after OAuth success, Codex and shared provider OAuth flows now clear pending-session/UI residue (auth URL, timeout/polling/manual-callback state) immediately and on modal close/tab change, preventing subsequent logins from stalling after `OAuth start`.
+
+---
+## [0.14.2] - 2026-03-14
+
+### Fixed
+- **GitHub Copilot switching now falls back to VS Code Insiders local storage automatically**: when the standard VS Code `Code` user-data path is missing, default-instance and token-injection flows now probe `Code - Insiders` for `state.vscdb`, Windows `Local State`, and VS Code safe-storage credentials, restoring switching for Insiders-only installs.
+
+---
+## [0.14.1] - 2026-03-14
+
+### Added
+- **CodeBuddy/CodeBuddy CN resource-package quota is now shown directly in app**: account cards and tables now render per-package quota amount, progress, and refresh/expiry time (including extra credits) without requiring web-only viewing.
+- **CodeBuddy CN Token import now hydrates quota metadata immediately**: Token import now pulls dosage/payment/user-resource payloads and persists them into quota and usage fields during account creation.
+
+### Changed
+- **Quota refresh now uses IDE access tokens instead of Cookie binding**: backend refresh now calls `/v2/billing/meter/get-user-resource` with Bearer token and identity headers, and writes refresh errors into account state for UI visibility.
+- **Legacy manual quota-binding flow is removed across backend and frontend**: removed cURL replay binding, binding-clear commands, and related service/type paths for both CodeBuddy and CodeBuddy CN.
+- **Localization copy is aligned with the new quota model across all locales**: removed obsolete Cookie-binding flow text, updated network-scope wording to resource-package quota refresh, and added package-title keys for base/activity packages in all supported languages.
+- **HTTP decoding compatibility for quota APIs is expanded**: `reqwest` now enables `brotli`/`deflate`/`zstd` features to handle compressed billing responses more reliably.
+
+### Fixed
+- **Quota summary and recommendation no longer depend on legacy binding state**: resource summary no longer returns `null` when `quota_binding` is absent, preventing fallback-only recommendation behavior after token refresh.
+
+---
+## [0.14.0] - 2026-03-13
+
+### Added
+- **CodeBuddy CN platform full integration**: Added CodeBuddy CN models, commands, modules, OAuth flow, account pages, services, stores, icons, navigation, dashboard/tray wiring, and multi-instance management support.
+- **CodeBuddy CN account lifecycle support**: Added browser-based OAuth login, Token/JSON import, local client import, account switching with local credential injection, tag management, and account export.
+- **Manual OAuth callback URL input**: OAuth flows that rely on a local callback port now support manual callback URL input when automatic callback capture is unavailable, improving authorization success in restricted network environments.
+
+### Changed
+- **CodeBuddy/CodeBuddy CN quota display simplified**: Quota information is now viewed on the web page; removed complex in-app quota query form for a cleaner account page experience.
+- **Shared runtime surfaces now cover eleven platforms**: Dashboard, tray, settings, quick settings, auto-refresh scheduling, quota-alert preferences, navigation, and README/docs now include CodeBuddy CN consistently.
+
+### Fixed
+- **Qoder import now refreshes account list**: JSON and Token import on Qoder platform now correctly refresh account data after successful import, fixing display issues where imported accounts were not shown immediately.
+- **Local import now refreshes tray summaries across multiple platforms**: Antigravity, Codex, Cursor, Kiro, Windsurf, Trae, and Qoder now update the tray menu immediately after successful local import, preventing shared-runtime summaries from staying stale after import.
+
+---
+## [0.13.0] - 2026-03-12
+
+### Added
+- **Qoder platform full integration across backend and frontend**: Added Qoder models, commands, modules, official CLI device-login flow, local/JSON import, account pages, services, stores, icons, navigation, dashboard/tray wiring, and raw-plan/quota presentation.
+- **Qoder account switching and multi-instance management**: Added Qoder credential injection, default-instance binding, isolated multi-instance profiles, start/stop/open-window/close-all controls, and launch-path detection for macOS, Windows, and Linux.
+- **Trae platform full integration across backend and frontend**: Added Trae models, commands, modules, OAuth flow, local/JSON import, account pages, services, stores, icons, navigation, dashboard/tray wiring, and plan/usage presentation.
+- **Trae account switching and multi-instance management**: Added Trae local auth write-back using the client's actual on-disk rules, default-instance binding, isolated multi-instance profiles, start/stop/open-window/close-all controls, and launch-path detection for macOS, Windows, and Linux.
+
+### Changed
+- **Shared runtime surfaces now cover ten platforms**: Dashboard, tray, settings, quick settings, auto-refresh scheduling, quota-alert preferences, navigation, and README/docs now include Qoder and Trae consistently.
+- **Settings now expose Qoder/Trae path and quota controls**: General settings now cover Qoder/Trae auto-refresh, launch paths, and quota alerts in one place.
+- **Gemini platform wording is now aligned as Gemini Cli**: Shared navigation, settings, and account-management labels now consistently use `Gemini Cli`.
+
+### Fixed
+- **Pending OAuth sessions are now cancelled when dialogs or pages close**: Provider OAuth flows now cancel in-flight authorization sessions on modal close, tab switch, or page unload to avoid stale pending sessions.
+- **Windows updater now keeps installer type consistent to avoid duplicate desktop shortcuts**: Windows update checks now pass an explicit updater target based on the current bundle type (`windows-*-nsis` / `windows-*-msi`), and merged `latest.json` now points the `windows-x86_64` fallback to NSIS to prevent installer-type drift from recreating desktop shortcuts during update.
+
+---
+## [0.12.3] - 2026-03-11
+
+### Fixed
+- **macOS permission prompts no longer attribute to Cockpit Tools**: All IDE launches (Codex, VS Code, CodeBuddy) on macOS now use `open -a` via LaunchServices instead of direct binary execution, so macOS TCC permission dialogs (e.g. Downloads folder access) correctly attribute to the launched IDE rather than Cockpit Tools. Multi-instance PID tracking is preserved through post-launch process polling.
+
+---
+## [0.12.2] - 2026-03-11
+
+### Added
+- **Linux package installs now support managed in-app updates**: Added `.deb`/`.rpm` runtime detection, signed package download, progress reporting, and privileged install flow so Linux package-manager installs can complete updates directly in Cockpit.
+- **Antigravity accounts now support local account groups**: Added local folder-style account groups on the Antigravity accounts page, including create/rename/delete, batch add/remove, grouped browsing, and per-group quota refresh.
+
+### Changed
+- **Windsurf plan presentation now recognizes more official tiers**: Windsurf account cards, badges, and filters now resolve Trial, Teams, Teams Ultimate, and Pro Ultimate labels from remote plan data and teams-tier metadata.
+- **Linux updater behavior now matches package-managed installs**: Background silent download is skipped for managed `.deb`/`.rpm` installs, and the sidebar/update dialog now shows authorization and installation progress states during one-click update.
+- **Quota alert native notifications now follow the selected UI language**: Backend notification text now resolves from locale keys and covers Codex, GitHub Copilot, Windsurf, Kiro, Cursor, Gemini, and CodeBuddy consistently.
+
+### Fixed
+- **Wakeup task creation/test now checks runtime readiness first**: Opening “new task” and “test task” now stops early and reuses the existing runtime-path guidance when the wakeup runtime is not configured.
+- **Settings and recovery dialogs now surface action failures inline**: Quick Settings path/config errors, file-corruption “open folder” failures, and global modal action failures are now shown in the UI instead of only logging to console.
+- **macOS quota alerts no longer keep a click-wait notification loop alive**: Native quota notifications now use fire-and-forget delivery to avoid unnecessary background energy usage after notification delivery.
+
+---
+## [0.12.1] - 2026-03-10
+
+### Added
+- **Codex account profile hydration from official account-check endpoint**: Added a `refresh_codex_account_profile` backend/frontend flow to fetch and persist `account_name` and `account_structure`.
+- **Automatic profile hydration for team-like Codex accounts**: Added store-level background hydration for accounts missing structure/name metadata, with in-flight de-duplication and a 5-minute retry interval.
+
+### Changed
+- **Codex account cards and tables now display account context**: account rows now show “Personal account” or hydrated team/workspace names based on structure, plan type, and workspace metadata.
+- **Codex instance quota preview now follows Code Review visibility preference**: when Code Review quota is hidden in preferences, instance-page badges, search text, and quota preview now hide it consistently.
+
+---
+## [0.12.0] - 2026-03-10
+
+### Added
+- **CodeBuddy platform full integration across backend and frontend**: Added CodeBuddy models, commands, modules, OAuth flow, account pages, services, stores, icons, navigation, dashboard wiring, and shared platform metadata.
+- **CodeBuddy account lifecycle support**: Added browser-based OAuth login, Token/JSON import, quota query and binding, cycle/resource/extra-credit presentation, tag editing, bulk actions, account export, and local credential injection for account switching.
+- **CodeBuddy multi-instance management**: Added CodeBuddy instance store and commands with isolated user-data directories, account binding, instance create/update/delete, start/stop, open-window, and close-all controls.
+- **CodeBuddy quota binding supports full cURL replay**: Added a full `Copy as cURL (bash)` workflow for `get-user-resource`, replaying the original request (method/headers/body) to improve binding accuracy and persist normalized quota binding parameters.
+
+### Changed
+- **CodeBuddy is now integrated into shared runtime surfaces**: Added CodeBuddy app-path detection, auto-refresh interval, quota-alert settings, Quick Settings, tray summaries, and global refresh scheduling.
+- **Cursor switch now attempts to launch the default instance after injection**: switching a Cursor account now updates the default-instance binding and tries to start Cursor immediately, while still emitting unified path-missing guidance when the app path is unavailable.
+- **Codex quota presentation is now consolidated into one flexible column**: the Accounts table now renders all quota windows in a single area, and Code Review quota visibility can be toggled from preferences.
+
+### Fixed
+- **Codex account switching now respects `CODEX_HOME`**: Codex auth file read/write now honors custom `CODEX_HOME` (including quoted env values), and auth write errors now include explicit target paths for troubleshooting.
+- **Secondary windows no longer inherit main-window close interception**: non-main windows now close directly instead of being incorrectly blocked by the tray/minimize confirmation flow.
+- **Windsurf safe-storage key lookup is now provider-specific**: macOS and Linux credential handling no longer falls back to generic VS Code safe-storage entries, reducing wrong-key reads during injection.
+
+---
 ## [0.11.3] - 2026-03-10
 
 ### Fixed

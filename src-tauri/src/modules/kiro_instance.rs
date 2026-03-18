@@ -1,13 +1,17 @@
 use std::collections::{HashMap, HashSet};
+#[cfg(not(target_os = "macos"))]
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+#[cfg(not(target_os = "macos"))]
+use std::process::Stdio;
 use std::sync::Mutex;
 
 use chrono::Utc;
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::{json, Value};
+#[cfg(not(target_os = "macos"))]
 use sysinfo::{ProcessRefreshKind, System, UpdateKind};
 use uuid::Uuid;
 
@@ -358,6 +362,7 @@ fn normalize_non_empty_path(value: Option<&str>) -> Option<String> {
         .filter(|text| !text.is_empty())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_user_data_dir_value(raw: &str) -> Option<String> {
     let rest = raw.trim_start();
     if rest.is_empty() {
@@ -384,6 +389,7 @@ fn parse_user_data_dir_value(raw: &str) -> Option<String> {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn extract_user_data_dir(args: &[OsString]) -> Option<String> {
     let tokens: Vec<String> = args
         .iter()
@@ -419,6 +425,7 @@ fn extract_user_data_dir(args: &[OsString]) -> Option<String> {
     None
 }
 
+#[cfg(target_os = "macos")]
 fn split_command_tokens(command_line: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
@@ -455,6 +462,7 @@ fn split_command_tokens(command_line: &str) -> Vec<String> {
     tokens
 }
 
+#[cfg(target_os = "macos")]
 fn extract_user_data_dir_from_command_line(command_line: &str) -> Option<String> {
     let tokens = split_command_tokens(command_line);
     let mut index = 0;
@@ -489,6 +497,7 @@ fn extract_user_data_dir_from_command_line(command_line: &str) -> Option<String>
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn is_helper_process(name: &str, args_line: &str) -> bool {
     args_line.contains("--type=")
         || name.contains("helper")
@@ -1008,53 +1017,52 @@ fn detect_kiro_exec_path() -> Option<PathBuf> {
                 }
             }
         }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let mut candidates: Vec<PathBuf> = Vec::new();
-        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-            candidates.push(
-                Path::new(&local_appdata)
-                    .join("Programs")
-                    .join("Kiro")
-                    .join("Kiro.exe"),
-            );
-            candidates.push(
-                Path::new(&local_appdata)
-                    .join("Programs")
-                    .join("Kiro")
-                    .join("Electron.exe"),
-            );
-        }
-        for candidate in candidates {
-            if candidate.exists() {
-                return Some(candidate);
+        #[cfg(target_os = "windows")]
+        {
+            let mut candidates: Vec<PathBuf> = Vec::new();
+            if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+                candidates.push(
+                    Path::new(&local_appdata)
+                        .join("Programs")
+                        .join("Kiro")
+                        .join("Kiro.exe"),
+                );
+                candidates.push(
+                    Path::new(&local_appdata)
+                        .join("Programs")
+                        .join("Kiro")
+                        .join("Electron.exe"),
+                );
             }
-        }
-        if let Some(path) = modules::process::detect_windows_exec_path_by_signatures(
-            "kiro",
-            &["Kiro.exe", "Electron.exe"],
-            &["kiro"],
-            &["kiro"],
-            &["kiro"],
-        ) {
-            return Some(path);
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let candidates = ["/usr/bin/kiro", "/opt/kiro/kiro"];
-        for candidate in candidates {
-            let path = PathBuf::from(candidate);
-            if path.exists() {
+            for candidate in candidates {
+                if candidate.exists() {
+                    return Some(candidate);
+                }
+            }
+            if let Some(path) = modules::process::detect_windows_exec_path_by_signatures(
+                "kiro",
+                &["Kiro.exe", "Electron.exe"],
+                &["kiro"],
+                &["kiro"],
+                &["kiro"],
+            ) {
                 return Some(path);
             }
         }
-    }
 
-    None
+        #[cfg(target_os = "linux")]
+        {
+            let candidates = ["/usr/bin/kiro", "/opt/kiro/kiro"];
+            for candidate in candidates {
+                let path = PathBuf::from(candidate);
+                if path.exists() {
+                    return Some(path);
+                }
+            }
+        }
+
+        return None;
+    }
 }
 
 fn path_looks_like_kiro(path: &Path) -> bool {
@@ -1121,7 +1129,7 @@ fn sanitize_macos_gui_launch_env(cmd: &mut Command) {
     cmd.env_remove("XPC_SERVICE_NAME");
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
 fn sanitize_macos_gui_launch_env(_cmd: &mut Command) {}
 
 #[cfg(target_os = "windows")]
@@ -1153,7 +1161,50 @@ fn spawn_kiro_windows(
     Ok(child.id())
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(target_os = "macos")]
+fn spawn_kiro_macos_open(
+    launch_path: &Path,
+    user_data_dir: &str,
+    extra_args: &[String],
+    use_new_window: bool,
+) -> Result<u32, String> {
+    let app_root = normalize_macos_app_root(launch_path).ok_or("APP_PATH_NOT_FOUND:kiro")?;
+    let target = user_data_dir.trim();
+
+    let mut cmd = Command::new("open");
+    sanitize_macos_gui_launch_env(&mut cmd);
+    cmd.arg("-n").arg("-a").arg(&app_root);
+    cmd.arg("--args");
+    cmd.arg("--user-data-dir").arg(target);
+    if use_new_window {
+        cmd.arg("--new-window");
+    } else {
+        cmd.arg("--reuse-window");
+    }
+    for arg in extra_args {
+        if !arg.trim().is_empty() {
+            cmd.arg(arg.trim());
+        }
+    }
+
+    let child = spawn_command_with_trace(&mut cmd).map_err(|e| format!("启动 Kiro 失败: {}", e))?;
+    modules::logger::log_info("Kiro 启动命令已发送（open -n -a）");
+    let probe_started = std::time::Instant::now();
+    let timeout = std::time::Duration::from_secs(6);
+    while probe_started.elapsed() < timeout {
+        if let Some(resolved_pid) = resolve_kiro_pid(None, Some(target)) {
+            return Ok(resolved_pid);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    modules::logger::log_warn(&format!(
+        "[Kiro Start] 启动后 6s 内未匹配到实例 PID，回退 open pid={}",
+        child.id()
+    ));
+    Ok(child.id())
+}
+
+#[cfg(target_os = "linux")]
 fn spawn_kiro_unix(
     launch_path: &Path,
     user_data_dir: &str,
@@ -1196,7 +1247,12 @@ pub fn start_kiro_with_args_with_new_window(
         return spawn_kiro_windows(&launch_path, target, extra_args, use_new_window);
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(target_os = "macos")]
+    {
+        return spawn_kiro_macos_open(&launch_path, target, extra_args, use_new_window);
+    }
+
+    #[cfg(target_os = "linux")]
     {
         return spawn_kiro_unix(&launch_path, target, extra_args, use_new_window);
     }

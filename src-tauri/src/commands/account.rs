@@ -73,7 +73,7 @@ pub async fn set_current_account(app: tauri::AppHandle, account_id: String) -> R
 #[tauri::command]
 pub async fn fetch_account_quota(account_id: String) -> AppResult<models::Account> {
     let mut account = modules::load_account(&account_id).map_err(AppError::Account)?;
-    let quota = modules::fetch_quota_with_retry(&mut account, true).await?;
+    let quota = modules::fetch_quota_with_delayed_retry(&mut account, true).await?;
     modules::update_account_quota(&account_id, quota).map_err(AppError::Account)?;
     // 重载账号，包含写入的 quota_error 等最新信息
     let updated_account = modules::load_account(&account_id).map_err(AppError::Account)?;
@@ -113,7 +113,7 @@ pub async fn refresh_current_quota(app: tauri::AppHandle) -> Result<(), String> 
         return Err("未找到当前账号".to_string());
     };
     let mut account = account;
-    let quota = modules::fetch_quota_with_retry(&mut account, true)
+    let quota = modules::fetch_quota_with_delayed_retry(&mut account, true)
         .await
         .map_err(|e| e.to_string())?;
     modules::update_account_quota(&account.id, quota).map_err(|e| e.to_string())?;
@@ -225,9 +225,16 @@ pub async fn switch_account(app: AppHandle, account_id: String) -> Result<models
     let _ = modules::instance::update_default_pid(None);
     modules::instance::inject_account_to_profile(&default_dir, &account_id)?;
 
-    // 7. 启动 Antigravity（启动失败不阻断切号，保持原行为）
+    // 7. 启动 Antigravity（带默认实例自定义启动参数；启动失败不阻断切号，保持原行为）
     modules::logger::log_info("正在启动 Antigravity 默认实例...");
-    let launch_error = match modules::process::start_antigravity() {
+    let default_settings = modules::instance::load_default_settings()?;
+    let extra_args = modules::process::parse_extra_args(&default_settings.extra_args);
+    let launch_result = if extra_args.is_empty() {
+        modules::process::start_antigravity()
+    } else {
+        modules::process::start_antigravity_with_args("", &extra_args)
+    };
+    let launch_error = match launch_result {
         Ok(pid) => {
             if let Err(e) = modules::instance::update_default_pid(Some(pid)) {
                 modules::logger::log_warn(&format!("更新默认实例 PID 失败: {}", e));

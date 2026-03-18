@@ -4,24 +4,239 @@ use crate::models::codex::{
 };
 use crate::modules::{codex_oauth, logger};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 static CODEX_QUOTA_ALERT_LAST_SENT: std::sync::LazyLock<Mutex<HashMap<String, i64>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+static CODEX_AUTO_SWITCH_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 const CODEX_QUOTA_ALERT_COOLDOWN_SECONDS: i64 = 300;
+const ACCOUNT_CHECK_URL: &str = "https://chatgpt.com/backend-api/wham/accounts/check";
+
+fn normalize_optional_json_str(value: Option<&serde_json::Value>) -> Option<String> {
+    normalize_optional_ref(value.and_then(|item| item.as_str()))
+}
+
+fn extract_account_record_field(
+    record: &serde_json::Map<String, serde_json::Value>,
+    keys: &[&str],
+) -> Option<String> {
+    for key in keys {
+        if let Some(value) = normalize_optional_json_str(record.get(*key)) {
+            return Some(value);
+        }
+    }
+    None
+}
+
+fn collect_account_records(payload: &serde_json::Value) -> Vec<serde_json::Value> {
+    let mut records = Vec::new();
+
+    if let Some(accounts_value) = payload.get("accounts") {
+        if let Some(array) = accounts_value.as_array() {
+            for item in array {
+                if item.is_object() {
+                    records.push(item.clone());
+                }
+            }
+        } else if let Some(object) = accounts_value.as_object() {
+            for value in object.values() {
+                if value.is_object() {
+                    records.push(value.clone());
+                }
+            }
+        }
+    }
+
+    if records.is_empty() {
+        if let Some(array) = payload.as_array() {
+            for item in array {
+                if item.is_object() {
+                    records.push(item.clone());
+                }
+            }
+        }
+    }
+
+    records
+}
+
+fn parse_account_profile_from_check_response(
+    payload: &serde_json::Value,
+    account: &CodexAccount,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let records = collect_account_records(payload);
+    if records.is_empty() {
+        return (None, None, None);
+    }
+
+    let ordering_first_id = payload
+        .get("account_ordering")
+        .and_then(|value| value.as_array())
+        .and_then(|items| items.first())
+        .and_then(|value| value.as_str())
+        .and_then(|value| normalize_optional_ref(Some(value)));
+    let expected_account_id = normalize_optional_ref(account.account_id.as_deref())
+        .or_else(|| extract_chatgpt_account_id_from_access_token(&account.tokens.access_token));
+    let expected_org_id = normalize_optional_ref(account.organization_id.as_deref());
+
+    let mut selected_record: Option<serde_json::Value> = None;
+
+    if let Some(expected_id) = expected_account_id.as_deref() {
+        selected_record = records
+            .iter()
+            .find(|item| {
+                let Some(record) = item.as_object() else {
+                    return false;
+                };
+                let candidate_id = extract_account_record_field(
+                    record,
+                    &["id", "account_id", "chatgpt_account_id", "workspace_id"],
+                );
+                normalize_optional_ref(candidate_id.as_deref()) == Some(expected_id.to_string())
+            })
+            .cloned();
+    }
+
+    if selected_record.is_none() {
+        if let Some(ordering_id) = ordering_first_id.as_deref() {
+            selected_record = records
+                .iter()
+                .find(|item| {
+                    let Some(record) = item.as_object() else {
+                        return false;
+                    };
+                    let candidate_id = extract_account_record_field(
+                        record,
+                        &["id", "account_id", "chatgpt_account_id", "workspace_id"],
+                    );
+                    normalize_optional_ref(candidate_id.as_deref()) == Some(ordering_id.to_string())
+                })
+                .cloned();
+        }
+    }
+
+    if selected_record.is_none() {
+        if let Some(org_id) = expected_org_id.as_deref() {
+            selected_record = records
+                .iter()
+                .find(|item| {
+                    let Some(record) = item.as_object() else {
+                        return false;
+                    };
+                    let candidate_org = extract_account_record_field(
+                        record,
+                        &["organization_id", "org_id", "workspace_id"],
+                    );
+                    normalize_optional_ref(candidate_org.as_deref()) == Some(org_id.to_string())
+                })
+                .cloned();
+        }
+    }
+
+    let selected = selected_record.unwrap_or_else(|| records[0].clone());
+    let Some(record) = selected.as_object() else {
+        return (None, None, None);
+    };
+
+    let account_name = extract_account_record_field(
+        record,
+        &[
+            "name",
+            "display_name",
+            "account_name",
+            "organization_name",
+            "workspace_name",
+            "title",
+        ],
+    );
+    let account_structure = extract_account_record_field(
+        record,
+        &[
+            "structure",
+            "account_structure",
+            "kind",
+            "type",
+            "account_type",
+        ],
+    );
+    let account_id = extract_account_record_field(
+        record,
+        &["id", "account_id", "chatgpt_account_id", "workspace_id"],
+    );
+
+    (account_name, account_structure, account_id)
+}
+
+async fn fetch_remote_account_profile(
+    account: &CodexAccount,
+) -> Result<(Option<String>, Option<String>, Option<String>), String> {
+    let client = reqwest::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", account.tokens.access_token))
+            .map_err(|e| format!("构建 Authorization 头失败: {}", e))?,
+    );
+    headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
+
+    if let Some(account_id) = normalize_optional_ref(account.account_id.as_deref())
+        .or_else(|| extract_chatgpt_account_id_from_access_token(&account.tokens.access_token))
+    {
+        headers.insert(
+            "ChatGPT-Account-Id",
+            HeaderValue::from_str(&account_id)
+                .map_err(|e| format!("构建 ChatGPT-Account-Id 头失败: {}", e))?,
+        );
+    }
+
+    let response = client
+        .get(ACCOUNT_CHECK_URL)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| format!("请求账号信息失败: {}", e))?;
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("读取账号信息响应失败: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("账号信息接口返回错误 {}: {}", status, body));
+    }
+
+    let payload: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("账号信息 JSON 解析失败: {}", e))?;
+    Ok(parse_account_profile_from_check_response(&payload, account))
+}
 
 /// 获取 Codex 数据目录（优先读取 CODEX_HOME 环境变量）
 pub fn get_codex_home() -> PathBuf {
-    if let Ok(raw) = std::env::var("CODEX_HOME") {
-        let trimmed = raw.trim().trim_matches('"');
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed);
-        }
+    if let Some(from_env) = resolve_codex_home_from_env() {
+        return from_env;
     }
     dirs::home_dir().expect("无法获取用户主目录").join(".codex")
+}
+
+fn resolve_codex_home_from_env() -> Option<PathBuf> {
+    let raw = std::env::var("CODEX_HOME").ok()?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    // 兼容用户使用 setx / shell 时可能包裹的引号
+    let unquoted = trimmed.trim_matches('"').trim_matches('\'').trim();
+    if unquoted.is_empty() {
+        return None;
+    }
+
+    Some(PathBuf::from(unquoted))
 }
 
 /// 获取官方 auth.json 路径
@@ -97,6 +312,13 @@ fn normalize_optional_ref(value: Option<&str>) -> Option<String> {
             Some(trimmed.to_string())
         }
     })
+}
+
+fn should_force_refresh_token(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("token_invalidated")
+        || lower.contains("your authentication token has been invalidated")
+        || lower.contains("401 unauthorized")
 }
 
 pub fn extract_chatgpt_account_id_from_access_token(access_token: &str) -> Option<String> {
@@ -280,6 +502,70 @@ pub fn list_accounts() -> Vec<CodexAccount> {
         .iter()
         .filter_map(|summary| load_account(&summary.id))
         .collect()
+}
+
+/// 刷新账号资料（团队名/结构）
+async fn refresh_account_profile_once(account_id: &str) -> Result<CodexAccount, String> {
+    let mut account = prepare_account_for_injection(account_id).await?;
+    let (account_name, account_structure, account_id_from_remote) =
+        match fetch_remote_account_profile(&account).await {
+            Ok(profile) => profile,
+            Err(err) if should_force_refresh_token(&err) => {
+                let refresh_token = account.tokens.refresh_token.clone().ok_or(err.clone())?;
+
+                logger::log_warn(&format!(
+                    "Codex 账号资料请求检测到失效 Token，准备强制刷新后重试: account={}, error={}",
+                    account.email, err
+                ));
+
+                account.tokens = codex_oauth::refresh_access_token(&refresh_token)
+                    .await
+                    .map_err(|e| format!("账号资料接口返回 Token 失效，刷新 Token 失败: {}", e))?;
+                save_account(&account)?;
+
+                fetch_remote_account_profile(&account).await?
+            }
+            Err(err) => return Err(err),
+        };
+
+    let mut changed = false;
+
+    if let Some(remote_account_id) = normalize_optional_value(account_id_from_remote) {
+        if normalize_optional_ref(account.account_id.as_deref()) != Some(remote_account_id.clone())
+        {
+            account.account_id = Some(remote_account_id);
+            changed = true;
+        }
+    }
+
+    if let Some(name) = normalize_optional_value(account_name) {
+        if normalize_optional_ref(account.account_name.as_deref()) != Some(name.clone()) {
+            account.account_name = Some(name);
+            changed = true;
+        }
+    }
+
+    if let Some(structure) = normalize_optional_value(account_structure) {
+        if normalize_optional_ref(account.account_structure.as_deref()) != Some(structure.clone()) {
+            account.account_structure = Some(structure);
+            changed = true;
+        }
+    }
+
+    if changed {
+        save_account(&account)?;
+    }
+
+    Ok(account)
+}
+
+pub async fn refresh_account_profile(account_id: &str) -> Result<CodexAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay(
+        "Codex Profile Refresh",
+        account_id,
+        || async { refresh_account_profile_once(account_id).await },
+    )
+    .await
 }
 
 /// 添加或更新账号
@@ -494,13 +780,41 @@ fn build_auth_file(account: &CodexAccount) -> CodexAuthFile {
 
 pub fn write_auth_file_to_dir(base_dir: &Path, account: &CodexAccount) -> Result<(), String> {
     let auth_path = base_dir.join("auth.json");
+    logger::log_info(&format!(
+        "[Codex切号] 准备写入登录信息: account_id={}, email={}, target_dir={}, target_file={}",
+        account.id,
+        account.email,
+        base_dir.display(),
+        auth_path.display()
+    ));
+
     if let Some(parent) = auth_path.parent() {
-        fs::create_dir_all(parent).ok();
+        fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "创建 auth.json 目录失败: path={}, error={}",
+                parent.display(),
+                e
+            )
+        })?;
     }
+
     let auth_file = build_auth_file(account);
     let content =
         serde_json::to_string_pretty(&auth_file).map_err(|e| format!("序列化失败: {}", e))?;
-    fs::write(&auth_path, content).map_err(|e| format!("写入 auth.json 失败: {}", e))?;
+    fs::write(&auth_path, content).map_err(|e| {
+        format!(
+            "写入 auth.json 失败: path={}, error={}",
+            auth_path.display(),
+            e
+        )
+    })?;
+
+    logger::log_info(&format!(
+        "[Codex切号] 已写入登录信息: account_id={}, target_file={}",
+        account.id,
+        auth_path.display()
+    ));
+
     Ok(())
 }
 
@@ -532,7 +846,20 @@ pub async fn prepare_account_for_injection(account_id: &str) -> Result<CodexAcco
 /// 切换账号（写入 auth.json）
 pub fn switch_account(account_id: &str) -> Result<CodexAccount, String> {
     let account = load_account(account_id).ok_or_else(|| format!("账号不存在: {}", account_id))?;
-    write_auth_file_to_dir(&get_codex_home(), &account)?;
+    let codex_home = get_codex_home();
+    let auth_path = codex_home.join("auth.json");
+    logger::log_info(&format!(
+        "[Codex切号] 开始切换账号: account_id={}, email={}, target_dir={}",
+        account.id,
+        account.email,
+        codex_home.display()
+    ));
+    write_auth_file_to_dir(&codex_home, &account)?;
+    logger::log_info(&format!(
+        "[Codex切号] 已替换目录登录信息: target_dir={}, target_file={}",
+        codex_home.display(),
+        auth_path.display()
+    ));
 
     // 更新索引中的 current_account_id
     let mut index = load_account_index();
@@ -897,6 +1224,10 @@ fn normalize_quota_alert_threshold(raw: i32) -> i32 {
     raw.clamp(0, 100)
 }
 
+fn normalize_auto_switch_threshold(raw: i32) -> i32 {
+    raw.clamp(0, 100)
+}
+
 fn format_codex_quota_metric_label(window_minutes: Option<i64>, fallback: &str) -> String {
     const HOUR_MINUTES: i64 = 60;
     const DAY_MINUTES: i64 = 24 * HOUR_MINUTES;
@@ -928,7 +1259,14 @@ fn format_codex_quota_metric_label(window_minutes: Option<i64>, fallback: &str) 
     format!("{}m", minutes)
 }
 
-fn extract_quota_metrics(account: &CodexAccount) -> Vec<(String, i32)> {
+#[derive(Debug, Clone)]
+struct CodexQuotaMetric {
+    key: &'static str,
+    label: String,
+    percentage: i32,
+}
+
+fn extract_quota_metrics(account: &CodexAccount) -> Vec<CodexQuotaMetric> {
     let Some(quota) = account.quota.as_ref() else {
         return Vec::new();
     };
@@ -938,39 +1276,149 @@ fn extract_quota_metrics(account: &CodexAccount) -> Vec<(String, i32)> {
     let mut metrics = Vec::new();
 
     if !has_presence || quota.hourly_window_present.unwrap_or(false) {
-        metrics.push((
-            format_codex_quota_metric_label(quota.hourly_window_minutes, "5h"),
-            quota.hourly_percentage.clamp(0, 100),
-        ));
+        metrics.push(CodexQuotaMetric {
+            key: "primary_window",
+            label: format_codex_quota_metric_label(quota.hourly_window_minutes, "5h"),
+            percentage: quota.hourly_percentage.clamp(0, 100),
+        });
     }
 
     if !has_presence || quota.weekly_window_present.unwrap_or(false) {
-        metrics.push((
-            format_codex_quota_metric_label(quota.weekly_window_minutes, "Weekly"),
-            quota.weekly_percentage.clamp(0, 100),
-        ));
+        metrics.push(CodexQuotaMetric {
+            key: "secondary_window",
+            label: format_codex_quota_metric_label(quota.weekly_window_minutes, "Weekly"),
+            percentage: quota.weekly_percentage.clamp(0, 100),
+        });
     }
 
     if metrics.is_empty() {
-        metrics.push((
-            format_codex_quota_metric_label(quota.hourly_window_minutes, "5h"),
-            quota.hourly_percentage.clamp(0, 100),
-        ));
+        metrics.push(CodexQuotaMetric {
+            key: "primary_window",
+            label: format_codex_quota_metric_label(quota.hourly_window_minutes, "5h"),
+            percentage: quota.hourly_percentage.clamp(0, 100),
+        });
     }
 
     metrics
 }
 
-fn average_quota_percentage(metrics: &[(String, i32)]) -> f64 {
+fn average_quota_percentage(metrics: &[CodexQuotaMetric]) -> f64 {
     if metrics.is_empty() {
         return 0.0;
     }
-    let sum: i32 = metrics.iter().map(|(_, pct)| *pct).sum();
+    let sum: i32 = metrics.iter().map(|metric| metric.percentage).sum();
     sum as f64 / metrics.len() as f64
 }
 
-fn build_quota_alert_cooldown_key(account_id: &str, threshold: i32) -> String {
-    format!("codex:{}:{}", account_id, threshold)
+fn metric_crossed_threshold(
+    metric: &CodexQuotaMetric,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> bool {
+    match metric.key {
+        "primary_window" => metric.percentage <= primary_threshold,
+        "secondary_window" => metric.percentage <= secondary_threshold,
+        _ => false,
+    }
+}
+
+fn metric_above_threshold(
+    metric: &CodexQuotaMetric,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> bool {
+    match metric.key {
+        "primary_window" => metric.percentage > primary_threshold,
+        "secondary_window" => metric.percentage > secondary_threshold,
+        _ => true,
+    }
+}
+
+fn metric_margin_over_threshold(
+    metric: &CodexQuotaMetric,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> Option<i32> {
+    match metric.key {
+        "primary_window" => Some(metric.percentage - primary_threshold),
+        "secondary_window" => Some(metric.percentage - secondary_threshold),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CodexSwitchCandidate {
+    account: CodexAccount,
+    min_margin: i32,
+    min_percentage: i32,
+    average_percentage: f64,
+}
+
+fn build_switch_candidate(
+    account: &CodexAccount,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> Option<CodexSwitchCandidate> {
+    let metrics = extract_quota_metrics(account);
+    if metrics.is_empty() {
+        return None;
+    }
+    if !metrics
+        .iter()
+        .all(|metric| metric_above_threshold(metric, primary_threshold, secondary_threshold))
+    {
+        return None;
+    }
+
+    let min_margin = metrics
+        .iter()
+        .filter_map(|metric| {
+            metric_margin_over_threshold(metric, primary_threshold, secondary_threshold)
+        })
+        .min()?;
+    let min_percentage = metrics.iter().map(|metric| metric.percentage).min()?;
+    let average_percentage = average_quota_percentage(&metrics);
+
+    Some(CodexSwitchCandidate {
+        account: account.clone(),
+        min_margin,
+        min_percentage,
+        average_percentage,
+    })
+}
+
+fn pick_best_candidate(mut candidates: Vec<CodexSwitchCandidate>) -> Option<CodexAccount> {
+    if candidates.is_empty() {
+        return None;
+    }
+
+    candidates.sort_by(|a, b| {
+        b.min_margin
+            .cmp(&a.min_margin)
+            .then_with(|| b.min_percentage.cmp(&a.min_percentage))
+            .then_with(|| {
+                b.average_percentage
+                    .partial_cmp(&a.average_percentage)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| a.account.last_used.cmp(&b.account.last_used))
+    });
+
+    candidates
+        .into_iter()
+        .next()
+        .map(|candidate| candidate.account)
+}
+
+fn build_quota_alert_cooldown_key(
+    account_id: &str,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> String {
+    format!(
+        "codex:{}:{}:{}",
+        account_id, primary_threshold, secondary_threshold
+    )
 }
 
 fn should_emit_quota_alert(cooldown_key: &str, now: i64) -> bool {
@@ -988,9 +1436,13 @@ fn should_emit_quota_alert(cooldown_key: &str, now: i64) -> bool {
     true
 }
 
-fn clear_quota_alert_cooldown(account_id: &str, threshold: i32) {
+fn clear_quota_alert_cooldown(account_id: &str, primary_threshold: i32, secondary_threshold: i32) {
     if let Ok(mut state) = CODEX_QUOTA_ALERT_LAST_SENT.lock() {
-        state.remove(&build_quota_alert_cooldown_key(account_id, threshold));
+        state.remove(&build_quota_alert_cooldown_key(
+            account_id,
+            primary_threshold,
+            secondary_threshold,
+        ));
     }
 }
 
@@ -1017,28 +1469,81 @@ fn resolve_current_account_id(accounts: &[CodexAccount]) -> Option<String> {
 fn pick_quota_alert_recommendation(
     accounts: &[CodexAccount],
     current_id: &str,
+    primary_threshold: i32,
+    secondary_threshold: i32,
 ) -> Option<CodexAccount> {
-    let mut candidates: Vec<CodexAccount> = accounts
+    let candidates: Vec<CodexSwitchCandidate> = accounts
         .iter()
         .filter(|account| account.id != current_id)
-        .filter(|account| !extract_quota_metrics(account).is_empty())
-        .cloned()
+        .filter_map(|account| {
+            build_switch_candidate(account, primary_threshold, secondary_threshold)
+        })
         .collect();
 
-    if candidates.is_empty() {
-        return None;
+    pick_best_candidate(candidates)
+}
+
+pub fn pick_auto_switch_target_if_needed() -> Result<Option<CodexAccount>, String> {
+    if CODEX_AUTO_SWITCH_IN_PROGRESS.swap(true, Ordering::SeqCst) {
+        logger::log_info("[AutoSwitch][Codex] 自动切号进行中，跳过本次检查");
+        return Ok(None);
     }
 
-    candidates.sort_by(|a, b| {
-        let avg_a = average_quota_percentage(&extract_quota_metrics(a));
-        let avg_b = average_quota_percentage(&extract_quota_metrics(b));
-        avg_b
-            .partial_cmp(&avg_a)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| a.last_used.cmp(&b.last_used))
-    });
+    let result = (|| {
+        let cfg = crate::modules::config::get_user_config();
+        if !cfg.codex_auto_switch_enabled {
+            return Ok(None);
+        }
 
-    candidates.into_iter().next()
+        let primary_threshold =
+            normalize_auto_switch_threshold(cfg.codex_auto_switch_primary_threshold);
+        let secondary_threshold =
+            normalize_auto_switch_threshold(cfg.codex_auto_switch_secondary_threshold);
+
+        let accounts = list_accounts();
+        let current_id = match resolve_current_account_id(&accounts) {
+            Some(id) => id,
+            None => return Ok(None),
+        };
+
+        let current = match accounts.iter().find(|account| account.id == current_id) {
+            Some(account) => account,
+            None => return Ok(None),
+        };
+
+        let current_metrics = extract_quota_metrics(current);
+        if current_metrics.is_empty() {
+            return Ok(None);
+        }
+
+        let should_switch = current_metrics
+            .iter()
+            .any(|metric| metric_crossed_threshold(metric, primary_threshold, secondary_threshold));
+        if !should_switch {
+            return Ok(None);
+        }
+
+        let candidates: Vec<CodexSwitchCandidate> = accounts
+            .iter()
+            .filter(|account| account.id != current_id)
+            .filter_map(|account| {
+                build_switch_candidate(account, primary_threshold, secondary_threshold)
+            })
+            .collect();
+
+        if candidates.is_empty() {
+            logger::log_warn(&format!(
+                "[AutoSwitch][Codex] 当前账号命中阈值 (primary<={}%, secondary<={}%)，但没有可切换候选账号",
+                primary_threshold, secondary_threshold
+            ));
+            return Ok(None);
+        }
+
+        Ok(pick_best_candidate(candidates))
+    })();
+
+    CODEX_AUTO_SWITCH_IN_PROGRESS.store(false, Ordering::SeqCst);
+    result
 }
 
 pub fn run_quota_alert_if_needed(
@@ -1048,7 +1553,10 @@ pub fn run_quota_alert_if_needed(
         return Ok(None);
     }
 
-    let threshold = normalize_quota_alert_threshold(cfg.codex_quota_alert_threshold);
+    let primary_threshold =
+        normalize_quota_alert_threshold(cfg.codex_quota_alert_primary_threshold);
+    let secondary_threshold =
+        normalize_quota_alert_threshold(cfg.codex_quota_alert_secondary_threshold);
     let accounts = list_accounts();
     let current_id = match resolve_current_account_id(&accounts) {
         Some(id) => id,
@@ -1063,27 +1571,38 @@ pub fn run_quota_alert_if_needed(
     let metrics = extract_quota_metrics(current);
     let low_models: Vec<(String, i32)> = metrics
         .into_iter()
-        .filter(|(_, pct)| *pct <= threshold)
+        .filter(|metric| metric_crossed_threshold(metric, primary_threshold, secondary_threshold))
+        .map(|metric| (metric.label, metric.percentage))
         .collect();
 
     if low_models.is_empty() {
-        clear_quota_alert_cooldown(&current_id, threshold);
+        clear_quota_alert_cooldown(&current_id, primary_threshold, secondary_threshold);
         return Ok(None);
     }
 
     let now = chrono::Utc::now().timestamp();
-    let cooldown_key = build_quota_alert_cooldown_key(&current_id, threshold);
+    let cooldown_key =
+        build_quota_alert_cooldown_key(&current_id, primary_threshold, secondary_threshold);
     if !should_emit_quota_alert(&cooldown_key, now) {
         return Ok(None);
     }
 
-    let recommendation = pick_quota_alert_recommendation(&accounts, &current_id);
+    let recommendation = pick_quota_alert_recommendation(
+        &accounts,
+        &current_id,
+        primary_threshold,
+        secondary_threshold,
+    );
     let lowest_percentage = low_models.iter().map(|(_, pct)| *pct).min().unwrap_or(0);
     let payload = crate::modules::account::QuotaAlertPayload {
         platform: "codex".to_string(),
         current_account_id: current_id,
         current_email: current.email.clone(),
-        threshold,
+        threshold: primary_threshold,
+        threshold_display: Some(format!(
+            "primary_window<={}%, secondary_window<={}%",
+            primary_threshold, secondary_threshold
+        )),
         lowest_percentage,
         low_models: low_models.into_iter().map(|(name, _)| name).collect(),
         recommended_account_id: recommendation.as_ref().map(|account| account.id.clone()),

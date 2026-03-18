@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Ek istem kredileri",
         "credits": "Krediler",
         "email": "E-posta",
-        "promptCredits": "İstem kredileri"
+        "promptCredits": "İstem kredileri",
+        "creditPackage": "Kredi paketi",
+        "sharedCreditPackage": "Paylaşılan kredi paketi",
+        "account": "Hesap",
+        "createdAt": "Oluşturulma zamanı"
       },
       "empty": {
         "title": "Hesap yok"
@@ -49,7 +53,17 @@
         "label": "İçe aktar",
         "importing": "Yerel hesap içe aktarılıyor...",
         "pickFile": "İçe aktarılacak JSON dosyasını seçin",
-        "orJson": "Veya JSON dosyasından içe aktarın"
+        "orJson": "Veya JSON dosyasından içe aktarın",
+        "progress": {
+          "overallLine": "Genel ilerleme {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platform, {{processedAccounts}}/{{totalAccounts}} hesap işlendi)",
+          "currentPlatformLine": "İçe aktarılıyor: {{platform}} ({{count}} hesap)",
+          "currentStatusLine": "Geçerli platform durumu: {{status}}",
+          "platformDetailsTitle": "Platform detayları",
+          "statusProcessing": "İşleniyor...",
+          "statusRunning": "İçe aktarılıyor...",
+          "statusSkipped": "Atlandı",
+          "statusPending": "İçe aktarım bekleniyor"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Yetkilendirme bağlantısı hazırlanıyor...",
         "retry": "Yetkilendirme bilgisini yeniden oluştur",
         "timeoutRetry": "Yetkilendirme bağlantısını yenile",
-        "waiting": "Yetkilendirme bekleniyor..."
+        "waiting": "Yetkilendirme bekleniyor...",
+        "manualCallbackLabel": "Geri çağrı URL'sini manuel gir",
+        "manualCallbackPlaceholder": "Tam geri çağrı URL'sini yapıştırın, örn: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Tümünü yenile",
       "refreshQuota": "Kotayı yenile",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "Kota {{dateText}} tarihinde sıfırlanır.",
         "resetUnknown": "Kota sıfırlanmasına kalan -"
+      },
+      "updated": {
+        "label": "{{relative}} önce güncellendi"
       }
     }
   },
   "nav": {
-    "overview": "Antigravity Hesabı",
+    "overview": "Antigravity",
     "accounts": "Hesaplar",
     "wakeup": "Uyandırma Görevleri",
     "fingerprints": "Parmak İzleri",
     "settings": "Ayarlar",
-    "codex": "Codex Hesapları",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Gösterge Paneli",
@@ -159,9 +178,14 @@
     "manual": "Kullanım kılavuzu",
     "quickUpdate": {
       "update": "Güncelle",
-      "restart": "Yeniden başlat"
+      "restart": "Yeniden başlat",
+      "installing": "Yükleniyor"
     },
-    "gemini": "İkizler burcu"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Platform Düzeni",
@@ -173,7 +197,34 @@
     "trayToggle": "Tepside göster",
     "hiddenBadge": "Gizli",
     "openFromMore": "Platform düzenini yönet",
-    "dragHandleLabel": "Sürükleyerek sırala"
+    "dragHandleLabel": "Sürükleyerek sırala",
+    "tipWithGroups": "Sürükleyerek sıralayın. Kenar çubuğunda en fazla iki giriş gösterilebilir. Grup alt platformlarında kenar çubuğu/pano anahtarı yoktur; yalnızca menü çubuğu görünürlüğü ve varsayılan platform geçişi için kullanılır.",
+    "addGroup": "Grup ekle",
+    "editGroup": "Grubu düzenle",
+    "deleteGroup": "Grubu sil",
+    "groupBadge": "Grup",
+    "groupDefault": "Varsayılan platform",
+    "groupName": "Grup adı",
+    "groupNamePlaceholder": "Örnek: CodeBuddy Paketi",
+    "groupIcon": "Grup simgesi",
+    "groupIconFromPlatform": "Platform simgesi",
+    "groupIconCustom": "Özel görsel",
+    "groupIconPreview": "Simge önizleme",
+    "groupChildren": "Alt platformlar",
+    "groupNameRequired": "Lütfen grup adı girin",
+    "groupChildrenRequired": "En az bir alt platform seçin",
+    "groupCustomIconRequired": "Lütfen özel simge yükleyin",
+    "groupSwitchLabel": "Gruptaki platformu değiştir",
+    "collapseAllChildren": "Tüm alt platformları daralt",
+    "expandAllChildren": "Tüm alt platformları genişlet",
+    "addChildPlatform": "Alt platform ekle",
+    "collapseChildren": "Alt platformları daralt",
+    "expandChildren": "Alt platformları genişlet",
+    "noAvailableChildren": "Eklenecek uygun platform yok",
+    "customIconDeleteConfirm": "Bu özel simge silinsin mi?",
+    "editChildPlatform": "Alt platformu düzenle",
+    "setAsDefaultInGroup": "Bu grupta varsayılan platform olarak ayarla",
+    "removeFromGroup": "Gruptan kaldır"
   },
   "privacy": {
     "hideSensitive": "E-postaları gizle",
@@ -376,6 +427,8 @@
       "themeLight": "Açık",
       "themeDark": "Koyu",
       "themeSystem": "Sistem",
+      "uiScale": "Arayüz ölçeği",
+      "uiScaleDesc": "Arayüz ölçeğini ayarlayın",
       "accountManagement": "Hesap Yönetimi",
       "autoRefresh": "Antigravity kota otomatik yenileme",
       "codexAutoRefresh": "Codex kota otomatik yenileme",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Dock simgesinin görünürlüğünü pencere küçültme davranışından bağımsız olarak kontrol eder",
       "hideDockIconOff": "Hayır (Dock simgesini göster)",
       "hideDockIconOn": "Evet (Dock simgesini gizle)",
-      "storageTitle": "Dizinler ve Depolama",
       "dataDir": "Veri dizini",
       "dataDirDesc": "Hesaplar ve yapılandırma dosyaları için depolama konumu.",
       "fpDir": "Antigravity Depolama",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Açık (sessiz güncelleme)",
       "opencodeAuthOverwrite": "Codex'i değiştirirken OpenCode oturum açma bilgilerinin üzerine yazın",
       "opencodeAuthOverwriteDesc": "Kapalıyken yalnızca Codex açılır ve OpenCode mevcut oturum açma durumunu korur",
-      "opencodeRestartRequiresOverwrite": "İlk önce \"Kodeksi değiştirirken OpenCode oturum açma bilgilerinin üzerine yaz\" seçeneğini etkinleştirin"
+      "opencodeRestartRequiresOverwrite": "İlk önce \"Kodeksi değiştirirken OpenCode oturum açma bilgilerinin üzerine yaz\" seçeneğini etkinleştirin",
+      "codebuddySettingsTitle": "CodeBuddy Ayarları",
+      "codebuddyAutoRefresh": "CodeBuddy Kota Otomatik Yenileme",
+      "codebuddyAutoRefreshDesc": "Arka plan otomatik yenileme aralığı",
+      "codebuddyAppPath": "CodeBuddy Başlatma Yolu",
+      "codebuddyAppPathDesc": "Varsayılan yol için boş bırakın",
+      "codebuddyAppPathPlaceholder": "Varsayılan yol",
+      "codebuddyPathSelect": "Seç",
+      "codebuddyPathReset": "Varsayılana sıfırla",
+      "qoderPathReset": "Varsayılana sıfırla",
+      "traeAutoRefresh": "Trae Kota Otomatik Yenileme",
+      "traeAutoRefreshDesc": "Arka plan otomatik yenileme aralığı",
+      "traeAppPath": "Trae Başlatma Yolu",
+      "traeAppPathDesc": "Varsayılan yol için boş bırakın",
+      "traeAppPathPlaceholder": "Varsayılan yol",
+      "traePathSelect": "Seç",
+      "traePathReset": "Varsayılana sıfırla",
+      "workbuddyAppPath": "WorkBuddy Başlatma Yolu",
+      "workbuddyAppPathDesc": "Varsayılan yol için boş bırakın",
+      "workbuddyAppPathPlaceholder": "Varsayılan yol",
+      "workbuddyPathSelect": "Seç",
+      "workbuddyPathReset": "Varsayılana sıfırla"
     },
     "network": {
       "apiTitle": "Yerçekimine Karşı Kokpit API'si",
@@ -473,7 +546,22 @@
       "restartRequired": "Yapılandırma değişti, uygulamak için lütfen uygulamayı yeniden başlatın",
       "saveSuccess": "Ayarlar kaydedildi!",
       "saveSuccessRestart": "Ayarlar kaydedildi! Port değişikliklerinin etkili olması için lütfen uygulamayı yeniden başlatın.",
-      "saveFailed": "Kaydetme hatası: {{error}}"
+      "saveFailed": "Kaydetme hatası: {{error}}",
+      "reportTitle": "Web sorgu servisi",
+      "reportService": "HTTP rapor servisi",
+      "reportServiceDesc": "Kullanım özetleri için token korumalı bir HTTP uç noktası sağlar",
+      "reportPort": "Rapor portu",
+      "reportPortDesc": "Varsayılan {{port}}, değişiklikten sonra yeniden başlatma gerekir",
+      "reportToken": "Erişim tokeni",
+      "reportTokenDesc": "/report isteğinde zorunludur, gizli tutun",
+      "reportTokenRequired": "Web sorgu servisi etkin olduğunda erişim tokeni boş olamaz.",
+      "generateToken": "Oluştur",
+      "reportUrlPreview": "Uç nokta önizlemesi",
+      "reportUrlPreviewDesc": "format=md / format=yaml desteklenir, HTML görünümü için render=true kullanılır",
+      "reportUrlRaw": "Ham çıktı",
+      "reportUrlRendered": "İşlenmiş görünüm",
+      "firewallHintTitle": "Güvenlik duvarı ipucu",
+      "firewallHint": "URL erişilemiyorsa sistem güvenlik duvarı ayarlarını kontrol edin."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "AI Kredileri"
     },
     "empty": {
       "title": "Hesap Yok",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Tümü ({{count}})",
       "pro": "PRO ({{count}})",
-      "ultra": "ULTRA ({{count}})",
-      "free": "ÜCRETSİZ ({{count}})"
+      "ultra": "ULTRA ({{count}})"
     },
     "sortLabel": "Sırala",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "{{group}} sıfırlama zamanına göre",
       "descTooltip": "Azalan, Artan için tıkla",
       "ascTooltip": "Artan, Azalan için tıkla",
-      "toggleDirection": "Yönü değiştir"
+      "toggleDirection": "Yönü değiştir",
+      "plan": "Plana göre",
+      "quota": "Kotaya göre"
     },
     "filterTags": "Etiketleri filtrele",
     "filterTagsCount": "Etiketler",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} başarısız oldu: {{failList}}",
       "refreshingQuota": "Kota yenileniyor {{done}}/{{total}} (bu iletişim kutusunu kapatabilirsiniz)",
       "quotaRefreshDone": "Kota yenileme tamamlandı"
+    },
+    "groups": {
+      "manageTitle": "Grup yönetimi",
+      "title": "Hesap grupları",
+      "create": "Oluştur",
+      "newPlaceholder": "Grup adı girin...",
+      "empty": "Henüz grup yok. Başlamak için bir tane oluşturun",
+      "accountCount": "{{count}} hesap",
+      "rename": "Yeniden adlandır",
+      "addToGroup": "Gruba ekle",
+      "createAndAdd": "Grup oluştur ve ekle...",
+      "removeFromGroup": "Gruptan kaldır",
+      "allGroups": "Tüm gruplar",
+      "noGroups": "Grup yok",
+      "noGroupsDesc": "Hesaplarınızı toplu yönetmek için gruplar oluşturun",
+      "manage": "Yönet",
+      "error": {
+        "duplicate": "Grup adı zaten mevcut",
+        "createFailed": "Grup oluşturulamadı: {{error}}",
+        "renameFailed": "Grup yeniden adlandırılamadı: {{error}}",
+        "deleteFailed": "Grup silinemedi: {{error}}",
+        "addFailed": "Gruba eklenemedi: {{error}}",
+        "createAndAddFailed": "Grup oluşturulamadı ve eklenemedi: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Görev adı",
       "taskStatus": "Görev durumu",
       "triggerMode": "Tetikleme modu",
-      "triggerModeHint": "1. Planlı: ayarlanan zamanlarda tetiklenir.\\n2. Crontab: bir ifadeyle tanımlanır.\\n3. Kota sıfırlama: kota dolu olduğunda bir kez tetiklenir.",
+      "triggerModeHint": "1. Planlı: ayarlanan zamanlarda tetiklenir.\n2. Crontab: bir ifadeyle tanımlanır.\n3. Kota sıfırlama: kota dolu olduğunda bir kez tetiklenir.",
       "modeScheduled": "📅 Planlı",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Kota sıfırlama",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Ayrıntıları göster",
     "hideErrorDetails": "Ayrıntıları gizle",
     "autoUpdateFailedAfterRetries": "Otomatik güncelleme {{count}} denemeden sonra başarısız oldu. Daha sonra tekrar deneyin veya manuel indirin.",
-    "updateCancelled": "Güncelleme iptal edildi."
+    "updateCancelled": "Güncelleme iptal edildi.",
+    "cancelDownload": "İndirmeyi iptal et",
+    "installing": "Yükleniyor...",
+    "authorizing": "Sistem yetkisi bekleniyor...",
+    "installFailed": "Sistem kurulumu başarısız oldu. Daha sonra yeniden deneyin veya paketi manuel indirin.",
+    "restartRequiredAfterInstall": "Güncelleme yüklendi. Geçişi tamamlamak için uygulamayı manuel olarak yeniden başlatın."
   },
   "closeDialog": {
     "title": "Pencereyi kapat",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Kota hatası",
       "generic": "Kota yenileme başarısız, lütfen daha sonra tekrar deneyin",
-      "deactivatedWorkspace": "Çalışma alanı devre dışı, hesap değiştirin veya yeniden yetkilendirin"
+      "deactivatedWorkspace": "Çalışma alanı devre dışı, hesap değiştirin veya yeniden yetkilendirin",
+      "requestFailedManualRetry": "İstek başarısız oldu, lütfen manuel olarak yeniden deneyin: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Code Review kotasını göster"
     },
     "time": {
       "today": "Bugün {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Etiketler",
     "noAvailableTags": "Kullanılabilir etiket yok",
     "clearFilter": "Filtreyi temizle",
-    "editTags": "Etiketleri düzenle"
+    "editTags": "Etiketleri düzenle",
+    "account": {
+      "personal": "Kişisel hesap"
+    }
   },
   "githubCopilot": {
     "title": "GitHub Copilot Hesap Yönetimi",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Hata Aytıntıları",
       "filePath": "Dosya Konumu",
       "helpText": "Lütfen dosyayı manuel olarak onarmak veya silmek için klasörü açın, ardından uygulamayı yeniden başlatın.",
-      "openFolder": "Klasörü Aç"
+      "openFolder": "Klasörü Aç",
+      "openFolderFailed": "Klasör açılamadı: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Kota otomatik yenileme",
     "gemini": {
-      "title": "İkizler Ayarları",
-      "appPath": "Gemini CLI Yolu"
+      "title": "Gemini Cli Ayarları",
+      "appPath": "Gemini Cli Yolu"
     },
-    "geminiRefreshInterval": "Kota Otomatik Yenileme"
+    "geminiRefreshInterval": "Kota Otomatik Yenileme",
+    "codebuddy": {
+      "title": "CodeBuddy Ayarları",
+      "appPath": "CodeBuddy Yolu"
+    },
+    "error": {
+      "loadFailed": "Yapılandırma yüklenemedi: {{error}}",
+      "saveFailed": "Yapılandırma kaydedilemedi: {{error}}",
+      "pickPathFailed": "Yol seçilemedi: {{error}}",
+      "resetPathFailed": "Yol sıfırlanamadı: {{error}}"
+    },
+    "qoder": {
+      "title": "Qoder Ayarları",
+      "appPath": "Qoder Yolu"
+    },
+    "trae": {
+      "title": "Trae Ayarları",
+      "appPath": "Trae Yolu"
+    },
+    "codebuddyCn": {
+      "appPath": "CodeBuddy CN Yolu"
+    },
+    "workbuddy": {
+      "title": "WorkBuddy Ayarları",
+      "appPath": "WorkBuddy Yolu"
+    }
   },
   "quotaAlert": {
     "bannerText": "{{email}} için kota uyarısı (eşik {{threshold}}%, en düşük {{lowest}}%, modeller: {{models}})",
@@ -1847,31 +2000,31 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Gemini'ye geçiş",
-    "title": "Gemini Hesap Yönetimi",
+    "injectToGemini": "Gemini Cli'ye geç",
+    "title": "Gemini Cli Hesap Yönetimi",
     "empty": {
-      "description": "Gemini hesaplarınızı yönetmeye başlamak için \"Hesap Ekle\"ye tıklayın"
+      "description": "Gemini Cli hesaplarınızı yönetmeye başlamak için \"Hesap Ekle\"ye tıklayın"
     },
     "addModal": {
-      "title": "Gemini Hesabı Ekle"
+      "title": "Gemini Cli Hesabı Ekle"
     },
     "oauth": {
-      "desc": "Aşağıdaki düğmeye tıklayın ve tarayıcınızda Gemini OAuth yetkilendirmesini tamamlayın."
+      "desc": "Aşağıdaki düğmeye tıklayın ve tarayıcınızda Gemini Cli OAuth yetkilendirmesini tamamlayın."
     },
     "token": {
-      "desc": "Gemini Erişim Simgenizi (JWT) veya dışa aktarılan JSON verilerinizi yapıştırın.",
+      "desc": "Gemini Cli Erişim Simgenizi (JWT) veya dışa aktarılan JSON verilerinizi yapıştırın.",
       "formatHint": "Zorunlu alanlar ve örnekler (genişletmek için tıklayın)",
       "formatRequired": "Tek jeton: JWT'yi doğrudan yapıştırın; toplu içe aktarma: JSON dizi biçimini kullanın",
       "singleExample": "Tek örnek (JWT)",
       "batchExample": "Toplu örnek (JSON)"
     },
     "import": {
-      "localDesc": "Gemini hesap verilerini yerel Gemini yapılandırma dizininden (~/.gemini) veya bir JSON dosyasından içe aktarın.",
-      "localClient": "Yerel Gemini'den ithalat"
+      "localDesc": "Gemini Cli hesap verilerini yerel Gemini Cli yapılandırma dizininden (~/.gemini) veya bir JSON dosyasından içe aktarın.",
+      "localClient": "Yerel Gemini Cli'den içe aktar"
     },
     "flowNotice": {
-      "title": "Gemini hesap kılavuzu (genişletmek/daraltmak için tıklayın)",
-      "desc": "Yerel Gemini yapılandırmasından içe aktararak, bir JWT jetonu yapıştırarak veya OAuth aracılığıyla oturum açarak Gemini hesaplarını yönetin.",
+      "title": "Gemini Cli hesap kılavuzu (genişletmek/daraltmak için tıklayın)",
+      "desc": "Yerel Gemini Cli yapılandırmasından içe aktararak, bir JWT jetonu yapıştırarak veya OAuth aracılığıyla oturum açarak Gemini Cli hesaplarını yönetin.",
       "reason": "İzin kapsamı: hesap içe aktarma ve yerel kimlik bilgileri ekleme (hesap değiştirme) için varsayılan ~/.gemini veya örnek yolu (GEMINI_CLI_HOME/.gemini) altında oauth_creds.json, google_accounts.json ve settings.json okuyun ve yazın.",
       "storage": "Ağ kapsamı: OAuth ve yenileme, resmi Google/Gemini API'lerini (oauth2.googleapis.com ve googleapis.com gibi) çağırır. Yalnızca gerekli kimlik doğrulama/kota alanları gönderilir; yerel hesap dosyaları üçüncü taraf sunuculara yüklenmez."
     },
@@ -1888,14 +2041,306 @@
       "onDemand": "Talep üzerine"
     },
     "instances": {
-      "unsupported": "Gemini çoklu örnek yönetimi henüz desteklenmiyor.",
-      "unsupportedDescPlatform": "Gemini çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir.",
+      "unsupported": "Gemini Cli çoklu örnek yönetimi henüz desteklenmiyor.",
+      "unsupportedDescPlatform": "Gemini Cli çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir.",
       "launchDialogTitle": "Örneği Başlat",
       "launchHint": "Komutu kopyalayın ve manuel olarak çalıştırın veya doğrudan terminalde çalıştırın.",
       "runInTerminal": "Terminalde Çalıştır"
     },
     "switch": {
       "success": "Hesap başarıyla değiştirildi"
+    }
+  },
+  "codebuddy": {
+    "title": "CodeBuddy Hesap Yönetimi",
+    "noAccounts": "CodeBuddy hesabı yok",
+    "addAccount": "CodeBuddy Hesabı Ekle",
+    "flowNotice": {
+      "title": "CodeBuddy hesap yönetimi bilgisi (genişlet/daralt için tıklayın)",
+      "desc": "Hesap değiştirme için CodeBuddy yerel kimlik doğrulama deposu okunur ve şifre çözme/yeniden şifreleme için sistem kimlik bilgisi servisleri çağrılır. Veriler yalnızca yerelde işlenir.",
+      "permission": "İzin kapsamı: CodeBuddy kimlik veritabanını (state.vscdb) okuma; şifre çözme/geri yazma için sistem kimlik yeteneklerini çağırma (macOS Keychain / Windows DPAPI / Linux Secret Service).",
+      "network": "Ağ kapsamı: OAuth girişi ve belirteç yenileme için codebuddy.ai'ye ağ istekleri gerekir; kota sorguları faturalama API'lerini çağırır. Yerel anahtarlar veya kimlik bilgileri yüklenmez."
+    },
+    "nickname": "Takma ad",
+    "enterprise": "Kurumsal",
+    "usage": "Kullanım durumu",
+    "creditsBalance": "Kredi bakiyesi",
+    "usageNormal": "Normal",
+    "oauthWaiting": "Yetkilendirme bekleniyor...",
+    "oauthDesc": "Tarayıcınızda CodeBuddy yetkilendirme sayfasını açmak için aşağıdaki düğmeye tıklayın.",
+    "oauthDescWebview": "Yerleşik WebView'da CodeBuddy yetkilendirme sayfasını açmak için aşağıdaki düğmeye tıklayın.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Yalnızca IDE girişi",
+        "item1": "Tarayıcıda OAuth tamamlandıktan sonra hesabı ekleyin ve IDE geçişi için kullanın.",
+        "item2": "Kota sorgu parametreleri otomatik bağlanmaz.",
+        "item3": "Kota görüntülemek gerekiyorsa hesap kartında \"Kota Sorgula\"yı elle çalıştırın."
+      }
+    },
+    "oauthWebviewTab": "WebView ile OAuth",
+    "oauthOpenWebview": "WebView'da aç",
+    "oauthOpenWebviewIncognito": "Gizli WebView'da aç",
+    "oauthOpenWebviewFailed": "WebView açılamadı: {{error}}",
+    "oauthOpenBrowserFallback": "Tarayıcıda aç (yedek)",
+    "oauthOpenBrowserFailed": "Tarayıcı açılamadı: {{error}}",
+    "oauthWebviewProgressHint": "Takılan aşamayı bulmak için WebView üstünde yatay adım çubuğu gösterilir.",
+    "oauthFlow": {
+      "prepare": "OAuth bağlantısını hazırla",
+      "authorize": "Yetkilendirme bağlantısını aç ve onayla",
+      "bind": "Yetkilendirme sonucunu yokla ve hesabı bağla",
+      "retryPrepare": "OAuth bağlantısını yeniden oluştur",
+      "retryAuthorize": "Yetkilendirme bağlantısını yeniden iste",
+      "retryBind": "Yetki yoklamasını yeniden dene",
+      "error": "Akış hatası: {{error}}"
+    },
+    "tokenDesc": "CodeBuddy erişim belirtecinizi yapıştırın:",
+    "jsonDesc": "CodeBuddy hesaplarını içeren bir JSON dosyası seçin:",
+    "import": {
+      "localDesc": "Hesap verilerini yerel CodeBuddy istemcisinden veya bir JSON dosyasından içe aktarın.",
+      "localClient": "Yerel CodeBuddy'den içe aktar"
+    },
+    "search": "CodeBuddy hesaplarını ara...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Kota yenileme başarısız",
+      "sectionTitle": "Kota Sorgusu",
+      "empty": "Henüz bağlı kota sorgu bilgisi yok",
+      "packageUnknown": "Bilinmeyen paket",
+      "quotaLabel": "Kalan kota",
+      "updatedAt": "Son sorgu: {{time}}",
+      "cycleRange": "Döngü: {{start}} - {{end}}",
+      "cycleUnknown": "Döngü bilgisi yok",
+      "expireAt": "Bitiş: {{time}}",
+      "expireUnknown": "Bitiş: Yok",
+      "packageTitle": {
+        "base": "Temel deneyim paketi",
+        "activity": "Etkinlik hediye paketi"
+      }
+    },
+    "extraCredit": {
+      "title": "Kredi Paketi"
+    },
+    "oauthUrlInputPlaceholder": "Yetkilendirme URL'sini elle girebilirsiniz",
+    "oauthInvalidUrl": "Geçersiz yetkilendirme URL'si. Lütfen tam bir URL girin.",
+    "oauthGotoWebview": "Açık WebView'ı girilen URL'ye yönlendir",
+    "oauthGotoWebviewSuccess": "WebView'ın girilen URL'ye gitmesi istendi.",
+    "oauthGotoWebviewFailed": "WebView yönlendirme başarısız: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Bu WebView içinde gitmek için bir URL girin",
+    "oauthWebviewInlineGo": "Git",
+    "oauthSuccessClosePrompt": "Hesap başarıyla eklendi. Bu WebView şimdi kapatılsın mı?\nHemen kapatmak için \"WebView'ı Kapat\", açık bırakmak için \"Daha Sonra\" seçin.",
+    "oauthSuccessCloseTitle": "Hesap Eklendi",
+    "oauthSuccessCloseNowLabel": "WebView'ı Kapat",
+    "oauthSuccessCloseLaterLabel": "Daha Sonra",
+    "oauthSuccessCloseNowStatus": "✅ Hesap eklendi. Pencere kapatılıyor...",
+    "oauthSuccessCloseLaterStatus": "✅ Hesap eklendi. Bu WebView açık kalacak.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 OAuth bağlantısını hazırla",
+        "authorize": "2 Yetkilendirme bağlantısını aç ve onayla",
+        "bind": "3 Yetkilendirme sonucunu yokla ve hesabı bağla",
+        "complete": "5 Tamamlandı (elle kapat)"
+      },
+      "status": {
+        "loginConfirm": "Lütfen bu sayfada giriş ve yetkilendirmeyi tamamlayın."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Qoder Hesap Yönetimi",
+    "comingSoon": {
+      "title": "Çoklu Örnek Yakında",
+      "desc": "Farklı hesaplarla birden fazla Qoder.app örneğini aynı anda çalıştırın."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Qoder çoklu örnek yalnızca macOS, Windows ve Linux'ta desteklenir."
+      }
+    },
+    "oauth": {
+      "hint": "Açılan tarayıcı sayfasında oturum açmayı tamamlayın: oturum açma sayfası otomatik olarak açılmazsa “Giriş bağlantısını kopyala” seçeneğine tıklayın, bağlantıyı kopyalayıp tarayıcıya yapıştırarak oturum açmayı tamamlayın.",
+      "copyLoginUrl": "Giriş bağlantısını kopyala"
+    },
+    "usageOverview": {
+      "title": "Kullanım özeti",
+      "viewDetails": "Ayrıntıları görüntüle",
+      "includedCredits": "Plana dahil krediler",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Aylık kotayı artırmak için planı yükseltin",
+      "upgradeAction": "Yükselt"
+    },
+    "flowNotice": {
+      "title": "Qoder hesap kilavuzu (genisletmek/daraltmak icin tiklayin)",
+      "desc": "Resmi OAuth girisini (callback), yerel ice aktarmayi, JSON ice aktarmayi, hesap degistirme enjeksiyonunu, coklu ornek baglamayi ve kota genel gorunumunu destekler. Giris akisi Qoder istemcisinin gercek disk verilerini izler.",
+      "permission": "Izin kapsami: hesap degistirme ve oturum enjeksiyonu icin Qoder yerel kimlik dogrulama depolamasini (auth kimlik bilgileri ve kullanici bilgileri) okur; tum veriler cihazinizda yerel olarak islenir.",
+      "network": "Ag kapsami: OAuth girisi, callback akisini tamamlamak icin resmi Qoder hizmetlerine erisim gerektirir; kota sorgulari Qoder API kullanir. Yerel anahtarlar veya kimlik bilgileri yuklenmez."
+    },
+    "addModal": {
+      "title": "Qoder hesabı ekle"
+    },
+    "import": {
+      "localDesc": "Yerel Qoder istemcisinden mevcut oturum durumunu okur; kullanıcı bilgileri, plan ve kredi kullanımı dahildir."
+    }
+  },
+  "trae": {
+    "title": "Trae hesap yonetimi",
+    "empty": {
+      "description": "Trae hesaplarinizi yonetmeye baslamak icin \"Hesap ekle\" dugmesine tiklayin veya yerel Trae verilerinden ya da bir JSON dosyasindan ice aktarın."
+    },
+    "addModal": {
+      "title": "Trae hesabi ekle"
+    },
+    "oauth": {
+      "desc": "Asagidaki dugmeye tiklayin ve tarayicida Trae OAuth yetkilendirmesini tamamlayin."
+    },
+    "import": {
+      "localDesc": "Yerel Trae yapilandirma dizininden oturum acik hesabi, plan bilgilerini ve onbellekteki kota verilerini ice aktarir.",
+      "jsonTab": "JSON dosyasi"
+    },
+    "quota": {
+      "usedOfTotal": "Kullanilan $ {{used}} / $ {{total}}",
+      "usageUnknown": "Kullanim: --",
+      "resetAt": "Sifirlama zamani: {{date}}",
+      "resetUnknown": "Sifirlama zamani bilinmiyor",
+      "statusUnknown": "Durum: bilinmiyor",
+      "statusNormal": "Durum: normal",
+      "statusExhaustedFree": "Durum: kullanim tukendi, plan yukseltmesi onerilir",
+      "statusExhaustedPro": "Durum: kullanim tukendi, plani yukseltin veya kullandikca odemeyi etkinlestirin",
+      "bonusUsed": "Ek bonus: +{{amount}}",
+      "bonusIncluded": "Ek bonus: dahil",
+      "bonusEmpty": "Ek bonus: --",
+      "packageConsuming": "Kullanim paketi: tuketiliyor",
+      "packageAvailable": "Kullanim paketi: kullanilabilir",
+      "packageEmpty": "Kullanim paketi: --",
+      "payAsYouGoConsuming": "Kullandikca odeme: tuketiliyor",
+      "payAsYouGoEnabled": "Kullandikca odeme: etkin",
+      "payAsYouGoEmpty": "Kullandikca odeme: --"
+    },
+    "flowNotice": {
+      "title": "Trae hesap kilavuzu (genisletmek/daraltmak icin tiklayin)",
+      "desc": "Resmi OAuth girisini, yerel ice aktarmayi, JSON ice aktarmayi ve yerel enjeksiyonla hesap degistirmeyi destekler. Hesap degisiminde veriler Trae istemcisinin gercek disk kurallarina gore yeniden yazilir.",
+      "permission": "Izin kapsami: hesap ice aktarma, hesap degistirme enjeksiyonu ve plan gosterimi icin yerel Trae storage.json icindeki girisle ilgili alanlari okur ve yazar. Tum veriler cihazinizda yerel olarak islenir.",
+      "network": "Ag kapsami: OAuth girisi, belirtec yenileme ve plan sorgulari resmi Trae API'lerini cagirir. Yerel hesap dosyalari ve ham depolama icerigi ucuncu taraf hizmetlere yuklenmez."
+    }
+  },
+  "codebuddyCn": {
+    "title": "CodeBuddy CN Hesap Yönetimi",
+    "noAccounts": "CodeBuddy CN hesabı yok",
+    "addAccount": "CodeBuddy CN Hesabı Ekle",
+    "search": "CodeBuddy CN hesaplarını ara...",
+    "oauthDesc": "Tarayıcınızda CodeBuddy CN yetkilendirme sayfasını açmak için aşağıdaki düğmeye tıklayın.",
+    "tokenDesc": "CodeBuddy CN erişim belirtecinizi yapıştırın:",
+    "flowNotice": {
+      "title": "CodeBuddy CN hesap yönetimi bilgisi (genişlet/daralt için tıklayın)",
+      "desc": "Hesap değiştirme için CodeBuddy CN yerel kimlik doğrulama deposu okunur ve şifre çözme/yeniden şifreleme için sistem kimlik bilgisi servisleri çağrılır. Veriler yalnızca yerelde işlenir.",
+      "permission": "İzin kapsamı: CodeBuddy CN kimlik veritabanını (state.vscdb) okuma; şifre çözme/geri yazma için sistem kimlik yeteneklerini çağırma (macOS Keychain / Windows DPAPI / Linux Secret Service).",
+      "network": "Ağ kapsamı: OAuth girişi ve belirteç yenileme için codebuddy.cn / copilot.tencent.com'ye ağ istekleri gerekir; kota sorguları faturalama API'lerini çağırır. Yerel anahtarlar veya kimlik bilgileri yüklenmez."
+    },
+    "import": {
+      "localDesc": "Hesap verilerini yerel CodeBuddy CN istemcisinden veya bir JSON dosyasından içe aktarın.",
+      "localClient": "Yerel CodeBuddy CN'den içe aktar"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "CodeBuddy CN çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "WorkBuddy Hesap Yönetimi",
+    "noAccounts": "WorkBuddy hesabı yok",
+    "addAccount": "WorkBuddy Hesabı Ekle",
+    "flowNotice": {
+      "title": "WorkBuddy hesap yönetimi bilgisi (genişlet/daralt için tıklayın)",
+      "desc": "Hesap değiştirme için WorkBuddy yerel kimlik doğrulama deposu okunur ve şifre çözme/yeniden şifreleme için sistem kimlik bilgisi servisleri çağrılır. Veriler yalnızca yerelde işlenir.",
+      "permission": "İzin kapsamı: WorkBuddy kimlik veritabanını (state.vscdb) okuma; şifre çözme/geri yazma için sistem kimlik yeteneklerini çağırma (macOS Keychain / Windows DPAPI / Linux Secret Service).",
+      "network": "Ağ kapsamı: OAuth girişi ve belirteç yenileme için WorkBuddy'ye ağ istekleri gerekir; kota sorguları faturalama API'lerini çağırır. Yerel anahtarlar veya kimlik bilgileri yüklenmez."
+    },
+    "nickname": "Takma ad",
+    "enterprise": "Kurumsal",
+    "usage": "Kullanım durumu",
+    "creditsBalance": "Kredi bakiyesi",
+    "usageNormal": "Normal",
+    "oauthWaiting": "Yetkilendirme bekleniyor...",
+    "oauthDesc": "Tarayıcınızda WorkBuddy yetkilendirme sayfasını açmak için aşağıdaki düğmeye tıklayın.",
+    "oauthDescWebview": "Yerleşik WebView'da WorkBuddy yetkilendirme sayfasını açmak için aşağıdaki düğmeye tıklayın.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Yalnızca IDE girişi",
+        "item1": "Tarayıcıda OAuth tamamlandıktan sonra hesabı ekleyin ve IDE geçişi için kullanın.",
+        "item2": "Kota sorgu parametreleri otomatik bağlanmaz.",
+        "item3": "Kota görüntülemek gerekiyorsa hesap kartında \"Kota Sorgula\"yı elle çalıştırın."
+      }
+    },
+    "oauthWebviewTab": "WebView ile OAuth",
+    "oauthOpenWebview": "WebView'da aç",
+    "oauthOpenWebviewIncognito": "Gizli WebView'da aç",
+    "oauthOpenWebviewFailed": "WebView açılamadı: {{error}}",
+    "oauthOpenBrowserFallback": "Tarayıcıda aç (yedek)",
+    "oauthOpenBrowserFailed": "Tarayıcı açılamadı: {{error}}",
+    "oauthWebviewProgressHint": "Takılan aşamayı bulmak için WebView üstünde yatay adım çubuğu gösterilir.",
+    "oauthFlow": {
+      "prepare": "OAuth bağlantısını hazırla",
+      "authorize": "Yetkilendirme bağlantısını aç ve onayla",
+      "bind": "Yetkilendirme sonucunu yokla ve hesabı bağla",
+      "retryPrepare": "OAuth bağlantısını yeniden oluştur",
+      "retryAuthorize": "Yetkilendirme bağlantısını yeniden iste",
+      "retryBind": "Yetki yoklamasını yeniden dene",
+      "error": "Akış hatası: {{error}}"
+    },
+    "tokenDesc": "WorkBuddy erişim belirtecinizi yapıştırın:",
+    "jsonDesc": "WorkBuddy hesaplarını içeren bir JSON dosyası seçin:",
+    "import": {
+      "localDesc": "Hesap verilerini yerel WorkBuddy istemcisinden veya bir JSON dosyasından içe aktarın.",
+      "localClient": "Yerel WorkBuddy'den içe aktar"
+    },
+    "search": "WorkBuddy hesaplarını ara...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Kota yenileme başarısız",
+      "sectionTitle": "Kota Sorgusu",
+      "empty": "Henüz bağlı kota sorgu bilgisi yok",
+      "packageUnknown": "Bilinmeyen paket",
+      "quotaLabel": "Kalan kota",
+      "updatedAt": "Son sorgu: {{time}}",
+      "cycleRange": "Döngü: {{start}} - {{end}}",
+      "cycleUnknown": "Döngü bilgisi yok",
+      "expireAt": "Bitiş: {{time}}",
+      "expireUnknown": "Bitiş: Yok",
+      "packageTitle": {
+        "base": "Temel deneyim paketi",
+        "activity": "Etkinlik hediye paketi"
+      }
+    },
+    "extraCredit": {
+      "title": "Kredi Paketi"
+    },
+    "oauthUrlInputPlaceholder": "Yetkilendirme URL'sini elle girebilirsiniz",
+    "oauthInvalidUrl": "Geçersiz yetkilendirme URL'si. Lütfen tam bir URL girin.",
+    "oauthGotoWebview": "Açık WebView'ı girilen URL'ye yönlendir",
+    "oauthGotoWebviewSuccess": "WebView'ın girilen URL'ye gitmesi istendi.",
+    "oauthGotoWebviewFailed": "WebView yönlendirme başarısız: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Bu WebView içinde gitmek için bir URL girin",
+    "oauthWebviewInlineGo": "Git",
+    "oauthSuccessClosePrompt": "Hesap başarıyla eklendi. Bu WebView şimdi kapatılsın mı?\nHemen kapatmak için \"WebView'ı Kapat\", açık bırakmak için \"Daha Sonra\" seçin.",
+    "oauthSuccessCloseTitle": "Hesap Eklendi",
+    "oauthSuccessCloseNowLabel": "WebView'ı Kapat",
+    "oauthSuccessCloseLaterLabel": "Daha Sonra",
+    "oauthSuccessCloseNowStatus": "✅ Hesap eklendi. Pencere kapatılıyor...",
+    "oauthSuccessCloseLaterStatus": "✅ Hesap eklendi. Bu WebView açık kalacak.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 OAuth bağlantısını hazırla",
+        "authorize": "2 Yetkilendirme bağlantısını aç ve onayla",
+        "bind": "3 Yetkilendirme sonucunu yokla ve hesabı bağla",
+        "complete": "5 Tamamlandı (elle kapat)"
+      },
+      "status": {
+        "loginConfirm": "Lütfen bu sayfada giriş ve yetkilendirmeyi tamamlayın."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "WorkBuddy çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir."
+      }
     }
   }
 }

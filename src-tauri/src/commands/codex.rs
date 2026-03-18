@@ -2,9 +2,12 @@ use crate::models::codex::{CodexAccount, CodexQuota, CodexTokens};
 use crate::modules::{
     codex_account, codex_oauth, codex_quota, config, logger, opencode_auth, process,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::AppHandle;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use tauri::Emitter;
+
+static CODEX_POST_REFRESH_CHECK_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 /// 列出所有 Codex 账号
 #[tauri::command]
@@ -16,6 +19,12 @@ pub fn list_codex_accounts() -> Result<Vec<CodexAccount>, String> {
 #[tauri::command]
 pub fn get_current_codex_account() -> Result<Option<CodexAccount>, String> {
     Ok(codex_account::get_current_account())
+}
+
+/// 刷新账号资料（团队名/结构）
+#[tauri::command]
+pub async fn refresh_codex_account_profile(account_id: String) -> Result<CodexAccount, String> {
+    codex_account::refresh_account_profile(&account_id).await
 }
 
 /// 切换 Codex 账号（包含 token 刷新检查）
@@ -109,6 +118,48 @@ pub async fn switch_codex_account(
     Ok(account)
 }
 
+async fn run_codex_post_refresh_checks(app: &AppHandle) {
+    if CODEX_POST_REFRESH_CHECK_IN_PROGRESS.swap(true, Ordering::SeqCst) {
+        logger::log_info("[AutoSwitch][Codex] 后置检查进行中，跳过本次执行");
+        return;
+    }
+
+    let mut switched = false;
+
+    match codex_account::pick_auto_switch_target_if_needed() {
+        Ok(Some(target)) => {
+            let target_id = target.id.clone();
+            match switch_codex_account(app.clone(), target_id.clone()).await {
+                Ok(switched_account) => {
+                    logger::log_info(&format!(
+                        "[AutoSwitch][Codex] 自动切号完成: target_id={}, email={}",
+                        switched_account.id, switched_account.email
+                    ));
+                    switched = true;
+                }
+                Err(e) => {
+                    logger::log_warn(&format!(
+                        "[AutoSwitch][Codex] 自动切号失败: target_id={}, error={}",
+                        target_id, e
+                    ));
+                }
+            }
+        }
+        Ok(None) => {}
+        Err(e) => {
+            logger::log_warn(&format!("[AutoSwitch][Codex] 自动切号检查失败: {}", e));
+        }
+    }
+
+    if !switched {
+        if let Err(e) = codex_account::run_quota_alert_if_needed() {
+            logger::log_warn(&format!("[QuotaAlert][Codex] 预警检查失败: {}", e));
+        }
+    }
+
+    CODEX_POST_REFRESH_CHECK_IN_PROGRESS.store(false, Ordering::SeqCst);
+}
+
 /// 删除 Codex 账号
 #[tauri::command]
 pub fn delete_codex_account(account_id: String) -> Result<(), String> {
@@ -123,8 +174,10 @@ pub fn delete_codex_accounts(account_ids: Vec<String>) -> Result<(), String> {
 
 /// 从本地 auth.json 导入账号
 #[tauri::command]
-pub fn import_codex_from_local() -> Result<CodexAccount, String> {
-    codex_account::import_from_local()
+pub fn import_codex_from_local(app: AppHandle) -> Result<CodexAccount, String> {
+    let account = codex_account::import_from_local()?;
+    let _ = crate::modules::tray::update_tray_menu(&app);
+    Ok(account)
 }
 
 /// 从 JSON 字符串导入账号
@@ -152,9 +205,7 @@ pub fn import_codex_from_files(
 pub async fn refresh_codex_quota(app: AppHandle, account_id: String) -> Result<CodexQuota, String> {
     let result = codex_quota::refresh_account_quota(&account_id).await;
     if result.is_ok() {
-        if let Err(e) = codex_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!("[QuotaAlert][Codex] 预警检查失败: {}", e));
-        }
+        run_codex_post_refresh_checks(&app).await;
         let _ = crate::modules::tray::update_tray_menu(&app);
     }
     result
@@ -167,12 +218,7 @@ pub async fn refresh_current_codex_quota(app: AppHandle) -> Result<(), String> {
     };
     let result = codex_quota::refresh_account_quota(&account.id).await;
     if result.is_ok() {
-        if let Err(e) = codex_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!(
-                "[QuotaAlert][Codex] 当前账号刷新后预警检查失败: {}",
-                e
-            ));
-        }
+        run_codex_post_refresh_checks(&app).await;
         let _ = crate::modules::tray::update_tray_menu(&app);
         Ok(())
     } else {
@@ -188,12 +234,7 @@ pub async fn refresh_all_codex_quotas(app: AppHandle) -> Result<i32, String> {
     let results = codex_quota::refresh_all_quotas().await?;
     let success_count = results.iter().filter(|(_, r)| r.is_ok()).count();
     if success_count > 0 {
-        if let Err(e) = codex_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!(
-                "[QuotaAlert][Codex] 全量刷新后预警检查失败: {}",
-                e
-            ));
-        }
+        run_codex_post_refresh_checks(&app).await;
     }
     let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(success_count as i32)
@@ -273,6 +314,20 @@ pub fn codex_oauth_login_cancel(login_id: Option<String>) -> Result<(), String> 
         result.as_ref().map(|_| "ok").map_err(|e| e)
     ));
     result
+}
+
+/// OAuth：手动提交回调链接（用于本地端口不可达时）
+#[tauri::command]
+pub fn codex_oauth_submit_callback_url(
+    app_handle: AppHandle,
+    login_id: String,
+    callback_url: String,
+) -> Result<(), String> {
+    codex_oauth::submit_callback_url(login_id.as_str(), callback_url.as_str())?;
+    let payload = serde_json::json!({ "loginId": login_id });
+    let _ = app_handle.emit("codex-oauth-login-completed", payload.clone());
+    let _ = app_handle.emit("ghcp-oauth-login-completed", payload);
+    Ok(())
 }
 
 /// 通过 Token 添加账号

@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Tín dụng prompt bổ sung",
         "credits": "Tín dụng",
         "email": "E-mail",
-        "promptCredits": "Tín dụng prompt"
+        "promptCredits": "Tín dụng prompt",
+        "creditPackage": "Gói credit",
+        "sharedCreditPackage": "Gói credit dùng chung",
+        "account": "Tài khoản",
+        "createdAt": "Thời gian tạo"
       },
       "empty": {
         "title": "Chưa có tài khoản"
@@ -49,7 +53,17 @@
         "label": "Nhập",
         "importing": "Đang nhập tài khoản cục bộ...",
         "pickFile": "Chọn tệp JSON để nhập",
-        "orJson": "Hoặc nhập từ tệp JSON"
+        "orJson": "Hoặc nhập từ tệp JSON",
+        "progress": {
+          "overallLine": "Tiến độ tổng thể {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} nền tảng, đã xử lý {{processedAccounts}}/{{totalAccounts}} tài khoản)",
+          "currentPlatformLine": "Đang nhập: {{platform}} ({{count}} tài khoản)",
+          "currentStatusLine": "Trạng thái nền tảng hiện tại: {{status}}",
+          "platformDetailsTitle": "Chi tiết nền tảng",
+          "statusProcessing": "Đang xử lý...",
+          "statusRunning": "Đang nhập...",
+          "statusSkipped": "Đã bỏ qua",
+          "statusPending": "Đang chờ nhập"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Đang chuẩn bị liên kết ủy quyền...",
         "retry": "Tạo lại thông tin ủy quyền",
         "timeoutRetry": "Làm mới liên kết ủy quyền",
-        "waiting": "Đang chờ ủy quyền..."
+        "waiting": "Đang chờ ủy quyền...",
+        "manualCallbackLabel": "Nhập URL callback thủ công",
+        "manualCallbackPlaceholder": "Dán đầy đủ URL callback, ví dụ: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Làm mới tất cả",
       "refreshQuota": "Làm mới hạn mức",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "Hạn mức sẽ được đặt lại {{dateText}}.",
         "resetUnknown": "Hạn mức sẽ đặt lại sau -"
+      },
+      "updated": {
+        "label": "Cập nhật {{relative}} trước"
       }
     }
   },
   "nav": {
-    "overview": "Tài khoản Antigravity",
+    "overview": "Antigravity",
     "accounts": "Quản lý tài khoản",
     "wakeup": "Wakeup Tasks",
     "fingerprints": "Vân tay thiết bị",
     "settings": "Cài đặt",
-    "codex": "Tài khoản Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Bảng điều khiển",
@@ -159,9 +178,14 @@
     "manual": "Hướng dẫn sử dụng",
     "quickUpdate": {
       "update": "Cập nhật",
-      "restart": "Khởi động lại"
+      "restart": "Khởi động lại",
+      "installing": "Đang cài đặt"
     },
-    "gemini": "Song Tử"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Bố cục nền tảng",
@@ -173,7 +197,34 @@
     "trayToggle": "Hiển thị trên khay hệ thống",
     "hiddenBadge": "Ẩn",
     "openFromMore": "Quản lý bố cục nền tảng",
-    "dragHandleLabel": "Kéo để sắp xếp lại"
+    "dragHandleLabel": "Kéo để sắp xếp lại",
+    "tipWithGroups": "Kéo để sắp xếp lại. Tối đa chỉ hiển thị 2 mục ở thanh bên. Nền tảng con trong nhóm không có công tắc thanh bên/bảng điều khiển và chỉ dùng cho thanh menu cùng chuyển nền tảng mặc định.",
+    "addGroup": "Thêm nhóm",
+    "editGroup": "Sửa nhóm",
+    "deleteGroup": "Xóa nhóm",
+    "groupBadge": "Nhóm",
+    "groupDefault": "Nền tảng mặc định",
+    "groupName": "Tên nhóm",
+    "groupNamePlaceholder": "Ví dụ: Bộ CodeBuddy",
+    "groupIcon": "Biểu tượng nhóm",
+    "groupIconFromPlatform": "Biểu tượng nền tảng",
+    "groupIconCustom": "Ảnh tùy chỉnh",
+    "groupIconPreview": "Xem trước biểu tượng",
+    "groupChildren": "Nền tảng con",
+    "groupNameRequired": "Vui lòng nhập tên nhóm",
+    "groupChildrenRequired": "Chọn ít nhất một nền tảng con",
+    "groupCustomIconRequired": "Vui lòng tải lên biểu tượng tùy chỉnh",
+    "groupSwitchLabel": "Chuyển nền tảng trong nhóm",
+    "collapseAllChildren": "Thu gọn tất cả nền tảng con",
+    "expandAllChildren": "Mở rộng tất cả nền tảng con",
+    "addChildPlatform": "Thêm nền tảng con",
+    "collapseChildren": "Thu gọn nền tảng con",
+    "expandChildren": "Mở rộng nền tảng con",
+    "noAvailableChildren": "Không có nền tảng nào để thêm",
+    "customIconDeleteConfirm": "Xóa biểu tượng tùy chỉnh này?",
+    "editChildPlatform": "Chỉnh sửa nền tảng con",
+    "setAsDefaultInGroup": "Đặt làm nền tảng mặc định trong nhóm này",
+    "removeFromGroup": "Xóa khỏi nhóm"
   },
   "privacy": {
     "hideSensitive": "Ẩn email",
@@ -376,6 +427,8 @@
       "themeLight": "Sáng (Light)",
       "themeDark": "Tối (Dark)",
       "themeSystem": "Theo hệ thống",
+      "uiScale": "Tỷ lệ giao diện",
+      "uiScaleDesc": "Điều chỉnh tỷ lệ giao diện",
       "accountManagement": "Quản lý tài khoản",
       "autoRefresh": "Tự động làm mới hạn mức Antigravity",
       "codexAutoRefresh": "Tự động làm mới hạn mức Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Điều khiển hiển thị biểu tượng Dock độc lập, không phụ thuộc vào hành vi thu nhỏ cửa sổ",
       "hideDockIconOff": "Không (Hiện biểu tượng Dock)",
       "hideDockIconOn": "Có (Ẩn biểu tượng Dock)",
-      "storageTitle": "Thư mục & Lưu trữ",
       "dataDir": "Thư mục dữ liệu",
       "dataDirDesc": "Vị trí lưu trữ tài khoản và cấu hình.",
       "fpDir": "Thư mục lưu trữ Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Bật (cập nhật im lặng)",
       "opencodeAuthOverwrite": "Ghi đè đăng nhập OpenCode khi chuyển đổi Codex",
       "opencodeAuthOverwriteDesc": "Khi tắt, chỉ Codex được chuyển đổi và OpenCode giữ trạng thái đăng nhập hiện tại",
-      "opencodeRestartRequiresOverwrite": "Trước tiên hãy bật \"Ghi đè đăng nhập OpenCode khi chuyển đổi Codex\""
+      "opencodeRestartRequiresOverwrite": "Trước tiên hãy bật \"Ghi đè đăng nhập OpenCode khi chuyển đổi Codex\"",
+      "codebuddySettingsTitle": "Cài đặt CodeBuddy",
+      "codebuddyAutoRefresh": "Tự động làm mới hạn ngạch CodeBuddy",
+      "codebuddyAutoRefreshDesc": "Tần suất tự động cập nhật nền",
+      "codebuddyAppPath": "Đường dẫn khởi động CodeBuddy",
+      "codebuddyAppPathDesc": "Để trống để dùng đường dẫn mặc định",
+      "codebuddyAppPathPlaceholder": "Đường dẫn mặc định",
+      "codebuddyPathSelect": "Chọn",
+      "codebuddyPathReset": "Đặt lại mặc định",
+      "qoderPathReset": "Đặt lại mặc định",
+      "traeAutoRefresh": "Tự động làm mới hạn ngạch Trae",
+      "traeAutoRefreshDesc": "Tần suất tự động cập nhật nền",
+      "traeAppPath": "Đường dẫn khởi động Trae",
+      "traeAppPathDesc": "Để trống để dùng đường dẫn mặc định",
+      "traeAppPathPlaceholder": "Đường dẫn mặc định",
+      "traePathSelect": "Chọn",
+      "traePathReset": "Đặt lại mặc định",
+      "workbuddyAppPath": "Đường dẫn khởi động WorkBuddy",
+      "workbuddyAppPathDesc": "Để trống để dùng đường dẫn mặc định",
+      "workbuddyAppPathPlaceholder": "Đường dẫn mặc định",
+      "workbuddyPathSelect": "Chọn",
+      "workbuddyPathReset": "Đặt lại mặc định"
     },
     "network": {
       "apiTitle": "API Antigravity Cockpit",
@@ -473,7 +546,22 @@
       "restartRequired": "Cấu hình đã thay đổi, vui lòng khởi động lại ứng dụng để có hiệu lực",
       "saveSuccess": "Cài đặt đã được lưu!",
       "saveSuccessRestart": "Cài đặt đã được lưu! Do cấu hình cổng đã thay đổi, vui lòng khởi động lại ứng dụng.",
-      "saveFailed": "Lưu thất bại: {{error}}"
+      "saveFailed": "Lưu thất bại: {{error}}",
+      "reportTitle": "Dịch vụ truy vấn web",
+      "reportService": "Dịch vụ báo cáo HTTP",
+      "reportServiceDesc": "Cung cấp endpoint HTTP có token bảo vệ để xem tóm tắt mức sử dụng",
+      "reportPort": "Cổng báo cáo",
+      "reportPortDesc": "Mặc định là {{port}}, cần khởi động lại sau khi thay đổi",
+      "reportToken": "Token truy cập",
+      "reportTokenDesc": "Bắt buộc khi gọi /report, hãy giữ bí mật",
+      "reportTokenRequired": "Không được để trống token truy cập khi bật dịch vụ truy vấn web.",
+      "generateToken": "Tạo",
+      "reportUrlPreview": "Xem trước endpoint",
+      "reportUrlPreviewDesc": "Hỗ trợ format=md / format=yaml và render=true cho chế độ HTML",
+      "reportUrlRaw": "Đầu ra thô",
+      "reportUrlRendered": "Chế độ hiển thị",
+      "firewallHintTitle": "Gợi ý tường lửa",
+      "firewallHint": "Nếu URL không truy cập được, hãy kiểm tra cài đặt tường lửa của hệ thống."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "Tín dụng AI"
     },
     "empty": {
       "title": "Chưa có tài khoản",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Tất cả ({{count}})",
       "pro": "CHUYÊN NGHIỆP ({{count}})",
-      "ultra": "SIÊU ({{count}})",
-      "free": "MIỄN PHÍ ({{count}})"
+      "ultra": "SIÊU ({{count}})"
     },
     "sortLabel": "Sắp xếp",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "Theo thời gian đặt lại {{group}}",
       "descTooltip": "Giảm dần, nhấn để chuyển Tăng dần",
       "ascTooltip": "Tăng dần, nhấn để chuyển Giảm dần",
-      "toggleDirection": "Đổi hướng sắp xếp"
+      "toggleDirection": "Đổi hướng sắp xếp",
+      "plan": "Theo gói",
+      "quota": "Theo hạn mức"
     },
     "filterTags": "Lọc thẻ",
     "filterTagsCount": "Thẻ",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} thất bại: {{failList}}",
       "refreshingQuota": "Đang làm mới hạn ngạch {{done}}/{{total}} (bạn có thể đóng hộp thoại này)",
       "quotaRefreshDone": "Làm mới hạn ngạch hoàn tất"
+    },
+    "groups": {
+      "manageTitle": "Quản lý nhóm",
+      "title": "Nhóm tài khoản",
+      "create": "Tạo",
+      "newPlaceholder": "Nhập tên nhóm...",
+      "empty": "Chưa có nhóm nào. Tạo một nhóm để bắt đầu",
+      "accountCount": "{{count}} tài khoản",
+      "rename": "Đổi tên",
+      "addToGroup": "Thêm vào nhóm",
+      "createAndAdd": "Tạo nhóm và thêm...",
+      "removeFromGroup": "Xóa khỏi nhóm",
+      "allGroups": "Tất cả nhóm",
+      "noGroups": "Chưa có nhóm",
+      "noGroupsDesc": "Tạo nhóm để quản lý tài khoản hàng loạt",
+      "manage": "Quản lý",
+      "error": {
+        "duplicate": "Tên nhóm đã tồn tại",
+        "createFailed": "Tạo nhóm thất bại: {{error}}",
+        "renameFailed": "Đổi tên nhóm thất bại: {{error}}",
+        "deleteFailed": "Xóa nhóm thất bại: {{error}}",
+        "addFailed": "Thêm vào nhóm thất bại: {{error}}",
+        "createAndAddFailed": "Tạo nhóm và thêm thất bại: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Tên nhiệm vụ",
       "taskStatus": "Trạng thái",
       "triggerMode": "Chế độ kích hoạt",
-      "triggerModeHint": "1. Lịch trình: kích hoạt vào các thời điểm đã thiết lập.\\n2. Crontab: định nghĩa bằng biểu thức.\\n3. Đặt lại hạn mức: kích hoạt một lần khi hạn mức đầy.",
+      "triggerModeHint": "1. Lịch trình: kích hoạt vào các thời điểm đã thiết lập.\n2. Crontab: định nghĩa bằng biểu thức.\n3. Đặt lại hạn mức: kích hoạt một lần khi hạn mức đầy.",
       "modeScheduled": "📅 Lịch trình",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Đặt lại hạn mức",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Xem chi tiết",
     "hideErrorDetails": "Ẩn chi tiết",
     "autoUpdateFailedAfterRetries": "Tự động cập nhật thất bại sau {{count}} lần thử. Hãy thử lại sau hoặc tải thủ công.",
-    "updateCancelled": "Đã hủy cập nhật."
+    "updateCancelled": "Đã hủy cập nhật.",
+    "cancelDownload": "Hủy tải xuống",
+    "installing": "Đang cài đặt...",
+    "authorizing": "Đang chờ cấp quyền hệ thống...",
+    "installFailed": "Cài đặt hệ thống thất bại. Hãy thử lại sau hoặc tải gói về thủ công.",
+    "restartRequiredAfterInstall": "Bản cập nhật đã được cài. Hãy khởi động lại ứng dụng thủ công để hoàn tất chuyển đổi."
   },
   "closeDialog": {
     "title": "Đóng cửa sổ",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Lỗi quota",
       "generic": "Làm mới quota thất bại, vui lòng thử lại sau",
-      "deactivatedWorkspace": "Workspace đã bị vô hiệu hoá, hãy đổi tài khoản hoặc cấp quyền lại"
+      "deactivatedWorkspace": "Workspace đã bị vô hiệu hoá, hãy đổi tài khoản hoặc cấp quyền lại",
+      "requestFailedManualRetry": "Yêu cầu thất bại, vui lòng thử lại thủ công: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Hiển thị hạn mức Code Review"
     },
     "time": {
       "today": "Hôm nay {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Thẻ",
     "noAvailableTags": "Không có thẻ nào",
     "clearFilter": "Xóa bộ lọc",
-    "editTags": "Chỉnh sửa thẻ"
+    "editTags": "Chỉnh sửa thẻ",
+    "account": {
+      "personal": "Tài khoản cá nhân"
+    }
   },
   "githubCopilot": {
     "title": "Quản lý tài khoản GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Chi tiết lỗi",
       "filePath": "Vị trí tệp",
       "helpText": "Vui lòng mở thư mục để sửa thủ công hoặc xóa tệp, sau đó khởi động lại ứng dụng.",
-      "openFolder": "Mở thư mục"
+      "openFolder": "Mở thư mục",
+      "openFolderFailed": "Mở thư mục thất bại: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Tự động làm mới hạn mức",
     "gemini": {
-      "title": "Cài đặt Song Tử",
-      "appPath": "Đường dẫn CLI của Song Tử"
+      "title": "Cài đặt Gemini Cli",
+      "appPath": "Đường dẫn Gemini Cli"
     },
-    "geminiRefreshInterval": "Tự động làm mới hạn ngạch"
+    "geminiRefreshInterval": "Tự động làm mới hạn ngạch",
+    "codebuddy": {
+      "title": "Cài đặt CodeBuddy",
+      "appPath": "Đường dẫn CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Tải cấu hình thất bại: {{error}}",
+      "saveFailed": "Lưu cấu hình thất bại: {{error}}",
+      "pickPathFailed": "Chọn đường dẫn thất bại: {{error}}",
+      "resetPathFailed": "Đặt lại đường dẫn thất bại: {{error}}"
+    },
+    "qoder": {
+      "title": "Cài đặt Qoder",
+      "appPath": "Đường dẫn Qoder"
+    },
+    "trae": {
+      "title": "Cài đặt Trae",
+      "appPath": "Đường dẫn Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "Đường dẫn CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "Cài đặt WorkBuddy",
+      "appPath": "Đường dẫn WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "Cảnh báo hạn mức cho {{email}} (ngưỡng {{threshold}}%, thấp nhất {{lowest}}%, mô hình: {{models}})",
@@ -1847,31 +2000,31 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Chuyển sang cung Song Tử",
-    "title": "Quản lý tài khoản Song Tử",
+    "injectToGemini": "Chuyển sang Gemini Cli",
+    "title": "Quản lý tài khoản Gemini Cli",
     "empty": {
-      "description": "Nhấp vào \"Thêm tài khoản\" để bắt đầu quản lý tài khoản Gemini của bạn"
+      "description": "Nhấp vào \"Thêm tài khoản\" để bắt đầu quản lý tài khoản Gemini Cli của bạn"
     },
     "addModal": {
-      "title": "Thêm tài khoản Song Tử"
+      "title": "Thêm tài khoản Gemini Cli"
     },
     "oauth": {
-      "desc": "Nhấp vào nút bên dưới và hoàn tất ủy quyền Gemini OAuth trong trình duyệt của bạn."
+      "desc": "Nhấp vào nút bên dưới và hoàn tất ủy quyền Gemini Cli OAuth trong trình duyệt của bạn."
     },
     "token": {
-      "desc": "Dán Mã thông báo truy cập Gemini (JWT) hoặc dữ liệu JSON đã xuất của bạn.",
+      "desc": "Dán Mã thông báo truy cập Gemini Cli (JWT) hoặc dữ liệu JSON đã xuất của bạn.",
       "formatHint": "Các trường và ví dụ bắt buộc (bấm vào để mở rộng)",
       "formatRequired": "Mã thông báo đơn: dán JWT trực tiếp; nhập hàng loạt: sử dụng định dạng mảng JSON",
       "singleExample": "Ví dụ đơn (JWT)",
       "batchExample": "Ví dụ về lô (JSON)"
     },
     "import": {
-      "localDesc": "Nhập dữ liệu tài khoản Gemini từ thư mục cấu hình Gemini cục bộ (~/.gemini) hoặc tệp JSON.",
-      "localClient": "Nhập khẩu từ Gemini địa phương"
+      "localDesc": "Nhập dữ liệu tài khoản Gemini Cli từ thư mục cấu hình Gemini Cli cục bộ (~/.gemini) hoặc tệp JSON.",
+      "localClient": "Nhập từ Gemini Cli cục bộ"
     },
     "flowNotice": {
-      "title": "Hướng dẫn tài khoản Gemini (bấm vào để mở rộng/thu gọn)",
-      "desc": "Quản lý tài khoản Gemini bằng cách nhập từ cấu hình Gemini cục bộ, dán mã thông báo JWT hoặc đăng nhập qua OAuth.",
+      "title": "Hướng dẫn tài khoản Gemini Cli (bấm vào để mở rộng/thu gọn)",
+      "desc": "Quản lý tài khoản Gemini Cli bằng cách nhập từ cấu hình Gemini Cli cục bộ, dán mã thông báo JWT hoặc đăng nhập qua OAuth.",
       "reason": "Phạm vi quyền: đọc và ghi oauth_creds.json, google_accounts.json và settings.json theo mặc định ~/.gemini hoặc đường dẫn phiên bản (GEMINI_CLI_HOME/.gemini) để nhập tài khoản và chèn thông tin xác thực cục bộ (chuyển đổi tài khoản).",
       "storage": "Phạm vi mạng: OAuth và làm mới cuộc gọi API Google/Gemini chính thức (chẳng hạn như oauth2.googleapis.com và googleapis.com). Chỉ các trường xác thực/hạn ngạch bắt buộc mới được gửi; các tệp tài khoản cục bộ không được tải lên máy chủ của bên thứ ba."
     },
@@ -1888,14 +2041,306 @@
       "onDemand": "Theo yêu cầu"
     },
     "instances": {
-      "unsupported": "Quản lý đa phiên bản Gemini chưa được hỗ trợ.",
-      "unsupportedDescPlatform": "Phiên bản đa phiên bản Gemini chỉ được hỗ trợ trên macOS, Windows và Linux.",
+      "unsupported": "Quản lý đa phiên bản Gemini Cli chưa được hỗ trợ.",
+      "unsupportedDescPlatform": "Phiên bản đa phiên bản Gemini Cli chỉ được hỗ trợ trên macOS, Windows và Linux.",
       "launchDialogTitle": "Khởi chạy phiên bản",
       "launchHint": "Sao chép lệnh và chạy thủ công hoặc thực thi trực tiếp trong terminal.",
       "runInTerminal": "Chạy trong Terminal"
     },
     "switch": {
       "success": "Chuyển đổi tài khoản thành công"
+    }
+  },
+  "codebuddy": {
+    "title": "Quản lý tài khoản CodeBuddy",
+    "noAccounts": "Chưa có tài khoản CodeBuddy",
+    "addAccount": "Thêm tài khoản CodeBuddy",
+    "flowNotice": {
+      "title": "Hướng dẫn quản lý tài khoản CodeBuddy (bấm để mở rộng/thu gọn)",
+      "desc": "Khi chuyển tài khoản, ứng dụng cần đọc vùng lưu xác thực cục bộ của CodeBuddy và gọi dịch vụ chứng thực hệ thống để giải mã/mã hóa lại. Dữ liệu chỉ được xử lý cục bộ.",
+      "permission": "Phạm vi quyền: đọc cơ sở dữ liệu xác thực CodeBuddy (state.vscdb), gọi khả năng chứng thực hệ thống (macOS Keychain / Windows DPAPI / Linux Secret Service) để giải mã và ghi lại.",
+      "network": "Phạm vi mạng: đăng nhập OAuth và làm mới Token cần gửi yêu cầu đến codebuddy.ai; truy vấn hạn ngạch sẽ gọi API tính phí. Không tải lên khóa hoặc thông tin xác thực cục bộ."
+    },
+    "nickname": "Biệt danh",
+    "enterprise": "Doanh nghiệp",
+    "usage": "Trạng thái sử dụng",
+    "creditsBalance": "Số dư tín dụng",
+    "usageNormal": "Bình thường",
+    "oauthWaiting": "Đang chờ hoàn tất ủy quyền...",
+    "oauthDesc": "Bấm nút bên dưới để mở trang ủy quyền CodeBuddy trong trình duyệt.",
+    "oauthDescWebview": "Bấm nút bên dưới để mở trang ủy quyền CodeBuddy trong WebView tích hợp.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Chỉ ủy quyền thông tin đăng nhập IDE",
+        "item1": "Sau khi hoàn tất OAuth trong trình duyệt, bạn có thể thêm tài khoản và dùng để chuyển IDE.",
+        "item2": "Tham số truy vấn hạn ngạch sẽ không được liên kết tự động.",
+        "item3": "Nếu cần hiển thị hạn ngạch, hãy chạy thủ công \"Truy vấn hạn ngạch\" trên thẻ tài khoản."
+      }
+    },
+    "oauthWebviewTab": "Xác thực WebView",
+    "oauthOpenWebview": "Mở trong WebView",
+    "oauthOpenWebviewIncognito": "Mở trong WebView ẩn danh",
+    "oauthOpenWebviewFailed": "Mở WebView thất bại: {{error}}",
+    "oauthOpenBrowserFallback": "Mở trong trình duyệt (dự phòng)",
+    "oauthOpenBrowserFailed": "Mở trình duyệt thất bại: {{error}}",
+    "oauthWebviewProgressHint": "Thanh bước ngang sẽ hiển thị ở đầu WebView để dễ xác định bước bị kẹt.",
+    "oauthFlow": {
+      "prepare": "Chuẩn bị liên kết ủy quyền",
+      "authorize": "Mở liên kết ủy quyền và xác nhận",
+      "bind": "Thăm dò kết quả ủy quyền và liên kết tài khoản",
+      "retryPrepare": "Tạo lại liên kết ủy quyền",
+      "retryAuthorize": "Yêu cầu lại liên kết ủy quyền",
+      "retryBind": "Thử lại thăm dò ủy quyền",
+      "error": "Lỗi quy trình: {{error}}"
+    },
+    "tokenDesc": "Dán access token của CodeBuddy:",
+    "jsonDesc": "Chọn tệp JSON chứa tài khoản CodeBuddy:",
+    "import": {
+      "localDesc": "Hỗ trợ nhập dữ liệu tài khoản từ ứng dụng CodeBuddy cục bộ hoặc từ tệp JSON.",
+      "localClient": "Nhập từ CodeBuddy cục bộ"
+    },
+    "search": "Tìm kiếm tài khoản CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Làm mới hạn ngạch thất bại",
+      "sectionTitle": "Truy vấn hạn ngạch",
+      "empty": "Chưa có thông tin truy vấn hạn ngạch được liên kết",
+      "packageUnknown": "Không rõ gói",
+      "quotaLabel": "Hạn ngạch còn lại",
+      "updatedAt": "Lần truy vấn gần nhất: {{time}}",
+      "cycleRange": "Chu kỳ: {{start}} - {{end}}",
+      "cycleUnknown": "Chưa có thông tin chu kỳ",
+      "expireAt": "Hết hạn lúc: {{time}}",
+      "expireUnknown": "Hết hạn: chưa có",
+      "packageTitle": {
+        "base": "Gói trải nghiệm cơ bản",
+        "activity": "Gói quà tặng sự kiện"
+      }
+    },
+    "extraCredit": {
+      "title": "Gói cộng thêm"
+    },
+    "oauthUrlInputPlaceholder": "Có thể nhập URL ủy quyền thủ công",
+    "oauthInvalidUrl": "Định dạng liên kết ủy quyền không đúng. Vui lòng nhập URL đầy đủ.",
+    "oauthGotoWebview": "Điều hướng WebView đã mở tới URL đã nhập",
+    "oauthGotoWebviewSuccess": "Đã yêu cầu WebView điều hướng tới URL đã nhập.",
+    "oauthGotoWebviewFailed": "Điều hướng WebView thất bại: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Nhập URL để điều hướng ngay trong WebView này",
+    "oauthWebviewInlineGo": "Đi",
+    "oauthSuccessClosePrompt": "Đã thêm tài khoản thành công. Đóng WebView này ngay bây giờ?\nChọn \"Đóng WebView\" để đóng ngay hoặc \"Để sau\" để giữ nguyên cửa sổ.",
+    "oauthSuccessCloseTitle": "Đã thêm tài khoản",
+    "oauthSuccessCloseNowLabel": "Đóng WebView",
+    "oauthSuccessCloseLaterLabel": "Để sau",
+    "oauthSuccessCloseNowStatus": "✅ Đã thêm tài khoản. Đang đóng cửa sổ...",
+    "oauthSuccessCloseLaterStatus": "✅ Đã thêm tài khoản. WebView này sẽ vẫn mở.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Chuẩn bị liên kết ủy quyền",
+        "authorize": "2 Mở liên kết ủy quyền và xác nhận",
+        "bind": "3 Thăm dò kết quả ủy quyền và liên kết tài khoản",
+        "complete": "5 Hoàn tất (đóng thủ công)"
+      },
+      "status": {
+        "loginConfirm": "Vui lòng hoàn tất đăng nhập và ủy quyền trên trang này."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Quản lý tài khoản Qoder",
+    "comingSoon": {
+      "title": "Đa Phiên Bản Sắp Ra Mắt",
+      "desc": "Chạy nhiều phiên bản Qoder.app với các tài khoản khác nhau cùng lúc."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Đa phiên bản Qoder chỉ được hỗ trợ trên macOS, Windows và Linux."
+      }
+    },
+    "oauth": {
+      "hint": "Hãy hoàn tất đăng nhập trên trang trình duyệt đã mở: nếu trang đăng nhập không tự động mở, hãy nhấp vào \"Sao chép liên kết đăng nhập\", sao chép liên kết rồi dán vào trình duyệt để hoàn tất đăng nhập.",
+      "copyLoginUrl": "Sao chép liên kết đăng nhập"
+    },
+    "usageOverview": {
+      "title": "Tổng quan sử dụng",
+      "viewDetails": "Xem chi tiết",
+      "includedCredits": "Credits trong gói",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Nâng cấp gói để tăng hạn mức hàng tháng",
+      "upgradeAction": "Nâng cấp"
+    },
+    "flowNotice": {
+      "title": "Huong dan tai khoan Qoder (nhan de mo rong/thu gon)",
+      "desc": "Ho tro dang nhap OAuth chinh thuc (callback), nhap cuc bo, nhap JSON, tiem chuyen tai khoan, gan nhieu instance va tong quan han muc. Luong dang nhap su dung dung du lieu luu tru thuc te cua Qoder client.",
+      "permission": "Pham vi quyen: doc kho xac thuc cuc bo cua Qoder (thong tin auth va thong tin nguoi dung) de phuc vu chuyen tai khoan va tiem phien; moi du lieu deu duoc xu ly cuc bo tren may cua ban.",
+      "network": "Pham vi mang: dang nhap OAuth can truy cap dich vu chinh thuc cua Qoder de hoan tat callback; truy van han muc su dung Qoder API. Khong tai len khoa hay thong tin xac thuc cuc bo."
+    },
+    "addModal": {
+      "title": "Thêm tài khoản Qoder"
+    },
+    "import": {
+      "localDesc": "Đọc trạng thái đăng nhập hiện tại từ ứng dụng Qoder cục bộ, bao gồm thông tin người dùng, gói và mức sử dụng tín dụng."
+    }
+  },
+  "trae": {
+    "title": "Quan ly tai khoan Trae",
+    "empty": {
+      "description": "Nhan \"Them tai khoan\" de bat dau quan ly cac tai khoan Trae, hoac nhap tu du lieu Trae cuc bo hay tep JSON."
+    },
+    "addModal": {
+      "title": "Them tai khoan Trae"
+    },
+    "oauth": {
+      "desc": "Nhan nut ben duoi va hoan tat uy quyen OAuth cua Trae trong trinh duyet."
+    },
+    "import": {
+      "localDesc": "Nhap tai khoan dang dang nhap, thong tin goi va du lieu han muc da luu cache tu thu muc cau hinh Trae cuc bo.",
+      "jsonTab": "Tep JSON"
+    },
+    "quota": {
+      "usedOfTotal": "Da dung $ {{used}} / $ {{total}}",
+      "usageUnknown": "Muc dung: --",
+      "resetAt": "Thoi gian dat lai: {{date}}",
+      "resetUnknown": "Khong ro thoi gian dat lai",
+      "statusUnknown": "Trang thai: chua ro",
+      "statusNormal": "Trang thai: binh thuong",
+      "statusExhaustedFree": "Trang thai: da het muc dung, nen nang cap goi",
+      "statusExhaustedPro": "Trang thai: da het muc dung, hay nang cap goi hoac bat thanh toan theo muc dung",
+      "bonusUsed": "Thuong them: +{{amount}}",
+      "bonusIncluded": "Thuong them: da bao gom",
+      "bonusEmpty": "Thuong them: --",
+      "packageConsuming": "Goi muc dung: dang tieu thu",
+      "packageAvailable": "Goi muc dung: kha dung",
+      "packageEmpty": "Goi muc dung: --",
+      "payAsYouGoConsuming": "Thanh toan theo muc dung: dang tieu thu",
+      "payAsYouGoEnabled": "Thanh toan theo muc dung: da bat",
+      "payAsYouGoEmpty": "Thanh toan theo muc dung: --"
+    },
+    "flowNotice": {
+      "title": "Huong dan tai khoan Trae (nhan de mo rong/thu gon)",
+      "desc": "Ho tro dang nhap OAuth chinh thuc, nhap cuc bo, nhap JSON va chuyen tai khoan bang cach tiem du lieu cuc bo. Khi chuyen tai khoan, du lieu duoc ghi lai theo dung quy tac luu tru thuc te cua Trae client.",
+      "permission": "Pham vi quyen: doc va ghi cac truong lien quan den dang nhap trong storage.json cuc bo cua Trae de phuc vu viec nhap tai khoan, tiem chuyen tai khoan va hien thi goi. Moi du lieu deu duoc xu ly cuc bo tren may cua ban.",
+      "network": "Pham vi mang: dang nhap OAuth, lam moi token va truy van goi se goi cac API chinh thuc cua Trae. Tep tai khoan cuc bo va noi dung luu tru thuan khong duoc tai len dich vu ben thu ba."
+    }
+  },
+  "codebuddyCn": {
+    "title": "Quản lý tài khoản CodeBuddy CN",
+    "noAccounts": "Chưa có tài khoản CodeBuddy CN",
+    "addAccount": "Thêm tài khoản CodeBuddy CN",
+    "search": "Tìm kiếm tài khoản CodeBuddy CN...",
+    "oauthDesc": "Bấm nút bên dưới để mở trang ủy quyền CodeBuddy CN trong trình duyệt.",
+    "tokenDesc": "Dán access token của CodeBuddy CN:",
+    "flowNotice": {
+      "title": "Hướng dẫn quản lý tài khoản CodeBuddy CN (bấm để mở rộng/thu gọn)",
+      "desc": "Khi chuyển tài khoản, ứng dụng cần đọc vùng lưu xác thực cục bộ của CodeBuddy CN và gọi dịch vụ chứng thực hệ thống để giải mã/mã hóa lại. Dữ liệu chỉ được xử lý cục bộ.",
+      "permission": "Phạm vi quyền: đọc cơ sở dữ liệu xác thực CodeBuddy CN (state.vscdb), gọi khả năng chứng thực hệ thống (macOS Keychain / Windows DPAPI / Linux Secret Service) để giải mã và ghi lại.",
+      "network": "Phạm vi mạng: đăng nhập OAuth và làm mới Token cần gửi yêu cầu đến codebuddy.cn / copilot.tencent.com; truy vấn hạn ngạch sẽ gọi API tính phí. Không tải lên khóa hoặc thông tin xác thực cục bộ."
+    },
+    "import": {
+      "localDesc": "Hỗ trợ nhập dữ liệu tài khoản từ ứng dụng CodeBuddy CN cục bộ hoặc từ tệp JSON.",
+      "localClient": "Nhập từ CodeBuddy CN cục bộ"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Phiên bản đa phiên bản CodeBuddy CN chỉ được hỗ trợ trên macOS, Windows và Linux."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "Quản lý tài khoản WorkBuddy",
+    "noAccounts": "Chưa có tài khoản WorkBuddy",
+    "addAccount": "Thêm tài khoản WorkBuddy",
+    "flowNotice": {
+      "title": "Hướng dẫn quản lý tài khoản WorkBuddy (bấm để mở rộng/thu gọn)",
+      "desc": "Khi chuyển tài khoản, ứng dụng cần đọc vùng lưu xác thực cục bộ của WorkBuddy và gọi dịch vụ chứng thực hệ thống để giải mã/mã hóa lại. Dữ liệu chỉ được xử lý cục bộ.",
+      "permission": "Phạm vi quyền: đọc cơ sở dữ liệu xác thực WorkBuddy (state.vscdb), gọi khả năng chứng thực hệ thống (macOS Keychain / Windows DPAPI / Linux Secret Service) để giải mã và ghi lại.",
+      "network": "Phạm vi mạng: đăng nhập OAuth và làm mới Token cần gửi yêu cầu đến WorkBuddy; truy vấn hạn ngạch sẽ gọi API tính phí. Không tải lên khóa hoặc thông tin xác thực cục bộ."
+    },
+    "nickname": "Biệt danh",
+    "enterprise": "Doanh nghiệp",
+    "usage": "Trạng thái sử dụng",
+    "creditsBalance": "Số dư tín dụng",
+    "usageNormal": "Bình thường",
+    "oauthWaiting": "Đang chờ hoàn tất ủy quyền...",
+    "oauthDesc": "Bấm nút bên dưới để mở trang ủy quyền WorkBuddy trong trình duyệt.",
+    "oauthDescWebview": "Bấm nút bên dưới để mở trang ủy quyền WorkBuddy trong WebView tích hợp.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Chỉ ủy quyền thông tin đăng nhập IDE",
+        "item1": "Sau khi hoàn tất OAuth trong trình duyệt, bạn có thể thêm tài khoản và dùng để chuyển IDE.",
+        "item2": "Tham số truy vấn hạn ngạch sẽ không được liên kết tự động.",
+        "item3": "Nếu cần hiển thị hạn ngạch, hãy chạy thủ công \"Truy vấn hạn ngạch\" trên thẻ tài khoản."
+      }
+    },
+    "oauthWebviewTab": "Xác thực WebView",
+    "oauthOpenWebview": "Mở trong WebView",
+    "oauthOpenWebviewIncognito": "Mở trong WebView ẩn danh",
+    "oauthOpenWebviewFailed": "Mở WebView thất bại: {{error}}",
+    "oauthOpenBrowserFallback": "Mở trong trình duyệt (dự phòng)",
+    "oauthOpenBrowserFailed": "Mở trình duyệt thất bại: {{error}}",
+    "oauthWebviewProgressHint": "Thanh bước ngang sẽ hiển thị ở đầu WebView để dễ xác định bước bị kẹt.",
+    "oauthFlow": {
+      "prepare": "Chuẩn bị liên kết ủy quyền",
+      "authorize": "Mở liên kết ủy quyền và xác nhận",
+      "bind": "Thăm dò kết quả ủy quyền và liên kết tài khoản",
+      "retryPrepare": "Tạo lại liên kết ủy quyền",
+      "retryAuthorize": "Yêu cầu lại liên kết ủy quyền",
+      "retryBind": "Thử lại thăm dò ủy quyền",
+      "error": "Lỗi quy trình: {{error}}"
+    },
+    "tokenDesc": "Dán access token của WorkBuddy:",
+    "jsonDesc": "Chọn tệp JSON chứa tài khoản WorkBuddy:",
+    "import": {
+      "localDesc": "Hỗ trợ nhập dữ liệu tài khoản từ ứng dụng WorkBuddy cục bộ hoặc từ tệp JSON.",
+      "localClient": "Nhập từ WorkBuddy cục bộ"
+    },
+    "search": "Tìm kiếm tài khoản WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Làm mới hạn ngạch thất bại",
+      "sectionTitle": "Truy vấn hạn ngạch",
+      "empty": "Chưa có thông tin truy vấn hạn ngạch được liên kết",
+      "packageUnknown": "Không rõ gói",
+      "quotaLabel": "Hạn ngạch còn lại",
+      "updatedAt": "Lần truy vấn gần nhất: {{time}}",
+      "cycleRange": "Chu kỳ: {{start}} - {{end}}",
+      "cycleUnknown": "Chưa có thông tin chu kỳ",
+      "expireAt": "Hết hạn lúc: {{time}}",
+      "expireUnknown": "Hết hạn: chưa có",
+      "packageTitle": {
+        "base": "Gói trải nghiệm cơ bản",
+        "activity": "Gói quà tặng sự kiện"
+      }
+    },
+    "extraCredit": {
+      "title": "Gói cộng thêm"
+    },
+    "oauthUrlInputPlaceholder": "Có thể nhập URL ủy quyền thủ công",
+    "oauthInvalidUrl": "Định dạng liên kết ủy quyền không đúng. Vui lòng nhập URL đầy đủ.",
+    "oauthGotoWebview": "Điều hướng WebView đã mở tới URL đã nhập",
+    "oauthGotoWebviewSuccess": "Đã yêu cầu WebView điều hướng tới URL đã nhập.",
+    "oauthGotoWebviewFailed": "Điều hướng WebView thất bại: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Nhập URL để điều hướng ngay trong WebView này",
+    "oauthWebviewInlineGo": "Đi",
+    "oauthSuccessClosePrompt": "Đã thêm tài khoản thành công. Đóng WebView này ngay bây giờ?\nChọn \"Đóng WebView\" để đóng ngay hoặc \"Để sau\" để giữ nguyên cửa sổ.",
+    "oauthSuccessCloseTitle": "Đã thêm tài khoản",
+    "oauthSuccessCloseNowLabel": "Đóng WebView",
+    "oauthSuccessCloseLaterLabel": "Để sau",
+    "oauthSuccessCloseNowStatus": "✅ Đã thêm tài khoản. Đang đóng cửa sổ...",
+    "oauthSuccessCloseLaterStatus": "✅ Đã thêm tài khoản. WebView này sẽ vẫn mở.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Chuẩn bị liên kết ủy quyền",
+        "authorize": "2 Mở liên kết ủy quyền và xác nhận",
+        "bind": "3 Thăm dò kết quả ủy quyền và liên kết tài khoản",
+        "complete": "5 Hoàn tất (đóng thủ công)"
+      },
+      "status": {
+        "loginConfirm": "Vui lòng hoàn tất đăng nhập và ủy quyền trên trang này."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Phiên bản đa phiên bản WorkBuddy chỉ được hỗ trợ trên macOS, Windows và Linux."
+      }
     }
   }
 }

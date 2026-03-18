@@ -117,6 +117,22 @@ pub fn run() {
                 modules::websocket::start_server().await;
             });
 
+            // 启动网页查询服务（网络服务配置中的独立模块）
+            tauri::async_runtime::spawn(async {
+                modules::web_report::start_server().await;
+            });
+
+            {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    modules::codex_oauth::restore_pending_oauth_listener(app_handle);
+                    modules::windsurf_oauth::restore_pending_oauth_listener();
+                    modules::kiro_oauth::restore_pending_oauth_listener();
+                    modules::trae_oauth::restore_pending_oauth_listener();
+                    modules::gemini_oauth::restore_pending_oauth_state();
+                });
+            }
+
             #[cfg(target_os = "macos")]
             apply_macos_activation_policy(&app.handle());
 
@@ -137,21 +153,21 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
+                if window.label() != "main" {
+                    return;
+                }
                 let config = modules::config::get_user_config();
 
                 match config.close_behavior {
                     CloseWindowBehavior::Minimize => {
-                        // 直接最小化到托盘
                         api.prevent_close();
                         let _ = window.hide();
                         info!("[Window] 窗口已最小化到托盘");
                     }
                     CloseWindowBehavior::Quit => {
-                        // 直接退出，不阻止关闭
                         info!("[Window] 用户选择退出应用");
                     }
                     CloseWindowBehavior::Ask => {
-                        // 需要询问用户，阻止关闭并发送事件到前端
                         api.prevent_close();
                         let _ = window.emit("window:close_requested", ());
                         info!("[Window] 等待用户选择关闭行为");
@@ -204,6 +220,7 @@ pub fn run() {
             commands::oauth::start_oauth_login,
             commands::oauth::prepare_oauth_url,
             commands::oauth::complete_oauth_login,
+            commands::oauth::submit_oauth_callback_url,
             commands::oauth::cancel_oauth_login,
             // Import/Export Commands
             commands::import::import_from_old_tools,
@@ -248,6 +265,8 @@ pub fn run() {
             commands::update::save_pending_update_notes,
             commands::update::check_version_jump,
             commands::update::update_log,
+            commands::update::get_update_runtime_info,
+            commands::update::install_linux_update,
             // Announcement Commands
             commands::announcement::announcement_get_state,
             commands::announcement::announcement_mark_as_read,
@@ -265,6 +284,7 @@ pub fn run() {
             // Codex Commands
             commands::codex::list_codex_accounts,
             commands::codex::get_current_codex_account,
+            commands::codex::refresh_codex_account_profile,
             commands::codex::switch_codex_account,
             commands::codex::delete_codex_account,
             commands::codex::delete_codex_accounts,
@@ -277,6 +297,7 @@ pub fn run() {
             commands::codex::refresh_current_codex_quota,
             commands::codex::codex_oauth_login_start,
             commands::codex::codex_oauth_login_completed,
+            commands::codex::codex_oauth_submit_callback_url,
             commands::codex::codex_oauth_login_cancel,
             commands::codex::add_codex_account_with_token,
             commands::codex::is_codex_oauth_port_in_use,
@@ -318,6 +339,7 @@ pub fn run() {
             commands::windsurf::refresh_all_windsurf_tokens,
             commands::windsurf::windsurf_oauth_login_start,
             commands::windsurf::windsurf_oauth_login_complete,
+            commands::windsurf::windsurf_oauth_submit_callback_url,
             commands::windsurf::windsurf_oauth_login_cancel,
             commands::windsurf::add_windsurf_account_with_token,
             commands::windsurf::add_windsurf_account_with_password,
@@ -335,11 +357,145 @@ pub fn run() {
             commands::kiro::refresh_all_kiro_tokens,
             commands::kiro::kiro_oauth_login_start,
             commands::kiro::kiro_oauth_login_complete,
+            commands::kiro::kiro_oauth_submit_callback_url,
             commands::kiro::kiro_oauth_login_cancel,
             commands::kiro::add_kiro_account_with_token,
             commands::kiro::update_kiro_account_tags,
             commands::kiro::get_kiro_accounts_index_path,
             commands::kiro::inject_kiro_to_vscode,
+            // CodeBuddy Commands
+            commands::codebuddy::list_codebuddy_accounts,
+            commands::codebuddy::delete_codebuddy_account,
+            commands::codebuddy::delete_codebuddy_accounts,
+            commands::codebuddy::import_codebuddy_from_json,
+            commands::codebuddy::import_codebuddy_from_local,
+            commands::codebuddy::export_codebuddy_accounts,
+            commands::codebuddy::refresh_codebuddy_token,
+            commands::codebuddy::refresh_all_codebuddy_tokens,
+            commands::codebuddy::codebuddy_oauth_login_start,
+            commands::codebuddy::codebuddy_oauth_login_complete,
+            commands::codebuddy::codebuddy_oauth_login_cancel,
+            commands::codebuddy::add_codebuddy_account_with_token,
+            commands::codebuddy::update_codebuddy_account_tags,
+            commands::codebuddy::get_codebuddy_accounts_index_path,
+            commands::codebuddy::inject_codebuddy_to_vscode,
+            // CodeBuddy CN Commands
+            commands::codebuddy_cn::list_codebuddy_cn_accounts,
+            commands::codebuddy_cn::delete_codebuddy_cn_account,
+            commands::codebuddy_cn::delete_codebuddy_cn_accounts,
+            commands::codebuddy_cn::import_codebuddy_cn_from_json,
+            commands::codebuddy_cn::import_codebuddy_cn_from_local,
+            commands::codebuddy_cn::export_codebuddy_cn_accounts,
+            commands::codebuddy_cn::refresh_codebuddy_cn_token,
+            commands::codebuddy_cn::refresh_all_codebuddy_cn_tokens,
+            commands::codebuddy_cn::codebuddy_cn_oauth_login_start,
+            commands::codebuddy_cn::codebuddy_cn_oauth_login_complete,
+            commands::codebuddy_cn::codebuddy_cn_oauth_login_cancel,
+            commands::codebuddy_cn::add_codebuddy_cn_account_with_token,
+            commands::codebuddy_cn::update_codebuddy_cn_account_tags,
+            commands::codebuddy_cn::get_codebuddy_cn_accounts_index_path,
+            commands::codebuddy_cn::inject_codebuddy_cn_to_vscode,
+            commands::codebuddy_cn::sync_codebuddy_cn_to_workbuddy,
+            // WorkBuddy Commands
+            commands::workbuddy::list_workbuddy_accounts,
+            commands::workbuddy::delete_workbuddy_account,
+            commands::workbuddy::delete_workbuddy_accounts,
+            commands::workbuddy::import_workbuddy_from_json,
+            commands::workbuddy::import_workbuddy_from_local,
+            commands::workbuddy::export_workbuddy_accounts,
+            commands::workbuddy::refresh_workbuddy_token,
+            commands::workbuddy::refresh_all_workbuddy_tokens,
+            commands::workbuddy::workbuddy_oauth_login_start,
+            commands::workbuddy::workbuddy_oauth_login_complete,
+            commands::workbuddy::workbuddy_oauth_login_cancel,
+            commands::workbuddy::add_workbuddy_account_with_token,
+            commands::workbuddy::update_workbuddy_account_tags,
+            commands::workbuddy::get_workbuddy_accounts_index_path,
+            commands::workbuddy::inject_workbuddy_to_vscode,
+            commands::workbuddy::sync_workbuddy_to_codebuddy_cn,
+            // WorkBuddy Instance Commands
+            commands::workbuddy_instance::workbuddy_get_instance_defaults,
+            commands::workbuddy_instance::workbuddy_list_instances,
+            commands::workbuddy_instance::workbuddy_create_instance,
+            commands::workbuddy_instance::workbuddy_update_instance,
+            commands::workbuddy_instance::workbuddy_delete_instance,
+            commands::workbuddy_instance::workbuddy_start_instance,
+            commands::workbuddy_instance::workbuddy_stop_instance,
+            commands::workbuddy_instance::workbuddy_open_instance_window,
+            commands::workbuddy_instance::workbuddy_close_all_instances,
+            // CodeBuddy Instance Commands
+            commands::codebuddy_instance::codebuddy_get_instance_defaults,
+            commands::codebuddy_instance::codebuddy_list_instances,
+            commands::codebuddy_instance::codebuddy_create_instance,
+            commands::codebuddy_instance::codebuddy_update_instance,
+            commands::codebuddy_instance::codebuddy_delete_instance,
+            commands::codebuddy_instance::codebuddy_start_instance,
+            commands::codebuddy_instance::codebuddy_stop_instance,
+            commands::codebuddy_instance::codebuddy_open_instance_window,
+            commands::codebuddy_instance::codebuddy_close_all_instances,
+            // CodeBuddy CN Instance Commands
+            commands::codebuddy_cn_instance::codebuddy_cn_get_instance_defaults,
+            commands::codebuddy_cn_instance::codebuddy_cn_list_instances,
+            commands::codebuddy_cn_instance::codebuddy_cn_create_instance,
+            commands::codebuddy_cn_instance::codebuddy_cn_update_instance,
+            commands::codebuddy_cn_instance::codebuddy_cn_delete_instance,
+            commands::codebuddy_cn_instance::codebuddy_cn_start_instance,
+            commands::codebuddy_cn_instance::codebuddy_cn_stop_instance,
+            commands::codebuddy_cn_instance::codebuddy_cn_open_instance_window,
+            commands::codebuddy_cn_instance::codebuddy_cn_close_all_instances,
+            // Qoder Commands
+            commands::qoder::list_qoder_accounts,
+            commands::qoder::delete_qoder_account,
+            commands::qoder::delete_qoder_accounts,
+            commands::qoder::import_qoder_from_json,
+            commands::qoder::import_qoder_from_local,
+            commands::qoder::qoder_oauth_login_start,
+            commands::qoder::qoder_oauth_login_peek,
+            commands::qoder::qoder_oauth_login_complete,
+            commands::qoder::qoder_oauth_login_cancel,
+            commands::qoder::export_qoder_accounts,
+            commands::qoder::refresh_qoder_token,
+            commands::qoder::refresh_all_qoder_tokens,
+            commands::qoder::inject_qoder_account,
+            commands::qoder::update_qoder_account_tags,
+            commands::qoder::get_qoder_accounts_index_path,
+            // Qoder Instance Commands
+            commands::qoder_instance::qoder_get_instance_defaults,
+            commands::qoder_instance::qoder_list_instances,
+            commands::qoder_instance::qoder_create_instance,
+            commands::qoder_instance::qoder_update_instance,
+            commands::qoder_instance::qoder_delete_instance,
+            commands::qoder_instance::qoder_start_instance,
+            commands::qoder_instance::qoder_stop_instance,
+            commands::qoder_instance::qoder_open_instance_window,
+            commands::qoder_instance::qoder_close_all_instances,
+            // Trae Commands
+            commands::trae::list_trae_accounts,
+            commands::trae::delete_trae_account,
+            commands::trae::delete_trae_accounts,
+            commands::trae::import_trae_from_json,
+            commands::trae::import_trae_from_local,
+            commands::trae::trae_oauth_login_start,
+            commands::trae::trae_oauth_login_complete,
+            commands::trae::trae_oauth_submit_callback_url,
+            commands::trae::trae_oauth_login_cancel,
+            commands::trae::export_trae_accounts,
+            commands::trae::refresh_trae_token,
+            commands::trae::refresh_all_trae_tokens,
+            commands::trae::add_trae_account_with_token,
+            commands::trae::update_trae_account_tags,
+            commands::trae::get_trae_accounts_index_path,
+            commands::trae::inject_trae_account,
+            // Trae Instance Commands
+            commands::trae_instance::trae_get_instance_defaults,
+            commands::trae_instance::trae_list_instances,
+            commands::trae_instance::trae_create_instance,
+            commands::trae_instance::trae_update_instance,
+            commands::trae_instance::trae_delete_instance,
+            commands::trae_instance::trae_start_instance,
+            commands::trae_instance::trae_stop_instance,
+            commands::trae_instance::trae_open_instance_window,
+            commands::trae_instance::trae_close_all_instances,
             // Cursor Commands
             commands::cursor::list_cursor_accounts,
             commands::cursor::delete_cursor_account,
@@ -367,6 +523,7 @@ pub fn run() {
             commands::gemini::refresh_all_gemini_tokens,
             commands::gemini::gemini_oauth_login_start,
             commands::gemini::gemini_oauth_login_complete,
+            commands::gemini::gemini_oauth_submit_callback_url,
             commands::gemini::gemini_oauth_login_cancel,
             commands::gemini::add_gemini_account_with_token,
             commands::gemini::update_gemini_account_tags,

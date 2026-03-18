@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Doplňkové kredity promptů",
         "credits": "Kredity",
         "email": "E-mail",
-        "promptCredits": "Kredity promptů"
+        "promptCredits": "Kredity promptů",
+        "creditPackage": "Balíček kreditů",
+        "sharedCreditPackage": "Sdílený balíček kreditů",
+        "account": "Účet",
+        "createdAt": "Čas vytvoření"
       },
       "empty": {
         "title": "Žádné účty"
@@ -49,7 +53,17 @@
         "label": "Importovat",
         "importing": "Import lokálního účtu...",
         "pickFile": "Vyberte soubor JSON k importu",
-        "orJson": "Nebo importujte ze souboru JSON"
+        "orJson": "Nebo importujte ze souboru JSON",
+        "progress": {
+          "overallLine": "Celkový průběh {{percent}} % ({{completedPlatforms}}/{{totalPlatforms}} platforem, {{processedAccounts}}/{{totalAccounts}} účtů zpracováno)",
+          "currentPlatformLine": "Importuje se: {{platform}} ({{count}} účtů)",
+          "currentStatusLine": "Aktuální stav platformy: {{status}}",
+          "platformDetailsTitle": "Detaily platforem",
+          "statusProcessing": "Zpracovává se...",
+          "statusRunning": "Importuje se...",
+          "statusSkipped": "Přeskočeno",
+          "statusPending": "Čeká na import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Připravuje se autorizační odkaz...",
         "retry": "Znovu vygenerovat autorizační údaje",
         "timeoutRetry": "Obnovit autorizační odkaz",
-        "waiting": "Čekání na autorizaci..."
+        "waiting": "Čekání na autorizaci...",
+        "manualCallbackLabel": "Ručně zadat callback URL",
+        "manualCallbackPlaceholder": "Vložte celý callback URL, např.: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Obnovit vše",
       "refreshQuota": "Obnovit kvótu",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "Limit se obnoví {{dateText}}.",
         "resetUnknown": "Limit se obnoví -"
+      },
+      "updated": {
+        "label": "Aktualizováno před {{relative}}"
       }
     }
   },
   "nav": {
-    "overview": "Účet Antigravity",
+    "overview": "Antigravity",
     "accounts": "Účty",
     "wakeup": "Úlohy probuzení",
     "fingerprints": "Otisky",
     "settings": "Nastavení",
-    "codex": "Účty Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Dashboard",
@@ -159,9 +178,14 @@
     "manual": "Uživatelská příručka",
     "quickUpdate": {
       "update": "Aktualizovat",
-      "restart": "Restartovat"
+      "restart": "Restartovat",
+      "installing": "Instalace"
     },
-    "gemini": "Účty Gemini"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Rozložení platforem",
@@ -173,7 +197,34 @@
     "trayToggle": "Zobrazit v systémové liště",
     "hiddenBadge": "Skryto",
     "openFromMore": "Spravovat rozložení platforem",
-    "dragHandleLabel": "Přetažením změnit pořadí"
+    "dragHandleLabel": "Přetažením změnit pořadí",
+    "tipWithGroups": "Přetažením změňte pořadí. V postranním panelu mohou být nejvýše dvě položky. Podřízené platformy skupiny nelze zobrazit v postranním panelu/přehledu; slouží jen pro lištu a přepnutí výchozí platformy.",
+    "addGroup": "Přidat skupinu",
+    "editGroup": "Upravit skupinu",
+    "deleteGroup": "Smazat skupinu",
+    "groupBadge": "Skupina",
+    "groupDefault": "Výchozí platforma",
+    "groupName": "Název skupiny",
+    "groupNamePlaceholder": "Např.: CodeBuddy Suite",
+    "groupIcon": "Ikona skupiny",
+    "groupIconFromPlatform": "Ikona platformy",
+    "groupIconCustom": "Vlastní obrázek",
+    "groupIconPreview": "Náhled ikony",
+    "groupChildren": "Podřízené platformy",
+    "groupNameRequired": "Zadejte název skupiny",
+    "groupChildrenRequired": "Vyberte alespoň jednu podřízenou platformu",
+    "groupCustomIconRequired": "Nahrajte vlastní ikonu",
+    "groupSwitchLabel": "Přepnout platformu ve skupině",
+    "collapseAllChildren": "Sbalit všechny podřízené platformy",
+    "expandAllChildren": "Rozbalit všechny podřízené platformy",
+    "addChildPlatform": "Přidat podřízenou platformu",
+    "collapseChildren": "Sbalit podřízené platformy",
+    "expandChildren": "Rozbalit podřízené platformy",
+    "noAvailableChildren": "Žádné platformy k přidání",
+    "customIconDeleteConfirm": "Smazat tuto vlastní ikonu?",
+    "editChildPlatform": "Upravit podřízenou platformu",
+    "setAsDefaultInGroup": "Nastavit jako výchozí platformu v této skupině",
+    "removeFromGroup": "Odebrat ze skupiny"
   },
   "privacy": {
     "hideSensitive": "Skrýt e-maily",
@@ -376,6 +427,8 @@
       "themeLight": "Světlý",
       "themeDark": "Tmavý",
       "themeSystem": "Systémový",
+      "uiScale": "Měřítko rozhraní",
+      "uiScaleDesc": "Upravte měřítko rozhraní",
       "accountManagement": "Správa účtů",
       "autoRefresh": "Automatické obnovení kvóty Antigravity",
       "codexAutoRefresh": "Automatické obnovení kvóty Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Nezávisle řídí viditelnost ikony v Docku bez vlivu chování minimalizace okna",
       "hideDockIconOff": "Ne (Zobrazit ikonu v Docku)",
       "hideDockIconOn": "Ano (Skrýt ikonu v Docku)",
-      "storageTitle": "Adresáře a úložiště",
       "dataDir": "Datový adresář",
       "dataDirDesc": "Umístění pro uložení účtů a konfiguračních souborů.",
       "fpDir": "Úložiště Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Zapnuto (tichá aktualizace)",
       "opencodeAuthOverwrite": "Při přepnutí Codexu přepsat přihlášení OpenCode",
       "opencodeAuthOverwriteDesc": "Pokud je vypnuto, přepne se pouze Codex a OpenCode zůstane v aktuálním přihlášení",
-      "opencodeRestartRequiresOverwrite": "Nejprve zapněte „Při přepnutí Codexu přepsat přihlášení OpenCode“"
+      "opencodeRestartRequiresOverwrite": "Nejprve zapněte „Při přepnutí Codexu přepsat přihlášení OpenCode“",
+      "codebuddySettingsTitle": "Nastavení CodeBuddy",
+      "codebuddyAutoRefresh": "Automatické obnovení kvóty CodeBuddy",
+      "codebuddyAutoRefreshDesc": "Interval automatického obnovení na pozadí",
+      "codebuddyAppPath": "Spouštěcí cesta CodeBuddy",
+      "codebuddyAppPathDesc": "Pro výchozí cestu ponechte prázdné",
+      "codebuddyAppPathPlaceholder": "Výchozí cesta",
+      "codebuddyPathSelect": "Vybrat",
+      "codebuddyPathReset": "Obnovit výchozí",
+      "qoderPathReset": "Obnovit výchozí",
+      "traeAutoRefresh": "Automatické obnovení kvóty Trae",
+      "traeAutoRefreshDesc": "Interval automatického obnovení na pozadí",
+      "traeAppPath": "Spouštěcí cesta Trae",
+      "traeAppPathDesc": "Pro výchozí cestu ponechte prázdné",
+      "traeAppPathPlaceholder": "Výchozí cesta",
+      "traePathSelect": "Vybrat",
+      "traePathReset": "Obnovit výchozí",
+      "workbuddyAppPath": "Spouštěcí cesta WorkBuddy",
+      "workbuddyAppPathDesc": "Pro výchozí cestu ponechte prázdné",
+      "workbuddyAppPathPlaceholder": "Výchozí cesta",
+      "workbuddyPathSelect": "Vybrat",
+      "workbuddyPathReset": "Obnovit výchozí"
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -473,7 +546,22 @@
       "restartRequired": "Konfigurace byla změněna, restartujte prosím aplikaci",
       "saveSuccess": "Nastavení uloženo!",
       "saveSuccessRestart": "Nastavení uloženo! Restatujte prosím aplikaci, aby se změny portu projevily.",
-      "saveFailed": "Uložení selhalo: {{error}}"
+      "saveFailed": "Uložení selhalo: {{error}}",
+      "reportTitle": "Služba webového dotazu",
+      "reportService": "HTTP služba reportu",
+      "reportServiceDesc": "Zpřístupní HTTP endpoint chráněný tokenem pro přehledy využití",
+      "reportPort": "Port reportu",
+      "reportPortDesc": "Výchozí je {{port}}, po změně je nutný restart",
+      "reportToken": "Přístupový token",
+      "reportTokenDesc": "Povinné při požadavku na /report, uchovávejte v soukromí",
+      "reportTokenRequired": "Při zapnuté službě webového dotazu nesmí být přístupový token prázdný.",
+      "generateToken": "Generovat",
+      "reportUrlPreview": "Náhled endpointu",
+      "reportUrlPreviewDesc": "Podporuje format=md / format=yaml a render=true pro HTML zobrazení",
+      "reportUrlRaw": "Surový výstup",
+      "reportUrlRendered": "Vykreslené zobrazení",
+      "firewallHintTitle": "Tip k firewallu",
+      "firewallHint": "Pokud URL není dostupná, zkontrolujte nastavení systémového firewallu."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "AI Kredity"
     },
     "empty": {
       "title": "Žádné účty",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Vše ({{count}})",
       "pro": "PRO ({{count}})",
-      "ultra": "ULTRA ({{count}})",
-      "free": "ZDARMA ({{count}})"
+      "ultra": "ULTRA ({{count}})"
     },
     "sortLabel": "Seřadit",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "Podle času resetu {{group}}",
       "descTooltip": "Sestupně, kliknutím přepnete na vzestupně",
       "ascTooltip": "Vzestupně, kliknutím přepnete na sestupně",
-      "toggleDirection": "Přepnout směr řazení"
+      "toggleDirection": "Přepnout směr řazení",
+      "plan": "Podle plánu",
+      "quota": "Podle kvóty"
     },
     "filterTags": "Filtrovat štítky",
     "filterTagsCount": "Štítky",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} selhalo: {{failList}}",
       "refreshingQuota": "Obnovuji kvótu {{done}}/{{total}} (toto okno můžete zavřít)",
       "quotaRefreshDone": "Obnovení kvóty dokončeno"
+    },
+    "groups": {
+      "manageTitle": "Správa skupin",
+      "title": "Skupiny účtů",
+      "create": "Vytvořit",
+      "newPlaceholder": "Zadejte název skupiny...",
+      "empty": "Zatím žádné skupiny. Vytvořte jednu",
+      "accountCount": "{{count}} účet(ů)",
+      "rename": "Přejmenovat",
+      "addToGroup": "Přidat do skupiny",
+      "createAndAdd": "Vytvořit skupinu a přidat...",
+      "removeFromGroup": "Odebrat ze skupiny",
+      "allGroups": "Všechny skupiny",
+      "noGroups": "Žádné skupiny",
+      "noGroupsDesc": "Vytvořte skupiny pro správu účtů",
+      "manage": "Spravovat",
+      "error": {
+        "duplicate": "Název skupiny již existuje",
+        "createFailed": "Nepodařilo se vytvořit skupinu: {{error}}",
+        "renameFailed": "Nepodařilo se přejmenovat skupinu: {{error}}",
+        "deleteFailed": "Nepodařilo se smazat skupinu: {{error}}",
+        "addFailed": "Nepodařilo se přidat do skupiny: {{error}}",
+        "createAndAddFailed": "Nepodařilo se vytvořit a přidat: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Název úlohy",
       "taskStatus": "Stav úlohy",
       "triggerMode": "Režim spouštění",
-      "triggerModeHint": "1. Plánováno: spouští se v nastavených časech.\\n2. Crontab: definujte výrazem.\\n3. Reset kvóty: spustí se jednou při plné kvótě.",
+      "triggerModeHint": "1. Plánováno: spouští se v nastavených časech.\n2. Crontab: definujte výrazem.\n3. Reset kvóty: spustí se jednou při plné kvótě.",
       "modeScheduled": "📅 Plánováno",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Reset kvóty",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Zobrazit podrobnosti",
     "hideErrorDetails": "Skrýt podrobnosti",
     "autoUpdateFailedAfterRetries": "Automatická aktualizace selhala i po {{count}} pokusech. Zkuste to později nebo stáhněte ručně.",
-    "updateCancelled": "Aktualizace byla zrušena."
+    "updateCancelled": "Aktualizace byla zrušena.",
+    "cancelDownload": "Zrušit stahování",
+    "installing": "Instaluje se...",
+    "authorizing": "Čeká se na autorizaci systému...",
+    "installFailed": "Instalace do systému selhala. Zkuste to později nebo stáhněte balíček ručně.",
+    "restartRequiredAfterInstall": "Aktualizace je nainstalována. Dokončete přepnutí ručním restartem aplikace."
   },
   "closeDialog": {
     "title": "Zavřít okno",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Chyba kvóty",
       "generic": "Obnovení kvóty se nezdařilo, zkuste to prosím později",
-      "deactivatedWorkspace": "Pracovní prostor je deaktivovaný, přepněte účet nebo znovu autorizujte"
+      "deactivatedWorkspace": "Pracovní prostor je deaktivovaný, přepněte účet nebo znovu autorizujte",
+      "requestFailedManualRetry": "Požadavek selhal, zkuste to prosím znovu ručně: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Zobrazit kvótu Code Review"
     },
     "time": {
       "today": "Dnes {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Štítky",
     "noAvailableTags": "Žádné dostupné štítky",
     "clearFilter": "Vymazat filtr",
-    "editTags": "Upravit štítky"
+    "editTags": "Upravit štítky",
+    "account": {
+      "personal": "Osobní účet"
+    }
   },
   "githubCopilot": {
     "title": "Správa účtů GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Podrobnosti chyby",
       "filePath": "Umístění souboru",
       "helpText": "Otevřete složku a opravte nebo odstraňte soubor ručně, poté restartujte aplikaci.",
-      "openFolder": "Otevřít složku"
+      "openFolder": "Otevřít složku",
+      "openFolderFailed": "Nepodařilo se otevřít složku: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Automatická obnova kvóty",
     "gemini": {
-      "title": "Nastavení Gemini",
-      "appPath": "Cesta k Gemini"
+      "title": "Nastavení Gemini Cli",
+      "appPath": "Cesta k Gemini Cli"
     },
-    "geminiRefreshInterval": "Automatická obnova kvóty"
+    "geminiRefreshInterval": "Automatická obnova kvóty",
+    "codebuddy": {
+      "title": "Nastavení CodeBuddy",
+      "appPath": "Cesta CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Nepodařilo se načíst konfiguraci: {{error}}",
+      "saveFailed": "Nepodařilo se uložit konfiguraci: {{error}}",
+      "pickPathFailed": "Nepodařilo se vybrat cestu: {{error}}",
+      "resetPathFailed": "Nepodařilo se resetovat cestu: {{error}}"
+    },
+    "qoder": {
+      "title": "Nastavení Qoder",
+      "appPath": "Cesta Qoder"
+    },
+    "trae": {
+      "title": "Nastavení Trae",
+      "appPath": "Cesta Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "Cesta CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "Nastavení WorkBuddy",
+      "appPath": "Cesta WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "Upozornění na kvótu pro {{email}} (práh {{threshold}} %, minimum {{lowest}} %, modely: {{models}})",
@@ -1847,7 +2000,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Přepnout na Gemini",
+    "injectToGemini": "Přepnout na Gemini Cli",
     "updated": {
       "label": "Aktualizováno před {{relative}}"
     },
@@ -1860,10 +2013,10 @@
       "resetsUnknown": "Čas obnovení není znám",
       "onDemand": "Na vyžádání"
     },
-    "title": "Správa účtů Gemini",
+    "title": "Správa účtů Gemini Cli",
     "instances": {
-      "unsupported": "Správa více instancí Gemini zatím není podporována.",
-      "unsupportedDescPlatform": "Více instancí Gemini je podporováno pouze na macOS, Windows a Linuxu.",
+      "unsupported": "Správa více instancí Gemini Cli zatím není podporována.",
+      "unsupportedDescPlatform": "Více instancí Gemini Cli je podporováno pouze na macOS, Windows a Linuxu.",
       "launchDialogTitle": "Spustit instanci",
       "launchHint": "Zkopírujte příkaz a spusťte jej ručně, nebo jej spusťte přímo v terminálu.",
       "runInTerminal": "Spustit v terminálu"
@@ -1872,30 +2025,322 @@
       "success": "Účet byl úspěšně přepnut"
     },
     "empty": {
-      "description": "Klikněte na „Přidat účet“ a začněte spravovat své účty Gemini"
+      "description": "Klikněte na „Přidat účet“ a začněte spravovat své účty Gemini Cli"
     },
     "addModal": {
-      "title": "Přidat účet Gemini"
+      "title": "Přidat účet Gemini Cli"
     },
     "oauth": {
-      "desc": "Klikněte na tlačítko níže a dokončete autorizaci Gemini v prohlížeči."
+      "desc": "Klikněte na tlačítko níže a dokončete autorizaci Gemini Cli v prohlížeči."
     },
     "token": {
-      "desc": "Vložte svůj přístupový token Gemini (JWT) nebo exportovaná JSON data.",
+      "desc": "Vložte svůj přístupový token Gemini Cli (JWT) nebo exportovaná JSON data.",
       "formatHint": "Povinná pole a příklady (klikněte pro rozbalení)",
       "formatRequired": "Jeden token: vložte JWT přímo; hromadný import: použijte formát JSON pole",
       "singleExample": "Příklad jednoho tokenu (JWT)",
       "batchExample": "Příklad hromadného importu (JSON)"
     },
     "import": {
-      "localDesc": "Importujte data účtu z místního klienta Gemini nebo souboru JSON.",
-      "localClient": "Import z místního Gemini"
+      "localDesc": "Importujte data účtu z místního klienta Gemini Cli nebo souboru JSON.",
+      "localClient": "Import z místního Gemini Cli"
     },
     "flowNotice": {
-      "title": "Průvodce účtem Gemini (klikněte pro rozbalení/sbalení)",
-      "desc": "Spravujte účty Gemini importem z místní instalace Gemini nebo vložením tokenů JWT. Data jsou zpracovávána pouze lokálně.",
+      "title": "Průvodce účtem Gemini Cli (klikněte pro rozbalení/sbalení)",
+      "desc": "Spravujte účty Gemini Cli importem z místní instalace Gemini Cli nebo vložením tokenů JWT. Data jsou zpracovávána pouze lokálně.",
       "reason": "Rozsah oprávnění: čtení a zápis oauth_creds.json, google_accounts.json a settings.json v výchozím ~/.gemini nebo v cestě instance (GEMINI_CLI_HOME/.gemini) pro import účtů a lokální injekci přihlašovacích údajů (přepnutí účtu).",
       "storage": "Síťový rozsah: OAuth a obnovení kvóty volají oficiální API Google/Gemini (např. oauth2.googleapis.com a googleapis.com). Odesílají se jen nutná pole pro autentizaci/kvótu; lokální soubory se na servery třetích stran nenahrávají."
+    }
+  },
+  "codebuddy": {
+    "title": "Správa účtů CodeBuddy",
+    "noAccounts": "Žádné účty CodeBuddy",
+    "addAccount": "Přidat účet CodeBuddy",
+    "flowNotice": {
+      "title": "Informace o správě účtů CodeBuddy (kliknutím rozbalíte/sbalíte)",
+      "desc": "Přepínání účtů vyžaduje čtení místního úložiště autentizace CodeBuddy a volání systémových služeb přihlašovacích údajů pro dešifrování/opětovné zašifrování. Data se zpracovávají pouze lokálně.",
+      "permission": "Rozsah oprávnění: čtení databáze autentizace CodeBuddy (state.vscdb), volání systémových schopností pro přihlašovací údaje (macOS Keychain / Windows DPAPI / Linux Secret Service) pro dešifrování/zápis zpět.",
+      "network": "Rozsah sítě: přihlášení OAuth a obnovení tokenu vyžadují síťové požadavky na codebuddy.ai; dotazy na kvótu volají billing API. Žádné místní klíče ani přihlašovací údaje se neodesílají."
+    },
+    "nickname": "Přezdívka",
+    "enterprise": "Podnikový",
+    "usage": "Stav využití",
+    "creditsBalance": "Zůstatek kreditů",
+    "usageNormal": "Normální",
+    "oauthWaiting": "Čekání na autorizaci...",
+    "oauthDesc": "Klikněte na tlačítko níže a otevřete autorizační stránku CodeBuddy v prohlížeči.",
+    "oauthDescWebview": "Klikněte na tlačítko níže a otevřete autorizační stránku CodeBuddy ve vestavěném WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Pouze přihlášení IDE",
+        "item1": "Po dokončení OAuth v prohlížeči přidejte účet a použijte ho pro přepínání IDE.",
+        "item2": "Parametry dotazu kvóty se nenavážou automaticky.",
+        "item3": "Pokud potřebujete zobrazení kvóty, spusťte na kartě účtu ručně \"Dotázat kvótu\"."
+      }
+    },
+    "oauthWebviewTab": "OAuth přes WebView",
+    "oauthOpenWebview": "Otevřít ve WebView",
+    "oauthOpenWebviewIncognito": "Otevřít v anonymním WebView",
+    "oauthOpenWebviewFailed": "Nepodařilo se otevřít WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Otevřít v prohlížeči (záloha)",
+    "oauthOpenBrowserFailed": "Nepodařilo se otevřít prohlížeč: {{error}}",
+    "oauthWebviewProgressHint": "V horní části WebView se zobrazuje vodorovná lišta kroků pro určení zaseknuté fáze.",
+    "oauthFlow": {
+      "prepare": "Připravit OAuth odkaz",
+      "authorize": "Otevřít autorizační odkaz a potvrdit",
+      "bind": "Dotazovat výsledek autorizace a navázat účet",
+      "retryPrepare": "Znovu vygenerovat OAuth odkaz",
+      "retryAuthorize": "Znovu vyžádat autorizační odkaz",
+      "retryBind": "Opakovat dotazování autorizace",
+      "error": "Chyba toku: {{error}}"
+    },
+    "tokenDesc": "Vložte přístupový token CodeBuddy:",
+    "jsonDesc": "Vyberte soubor JSON obsahující účty CodeBuddy:",
+    "import": {
+      "localDesc": "Importujte data účtu z místního klienta CodeBuddy nebo ze souboru JSON.",
+      "localClient": "Importovat z místního CodeBuddy"
+    },
+    "search": "Hledat účty CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Obnovení kvóty selhalo",
+      "sectionTitle": "Dotaz kvóty",
+      "empty": "Zatím nejsou navázané informace o dotazu kvóty",
+      "packageUnknown": "Neznámý balíček",
+      "quotaLabel": "Zbývající kvóta",
+      "updatedAt": "Poslední dotaz: {{time}}",
+      "cycleRange": "Cyklus: {{start}} - {{end}}",
+      "cycleUnknown": "Informace o cyklu nejsou dostupné",
+      "expireAt": "Vyprší: {{time}}",
+      "expireUnknown": "Vyprší: N/A",
+      "packageTitle": {
+        "base": "Základní balíček zkušeností",
+        "activity": "Balíček dárků z akcí"
+      }
+    },
+    "extraCredit": {
+      "title": "Kreditní balíček"
+    },
+    "oauthUrlInputPlaceholder": "Autorizační URL můžete zadat ručně",
+    "oauthInvalidUrl": "Neplatná autorizační URL. Zadejte úplnou URL.",
+    "oauthGotoWebview": "Přejít v otevřeném WebView na zadanou URL",
+    "oauthGotoWebviewSuccess": "WebView dostalo požadavek přejít na zadanou URL.",
+    "oauthGotoWebviewFailed": "Nepodařilo se navigovat WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Zadejte URL pro navigaci v tomto WebView",
+    "oauthWebviewInlineGo": "Přejít",
+    "oauthSuccessClosePrompt": "Účet byl úspěšně přidán. Zavřít toto WebView nyní?\nZvolte \"Zavřít WebView\" pro okamžité zavření nebo \"Později\" pro ponechání otevřeného.",
+    "oauthSuccessCloseTitle": "Účet přidán",
+    "oauthSuccessCloseNowLabel": "Zavřít WebView",
+    "oauthSuccessCloseLaterLabel": "Později",
+    "oauthSuccessCloseNowStatus": "✅ Účet přidán. Zavírám okno...",
+    "oauthSuccessCloseLaterStatus": "✅ Účet přidán. Toto WebView zůstane otevřené.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Připravit OAuth odkaz",
+        "authorize": "2 Otevřít autorizační odkaz a potvrdit",
+        "bind": "3 Dotazovat výsledek autorizace a navázat účet",
+        "complete": "5 Dokončeno (zavřít ručně)"
+      },
+      "status": {
+        "loginConfirm": "Na této stránce dokončete přihlášení a autorizaci."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Správa účtů Qoder",
+    "comingSoon": {
+      "title": "Funkce více instancí již brzy",
+      "desc": "Spusťte více instancí Qoder.app s různými účty současně, zůstaňte naladěni."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Více instancí Qoder je podporováno pouze na macOS, Windows a Linuxu."
+      }
+    },
+    "oauth": {
+      "hint": "Dokončete přihlášení v otevřené stránce prohlížeče: pokud se přihlašovací stránka neotevřela automaticky, klikněte na „Kopírovat odkaz pro přihlášení“, zkopírujte odkaz a vložte jej do prohlížeče.",
+      "copyLoginUrl": "Kopírovat odkaz pro přihlášení"
+    },
+    "usageOverview": {
+      "title": "Přehled využití",
+      "viewDetails": "Zobrazit podrobnosti",
+      "includedCredits": "Kredity v rámci tarifu",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Upgradujte tarif pro navýšení měsíčního limitu",
+      "upgradeAction": "Upgradovat"
+    },
+    "flowNotice": {
+      "title": "Prirucka k uctu Qoder (kliknutim rozbalit/sbalit)",
+      "desc": "Podporuje oficialni prihlaseni pres OAuth (callback), mistni import, import JSON, injekci pro prepnuti uctu, navazani vice instanci a prehled kvot. Prihlasovaci tok vychazi ze skutecnych ulozenych dat klienta Qoder.",
+      "permission": "Rozsah opravneni: cte mistni autentizacni uloziste Qoderu (prihlasovaci udaje auth a informace o uzivateli) pro prepinani uctu a injekci relace; vsechna data se zpracovavaji pouze lokalne na vasem zarizeni.",
+      "network": "Sitovy rozsah: prihlaseni pres OAuth vyzaduje spojeni s oficialnimi sluzbami Qoderu pro callback; dotazy na kvotu pouzivaji Qoder API. Mistni klice ani povereni se neodesilaji."
+    },
+    "addModal": {
+      "title": "Přidat účet Qoder"
+    },
+    "import": {
+      "localDesc": "Načte aktuální stav přihlášení z místního klienta Qoder, včetně informací o uživateli, plánu a využití kreditů."
+    }
+  },
+  "trae": {
+    "title": "Sprava uctu Trae",
+    "empty": {
+      "description": "Kliknete na „Pridat ucet“ a zacnete spravovat ucty Trae, nebo je importujte z mistnich dat Trae ci ze souboru JSON."
+    },
+    "addModal": {
+      "title": "Pridat ucet Trae"
+    },
+    "oauth": {
+      "desc": "Kliknete na tlacitko nize a dokoncete autorizaci Trae OAuth v prohlizeci."
+    },
+    "import": {
+      "localDesc": "Importuje aktualne prihlaseny ucet, informace o tarifu a cache kvoty z mistniho konfiguracniho adresare Trae.",
+      "jsonTab": "Soubor JSON"
+    },
+    "quota": {
+      "usedOfTotal": "Vyuzito $ {{used}} z $ {{total}}",
+      "usageUnknown": "Vyuziti: --",
+      "resetAt": "Cas resetu: {{date}}",
+      "resetUnknown": "Cas resetu neni znam",
+      "statusUnknown": "Stav: neznamy",
+      "statusNormal": "Stav: normalni",
+      "statusExhaustedFree": "Stav: vyuziti vycerpano, doporucujeme upgrade",
+      "statusExhaustedPro": "Stav: vyuziti vycerpano, upgradujte nebo zapnete prubezne uctovani",
+      "bonusUsed": "Bonus navic: +{{amount}}",
+      "bonusIncluded": "Bonus navic: zahrnut",
+      "bonusEmpty": "Bonus navic: --",
+      "packageConsuming": "Balicek pouziti: cerpa se",
+      "packageAvailable": "Balicek pouziti: dostupny",
+      "packageEmpty": "Balicek pouziti: --",
+      "payAsYouGoConsuming": "Prubezne uctovani: cerpa se",
+      "payAsYouGoEnabled": "Prubezne uctovani: zapnuto",
+      "payAsYouGoEmpty": "Prubezne uctovani: --"
+    },
+    "flowNotice": {
+      "title": "Prirucka k uctu Trae (kliknutim rozbalit/sbalit)",
+      "desc": "Podporuje oficialni prihlaseni OAuth, mistni import, import JSON a prepinani uctu pomoci lokalni injekce. Pri prepnuti zapisuje data podle skutecnych pravidel klienta Trae.",
+      "permission": "Rozsah opravneni: cte a zapisuje prihlasovaci pole v mistnim souboru Trae storage.json pro import uctu, injekci prepnuti uctu a zobrazeni tarifu. Vsechna data se zpracovavaji pouze lokalne na vasem zarizeni.",
+      "network": "Sitovy rozsah: prihlaseni OAuth, obnoveni tokenu a dotazy na tarif volaji oficialni API Trae. Mistni soubory uctu ani puvodni obsah uloziste se neodesilaji sluzbam tretich stran."
+    }
+  },
+  "codebuddyCn": {
+    "title": "Správa účtů CodeBuddy CN",
+    "noAccounts": "Žádné účty CodeBuddy CN",
+    "addAccount": "Přidat účet CodeBuddy CN",
+    "search": "Hledat účty CodeBuddy CN...",
+    "oauthDesc": "Klikněte na tlačítko níže a otevřete autorizační stránku CodeBuddy CN v prohlížeči.",
+    "tokenDesc": "Vložte přístupový token CodeBuddy CN:",
+    "flowNotice": {
+      "title": "Informace o správě účtů CodeBuddy CN (kliknutím rozbalíte/sbalíte)",
+      "desc": "Přepínání účtů vyžaduje čtení místního úložiště autentizace CodeBuddy CN a volání systémových služeb přihlašovacích údajů pro dešifrování/opětovné zašifrování. Data se zpracovávají pouze lokálně.",
+      "permission": "Rozsah oprávnění: čtení databáze autentizace CodeBuddy CN (state.vscdb), volání systémových schopností pro přihlašovací údaje (macOS Keychain / Windows DPAPI / Linux Secret Service) pro dešifrování/zápis zpět.",
+      "network": "Rozsah sítě: přihlášení OAuth a obnovení tokenu vyžadují síťové požadavky na codebuddy.cn / copilot.tencent.com; dotazy na kvótu volají billing API. Žádné místní klíče ani přihlašovací údaje se neodesílají."
+    },
+    "import": {
+      "localDesc": "Importujte data účtu z místního klienta CodeBuddy CN nebo ze souboru JSON.",
+      "localClient": "Importovat z místního CodeBuddy CN"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Více instancí CodeBuddy CN je podporováno pouze na macOS, Windows a Linuxu."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "Správa účtů WorkBuddy",
+    "noAccounts": "Žádné účty WorkBuddy",
+    "addAccount": "Přidat účet WorkBuddy",
+    "flowNotice": {
+      "title": "Informace o správě účtů WorkBuddy (kliknutím rozbalíte/sbalíte)",
+      "desc": "Přepínání účtů vyžaduje čtení místního úložiště autentizace WorkBuddy a volání systémových služeb přihlašovacích údajů pro dešifrování/opětovné zašifrování. Data se zpracovávají pouze lokálně.",
+      "permission": "Rozsah oprávnění: čtení databáze autentizace WorkBuddy (state.vscdb), volání systémových schopností pro přihlašovací údaje (macOS Keychain / Windows DPAPI / Linux Secret Service) pro dešifrování/zápis zpět.",
+      "network": "Rozsah sítě: přihlášení OAuth a obnovení tokenu vyžadují síťové požadavky na WorkBuddy; dotazy na kvótu volají billing API. Žádné místní klíče ani přihlašovací údaje se neodesílají."
+    },
+    "nickname": "Přezdívka",
+    "enterprise": "Podnikový",
+    "usage": "Stav využití",
+    "creditsBalance": "Zůstatek kreditů",
+    "usageNormal": "Normální",
+    "oauthWaiting": "Čekání na autorizaci...",
+    "oauthDesc": "Klikněte na tlačítko níže a otevřete autorizační stránku WorkBuddy v prohlížeči.",
+    "oauthDescWebview": "Klikněte na tlačítko níže a otevřete autorizační stránku WorkBuddy ve vestavěném WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Pouze přihlášení IDE",
+        "item1": "Po dokončení OAuth v prohlížeči přidejte účet a použijte ho pro přepínání IDE.",
+        "item2": "Parametry dotazu kvóty se nenavážou automaticky.",
+        "item3": "Pokud potřebujete zobrazení kvóty, spusťte na kartě účtu ručně \"Dotázat kvótu\"."
+      }
+    },
+    "oauthWebviewTab": "OAuth přes WebView",
+    "oauthOpenWebview": "Otevřít ve WebView",
+    "oauthOpenWebviewIncognito": "Otevřít v anonymním WebView",
+    "oauthOpenWebviewFailed": "Nepodařilo se otevřít WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Otevřít v prohlížeči (záloha)",
+    "oauthOpenBrowserFailed": "Nepodařilo se otevřít prohlížeč: {{error}}",
+    "oauthWebviewProgressHint": "V horní části WebView se zobrazuje vodorovná lišta kroků pro určení zaseknuté fáze.",
+    "oauthFlow": {
+      "prepare": "Připravit OAuth odkaz",
+      "authorize": "Otevřít autorizační odkaz a potvrdit",
+      "bind": "Dotazovat výsledek autorizace a navázat účet",
+      "retryPrepare": "Znovu vygenerovat OAuth odkaz",
+      "retryAuthorize": "Znovu vyžádat autorizační odkaz",
+      "retryBind": "Opakovat dotazování autorizace",
+      "error": "Chyba toku: {{error}}"
+    },
+    "tokenDesc": "Vložte přístupový token WorkBuddy:",
+    "jsonDesc": "Vyberte soubor JSON obsahující účty WorkBuddy:",
+    "import": {
+      "localDesc": "Importujte data účtu z místního klienta WorkBuddy nebo ze souboru JSON.",
+      "localClient": "Importovat z místního WorkBuddy"
+    },
+    "search": "Hledat účty WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Obnovení kvóty selhalo",
+      "sectionTitle": "Dotaz kvóty",
+      "empty": "Zatím nejsou navázané informace o dotazu kvóty",
+      "packageUnknown": "Neznámý balíček",
+      "quotaLabel": "Zbývající kvóta",
+      "updatedAt": "Poslední dotaz: {{time}}",
+      "cycleRange": "Cyklus: {{start}} - {{end}}",
+      "cycleUnknown": "Informace o cyklu nejsou dostupné",
+      "expireAt": "Vyprší: {{time}}",
+      "expireUnknown": "Vyprší: N/A",
+      "packageTitle": {
+        "base": "Základní balíček zkušeností",
+        "activity": "Balíček dárků z akcí"
+      }
+    },
+    "extraCredit": {
+      "title": "Kreditní balíček"
+    },
+    "oauthUrlInputPlaceholder": "Autorizační URL můžete zadat ručně",
+    "oauthInvalidUrl": "Neplatná autorizační URL. Zadejte úplnou URL.",
+    "oauthGotoWebview": "Přejít v otevřeném WebView na zadanou URL",
+    "oauthGotoWebviewSuccess": "WebView dostalo požadavek přejít na zadanou URL.",
+    "oauthGotoWebviewFailed": "Nepodařilo se navigovat WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Zadejte URL pro navigaci v tomto WebView",
+    "oauthWebviewInlineGo": "Přejít",
+    "oauthSuccessClosePrompt": "Účet byl úspěšně přidán. Zavřít toto WebView nyní?\nZvolte \"Zavřít WebView\" pro okamžité zavření nebo \"Později\" pro ponechání otevřeného.",
+    "oauthSuccessCloseTitle": "Účet přidán",
+    "oauthSuccessCloseNowLabel": "Zavřít WebView",
+    "oauthSuccessCloseLaterLabel": "Později",
+    "oauthSuccessCloseNowStatus": "✅ Účet přidán. Zavírám okno...",
+    "oauthSuccessCloseLaterStatus": "✅ Účet přidán. Toto WebView zůstane otevřené.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Připravit OAuth odkaz",
+        "authorize": "2 Otevřít autorizační odkaz a potvrdit",
+        "bind": "3 Dotazovat výsledek autorizace a navázat účet",
+        "complete": "5 Dokončeno (zavřít ručně)"
+      },
+      "status": {
+        "loginConfirm": "Na této stránce dokončete přihlášení a autorizaci."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Více instancí WorkBuddy je podporováno pouze na macOS, Windows a Linuxu."
+      }
     }
   }
 }

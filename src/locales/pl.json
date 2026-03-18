@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Dodatkowe kredyty promptów",
         "credits": "Kredyty",
         "email": "E-mail",
-        "promptCredits": "Kredyty promptów"
+        "promptCredits": "Kredyty promptów",
+        "creditPackage": "Pakiet kredytów",
+        "sharedCreditPackage": "Wspólny pakiet kredytów",
+        "account": "Konto",
+        "createdAt": "Czas utworzenia"
       },
       "empty": {
         "title": "Brak kont"
@@ -49,7 +53,17 @@
         "label": "Import",
         "importing": "Importowanie lokalnego konta...",
         "pickFile": "Wybierz plik JSON do importu",
-        "orJson": "Lub zaimportuj z pliku JSON"
+        "orJson": "Lub zaimportuj z pliku JSON",
+        "progress": {
+          "overallLine": "Postęp ogólny {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platform, {{processedAccounts}}/{{totalAccounts}} kont przetworzono)",
+          "currentPlatformLine": "Importowanie: {{platform}} ({{count}} kont)",
+          "currentStatusLine": "Aktualny status platformy: {{status}}",
+          "platformDetailsTitle": "Szczegóły platform",
+          "statusProcessing": "Przetwarzanie...",
+          "statusRunning": "Importowanie...",
+          "statusSkipped": "Pominięto",
+          "statusPending": "Oczekuje na import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Przygotowywanie linku autoryzacji...",
         "retry": "Wygeneruj ponownie dane autoryzacji",
         "timeoutRetry": "Odśwież link autoryzacji",
-        "waiting": "Oczekiwanie na autoryzację..."
+        "waiting": "Oczekiwanie na autoryzację...",
+        "manualCallbackLabel": "Wprowadź ręcznie URL callback",
+        "manualCallbackPlaceholder": "Wklej pełny URL callback, np. http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Odśwież wszystko",
       "refreshQuota": "Odśwież limit",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "Limit resetuje się {{dateText}}.",
         "resetUnknown": "Limit resetuje się -"
+      },
+      "updated": {
+        "label": "Zaktualizowano {{relative}} temu"
       }
     }
   },
   "nav": {
-    "overview": "Konto Antigravity",
+    "overview": "Antigravity",
     "accounts": "Konta",
     "wakeup": "Zadania wybudzania",
     "fingerprints": "Odciski palca",
     "settings": "Ustawienia",
-    "codex": "Konta Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Panel",
@@ -159,9 +178,14 @@
     "manual": "Instrukcja obsługi",
     "quickUpdate": {
       "update": "Aktualizuj",
-      "restart": "Uruchom ponownie"
+      "restart": "Uruchom ponownie",
+      "installing": "Instalowanie"
     },
-    "gemini": "Konta Gemini"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Układ platform",
@@ -173,7 +197,34 @@
     "trayToggle": "Pokaż w zasobniku",
     "hiddenBadge": "Ukryte",
     "openFromMore": "Zarządzaj układem platform",
-    "dragHandleLabel": "Przeciągnij, aby zmienić kolejność"
+    "dragHandleLabel": "Przeciągnij, aby zmienić kolejność",
+    "tipWithGroups": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie dwa wpisy. Elementy podrzędne grupy nie mają przełączników paska bocznego/pulpitu i służą tylko do paska menu oraz przełączania platformy domyślnej.",
+    "addGroup": "Dodaj grupę",
+    "editGroup": "Edytuj grupę",
+    "deleteGroup": "Usuń grupę",
+    "groupBadge": "Grupa",
+    "groupDefault": "Domyślna platforma",
+    "groupName": "Nazwa grupy",
+    "groupNamePlaceholder": "Przykład: Pakiet CodeBuddy",
+    "groupIcon": "Ikona grupy",
+    "groupIconFromPlatform": "Ikona platformy",
+    "groupIconCustom": "Własny obraz",
+    "groupIconPreview": "Podgląd ikony",
+    "groupChildren": "Platformy podrzędne",
+    "groupNameRequired": "Wpisz nazwę grupy",
+    "groupChildrenRequired": "Wybierz co najmniej jedną platformę podrzędną",
+    "groupCustomIconRequired": "Prześlij własną ikonę",
+    "groupSwitchLabel": "Przełącz platformę w grupie",
+    "collapseAllChildren": "Zwiń wszystkie platformy podrzędne",
+    "expandAllChildren": "Rozwiń wszystkie platformy podrzędne",
+    "addChildPlatform": "Dodaj platformę podrzędną",
+    "collapseChildren": "Zwiń platformy podrzędne",
+    "expandChildren": "Rozwiń platformy podrzędne",
+    "noAvailableChildren": "Brak platform do dodania",
+    "customIconDeleteConfirm": "Usunąć tę niestandardową ikonę?",
+    "editChildPlatform": "Edytuj platformę podrzędną",
+    "setAsDefaultInGroup": "Ustaw jako domyślną platformę w tej grupie",
+    "removeFromGroup": "Usuń z grupy"
   },
   "privacy": {
     "hideSensitive": "Ukryj e-maile",
@@ -376,6 +427,8 @@
       "themeLight": "Jasny",
       "themeDark": "Ciemny",
       "themeSystem": "Systemowy",
+      "uiScale": "Skala interfejsu",
+      "uiScaleDesc": "Dostosuj skalę interfejsu",
       "accountManagement": "Zarządzanie kontami",
       "autoRefresh": "Automatyczne odświeżanie limitu Antigravity",
       "codexAutoRefresh": "Automatyczne odświeżanie limitu Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Niezależnie steruje widocznością ikony Docka, bez wpływu zachowania minimalizacji okna",
       "hideDockIconOff": "Nie (Pokaż ikonę Docka)",
       "hideDockIconOn": "Tak (Ukryj ikonę Docka)",
-      "storageTitle": "Katalogi i pamięć",
       "dataDir": "Katalog danych",
       "dataDirDesc": "Lokalizacja przechowywania kont i plików konfiguracji.",
       "fpDir": "Magazyn Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Włączone (cicha aktualizacja)",
       "opencodeAuthOverwrite": "Nadpisuj logowanie OpenCode podczas przełączania Codex",
       "opencodeAuthOverwriteDesc": "Gdy wyłączone, przełączany jest tylko Codex, a OpenCode zachowuje bieżący stan logowania",
-      "opencodeRestartRequiresOverwrite": "Najpierw włącz „Nadpisuj logowanie OpenCode podczas przełączania Codex”"
+      "opencodeRestartRequiresOverwrite": "Najpierw włącz „Nadpisuj logowanie OpenCode podczas przełączania Codex”",
+      "codebuddySettingsTitle": "Ustawienia CodeBuddy",
+      "codebuddyAutoRefresh": "Automatyczne odświeżanie limitu CodeBuddy",
+      "codebuddyAutoRefreshDesc": "Interwał automatycznego odświeżania w tle",
+      "codebuddyAppPath": "Ścieżka uruchamiania CodeBuddy",
+      "codebuddyAppPathDesc": "Pozostaw puste, aby użyć domyślnej ścieżki",
+      "codebuddyAppPathPlaceholder": "Domyślna ścieżka",
+      "codebuddyPathSelect": "Wybierz",
+      "codebuddyPathReset": "Przywróć domyślne",
+      "qoderPathReset": "Przywróć domyślne",
+      "traeAutoRefresh": "Automatyczne odświeżanie limitu Trae",
+      "traeAutoRefreshDesc": "Interwał automatycznego odświeżania w tle",
+      "traeAppPath": "Ścieżka uruchamiania Trae",
+      "traeAppPathDesc": "Pozostaw puste, aby użyć domyślnej ścieżki",
+      "traeAppPathPlaceholder": "Domyślna ścieżka",
+      "traePathSelect": "Wybierz",
+      "traePathReset": "Przywróć domyślne",
+      "workbuddyAppPath": "Ścieżka uruchamiania WorkBuddy",
+      "workbuddyAppPathDesc": "Pozostaw puste, aby użyć domyślnej ścieżki",
+      "workbuddyAppPathPlaceholder": "Domyślna ścieżka",
+      "workbuddyPathSelect": "Wybierz",
+      "workbuddyPathReset": "Przywróć domyślne"
     },
     "network": {
       "apiTitle": "API kokpitu antygrawitacyjnego",
@@ -473,7 +546,22 @@
       "restartRequired": "Zmieniono konfigurację, uruchom ponownie aplikację, aby zastosować zmiany",
       "saveSuccess": "Ustawienia zapisane!",
       "saveSuccessRestart": "Ustawienia zapisane! Uruchom ponownie aplikację, aby zmiany portu weszły w życie.",
-      "saveFailed": "Błąd zapisu: {{error}}"
+      "saveFailed": "Błąd zapisu: {{error}}",
+      "reportTitle": "Usługa zapytań WWW",
+      "reportService": "Usługa raportu HTTP",
+      "reportServiceDesc": "Udostępnia endpoint HTTP chroniony tokenem dla podsumowań użycia",
+      "reportPort": "Port raportu",
+      "reportPortDesc": "Domyślnie {{port}}, po zmianie wymagany restart",
+      "reportToken": "Token dostępu",
+      "reportTokenDesc": "Wymagany przy żądaniu /report, zachowaj go w poufności",
+      "reportTokenRequired": "Token dostępu nie może być pusty, gdy usługa webowa jest włączona.",
+      "generateToken": "Generuj",
+      "reportUrlPreview": "Podgląd endpointu",
+      "reportUrlPreviewDesc": "Obsługuje format=md / format=yaml oraz render=true dla widoku HTML",
+      "reportUrlRaw": "Surowe wyjście",
+      "reportUrlRendered": "Widok renderowany",
+      "firewallHintTitle": "Wskazówka zapory",
+      "firewallHint": "Jeśli URL jest niedostępny, sprawdź ustawienia zapory systemowej."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "Kredyty AI"
     },
     "empty": {
       "title": "Brak kont",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Wszystkie ({{count}})",
       "pro": "PRO (__MASKA_0__)",
-      "ultra": "ULTRA (__MASKA_0__)",
-      "free": "GRATIS (__MASKA_0__)"
+      "ultra": "ULTRA (__MASKA_0__)"
     },
     "sortLabel": "Sortuj",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "Według czasu resetu {{group}}",
       "descTooltip": "Malejąco, kliknij dla rosnąco",
       "ascTooltip": "Rosnąco, kliknij dla malejąco",
-      "toggleDirection": "Zmień kierunek"
+      "toggleDirection": "Zmień kierunek",
+      "plan": "Według planu",
+      "quota": "Według limitu"
     },
     "filterTags": "Filtruj tagi",
     "filterTagsCount": "Tagi",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} nieudanych: {{failList}}",
       "refreshingQuota": "Odświeżanie limitu {{done}}/{{total}} (możesz zamknąć to okno)",
       "quotaRefreshDone": "Odświeżanie limitu zakończone"
+    },
+    "groups": {
+      "manageTitle": "Zarządzanie grupami",
+      "title": "Grupy kont",
+      "create": "Utwórz",
+      "newPlaceholder": "Wprowadź nazwę grupy...",
+      "empty": "Brak grup. Utwórz jedną, aby rozpocząć",
+      "accountCount": "{{count}} kont(o/a)",
+      "rename": "Zmień nazwę",
+      "addToGroup": "Dodaj do grupy",
+      "createAndAdd": "Utwórz grupę i dodaj...",
+      "removeFromGroup": "Usuń z grupy",
+      "allGroups": "Wszystkie grupy",
+      "noGroups": "Brak grup",
+      "noGroupsDesc": "Utwórz grupy, aby zarządzać kontami",
+      "manage": "Zarządzaj",
+      "error": {
+        "duplicate": "Nazwa grupy już istnieje",
+        "createFailed": "Nie udało się utworzyć grupy: {{error}}",
+        "renameFailed": "Nie udało się zmienić nazwy grupy: {{error}}",
+        "deleteFailed": "Nie udało się usunąć grupy: {{error}}",
+        "addFailed": "Nie udało się dodać do grupy: {{error}}",
+        "createAndAddFailed": "Nie udało się utworzyć grupy i dodać: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Nazwa zadania",
       "taskStatus": "Status zadania",
       "triggerMode": "Tryb wyzwalania",
-      "triggerModeHint": "1. Harmonogram: uruchamiane o ustawionych godzinach.\\n2. Crontab: definiowane wyrażeniem.\\n3. Reset limitu: uruchamiane raz po zapełnieniu limitu.",
+      "triggerModeHint": "1. Harmonogram: uruchamiane o ustawionych godzinach.\n2. Crontab: definiowane wyrażeniem.\n3. Reset limitu: uruchamiane raz po zapełnieniu limitu.",
       "modeScheduled": "📅 Harmonogram",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Reset limitu",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Pokaż szczegóły",
     "hideErrorDetails": "Ukryj szczegóły",
     "autoUpdateFailedAfterRetries": "Automatyczna aktualizacja nie powiodła się po {{count}} próbach. Spróbuj ponownie później lub pobierz ręcznie.",
-    "updateCancelled": "Aktualizacja została anulowana."
+    "updateCancelled": "Aktualizacja została anulowana.",
+    "cancelDownload": "Anuluj pobieranie",
+    "installing": "Instalowanie...",
+    "authorizing": "Oczekiwanie na autoryzację systemu...",
+    "installFailed": "Instalacja systemowa nie powiodła się. Spróbuj ponownie później lub pobierz pakiet ręcznie.",
+    "restartRequiredAfterInstall": "Aktualizacja jest zainstalowana. Uruchom aplikację ponownie ręcznie, aby dokończyć przełączenie."
   },
   "closeDialog": {
     "title": "Zamknij okno",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Błąd limitu",
       "generic": "Odświeżenie limitu nie powiodło się, spróbuj ponownie później",
-      "deactivatedWorkspace": "Obszar roboczy jest wyłączony, przełącz konto lub ponownie autoryzuj"
+      "deactivatedWorkspace": "Obszar roboczy jest wyłączony, przełącz konto lub ponownie autoryzuj",
+      "requestFailedManualRetry": "Żądanie nie powiodło się, spróbuj ponownie ręcznie: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Pokaż limit Code Review"
     },
     "time": {
       "today": "Dzisiaj {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Tagi",
     "noAvailableTags": "Brak dostępnych tagów",
     "clearFilter": "Wyczyść filtr",
-    "editTags": "Edytuj tagi"
+    "editTags": "Edytuj tagi",
+    "account": {
+      "personal": "Konto osobiste"
+    }
   },
   "githubCopilot": {
     "title": "Zarządzanie kontami GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Szczegóły błędu",
       "filePath": "Lokalizacja pliku",
       "helpText": "Otwórz folder, aby naprawić plik ręcznie lub go usunąć, a następnie uruchom ponownie aplikację.",
-      "openFolder": "Otwórz folder"
+      "openFolder": "Otwórz folder",
+      "openFolderFailed": "Nie udało się otworzyć folderu: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Automatyczne odświeżanie limitu",
     "gemini": {
-      "title": "Ustawienia Gemini",
-      "appPath": "Ścieżka Gemini"
+      "title": "Ustawienia Gemini Cli",
+      "appPath": "Ścieżka Gemini Cli"
     },
-    "geminiRefreshInterval": "Automatyczne odświeżanie limitu"
+    "geminiRefreshInterval": "Automatyczne odświeżanie limitu",
+    "codebuddy": {
+      "title": "Ustawienia CodeBuddy",
+      "appPath": "Ścieżka CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Nie udało się załadować konfiguracji: {{error}}",
+      "saveFailed": "Nie udało się zapisać konfiguracji: {{error}}",
+      "pickPathFailed": "Nie udało się wybrać ścieżki: {{error}}",
+      "resetPathFailed": "Nie udało się zresetować ścieżki: {{error}}"
+    },
+    "qoder": {
+      "title": "Ustawienia Qoder",
+      "appPath": "Ścieżka Qoder"
+    },
+    "trae": {
+      "title": "Ustawienia Trae",
+      "appPath": "Ścieżka Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "Ścieżka CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "Ustawienia WorkBuddy",
+      "appPath": "Ścieżka WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "Alert limitu dla {{email}} (próg {{threshold}}%, minimum {{lowest}}%, modele: {{models}})",
@@ -1847,7 +2000,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Przełącz na Gemini",
+    "injectToGemini": "Przełącz na Gemini Cli",
     "updated": {
       "label": "Zaktualizowano {{relative}} temu"
     },
@@ -1860,10 +2013,10 @@
       "resetsUnknown": "Nieznany czas resetu",
       "onDemand": "Na żądanie"
     },
-    "title": "Zarządzanie kontami Gemini",
+    "title": "Zarządzanie kontami Gemini Cli",
     "instances": {
-      "unsupported": "Zarządzanie wieloma instancjami Gemini nie jest jeszcze obsługiwane.",
-      "unsupportedDescPlatform": "Wiele instancji Gemini jest obsługiwane tylko na macOS, Windows i Linux.",
+      "unsupported": "Zarządzanie wieloma instancjami Gemini Cli nie jest jeszcze obsługiwane.",
+      "unsupportedDescPlatform": "Wiele instancji Gemini Cli jest obsługiwane tylko na macOS, Windows i Linux.",
       "launchDialogTitle": "Uruchom instancję",
       "launchHint": "Skopiuj polecenie i uruchom ręcznie albo wykonaj je bezpośrednio w terminalu.",
       "runInTerminal": "Uruchom w terminalu"
@@ -1872,30 +2025,322 @@
       "success": "Pomyślnie przełączono konto"
     },
     "empty": {
-      "description": "Kliknij „Dodaj konto“, aby rozpocząć zarządzanie kontami Gemini"
+      "description": "Kliknij „Dodaj konto“, aby rozpocząć zarządzanie kontami Gemini Cli"
     },
     "addModal": {
-      "title": "Dodaj konto Gemini"
+      "title": "Dodaj konto Gemini Cli"
     },
     "oauth": {
-      "desc": "Kliknij przycisk poniżej i dokończ autoryzację Gemini w przeglądarce."
+      "desc": "Kliknij przycisk poniżej i dokończ autoryzację Gemini Cli w przeglądarce."
     },
     "token": {
-      "desc": "Wklej swój token dostępu Gemini (JWT) lub wyeksportowane dane JSON.",
+      "desc": "Wklej swój token dostępu Gemini Cli (JWT) lub wyeksportowane dane JSON.",
       "formatHint": "Wymagane pola i przykłady (kliknij, aby rozwinąć)",
       "formatRequired": "Pojedynczy token: wklej JWT bezpośrednio; import zbiorczy: użyj formatu tablicy JSON",
       "singleExample": "Przykład pojedynczy (JWT)",
       "batchExample": "Przykład zbiorczy (JSON)"
     },
     "import": {
-      "localDesc": "Importuj dane konta z lokalnego klienta Gemini lub pliku JSON.",
-      "localClient": "Importuj z lokalnego Gemini"
+      "localDesc": "Importuj dane konta z lokalnego klienta Gemini Cli lub pliku JSON.",
+      "localClient": "Importuj z lokalnego Gemini Cli"
     },
     "flowNotice": {
-      "title": "Przewodnik po koncie Gemini (kliknij, aby rozwinąć/zwinąć)",
-      "desc": "Zarządzaj kontami Gemini, importując z lokalnej instalacji Gemini lub wklejając tokeny JWT. Dane są przetwarzane wyłącznie lokalnie.",
+      "title": "Przewodnik po koncie Gemini Cli (kliknij, aby rozwinąć/zwinąć)",
+      "desc": "Zarządzaj kontami Gemini Cli, importując z lokalnej instalacji Gemini Cli lub wklejając tokeny JWT. Dane są przetwarzane wyłącznie lokalnie.",
       "reason": "Zakres uprawnień: odczyt i zapis oauth_creds.json, google_accounts.json oraz settings.json w domyślnym ~/.gemini lub ścieżce instancji (GEMINI_CLI_HOME/.gemini) do importu kont i lokalnego wstrzykiwania poświadczeń (przełączanie kont).",
       "storage": "Zakres sieci: OAuth i odświeżanie limitu wywołują oficjalne API Google/Gemini (np. oauth2.googleapis.com i googleapis.com). Wysyłane są tylko wymagane pola uwierzytelniania/limitu; lokalne pliki nie są wysyłane na serwery stron trzecich."
+    }
+  },
+  "codebuddy": {
+    "title": "Zarządzanie kontami CodeBuddy",
+    "noAccounts": "Brak kont CodeBuddy",
+    "addAccount": "Dodaj konto CodeBuddy",
+    "flowNotice": {
+      "title": "Informacje o zarządzaniu kontami CodeBuddy (kliknij, aby rozwinąć/zwinąć)",
+      "desc": "Przełączanie kont wymaga odczytu lokalnego magazynu uwierzytelniania CodeBuddy oraz wywołania systemowych usług poświadczeń do odszyfrowania/ponownego zaszyfrowania. Dane są przetwarzane wyłącznie lokalnie.",
+      "permission": "Zakres uprawnień: odczyt bazy uwierzytelniania CodeBuddy (state.vscdb), wywołanie systemowych mechanizmów poświadczeń (macOS Keychain / Windows DPAPI / Linux Secret Service) do odszyfrowania i zapisu zwrotnego.",
+      "network": "Zakres sieci: logowanie OAuth i odświeżanie tokenu wymagają żądań do codebuddy.ai; zapytania o limity wywołują API rozliczeń. Żadne lokalne klucze ani poświadczenia nie są wysyłane."
+    },
+    "nickname": "Pseudonim",
+    "enterprise": "Firmowe",
+    "usage": "Stan użycia",
+    "creditsBalance": "Saldo kredytów",
+    "usageNormal": "Normalny",
+    "oauthWaiting": "Oczekiwanie na autoryzację...",
+    "oauthDesc": "Kliknij przycisk poniżej, aby otworzyć stronę autoryzacji CodeBuddy w przeglądarce.",
+    "oauthDescWebview": "Kliknij przycisk poniżej, aby otworzyć stronę autoryzacji CodeBuddy we wbudowanym WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Tylko logowanie IDE",
+        "item1": "Dodaj konto po zakończeniu OAuth w przeglądarce, a następnie użyj go do przełączania IDE.",
+        "item2": "Parametry zapytania limitu nie są automatycznie powiązywane.",
+        "item3": "Jeśli potrzebujesz podglądu limitu, uruchom ręcznie „Zapytaj limit” na karcie konta."
+      }
+    },
+    "oauthWebviewTab": "OAuth przez WebView",
+    "oauthOpenWebview": "Otwórz w WebView",
+    "oauthOpenWebviewIncognito": "Otwórz w prywatnym WebView",
+    "oauthOpenWebviewFailed": "Nie udało się otworzyć WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Otwórz w przeglądarce (awaryjnie)",
+    "oauthOpenBrowserFailed": "Nie udało się otworzyć przeglądarki: {{error}}",
+    "oauthWebviewProgressHint": "U góry WebView wyświetlany jest poziomy pasek kroków, aby wskazać zablokowany etap.",
+    "oauthFlow": {
+      "prepare": "Przygotuj link OAuth",
+      "authorize": "Otwórz link autoryzacji i potwierdź",
+      "bind": "Odpytaj wynik autoryzacji i powiąż konto",
+      "retryPrepare": "Wygeneruj link OAuth ponownie",
+      "retryAuthorize": "Ponownie poproś o link autoryzacji",
+      "retryBind": "Ponów odpytywanie autoryzacji",
+      "error": "Błąd przepływu: {{error}}"
+    },
+    "tokenDesc": "Wklej token dostępu CodeBuddy:",
+    "jsonDesc": "Wybierz plik JSON zawierający konta CodeBuddy:",
+    "import": {
+      "localDesc": "Importuj dane konta z lokalnego klienta CodeBuddy lub z pliku JSON.",
+      "localClient": "Importuj z lokalnego CodeBuddy"
+    },
+    "search": "Szukaj kont CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Odświeżanie limitu nieudane",
+      "sectionTitle": "Zapytanie limitu",
+      "empty": "Brak powiązanych informacji o zapytaniu limitu",
+      "packageUnknown": "Nieznany pakiet",
+      "quotaLabel": "Pozostały limit",
+      "updatedAt": "Ostatnie zapytanie: {{time}}",
+      "cycleRange": "Cykl: {{start}} - {{end}}",
+      "cycleUnknown": "Brak informacji o cyklu",
+      "expireAt": "Wygasa: {{time}}",
+      "expireUnknown": "Wygasa: brak danych",
+      "packageTitle": {
+        "base": "Podstawowy pakiet doświadczenia",
+        "activity": "Pakiet prezentowy z wydarzeń"
+      }
+    },
+    "extraCredit": {
+      "title": "Pakiet kredytów"
+    },
+    "oauthUrlInputPlaceholder": "Możesz ręcznie wpisać URL autoryzacji",
+    "oauthInvalidUrl": "Nieprawidłowy URL autoryzacji. Wprowadź pełny URL.",
+    "oauthGotoWebview": "Przejdź w otwartym WebView do podanego URL",
+    "oauthGotoWebviewSuccess": "Wysłano żądanie nawigacji WebView do podanego URL.",
+    "oauthGotoWebviewFailed": "Nie udało się nawigować WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Wprowadź URL, aby przejść w tym WebView",
+    "oauthWebviewInlineGo": "Przejdź",
+    "oauthSuccessClosePrompt": "Konto dodano pomyślnie. Zamknąć teraz to WebView?\nWybierz „Zamknij WebView”, aby zamknąć teraz, albo „Później”, aby pozostawić otwarte.",
+    "oauthSuccessCloseTitle": "Konto dodane",
+    "oauthSuccessCloseNowLabel": "Zamknij WebView",
+    "oauthSuccessCloseLaterLabel": "Później",
+    "oauthSuccessCloseNowStatus": "✅ Konto dodane. Zamykanie okna...",
+    "oauthSuccessCloseLaterStatus": "✅ Konto dodane. To WebView pozostanie otwarte.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Przygotuj link OAuth",
+        "authorize": "2 Otwórz link autoryzacji i potwierdź",
+        "bind": "3 Odpytaj wynik autoryzacji i powiąż konto",
+        "complete": "5 Gotowe (zamknij ręcznie)"
+      },
+      "status": {
+        "loginConfirm": "Na tej stronie dokończ logowanie i autoryzację."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Zarządzanie kontami Qoder",
+    "comingSoon": {
+      "title": "Multi-Instancja Wkrótce",
+      "desc": "Uruchamiaj wiele instancji Qoder.app z różnymi kontami jednocześnie."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Wiele instancji Qoder jest obsługiwanych tylko w systemach macOS, Windows i Linux."
+      }
+    },
+    "oauth": {
+      "hint": "Dokończ logowanie na otwartej stronie w przeglądarce: jeśli strona logowania nie otworzyła się automatycznie, kliknij „Kopiuj link logowania”, skopiuj link i wklej go do przeglądarki, aby zakończyć logowanie.",
+      "copyLoginUrl": "Kopiuj link logowania"
+    },
+    "usageOverview": {
+      "title": "Przegląd użycia",
+      "viewDetails": "Zobacz szczegóły",
+      "includedCredits": "Kredyty w ramach planu",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Ulepsz plan, aby zwiększyć miesięczny limit",
+      "upgradeAction": "Ulepsz"
+    },
+    "flowNotice": {
+      "title": "Przewodnik po kontach Qoder (kliknij, aby rozwinac/zwinac)",
+      "desc": "Obsluguje oficjalne logowanie OAuth (callback), import lokalny, import JSON, iniekcje przelaczania konta, powiazanie wielu instancji oraz przeglad limitu. Przeplyw logowania korzysta z rzeczywistych danych zapisywanych przez klienta Qoder.",
+      "permission": "Zakres uprawnien: odczytuje lokalny magazyn uwierzytelniania Qoder (dane auth i informacje uzytkownika) na potrzeby przelaczania konta i iniekcji sesji; wszystkie dane sa przetwarzane lokalnie na Twoim urzadzeniu.",
+      "network": "Zakres sieci: logowanie OAuth wymaga polaczenia z oficjalnymi uslugami Qoder do obslugi callbacku; zapytania o limit korzystaja z API Qoder. Lokalne klucze i dane uwierzytelniajace nie sa przesylane."
+    },
+    "addModal": {
+      "title": "Dodaj konto Qoder"
+    },
+    "import": {
+      "localDesc": "Odczytuje bieżący stan logowania z lokalnego klienta Qoder, w tym informacje o użytkowniku, planie i wykorzystaniu kredytów."
+    }
+  },
+  "trae": {
+    "title": "Zarzadzanie kontami Trae",
+    "empty": {
+      "description": "Kliknij „Dodaj konto”, aby zaczac zarzadzac kontami Trae, albo zaimportuj je z lokalnych danych Trae lub pliku JSON."
+    },
+    "addModal": {
+      "title": "Dodaj konto Trae"
+    },
+    "oauth": {
+      "desc": "Kliknij przycisk ponizej i zakoncz autoryzacje OAuth Trae w przegladarce."
+    },
+    "import": {
+      "localDesc": "Importuje aktualnie zalogowane konto, informacje o planie i dane limitu z pamieci podrecznej z lokalnego katalogu konfiguracji Trae.",
+      "jsonTab": "Plik JSON"
+    },
+    "quota": {
+      "usedOfTotal": "Wykorzystano $ {{used}} z $ {{total}}",
+      "usageUnknown": "Zuzycie: --",
+      "resetAt": "Reset: {{date}}",
+      "resetUnknown": "Nieznany czas resetu",
+      "statusUnknown": "Status: nieznany",
+      "statusNormal": "Status: normalny",
+      "statusExhaustedFree": "Status: limit zuzycia wyczerpany, zalecamy wyzszy plan",
+      "statusExhaustedPro": "Status: limit zuzycia wyczerpany, uaktualnij plan lub wlacz rozliczanie za uzycie",
+      "bonusUsed": "Dodatkowy bonus: +{{amount}}",
+      "bonusIncluded": "Dodatkowy bonus: wliczony",
+      "bonusEmpty": "Dodatkowy bonus: --",
+      "packageConsuming": "Pakiet uzycia: w trakcie zuzycia",
+      "packageAvailable": "Pakiet uzycia: dostepny",
+      "packageEmpty": "Pakiet uzycia: --",
+      "payAsYouGoConsuming": "Rozliczanie za uzycie: w trakcie zuzycia",
+      "payAsYouGoEnabled": "Rozliczanie za uzycie: wlaczone",
+      "payAsYouGoEmpty": "Rozliczanie za uzycie: --"
+    },
+    "flowNotice": {
+      "title": "Przewodnik po kontach Trae (kliknij, aby rozwinac/zwinac)",
+      "desc": "Obsluguje oficjalne logowanie OAuth, import lokalny, import JSON oraz przelaczanie kont przez lokalna iniekcje. Podczas przelaczania dane sa zapisywane zgodnie z rzeczywistymi zasadami zapisu klienta Trae.",
+      "permission": "Zakres uprawnien: odczytuje i zapisuje pola zwiazane z logowaniem w lokalnym pliku Trae storage.json na potrzeby importu konta, iniekcji przelaczenia konta i wyswietlania planu. Wszystkie dane sa przetwarzane lokalnie na Twoim urzadzeniu.",
+      "network": "Zakres sieci: logowanie OAuth, odswiezanie tokenu i zapytania o plan wywoluja oficjalne API Trae. Lokalne pliki kont i surowa zawartosc magazynu nie sa przesylane do uslug zewnetrznych."
+    }
+  },
+  "codebuddyCn": {
+    "title": "Zarządzanie kontami CodeBuddy CN",
+    "noAccounts": "Brak kont CodeBuddy CN",
+    "addAccount": "Dodaj konto CodeBuddy CN",
+    "search": "Szukaj kont CodeBuddy CN...",
+    "oauthDesc": "Kliknij przycisk poniżej, aby otworzyć stronę autoryzacji CodeBuddy CN w przeglądarce.",
+    "tokenDesc": "Wklej token dostępu CodeBuddy CN:",
+    "flowNotice": {
+      "title": "Informacje o zarządzaniu kontami CodeBuddy CN (kliknij, aby rozwinąć/zwinąć)",
+      "desc": "Przełączanie kont wymaga odczytu lokalnego magazynu uwierzytelniania CodeBuddy CN oraz wywołania systemowych usług poświadczeń do odszyfrowania/ponownego zaszyfrowania. Dane są przetwarzane wyłącznie lokalnie.",
+      "permission": "Zakres uprawnień: odczyt bazy uwierzytelniania CodeBuddy CN (state.vscdb), wywołanie systemowych mechanizmów poświadczeń (macOS Keychain / Windows DPAPI / Linux Secret Service) do odszyfrowania i zapisu zwrotnego.",
+      "network": "Zakres sieci: logowanie OAuth i odświeżanie tokenu wymagają żądań do codebuddy.cn / copilot.tencent.com; zapytania o limity wywołują API rozliczeń. Żadne lokalne klucze ani poświadczenia nie są wysyłane."
+    },
+    "import": {
+      "localDesc": "Importuj dane konta z lokalnego klienta CodeBuddy CN lub z pliku JSON.",
+      "localClient": "Importuj z lokalnego CodeBuddy CN"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Wiele instancji CodeBuddy CN jest obsługiwane tylko na macOS, Windows i Linux."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "Zarządzanie kontami WorkBuddy",
+    "noAccounts": "Brak kont WorkBuddy",
+    "addAccount": "Dodaj konto WorkBuddy",
+    "flowNotice": {
+      "title": "Informacje o zarządzaniu kontami WorkBuddy (kliknij, aby rozwinąć/zwinąć)",
+      "desc": "Przełączanie kont wymaga odczytu lokalnego magazynu uwierzytelniania WorkBuddy oraz wywołania systemowych usług poświadczeń do odszyfrowania/ponownego zaszyfrowania. Dane są przetwarzane wyłącznie lokalnie.",
+      "permission": "Zakres uprawnień: odczyt bazy uwierzytelniania WorkBuddy (state.vscdb), wywołanie systemowych mechanizmów poświadczeń (macOS Keychain / Windows DPAPI / Linux Secret Service) do odszyfrowania i zapisu zwrotnego.",
+      "network": "Zakres sieci: logowanie OAuth i odświeżanie tokenu wymagają żądań do WorkBuddy; zapytania o limity wywołują API rozliczeń. Żadne lokalne klucze ani poświadczenia nie są wysyłane."
+    },
+    "nickname": "Pseudonim",
+    "enterprise": "Firmowe",
+    "usage": "Stan użycia",
+    "creditsBalance": "Saldo kredytów",
+    "usageNormal": "Normalny",
+    "oauthWaiting": "Oczekiwanie na autoryzację...",
+    "oauthDesc": "Kliknij przycisk poniżej, aby otworzyć stronę autoryzacji WorkBuddy w przeglądarce.",
+    "oauthDescWebview": "Kliknij przycisk poniżej, aby otworzyć stronę autoryzacji WorkBuddy we wbudowanym WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Tylko logowanie IDE",
+        "item1": "Dodaj konto po zakończeniu OAuth w przeglądarce, a następnie użyj go do przełączania IDE.",
+        "item2": "Parametry zapytania limitu nie są automatycznie powiązywane.",
+        "item3": "Jeśli potrzebujesz podglądu limitu, uruchom ręcznie „Zapytaj limit” na karcie konta."
+      }
+    },
+    "oauthWebviewTab": "OAuth przez WebView",
+    "oauthOpenWebview": "Otwórz w WebView",
+    "oauthOpenWebviewIncognito": "Otwórz w prywatnym WebView",
+    "oauthOpenWebviewFailed": "Nie udało się otworzyć WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Otwórz w przeglądarce (awaryjnie)",
+    "oauthOpenBrowserFailed": "Nie udało się otworzyć przeglądarki: {{error}}",
+    "oauthWebviewProgressHint": "U góry WebView wyświetlany jest poziomy pasek kroków, aby wskazać zablokowany etap.",
+    "oauthFlow": {
+      "prepare": "Przygotuj link OAuth",
+      "authorize": "Otwórz link autoryzacji i potwierdź",
+      "bind": "Odpytaj wynik autoryzacji i powiąż konto",
+      "retryPrepare": "Wygeneruj link OAuth ponownie",
+      "retryAuthorize": "Ponownie poproś o link autoryzacji",
+      "retryBind": "Ponów odpytywanie autoryzacji",
+      "error": "Błąd przepływu: {{error}}"
+    },
+    "tokenDesc": "Wklej token dostępu WorkBuddy:",
+    "jsonDesc": "Wybierz plik JSON zawierający konta WorkBuddy:",
+    "import": {
+      "localDesc": "Importuj dane konta z lokalnego klienta WorkBuddy lub z pliku JSON.",
+      "localClient": "Importuj z lokalnego WorkBuddy"
+    },
+    "search": "Szukaj kont WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Odświeżanie limitu nieudane",
+      "sectionTitle": "Zapytanie limitu",
+      "empty": "Brak powiązanych informacji o zapytaniu limitu",
+      "packageUnknown": "Nieznany pakiet",
+      "quotaLabel": "Pozostały limit",
+      "updatedAt": "Ostatnie zapytanie: {{time}}",
+      "cycleRange": "Cykl: {{start}} - {{end}}",
+      "cycleUnknown": "Brak informacji o cyklu",
+      "expireAt": "Wygasa: {{time}}",
+      "expireUnknown": "Wygasa: brak danych",
+      "packageTitle": {
+        "base": "Podstawowy pakiet doświadczenia",
+        "activity": "Pakiet prezentowy z wydarzeń"
+      }
+    },
+    "extraCredit": {
+      "title": "Pakiet kredytów"
+    },
+    "oauthUrlInputPlaceholder": "Możesz ręcznie wpisać URL autoryzacji",
+    "oauthInvalidUrl": "Nieprawidłowy URL autoryzacji. Wprowadź pełny URL.",
+    "oauthGotoWebview": "Przejdź w otwartym WebView do podanego URL",
+    "oauthGotoWebviewSuccess": "Wysłano żądanie nawigacji WebView do podanego URL.",
+    "oauthGotoWebviewFailed": "Nie udało się nawigować WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Wprowadź URL, aby przejść w tym WebView",
+    "oauthWebviewInlineGo": "Przejdź",
+    "oauthSuccessClosePrompt": "Konto dodano pomyślnie. Zamknąć teraz to WebView?\nWybierz „Zamknij WebView”, aby zamknąć teraz, albo „Później”, aby pozostawić otwarte.",
+    "oauthSuccessCloseTitle": "Konto dodane",
+    "oauthSuccessCloseNowLabel": "Zamknij WebView",
+    "oauthSuccessCloseLaterLabel": "Później",
+    "oauthSuccessCloseNowStatus": "✅ Konto dodane. Zamykanie okna...",
+    "oauthSuccessCloseLaterStatus": "✅ Konto dodane. To WebView pozostanie otwarte.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Przygotuj link OAuth",
+        "authorize": "2 Otwórz link autoryzacji i potwierdź",
+        "bind": "3 Odpytaj wynik autoryzacji i powiąż konto",
+        "complete": "5 Gotowe (zamknij ręcznie)"
+      },
+      "status": {
+        "loginConfirm": "Na tej stronie dokończ logowanie i autoryzację."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Wiele instancji WorkBuddy jest obsługiwane tylko na macOS, Windows i Linux."
+      }
     }
   }
 }

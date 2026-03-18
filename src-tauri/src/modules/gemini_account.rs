@@ -158,7 +158,7 @@ fn resolve_gemini_home(cli_home_root: Option<&Path>) -> Result<PathBuf, String> 
         Some(root) => {
             let trimmed = root.to_string_lossy().trim().to_string();
             if trimmed.is_empty() {
-                return Err("Gemini CLI HOME 目录不能为空".to_string());
+                return Err("Gemini Cli HOME 目录不能为空".to_string());
             }
             Ok(PathBuf::from(trimmed).join(GEMINI_HOME_DIR))
         }
@@ -913,10 +913,6 @@ async fn load_code_assist_status(access_token: &str) -> Result<LoadCodeAssistSta
         .text()
         .await
         .map_err(|e| format!("读取 Gemini loadCodeAssist 响应失败: {}", e))?;
-    logger::log_info(&format!(
-        "[Gemini loadCodeAssist][raw-json] {}",
-        raw_body
-    ));
 
     let value = serde_json::from_str::<Value>(&raw_body)
         .map_err(|e| format!("解析 Gemini loadCodeAssist 响应失败: {}", e))?;
@@ -961,9 +957,11 @@ async fn load_code_assist_status(access_token: &str) -> Result<LoadCodeAssistSta
         .get("allowedTiers")
         .and_then(|v| v.as_array())
         .and_then(|tiers| {
-            tiers
-                .iter()
-                .find(|tier| tier.get("isDefault").and_then(|v| v.as_bool()).unwrap_or(false))
+            tiers.iter().find(|tier| {
+                tier.get("isDefault")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+            })
         })
         .and_then(|tier| normalize_non_empty(tier.get("id").and_then(|v| v.as_str())));
     let allowed_tier_ids = value
@@ -1168,7 +1166,7 @@ async fn force_refresh_access_token(account: &mut GeminiAccount) -> Result<(), S
     Ok(())
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<GeminiAccount, String> {
     let mut account =
         load_account_file(account_id).ok_or_else(|| "Gemini 账号不存在".to_string())?;
 
@@ -1246,6 +1244,13 @@ pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, St
     let updated = account.clone();
     upsert_account_record(account)?;
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Gemini Refresh", account_id, || async {
+        refresh_account_token_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<GeminiAccount, String>)>, String> {
@@ -1487,6 +1492,7 @@ pub fn run_quota_alert_if_needed() -> Result<(), String> {
         current_account_id: current_account.id,
         current_email: current_account.email,
         threshold,
+        threshold_display: None,
         lowest_percentage,
         low_models,
         recommended_account_id: recommendation.as_ref().map(|item| item.0.clone()),

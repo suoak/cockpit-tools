@@ -29,7 +29,11 @@
         "addOnPromptCredits": "أرصدة الأوامر الإضافية",
         "credits": "الأرصدة",
         "email": "البريد الإلكتروني",
-        "promptCredits": "أرصدة الأوامر"
+        "promptCredits": "أرصدة الأوامر",
+        "creditPackage": "حزمة الرصيد",
+        "sharedCreditPackage": "حزمة الرصيد المشتركة",
+        "account": "الحساب",
+        "createdAt": "وقت الإنشاء"
       },
       "empty": {
         "title": "لا توجد حسابات"
@@ -49,7 +53,17 @@
         "label": "استيراد",
         "importing": "جارٍ الاستيراد...",
         "pickFile": "اختر ملف JSON للاستيراد",
-        "orJson": "أو الاستيراد من ملف JSON"
+        "orJson": "أو الاستيراد من ملف JSON",
+        "progress": {
+          "overallLine": "التقدم الإجمالي {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} منصات، تمت معالجة {{processedAccounts}}/{{totalAccounts}} حسابات)",
+          "currentPlatformLine": "جارٍ الاستيراد: {{platform}} ({{count}} حسابات)",
+          "currentStatusLine": "حالة المنصة الحالية: {{status}}",
+          "platformDetailsTitle": "تفاصيل المنصات",
+          "statusProcessing": "جارٍ المعالجة...",
+          "statusRunning": "جارٍ الاستيراد...",
+          "statusSkipped": "تم التخطي",
+          "statusPending": "بانتظار الاستيراد"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "جارٍ تجهيز معلومات التفويض...",
         "retry": "إعادة إنشاء معلومات التفويض",
         "timeoutRetry": "تحديث رابط التفويض",
-        "waiting": "بانتظار التفويض..."
+        "waiting": "بانتظار التفويض...",
+        "manualCallbackLabel": "إدخال رابط رد النداء يدويًا",
+        "manualCallbackPlaceholder": "الصق رابط رد النداء الكامل، مثل: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "تحديث الكل",
       "refreshQuota": "تحديث الحصة",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "تتم إعادة تعيين الحصة {{dateText}}.",
         "resetUnknown": "إعادة تعيين الحصة بعد -"
+      },
+      "updated": {
+        "label": "تم التحديث قبل {{relative}}"
       }
     }
   },
   "nav": {
-    "overview": "حساب Antigravity",
+    "overview": "Antigravity",
     "accounts": "إدارة الحسابات",
     "wakeup": "مهام الاستيقاظ",
     "fingerprints": "بصمات الجهاز",
     "settings": "الإعدادات",
-    "codex": "حسابات Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "لوحة التحكم",
@@ -159,9 +178,14 @@
     "manual": "دليل الاستخدام",
     "quickUpdate": {
       "update": "تحديث",
-      "restart": "إعادة التشغيل"
+      "restart": "إعادة التشغيل",
+      "installing": "جارٍ التثبيت"
     },
-    "gemini": "حسابات Gemini"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "تخطيط المنصات",
@@ -173,7 +197,34 @@
     "trayToggle": "إظهار في شريط النظام",
     "hiddenBadge": "مخفي",
     "openFromMore": "إدارة تخطيط المنصات",
-    "dragHandleLabel": "اسحب لإعادة الترتيب"
+    "dragHandleLabel": "اسحب لإعادة الترتيب",
+    "tipWithGroups": "اسحب لإعادة الترتيب. يمكن عرض مدخلين كحد أقصى في الشريط الجانبي. عناصر المجموعة الفرعية لا تدعم تبديل الشريط الجانبي/لوحة المعلومات وتُستخدم فقط لعرض شريط القوائم وتبديل المنصة الافتراضية.",
+    "addGroup": "إضافة مجموعة",
+    "editGroup": "تحرير المجموعة",
+    "deleteGroup": "حذف المجموعة",
+    "groupBadge": "مجموعة",
+    "groupDefault": "المنصة الافتراضية",
+    "groupName": "اسم المجموعة",
+    "groupNamePlaceholder": "مثال: مجموعة CodeBuddy",
+    "groupIcon": "أيقونة المجموعة",
+    "groupIconFromPlatform": "أيقونة المنصة",
+    "groupIconCustom": "صورة مخصصة",
+    "groupIconPreview": "معاينة الأيقونة",
+    "groupChildren": "المنصات الفرعية",
+    "groupNameRequired": "يرجى إدخال اسم المجموعة",
+    "groupChildrenRequired": "اختر منصة فرعية واحدة على الأقل",
+    "groupCustomIconRequired": "يرجى رفع أيقونة مخصصة",
+    "groupSwitchLabel": "التبديل بين منصات المجموعة",
+    "collapseAllChildren": "طي جميع المنصات الفرعية",
+    "expandAllChildren": "توسيع جميع المنصات الفرعية",
+    "addChildPlatform": "إضافة منصة فرعية",
+    "collapseChildren": "طي المنصات الفرعية",
+    "expandChildren": "توسيع المنصات الفرعية",
+    "noAvailableChildren": "لا توجد منصات متاحة للإضافة",
+    "customIconDeleteConfirm": "هل تريد حذف هذه الأيقونة المخصصة؟",
+    "editChildPlatform": "تحرير المنصة الفرعية",
+    "setAsDefaultInGroup": "تعيينها كمنصة افتراضية في هذه المجموعة",
+    "removeFromGroup": "إزالة من المجموعة"
   },
   "privacy": {
     "hideSensitive": "إخفاء البريد الإلكتروني",
@@ -376,6 +427,8 @@
       "themeLight": "فاتح (Light)",
       "themeDark": "داكن (Dark)",
       "themeSystem": "حسب النظام",
+      "uiScale": "مقياس الواجهة",
+      "uiScaleDesc": "اضبط مقياس الواجهة",
       "accountManagement": "إدارة الحسابات",
       "autoRefresh": "تحديث تلقائي لحصة Antigravity",
       "codexAutoRefresh": "تحديث تلقائي لحصة Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "تحكم مستقل في ظهور أيقونة Dock دون التأثر بسلوك تصغير النافذة",
       "hideDockIconOff": "لا (إظهار أيقونة Dock)",
       "hideDockIconOn": "نعم (إخفاء أيقونة Dock)",
-      "storageTitle": "المجلدات والتخزين",
       "dataDir": "مجلد البيانات",
       "dataDirDesc": "موقع تخزين الحسابات وملفات التكوين.",
       "fpDir": "مجلد تخزين Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "تشغيل (تحديث صامت)",
       "opencodeAuthOverwrite": "استبدال تسجيل دخول OpenCode عند تبديل Codex",
       "opencodeAuthOverwriteDesc": "عند التعطيل، يتم تبديل Codex فقط ويحتفظ OpenCode بحالة تسجيل الدخول الحالية",
-      "opencodeRestartRequiresOverwrite": "فعّل أولاً \"استبدال تسجيل دخول OpenCode عند تبديل Codex\""
+      "opencodeRestartRequiresOverwrite": "فعّل أولاً \"استبدال تسجيل دخول OpenCode عند تبديل Codex\"",
+      "codebuddySettingsTitle": "إعدادات CodeBuddy",
+      "codebuddyAutoRefresh": "التحديث التلقائي لحصة CodeBuddy",
+      "codebuddyAutoRefreshDesc": "فاصل التحديث التلقائي في الخلفية",
+      "codebuddyAppPath": "مسار تشغيل CodeBuddy",
+      "codebuddyAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
+      "codebuddyAppPathPlaceholder": "المسار الافتراضي",
+      "codebuddyPathSelect": "اختيار",
+      "codebuddyPathReset": "إعادة إلى الافتراضي",
+      "qoderPathReset": "إعادة إلى الافتراضي",
+      "traeAutoRefresh": "التحديث التلقائي لحصة Trae",
+      "traeAutoRefreshDesc": "فاصل التحديث التلقائي في الخلفية",
+      "traeAppPath": "مسار تشغيل Trae",
+      "traeAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
+      "traeAppPathPlaceholder": "المسار الافتراضي",
+      "traePathSelect": "اختيار",
+      "traePathReset": "إعادة إلى الافتراضي",
+      "workbuddyAppPath": "مسار تشغيل WorkBuddy",
+      "workbuddyAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
+      "workbuddyAppPathPlaceholder": "المسار الافتراضي",
+      "workbuddyPathSelect": "اختيار",
+      "workbuddyPathReset": "إعادة إلى الافتراضي"
     },
     "network": {
       "apiTitle": "واجهة برمجة تطبيقات قمرة القيادة المضادة للجاذبية",
@@ -473,7 +546,22 @@
       "restartRequired": "تغيرت الإعدادات، يرجى إعادة تشغيل التطبيق للتفعيل",
       "saveSuccess": "تم حفظ الإعدادات!",
       "saveSuccessRestart": "تم حفظ الإعدادات! نظراً لتغير تكوين المنفذ، يرجى إعادة تشغيل التطبيق.",
-      "saveFailed": "فشل الحفظ: {{error}}"
+      "saveFailed": "فشل الحفظ: {{error}}",
+      "reportTitle": "خدمة الاستعلام عبر الويب",
+      "reportService": "خدمة تقرير HTTP",
+      "reportServiceDesc": "يوفّر نقطة نهاية HTTP محمية بالرمز لملخصات الاستخدام",
+      "reportPort": "منفذ التقرير",
+      "reportPortDesc": "القيمة الافتراضية {{port}}، يلزم إعادة التشغيل بعد التغيير",
+      "reportToken": "رمز الوصول",
+      "reportTokenDesc": "مطلوب عند طلب /report، يرجى الحفاظ على سريته",
+      "reportTokenRequired": "لا يمكن أن يكون رمز الوصول فارغًا عند تمكين خدمة الاستعلام عبر الويب.",
+      "generateToken": "إنشاء",
+      "reportUrlPreview": "معاينة نقطة النهاية",
+      "reportUrlPreviewDesc": "يدعم format=md / format=yaml و render=true لعرض HTML",
+      "reportUrlRaw": "المخرجات الخام",
+      "reportUrlRendered": "العرض المرئي",
+      "firewallHintTitle": "تلميح جدار الحماية",
+      "firewallHint": "إذا تعذر الوصول إلى الرابط، فتحقق من إعدادات جدار الحماية في النظام."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "رصيد الذكاء الاصطناعي"
     },
     "empty": {
       "title": "لا توجد حسابات",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "الكل ({{count}})",
       "pro": "محترف ({{count}})",
-      "ultra": "الترا ({{count}})",
-      "free": "مجاني ({{count}})"
+      "ultra": "الترا ({{count}})"
     },
     "sortLabel": "فرز",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "حسب وقت إعادة ضبط {{group}}",
       "descTooltip": "تنازلي، انقر للتبديل إلى تصاعدي",
       "ascTooltip": "تصاعدي، انقر للتبديل إلى تنازلي",
-      "toggleDirection": "تبديل اتجاه الترتيب"
+      "toggleDirection": "تبديل اتجاه الترتيب",
+      "plan": "حسب الخطة",
+      "quota": "حسب الحصة"
     },
     "filterTags": "تصفية العلامات",
     "filterTagsCount": "العلامات",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} فشل: {{failList}}",
       "refreshingQuota": "جارٍ تحديث الحصة {{done}}/{{total}} (يمكنك إغلاق هذا الحوار)",
       "quotaRefreshDone": "اكتمل تحديث الحصة"
+    },
+    "groups": {
+      "manageTitle": "إدارة المجموعات",
+      "title": "مجموعات الحسابات",
+      "create": "إنشاء",
+      "newPlaceholder": "أدخل اسم المجموعة...",
+      "empty": "لا توجد مجموعات. أنشئ واحدة للبدء",
+      "accountCount": "{{count}} حساب",
+      "rename": "إعادة تسمية",
+      "addToGroup": "إضافة إلى المجموعة",
+      "createAndAdd": "إنشاء مجموعة وإضافة...",
+      "removeFromGroup": "إزالة من المجموعة",
+      "allGroups": "جميع المجموعات",
+      "noGroups": "لا توجد مجموعات",
+      "noGroupsDesc": "أنشئ مجموعات لإدارة حساباتك",
+      "manage": "إدارة",
+      "error": {
+        "duplicate": "اسم المجموعة موجود بالفعل",
+        "createFailed": "فشل إنشاء المجموعة: {{error}}",
+        "renameFailed": "فشل إعادة تسمية المجموعة: {{error}}",
+        "deleteFailed": "فشل حذف المجموعة: {{error}}",
+        "addFailed": "فشل الإضافة إلى المجموعة: {{error}}",
+        "createAndAddFailed": "فشل الإنشاء والإضافة: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "اسم المهمة",
       "taskStatus": "حالة المهمة",
       "triggerMode": "وضع التشغيل",
-      "triggerModeHint": "1. مجدول: يتم التشغيل في الأوقات المحددة.\\n2. Crontab: تحديد بواسطة تعبير.\\n3. إعادة تعيين الحصة: تشغيل مرة واحدة عند امتلاء الحصة.",
+      "triggerModeHint": "1. مجدول: يتم التشغيل في الأوقات المحددة.\n2. Crontab: تحديد بواسطة تعبير.\n3. إعادة تعيين الحصة: تشغيل مرة واحدة عند امتلاء الحصة.",
       "modeScheduled": "📅 مجدول",
       "modeCrontab": "🧩 كرونتاب",
       "modeQuotaReset": "🔄 إعادة تعيين الحصة",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "عرض التفاصيل",
     "hideErrorDetails": "إخفاء التفاصيل",
     "autoUpdateFailedAfterRetries": "فشل التحديث التلقائي بعد {{count}} محاولات. يمكنك المحاولة لاحقًا أو التنزيل يدويًا.",
-    "updateCancelled": "تم إلغاء التحديث."
+    "updateCancelled": "تم إلغاء التحديث.",
+    "cancelDownload": "إلغاء التنزيل",
+    "installing": "جارٍ التثبيت...",
+    "authorizing": "بانتظار تفويض النظام...",
+    "installFailed": "فشل التثبيت على النظام. حاول لاحقًا أو نزّل الحزمة يدويًا.",
+    "restartRequiredAfterInstall": "تم تثبيت التحديث. أعد تشغيل التطبيق يدويًا لإكمال التبديل."
   },
   "closeDialog": {
     "title": "إغلاق النافذة",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "خطأ في الحصة",
       "generic": "فشل تحديث الحصة، يرجى المحاولة لاحقا",
-      "deactivatedWorkspace": "تم تعطيل مساحة العمل، بدّل الحساب أو أعد التفويض"
+      "deactivatedWorkspace": "تم تعطيل مساحة العمل، بدّل الحساب أو أعد التفويض",
+      "requestFailedManualRetry": "فشل الطلب، يُرجى إعادة المحاولة يدويًا: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "إظهار حصة Code Review"
     },
     "time": {
       "today": "اليوم {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "العلامات",
     "noAvailableTags": "لا توجد علامات متاحة",
     "clearFilter": "مسح التصفية",
-    "editTags": "تحرير العلامات"
+    "editTags": "تحرير العلامات",
+    "account": {
+      "personal": "حساب شخصي"
+    }
   },
   "githubCopilot": {
     "title": "إدارة حسابات GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "تفاصيل الخطأ",
       "filePath": "موقع الملف",
       "helpText": "يرجى فتح المجلد للإصلاح يدويًا أو حذف الملف، ثم إعادة تشغيل التطبيق.",
-      "openFolder": "فتح المجلد"
+      "openFolder": "فتح المجلد",
+      "openFolderFailed": "فشل فتح المجلد: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "تحديث الحصة تلقائيًا",
     "gemini": {
-      "title": "إعدادات Gemini",
-      "appPath": "مسار Gemini"
+      "title": "إعدادات Gemini Cli",
+      "appPath": "مسار Gemini Cli"
     },
-    "geminiRefreshInterval": "تحديث الحصة تلقائيًا"
+    "geminiRefreshInterval": "تحديث الحصة تلقائيًا",
+    "codebuddy": {
+      "title": "إعدادات CodeBuddy",
+      "appPath": "مسار CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "فشل تحميل الإعدادات: {{error}}",
+      "saveFailed": "فشل حفظ الإعدادات: {{error}}",
+      "pickPathFailed": "فشل اختيار المسار: {{error}}",
+      "resetPathFailed": "فشل إعادة تعيين المسار: {{error}}"
+    },
+    "qoder": {
+      "title": "إعدادات Qoder",
+      "appPath": "مسار Qoder"
+    },
+    "trae": {
+      "title": "إعدادات Trae",
+      "appPath": "مسار Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "مسار CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "إعدادات WorkBuddy",
+      "appPath": "مسار WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "تنبيه حصة للحساب {{email}} (العتبة {{threshold}}%، الأدنى {{lowest}}%، النماذج: {{models}})",
@@ -1847,7 +2000,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "التبديل إلى Gemini",
+    "injectToGemini": "التبديل إلى Gemini Cli",
     "updated": {
       "label": "تم التحديث قبل {{relative}}"
     },
@@ -1860,10 +2013,10 @@
       "resetsUnknown": "وقت إعادة التعيين غير معروف",
       "onDemand": "عند الطلب"
     },
-    "title": "إدارة حسابات Gemini",
+    "title": "إدارة حسابات Gemini Cli",
     "instances": {
-      "unsupported": "إدارة تعدد مثيلات Gemini غير مدعومة حاليًا.",
-      "unsupportedDescPlatform": "تعدد مثيلات Gemini مدعوم فقط على macOS وWindows وLinux.",
+      "unsupported": "إدارة تعدد مثيلات Gemini Cli غير مدعومة حاليًا.",
+      "unsupportedDescPlatform": "تعدد مثيلات Gemini Cli مدعوم فقط على macOS وWindows وLinux.",
       "launchDialogTitle": "تشغيل المثيل",
       "launchHint": "انسخ الأمر وشغّله يدويًا، أو نفّذه مباشرة في الطرفية.",
       "runInTerminal": "تشغيل في الطرفية"
@@ -1872,30 +2025,322 @@
       "success": "تم تبديل الحساب بنجاح"
     },
     "empty": {
-      "description": "انقر على \"إضافة حساب\" لبدء إدارة حسابات Gemini الخاصة بك"
+      "description": "انقر على \"إضافة حساب\" لبدء إدارة حسابات Gemini Cli الخاصة بك"
     },
     "addModal": {
-      "title": "إضافة حساب Gemini"
+      "title": "إضافة حساب Gemini Cli"
     },
     "oauth": {
-      "desc": "انقر الزر أدناه لإكمال تفويض Gemini في المتصفح."
+      "desc": "انقر الزر أدناه لإكمال تفويض Gemini Cli في المتصفح."
     },
     "token": {
-      "desc": "الصق رمز الوصول الخاص بك من Gemini (JWT) أو بيانات JSON المصدّرة.",
+      "desc": "الصق رمز الوصول الخاص بك من Gemini Cli (JWT) أو بيانات JSON المصدّرة.",
       "formatHint": "الحقول المطلوبة والأمثلة (انقر للتوسيع)",
       "formatRequired": "رمز مفرد: الصق JWT مباشرة؛ استيراد دفعي: استخدم تنسيق مصفوفة JSON",
       "singleExample": "مثال مفرد (JWT)",
       "batchExample": "مثال دفعي (JSON)"
     },
     "import": {
-      "localDesc": "استيراد بيانات الحساب من عميل Gemini المحلي أو ملف JSON.",
-      "localClient": "الاستيراد من Gemini المحلي"
+      "localDesc": "استيراد بيانات الحساب من عميل Gemini Cli المحلي أو ملف JSON.",
+      "localClient": "الاستيراد من Gemini Cli المحلي"
     },
     "flowNotice": {
-      "title": "دليل حساب Gemini (انقر للتوسيع/الطي)",
-      "desc": "إدارة حسابات Gemini عن طريق الاستيراد من تثبيت Gemini المحلي أو لصق رموز JWT. تتم معالجة البيانات محليًا فقط.",
+      "title": "دليل حساب Gemini Cli (انقر للتوسيع/الطي)",
+      "desc": "إدارة حسابات Gemini Cli عن طريق الاستيراد من تثبيت Gemini Cli المحلي أو لصق رموز JWT. تتم معالجة البيانات محليًا فقط.",
       "reason": "نطاق الأذونات: قراءة وكتابة oauth_creds.json وgoogle_accounts.json وsettings.json ضمن ~/.gemini الافتراضي أو مسار المثيل (GEMINI_CLI_HOME/.gemini) لاستيراد الحسابات وحقن بيانات الاعتماد محليًا (تبديل الحساب).",
       "storage": "نطاق الشبكة: عمليات OAuth وتحديث الحصة تستدعي واجهات Google/Gemini الرسمية (مثل oauth2.googleapis.com وgoogleapis.com). يتم إرسال حقول المصادقة/الحصة الضرورية فقط؛ ولا تُرفع الملفات المحلية إلى خوادم طرف ثالث."
+    }
+  },
+  "codebuddy": {
+    "title": "إدارة حسابات CodeBuddy",
+    "noAccounts": "لا توجد حسابات CodeBuddy",
+    "addAccount": "إضافة حساب CodeBuddy",
+    "flowNotice": {
+      "title": "معلومات إدارة حسابات CodeBuddy (انقر للتوسيع/الطي)",
+      "desc": "يتطلب تبديل الحسابات قراءة تخزين مصادقة CodeBuddy المحلي واستدعاء خدمات بيانات الاعتماد في النظام لفك التشفير/إعادة التشفير. تتم معالجة البيانات محليًا فقط.",
+      "permission": "نطاق الأذونات: قراءة قاعدة بيانات مصادقة CodeBuddy (state.vscdb)، واستدعاء قدرات بيانات الاعتماد بالنظام (macOS Keychain / Windows DPAPI / Linux Secret Service) لفك التشفير/إعادة الكتابة.",
+      "network": "نطاق الشبكة: تسجيل دخول OAuth وتحديث الرمز يتطلبان طلبات شبكة إلى codebuddy.ai؛ واستعلامات الحصة تستدعي واجهات فوترة API. لا يتم رفع أي مفاتيح أو بيانات اعتماد محلية."
+    },
+    "nickname": "الاسم المستعار",
+    "enterprise": "المؤسسة",
+    "usage": "حالة الاستخدام",
+    "creditsBalance": "رصيد النقاط",
+    "usageNormal": "طبيعي",
+    "oauthWaiting": "بانتظار التفويض...",
+    "oauthDesc": "انقر الزر أدناه لفتح صفحة تفويض CodeBuddy في متصفحك.",
+    "oauthDescWebview": "انقر الزر أدناه لفتح صفحة تفويض CodeBuddy في WebView المدمج.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "تسجيل دخول IDE فقط",
+        "item1": "أضف الحساب بعد إكمال OAuth في المتصفح، ثم استخدمه للتبديل داخل IDE.",
+        "item2": "لا يتم ربط معلمات استعلام الحصة تلقائيًا.",
+        "item3": "إذا احتجت عرض الحصة، شغّل \"استعلام الحصة\" يدويًا من بطاقة الحساب."
+      }
+    },
+    "oauthWebviewTab": "OAuth عبر WebView",
+    "oauthOpenWebview": "فتح في WebView",
+    "oauthOpenWebviewIncognito": "فتح في WebView المتخفي",
+    "oauthOpenWebviewFailed": "فشل فتح WebView: {{error}}",
+    "oauthOpenBrowserFallback": "فتح في المتصفح (بديل)",
+    "oauthOpenBrowserFailed": "فشل فتح المتصفح: {{error}}",
+    "oauthWebviewProgressHint": "يتم عرض شريط خطوات أفقي أعلى WebView لتحديد المرحلة المتوقفة.",
+    "oauthFlow": {
+      "prepare": "تحضير رابط OAuth",
+      "authorize": "فتح رابط التفويض وتأكيده",
+      "bind": "استطلاع نتيجة التفويض وربط الحساب",
+      "retryPrepare": "إعادة إنشاء رابط OAuth",
+      "retryAuthorize": "طلب رابط التفويض مرة أخرى",
+      "retryBind": "إعادة محاولة استطلاع التفويض",
+      "error": "خطأ في المسار: {{error}}"
+    },
+    "tokenDesc": "ألصق رمز الوصول الخاص بـ CodeBuddy:",
+    "jsonDesc": "اختر ملف JSON يحتوي على حسابات CodeBuddy:",
+    "import": {
+      "localDesc": "استيراد بيانات الحساب من عميل CodeBuddy المحلي أو من ملف JSON.",
+      "localClient": "استيراد من CodeBuddy المحلي"
+    },
+    "search": "ابحث في حسابات CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "فشل تحديث الحصة",
+      "sectionTitle": "استعلام الحصة",
+      "empty": "لا توجد معلومات ربط لاستعلام الحصة بعد",
+      "packageUnknown": "باقة غير معروفة",
+      "quotaLabel": "الحصة المتبقية",
+      "updatedAt": "آخر استعلام: {{time}}",
+      "cycleRange": "الدورة: {{start}} - {{end}}",
+      "cycleUnknown": "معلومات الدورة غير متاحة",
+      "expireAt": "ينتهي في: {{time}}",
+      "expireUnknown": "وقت الانتهاء: غير متاح",
+      "packageTitle": {
+        "base": "حزمة التجربة الأساسية",
+        "activity": "حزمة هدية النشاط"
+      }
+    },
+    "extraCredit": {
+      "title": "باقة الرصيد"
+    },
+    "oauthUrlInputPlaceholder": "يمكنك إدخال رابط التفويض يدويًا",
+    "oauthInvalidUrl": "رابط تفويض غير صالح. يرجى إدخال رابط كامل.",
+    "oauthGotoWebview": "توجيه WebView المفتوح إلى الرابط المُدخل",
+    "oauthGotoWebviewSuccess": "تم طلب توجيه WebView إلى الرابط المُدخل.",
+    "oauthGotoWebviewFailed": "فشل توجيه WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "أدخل رابطًا للتنقل داخل WebView هذا",
+    "oauthWebviewInlineGo": "انتقال",
+    "oauthSuccessClosePrompt": "تمت إضافة الحساب بنجاح. هل تريد إغلاق WebView الآن؟\nاختر \"إغلاق WebView\" للإغلاق الآن، أو \"لاحقًا\" للإبقاء عليه مفتوحًا.",
+    "oauthSuccessCloseTitle": "تمت إضافة الحساب",
+    "oauthSuccessCloseNowLabel": "إغلاق WebView",
+    "oauthSuccessCloseLaterLabel": "لاحقًا",
+    "oauthSuccessCloseNowStatus": "✅ تمت إضافة الحساب. جارٍ إغلاق النافذة...",
+    "oauthSuccessCloseLaterStatus": "✅ تمت إضافة الحساب. سيبقى WebView مفتوحًا.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 تحضير رابط OAuth",
+        "authorize": "2 فتح رابط التفويض وتأكيده",
+        "bind": "3 استطلاع نتيجة التفويض وربط الحساب",
+        "complete": "5 تم (إغلاق يدوي)"
+      },
+      "status": {
+        "loginConfirm": "يرجى إكمال تسجيل الدخول والتفويض في هذه الصفحة."
+      }
+    }
+  },
+  "qoder": {
+    "title": "إدارة حسابات Qoder",
+    "comingSoon": {
+      "title": "ميزة المثيلات المتعددة قادمة قريبًا",
+      "desc": "تشغيل عدة مثيلات Qoder.app بحسابات مختلفة في وقت واحد، ترقبوا."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "تعدد مثيلات Qoder مدعوم فقط على macOS وWindows وLinux."
+      }
+    },
+    "oauth": {
+      "hint": "يرجى إكمال تسجيل الدخول في صفحة المتصفح المفتوحة: إذا لم تُفتح صفحة تسجيل الدخول تلقائيًا، فانقر على \"نسخ رابط تسجيل الدخول\" ثم الصق الرابط في المتصفح لإكمال تسجيل الدخول.",
+      "copyLoginUrl": "نسخ رابط تسجيل الدخول"
+    },
+    "usageOverview": {
+      "title": "نظرة عامة على الاستخدام",
+      "viewDetails": "عرض التفاصيل",
+      "includedCredits": "الأرصدة ضمن الخطة",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "قم بترقية الخطة لزيادة الحصة الشهرية",
+      "upgradeAction": "ترقية"
+    },
+    "flowNotice": {
+      "title": "دليل حساب Qoder (انقر للتوسيع أو الطي)",
+      "desc": "يدعم تسجيل الدخول الرسمي عبر OAuth (مع الاستدعاء الراجع) والاستيراد المحلي واستيراد JSON وحقن تبديل الحساب وربط النوافذ المتعددة وعرض الحصة. يتبع تدفق تسجيل الدخول بيانات التخزين الفعلية لعميل Qoder.",
+      "permission": "نطاق الصلاحيات: يقرأ مخزن المصادقة المحلي الخاص بـ Qoder (بيانات اعتماد auth ومعلومات المستخدم) لاستخدامه في تبديل الحساب وحقن الجلسة؛ تتم معالجة جميع البيانات محليا على جهازك.",
+      "network": "نطاق الشبكة: يتطلب تسجيل الدخول عبر OAuth الاتصال بخدمات Qoder الرسمية لاكمال الاستدعاء الراجع؛ وتستعلم الحصة من واجهة Qoder API. لا يتم رفع المفاتيح او بيانات الاعتماد المحلية."
+    },
+    "addModal": {
+      "title": "إضافة حساب Qoder"
+    },
+    "import": {
+      "localDesc": "يقرأ حالة تسجيل الدخول الحالية من عميل Qoder المحلي، بما في ذلك معلومات المستخدم والخطة واستخدام الرصيد."
+    }
+  },
+  "trae": {
+    "title": "إدارة حسابات Trae",
+    "empty": {
+      "description": "انقر على \"إضافة حساب\" لبدء إدارة حسابات Trae، أو استيرادها من بيانات Trae المحلية أو من ملف JSON."
+    },
+    "addModal": {
+      "title": "إضافة حساب Trae"
+    },
+    "oauth": {
+      "desc": "انقر الزر أدناه وأكمل تفويض Trae OAuth في المتصفح."
+    },
+    "import": {
+      "localDesc": "استورد الحساب المسجل حاليا ومعلومات الخطة وبيانات الحصة المخزنة مؤقتا من دليل إعدادات Trae المحلي.",
+      "jsonTab": "ملف JSON"
+    },
+    "quota": {
+      "usedOfTotal": "المستخدم $ {{used}} من $ {{total}}",
+      "usageUnknown": "الاستخدام: --",
+      "resetAt": "وقت إعادة التعيين: {{date}}",
+      "resetUnknown": "وقت إعادة التعيين غير معروف",
+      "statusUnknown": "الحالة: غير معروفة",
+      "statusNormal": "الحالة: طبيعي",
+      "statusExhaustedFree": "الحالة: تم استنفاد الاستخدام، نوصي بالترقية",
+      "statusExhaustedPro": "الحالة: تم استنفاد الاستخدام، قم بالترقية أو فعّل الاستخدام حسب الطلب",
+      "bonusUsed": "الرصيد الإضافي: +{{amount}}",
+      "bonusIncluded": "الرصيد الإضافي: متضمن",
+      "bonusEmpty": "الرصيد الإضافي: --",
+      "packageConsuming": "حزمة الاستخدام: قيد الاستهلاك",
+      "packageAvailable": "حزمة الاستخدام: متاحة",
+      "packageEmpty": "حزمة الاستخدام: --",
+      "payAsYouGoConsuming": "الاستخدام حسب الطلب: قيد الاستهلاك",
+      "payAsYouGoEnabled": "الاستخدام حسب الطلب: مفعل",
+      "payAsYouGoEmpty": "الاستخدام حسب الطلب: --"
+    },
+    "flowNotice": {
+      "title": "دليل حساب Trae (انقر للتوسيع أو الطي)",
+      "desc": "يدعم تسجيل الدخول الرسمي عبر OAuth والاستيراد المحلي واستيراد JSON وتبديل الحساب عبر الحقن المحلي. تتم إعادة الكتابة وفقا لقواعد التخزين الفعلية لعميل Trae.",
+      "permission": "نطاق الصلاحيات: قراءة وكتابة الحقول المرتبطة بتسجيل الدخول في ملف storage.json المحلي الخاص بـ Trae لاستخدامها في استيراد الحساب وحقن تبديل الحساب وعرض الخطة. تتم معالجة جميع البيانات محليا على جهازك.",
+      "network": "نطاق الشبكة: تسجيل الدخول عبر OAuth وتحديث الرمز المميز واستعلامات الخطة تستدعي واجهات Trae الرسمية. لا يتم رفع ملفات الحساب المحلية أو محتوى التخزين الخام إلى خدمات خارجية."
+    }
+  },
+  "codebuddyCn": {
+    "title": "إدارة حسابات CodeBuddy CN",
+    "noAccounts": "لا توجد حسابات CodeBuddy CN",
+    "addAccount": "إضافة حساب CodeBuddy CN",
+    "search": "ابحث في حسابات CodeBuddy CN...",
+    "oauthDesc": "انقر الزر أدناه لفتح صفحة تفويض CodeBuddy CN في متصفحك.",
+    "tokenDesc": "ألصق رمز الوصول الخاص بـ CodeBuddy CN:",
+    "flowNotice": {
+      "title": "معلومات إدارة حسابات CodeBuddy CN (انقر للتوسيع/الطي)",
+      "desc": "يتطلب تبديل الحسابات قراءة تخزين مصادقة CodeBuddy CN المحلي واستدعاء خدمات بيانات الاعتماد في النظام لفك التشفير/إعادة التشفير. تتم معالجة البيانات محليًا فقط.",
+      "permission": "نطاق الأذونات: قراءة قاعدة بيانات مصادقة CodeBuddy CN (state.vscdb)، واستدعاء قدرات بيانات الاعتماد بالنظام (macOS Keychain / Windows DPAPI / Linux Secret Service) لفك التشفير/إعادة الكتابة.",
+      "network": "نطاق الشبكة: تسجيل دخول OAuth وتحديث الرمز يتطلبان طلبات شبكة إلى codebuddy.cn / copilot.tencent.com؛ واستعلامات الحصة تستدعي واجهات فوترة API. لا يتم رفع أي مفاتيح أو بيانات اعتماد محلية."
+    },
+    "import": {
+      "localDesc": "استيراد بيانات الحساب من عميل CodeBuddy CN المحلي أو من ملف JSON.",
+      "localClient": "استيراد من CodeBuddy CN المحلي"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "تعدد مثيلات CodeBuddy CN مدعوم فقط على macOS وWindows وLinux."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "إدارة حسابات WorkBuddy",
+    "noAccounts": "لا توجد حسابات WorkBuddy",
+    "addAccount": "إضافة حساب WorkBuddy",
+    "flowNotice": {
+      "title": "معلومات إدارة حسابات WorkBuddy (انقر للتوسيع/الطي)",
+      "desc": "يتطلب تبديل الحسابات قراءة تخزين مصادقة WorkBuddy المحلي واستدعاء خدمات بيانات الاعتماد في النظام لفك التشفير/إعادة التشفير. تتم معالجة البيانات محليًا فقط.",
+      "permission": "نطاق الأذونات: قراءة قاعدة بيانات مصادقة WorkBuddy (state.vscdb)، واستدعاء قدرات بيانات الاعتماد بالنظام (macOS Keychain / Windows DPAPI / Linux Secret Service) لفك التشفير/إعادة الكتابة.",
+      "network": "نطاق الشبكة: تسجيل دخول OAuth وتحديث الرمز يتطلبان طلبات شبكة إلى WorkBuddy؛ واستعلامات الحصة تستدعي واجهات فوترة API. لا يتم رفع أي مفاتيح أو بيانات اعتماد محلية."
+    },
+    "nickname": "الاسم المستعار",
+    "enterprise": "المؤسسة",
+    "usage": "حالة الاستخدام",
+    "creditsBalance": "رصيد النقاط",
+    "usageNormal": "طبيعي",
+    "oauthWaiting": "بانتظار التفويض...",
+    "oauthDesc": "انقر الزر أدناه لفتح صفحة تفويض WorkBuddy في متصفحك.",
+    "oauthDescWebview": "انقر الزر أدناه لفتح صفحة تفويض WorkBuddy في WebView المدمج.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "تسجيل دخول IDE فقط",
+        "item1": "أضف الحساب بعد إكمال OAuth في المتصفح، ثم استخدمه للتبديل داخل IDE.",
+        "item2": "لا يتم ربط معلمات استعلام الحصة تلقائيًا.",
+        "item3": "إذا احتجت عرض الحصة، شغّل \"استعلام الحصة\" يدويًا من بطاقة الحساب."
+      }
+    },
+    "oauthWebviewTab": "OAuth عبر WebView",
+    "oauthOpenWebview": "فتح في WebView",
+    "oauthOpenWebviewIncognito": "فتح في WebView المتخفي",
+    "oauthOpenWebviewFailed": "فشل فتح WebView: {{error}}",
+    "oauthOpenBrowserFallback": "فتح في المتصفح (بديل)",
+    "oauthOpenBrowserFailed": "فشل فتح المتصفح: {{error}}",
+    "oauthWebviewProgressHint": "يتم عرض شريط خطوات أفقي أعلى WebView لتحديد المرحلة المتوقفة.",
+    "oauthFlow": {
+      "prepare": "تحضير رابط OAuth",
+      "authorize": "فتح رابط التفويض وتأكيده",
+      "bind": "استطلاع نتيجة التفويض وربط الحساب",
+      "retryPrepare": "إعادة إنشاء رابط OAuth",
+      "retryAuthorize": "طلب رابط التفويض مرة أخرى",
+      "retryBind": "إعادة محاولة استطلاع التفويض",
+      "error": "خطأ في المسار: {{error}}"
+    },
+    "tokenDesc": "ألصق رمز الوصول الخاص بـ WorkBuddy:",
+    "jsonDesc": "اختر ملف JSON يحتوي على حسابات WorkBuddy:",
+    "import": {
+      "localDesc": "استيراد بيانات الحساب من عميل WorkBuddy المحلي أو من ملف JSON.",
+      "localClient": "استيراد من WorkBuddy المحلي"
+    },
+    "search": "ابحث في حسابات WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "فشل تحديث الحصة",
+      "sectionTitle": "استعلام الحصة",
+      "empty": "لا توجد معلومات ربط لاستعلام الحصة بعد",
+      "packageUnknown": "باقة غير معروفة",
+      "quotaLabel": "الحصة المتبقية",
+      "updatedAt": "آخر استعلام: {{time}}",
+      "cycleRange": "الدورة: {{start}} - {{end}}",
+      "cycleUnknown": "معلومات الدورة غير متاحة",
+      "expireAt": "ينتهي في: {{time}}",
+      "expireUnknown": "وقت الانتهاء: غير متاح",
+      "packageTitle": {
+        "base": "حزمة التجربة الأساسية",
+        "activity": "حزمة هدية النشاط"
+      }
+    },
+    "extraCredit": {
+      "title": "باقة الرصيد"
+    },
+    "oauthUrlInputPlaceholder": "يمكنك إدخال رابط التفويض يدويًا",
+    "oauthInvalidUrl": "رابط تفويض غير صالح. يرجى إدخال رابط كامل.",
+    "oauthGotoWebview": "توجيه WebView المفتوح إلى الرابط المُدخل",
+    "oauthGotoWebviewSuccess": "تم طلب توجيه WebView إلى الرابط المُدخل.",
+    "oauthGotoWebviewFailed": "فشل توجيه WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "أدخل رابطًا للتنقل داخل WebView هذا",
+    "oauthWebviewInlineGo": "انتقال",
+    "oauthSuccessClosePrompt": "تمت إضافة الحساب بنجاح. هل تريد إغلاق WebView الآن؟\nاختر \"إغلاق WebView\" للإغلاق الآن، أو \"لاحقًا\" للإبقاء عليه مفتوحًا.",
+    "oauthSuccessCloseTitle": "تمت إضافة الحساب",
+    "oauthSuccessCloseNowLabel": "إغلاق WebView",
+    "oauthSuccessCloseLaterLabel": "لاحقًا",
+    "oauthSuccessCloseNowStatus": "✅ تمت إضافة الحساب. جارٍ إغلاق النافذة...",
+    "oauthSuccessCloseLaterStatus": "✅ تمت إضافة الحساب. سيبقى WebView مفتوحًا.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 تحضير رابط OAuth",
+        "authorize": "2 فتح رابط التفويض وتأكيده",
+        "bind": "3 استطلاع نتيجة التفويض وربط الحساب",
+        "complete": "5 تم (إغلاق يدوي)"
+      },
+      "status": {
+        "loginConfirm": "يرجى إكمال تسجيل الدخول والتفويض في هذه الصفحة."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "تعدد مثيلات WorkBuddy مدعوم فقط على macOS وWindows وLinux."
+      }
     }
   }
 }

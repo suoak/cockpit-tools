@@ -16,6 +16,11 @@ export async function getCurrentCodexAccount(): Promise<CodexAccount | null> {
   return await invoke('get_current_codex_account');
 }
 
+/** 刷新 Codex 账号资料（团队名/结构） */
+export async function refreshCodexAccountProfile(accountId: string): Promise<CodexAccount> {
+  return await invoke('refresh_codex_account_profile', { accountId });
+}
+
 /** 切换 Codex 账号 */
 export async function switchCodexAccount(accountId: string): Promise<CodexAccount> {
   return await invoke('switch_codex_account', { accountId });
@@ -79,6 +84,14 @@ export async function completeCodexOAuthLogin(loginId: string): Promise<CodexAcc
 /** 新 OAuth 流程：取消登录 */
 export async function cancelCodexOAuthLogin(loginId?: string): Promise<void> {
   return await invoke('codex_oauth_login_cancel', { loginId: loginId ?? null });
+}
+
+/** 新 OAuth 流程：手动提交回调链接 */
+export async function submitCodexOAuthCallbackUrl(
+  loginId: string,
+  callbackUrl: string,
+): Promise<void> {
+  return await invoke('codex_oauth_submit_callback_url', { loginId, callbackUrl });
 }
 
 /** 通过 Token 添加账号 */

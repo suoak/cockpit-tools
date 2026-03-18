@@ -28,6 +28,19 @@ const LIST_ACCOUNTS_CACHE_TTL_MS: u64 = 800;
 
 // 使用与 AntigravityCockpit 插件相同的数据目录
 const DATA_DIR: &str = ".antigravity_cockpit";
+
+/// 对邮箱地址进行脱敏，仅保留首字符和域名，例如 "u***@example.com"
+#[inline]
+fn mask_email(email: &str) -> String {
+    if let Some(at_pos) = email.find('@') {
+        let local = &email[..at_pos];
+        let domain = &email[at_pos..];
+        let first = local.chars().next().map(|c| c.to_string()).unwrap_or_default();
+        format!("{}***{}", first, domain)
+    } else {
+        "***".to_string()
+    }
+}
 const ACCOUNTS_INDEX: &str = "accounts.json";
 const ACCOUNTS_DIR: &str = "accounts";
 const DELETED_ACCOUNT_FP_BINDINGS: &str = "deleted_account_fingerprint_bindings.json";
@@ -125,7 +138,7 @@ fn remember_deleted_account_fingerprint(account: &Account) -> Result<(), String>
     if crate::modules::fingerprint::get_fingerprint(fp_id).is_err() {
         modules::logger::log_warn(&format!(
             "删除账号时发现指纹不存在，跳过映射记录: email={}, fingerprint_id={}",
-            account.email, fp_id
+            mask_email(&account.email), fp_id
         ));
         return Ok(());
     }
@@ -152,7 +165,7 @@ fn lookup_deleted_account_fingerprint(email: &str) -> Result<Option<String>, Str
     } else {
         modules::logger::log_warn(&format!(
             "账号重建时命中过期指纹映射，已忽略: email={}, fingerprint_id={}",
-            email, fp_id
+            mask_email(email), fp_id
         ));
         let _ = clear_deleted_account_fingerprint(email);
         Ok(None)
@@ -410,7 +423,7 @@ pub fn add_account(
         Err(e) => {
             modules::logger::log_warn(&format!(
                 "读取已删除账号指纹映射失败，回退为新建指纹: email={}, error={}",
-                email, e
+                mask_email(&email), e
             ));
             None
         }
@@ -420,7 +433,7 @@ pub fn add_account(
         account.fingerprint_id = Some(fp_id.clone());
         modules::logger::log_info(&format!(
             "账号复用已删除映射指纹: email={}, fingerprint_id={}",
-            email, fp_id
+            mask_email(&email), fp_id
         ));
     } else {
         let fingerprint = crate::modules::fingerprint::generate_fingerprint(email.clone())?;
@@ -447,7 +460,7 @@ pub fn add_account(
         if let Err(e) = clear_deleted_account_fingerprint(&email) {
             modules::logger::log_warn(&format!(
                 "清理已删除账号指纹映射失败: email={}, error={}",
-                email, e
+                mask_email(&email), e
             ));
         }
     }
@@ -521,7 +534,7 @@ pub fn delete_account(account_id: &str) -> Result<(), String> {
         if let Err(e) = remember_deleted_account_fingerprint(&account) {
             modules::logger::log_warn(&format!(
                 "记录删除账号指纹映射失败: account_id={}, email={}, error={}",
-                account_id, account.email, e
+                account_id, mask_email(&account.email), e
             ));
         }
     }
@@ -563,7 +576,7 @@ pub fn delete_accounts(account_ids: &[String]) -> Result<(), String> {
             if let Err(e) = remember_deleted_account_fingerprint(&account) {
                 modules::logger::log_warn(&format!(
                     "批量删除时记录账号指纹映射失败: account_id={}, email={}, error={}",
-                    account_id, account.email, e
+                    account_id, mask_email(&account.email), e
                 ));
             }
         }
@@ -824,6 +837,7 @@ pub struct QuotaAlertPayload {
     pub current_account_id: String,
     pub current_email: String,
     pub threshold: i32,
+    pub threshold_display: Option<String>,
     pub lowest_percentage: i32,
     pub low_models: Vec<String>,
     pub recommended_account_id: Option<String>,
@@ -947,42 +961,47 @@ fn pick_quota_alert_recommendation(accounts: &[Account], current_id: &str) -> Op
 }
 
 fn build_quota_alert_notification_text(payload: &QuotaAlertPayload) -> (String, String) {
-    let title = format!(
-        "{} 配额预警",
-        match payload.platform.as_str() {
-            "codex" => "Codex",
-            "github_copilot" => "GitHub Copilot",
-            "windsurf" => "Windsurf",
-            _ => "Antigravity",
-        }
-    );
+    let locale = crate::modules::config::get_user_config().language;
+    let threshold_text = payload.threshold.to_string();
+    let lowest_text = payload.lowest_percentage.to_string();
     let model_text = if payload.low_models.is_empty() {
-        "未知模型".to_string()
+        modules::i18n::translate(&locale, "quotaAlert.modal.unknownModel", &[])
     } else {
         payload.low_models.join(", ")
     };
-    let mut body = format!(
-        "{} 低于 {}%（最低 {}%，模型：{}）",
-        payload.current_email, payload.threshold, payload.lowest_percentage, model_text
+
+    let platform_label = match payload.platform.as_str() {
+        "codex" => "Codex",
+        "github_copilot" => "GitHub Copilot",
+        "windsurf" => "Windsurf",
+        "kiro" => "Kiro",
+        "cursor" => "Cursor",
+        "gemini" => "Gemini Cli",
+        "codebuddy" => "CodeBuddy",
+        _ => "Antigravity",
+    };
+    let title = format!(
+        "{} {}",
+        platform_label,
+        modules::i18n::translate(&locale, "quotaAlert.modal.title", &[])
+    );
+    let mut body = modules::i18n::translate(
+        &locale,
+        "quotaAlert.bannerText",
+        &[
+            ("email", payload.current_email.as_str()),
+            ("threshold", threshold_text.as_str()),
+            ("lowest", lowest_text.as_str()),
+            ("models", model_text.as_str()),
+        ],
     );
     if let Some(email) = payload.recommended_email.as_ref() {
-        body.push_str(&format!("，建议切换到 {}", email));
+        let recommended_label =
+            modules::i18n::translate(&locale, "quotaAlert.modal.recommended", &[]);
+        body.push_str(" · ");
+        body.push_str(&format!("{}: {}", recommended_label, email));
     }
     (title, body)
-}
-
-fn focus_main_window_and_emit_quota_alert(
-    app_handle: &tauri::AppHandle,
-    payload: &QuotaAlertPayload,
-) {
-    use tauri::Manager;
-
-    if let Some(window) = app_handle.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-    }
-    emit_quota_alert(app_handle, payload);
 }
 
 pub fn emit_quota_alert(app_handle: &tauri::AppHandle, payload: &QuotaAlertPayload) {
@@ -1013,33 +1032,28 @@ pub fn send_quota_alert_native_notification(payload: &QuotaAlertPayload) {
 
 #[cfg(target_os = "macos")]
 pub fn send_quota_alert_native_notification(payload: &QuotaAlertPayload) {
-    let Some(app_handle) = crate::get_app_handle().cloned() else {
+    let Some(app_handle) = crate::get_app_handle() else {
         return;
     };
-    let payload_for_click = payload.clone();
+    let bundle_identifier = app_handle.config().identifier.to_string();
     let (title, body) = build_quota_alert_notification_text(payload);
 
     std::thread::spawn(move || {
         let mut notification = mac_notification_sys::Notification::new();
+        // Fire-and-forget on macOS. Waiting for clicks keeps a dedicated run loop alive
+        // inside mac-notification-sys, which can cause persistent background energy usage.
         notification
             .title(title.as_str())
             .message(body.as_str())
-            .wait_for_click(true)
-            .asynchronous(false);
+            .wait_for_click(false)
+            .asynchronous(true);
 
-        if let Err(e) = mac_notification_sys::set_application(&app_handle.config().identifier) {
+        if let Err(e) = mac_notification_sys::set_application(&bundle_identifier) {
             modules::logger::log_warn(&format!("[QuotaAlert] 设置通知应用标识失败: {}", e));
         }
 
-        match notification.send() {
-            Ok(mac_notification_sys::NotificationResponse::Click)
-            | Ok(mac_notification_sys::NotificationResponse::ActionButton(_)) => {
-                focus_main_window_and_emit_quota_alert(&app_handle, &payload_for_click);
-            }
-            Ok(_) => {}
-            Err(e) => {
-                modules::logger::log_warn(&format!("[QuotaAlert] 原生通知发送失败: {}", e));
-            }
+        if let Err(e) = notification.send() {
+            modules::logger::log_warn(&format!("[QuotaAlert] 原生通知发送失败: {}", e));
         }
     });
 }
@@ -1113,6 +1127,7 @@ pub fn run_quota_alert_if_needed() -> Result<Option<QuotaAlertPayload>, String> 
         current_account_id: current_id.clone(),
         current_email: current.email.clone(),
         threshold,
+        threshold_display: None,
         lowest_percentage,
         low_models: low_models.into_iter().map(|(name, _)| name).collect(),
         recommended_account_id: recommendation.as_ref().map(|acc| acc.id.clone()),
@@ -1228,7 +1243,7 @@ pub async fn refresh_all_quotas_logic() -> Result<RefreshStats, String> {
             let permit = semaphore.clone();
             async move {
                 let _guard = permit.acquire().await.unwrap();
-                match fetch_quota_with_retry(&mut account, false).await {
+                match fetch_quota_with_delayed_retry(&mut account, false).await {
                     Ok(quota) => {
                         if let Err(e) = update_account_quota(&account_id, quota) {
                             let msg = format!("Account {}: Save quota failed - {}", email, e);
@@ -1277,6 +1292,49 @@ pub async fn refresh_all_quotas_logic() -> Result<RefreshStats, String> {
         failed,
         details,
     })
+}
+
+pub async fn fetch_quota_with_delayed_retry(
+    account: &mut Account,
+    skip_cache: bool,
+) -> crate::error::AppResult<QuotaData> {
+    match fetch_quota_with_retry(account, skip_cache).await {
+        Ok(quota) => Ok(quota),
+        Err(first_error) => {
+            modules::logger::log_warn(&format!(
+                "[Antigravity Refresh] 首次刷新失败，{} 秒后重试: account_id={}, email={}, error={}",
+                crate::modules::refresh_retry::ACCOUNT_REFRESH_RETRY_DELAY_SECS,
+                account.id,
+                account.email,
+                first_error
+            ));
+
+            tokio::time::sleep(Duration::from_secs(
+                crate::modules::refresh_retry::ACCOUNT_REFRESH_RETRY_DELAY_SECS,
+            ))
+            .await;
+
+            match fetch_quota_with_retry(account, skip_cache).await {
+                Ok(quota) => {
+                    modules::logger::log_info(&format!(
+                        "[Antigravity Refresh] 重试刷新成功: account_id={}, email={}",
+                        account.id, account.email
+                    ));
+                    Ok(quota)
+                }
+                Err(second_error) => {
+                    modules::logger::log_warn(&format!(
+                        "[Antigravity Refresh] 重试后仍失败: account_id={}, email={}, first_error={}, second_error={}",
+                        account.id,
+                        account.email,
+                        first_error,
+                        second_error
+                    ));
+                    Err(second_error)
+                }
+            }
+        }
+    }
 }
 
 /// 带重试的配额查询
@@ -1391,9 +1449,16 @@ pub async fn switch_account_internal(account_id: &str) -> Result<Account, String
     let _ = modules::instance::update_default_pid(None);
     modules::instance::inject_account_to_profile(&default_dir, account_id)?;
 
-    // 7. 启动 Antigravity（启动失败不阻断切号，保持原行为）
+    // 7. 启动 Antigravity（带默认实例自定义启动参数；启动失败不阻断切号，保持原行为）
     modules::logger::log_info("[Switch] 正在启动 Antigravity 默认实例...");
-    match modules::process::start_antigravity() {
+    let default_settings = modules::instance::load_default_settings()?;
+    let extra_args = modules::process::parse_extra_args(&default_settings.extra_args);
+    let launch_result = if extra_args.is_empty() {
+        modules::process::start_antigravity()
+    } else {
+        modules::process::start_antigravity_with_args("", &extra_args)
+    };
+    match launch_result {
         Ok(pid) => {
             let _ = modules::instance::update_default_pid(Some(pid));
         }

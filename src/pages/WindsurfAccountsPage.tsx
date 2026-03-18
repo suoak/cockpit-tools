@@ -31,6 +31,8 @@ import { TagEditModal } from '../components/TagEditModal';
 import { ExportJsonModal } from '../components/ExportJsonModal';
 import {
   getWindsurfCreditsSummary,
+  getWindsurfPlanDisplayName,
+  getWindsurfPlanLabel,
 } from '../types/windsurf';
 import { buildWindsurfAccountPresentation } from '../presentation/platformAccountPresentation';
 
@@ -38,7 +40,7 @@ import { WindsurfOverviewTabsHeader, WindsurfTab } from '../components/WindsurfO
 import { WindsurfInstancesContent } from './WindsurfInstancesPage';
 import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
-import type { WindsurfAccount } from '../types/windsurf';
+import type { WindsurfAccount, WindsurfPlanBadge } from '../types/windsurf';
 
 const WINDSURF_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.windsurf.flow_notice_collapsed';
 const WINDSURF_CURRENT_ACCOUNT_ID_KEY = 'agtools.windsurf.current_account_id';
@@ -54,6 +56,18 @@ const WINDSURF_TOKEN_BATCH_EXAMPLE = `[
     "last_used": 1730000000
   }
 ]`;
+
+const WINDSURF_PLAN_FILTERS: WindsurfPlanBadge[] = [
+  'FREE',
+  'TRIAL',
+  'INDIVIDUAL',
+  'PRO',
+  'PRO_ULTIMATE',
+  'TEAMS',
+  'TEAMS_ULTIMATE',
+  'BUSINESS',
+  'ENTERPRISE',
+];
 
 export function WindsurfAccountsPage() {
   const [activeTab, setActiveTab] = useState<WindsurfTab>('overview');
@@ -80,6 +94,7 @@ export function WindsurfAccountsPage() {
       startLogin: windsurfService.startWindsurfOAuthLogin,
       completeLogin: windsurfService.completeWindsurfOAuthLogin,
       cancelLogin: windsurfService.cancelWindsurfOAuthLogin,
+      submitCallbackUrl: windsurfService.submitWindsurfOAuthCallbackUrl,
     },
     dataService: {
       importFromJson: windsurfService.importWindsurfFromJson,
@@ -115,7 +130,10 @@ export function WindsurfAccountsPage() {
     handleTokenImport, handleImportJsonFile, handleImportFromLocal, handlePickImportFile, importFileInputRef,
     oauthUrl, oauthUrlCopied, oauthUserCode, oauthUserCodeCopied, oauthMeta,
     oauthPrepareError, oauthCompleteError, oauthPolling, oauthTimedOut,
+    oauthManualCallbackInput, setOauthManualCallbackInput,
+    oauthManualCallbackSubmitting, oauthManualCallbackError, oauthSupportsManualCallback,
     handleCopyOauthUrl, handleCopyOauthUserCode, handleRetryOauth, handleOpenOauthUrl,
+    handleSubmitOauthCallbackUrl,
     handleInjectToVSCode,
     isFlowNoticeCollapsed, setIsFlowNoticeCollapsed,
     currentAccountId,
@@ -200,7 +218,7 @@ export function WindsurfAccountsPage() {
   );
 
   const resolvePlanKey = useCallback(
-    (account: WindsurfAccount) => resolvePresentation(account).planClass.toUpperCase(),
+    (account: WindsurfAccount) => getWindsurfPlanDisplayName(resolvePresentation(account).planLabel || account.plan_type || null),
     [resolvePresentation],
   );
 
@@ -271,7 +289,10 @@ export function WindsurfAccountsPage() {
 
   // ─── Tier filter ────────────────────────────────────────────────────
   const tierCounts = useMemo(() => {
-    const counts = { all: accounts.length, FREE: 0, INDIVIDUAL: 0, PRO: 0, BUSINESS: 0, ENTERPRISE: 0 };
+    const counts: Record<string, number> = { all: accounts.length };
+    WINDSURF_PLAN_FILTERS.forEach((planKey) => {
+      counts[planKey] = 0;
+    });
     accounts.forEach((account) => {
       const tier = resolvePlanKey(account);
       if (tier in counts) counts[tier as keyof typeof counts] += 1;
@@ -499,7 +520,7 @@ export function WindsurfAccountsPage() {
     });
 
   return (
-    <div className="ghcp-accounts-page">
+    <div className="ghcp-accounts-page windsurf-accounts-page">
       <WindsurfOverviewTabsHeader active={activeTab} onTabChange={setActiveTab} />
       <div className={`ghcp-flow-notice ${isFlowNoticeCollapsed ? 'collapsed' : ''}`} role="note" aria-live="polite">
         <button type="button" className="ghcp-flow-notice-toggle" onClick={() => setIsFlowNoticeCollapsed((prev) => !prev)} aria-expanded={!isFlowNoticeCollapsed}>
@@ -536,11 +557,11 @@ export function WindsurfAccountsPage() {
           <div className="filter-select">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} aria-label={t('common.shared.filterLabel', '筛选')}>
               <option value="all">{`ALL (${tierCounts.all})`}</option>
-              <option value="FREE">{`FREE (${tierCounts.FREE})`}</option>
-              <option value="INDIVIDUAL">{`INDIVIDUAL (${tierCounts.INDIVIDUAL})`}</option>
-              <option value="PRO">{`PRO (${tierCounts.PRO})`}</option>
-              <option value="BUSINESS">{`BUSINESS (${tierCounts.BUSINESS})`}</option>
-              <option value="ENTERPRISE">{`ENTERPRISE (${tierCounts.ENTERPRISE})`}</option>
+              {WINDSURF_PLAN_FILTERS.map((planKey) => (
+                <option key={planKey} value={planKey}>
+                  {`${getWindsurfPlanLabel(planKey)} (${tierCounts[planKey] ?? 0})`}
+                </option>
+              ))}
             </select>
           </div>
           <div className="tag-filter" ref={tagFilterRef}>
@@ -664,12 +685,39 @@ export function WindsurfAccountsPage() {
                     <button className="btn btn-sm btn-outline" onClick={handleRetryOauth}>{t('common.shared.oauth.retry', '重新生成授权信息')}</button></div>
                 ) : oauthUrl ? (
                   <div className="oauth-url-section">
-                    <div className="oauth-url-box"><input type="text" value={oauthUrl} readOnly /><button onClick={handleCopyOauthUrl}>{oauthUrlCopied ? <Check size={16} /> : <Copy size={16} />}</button></div>
+                    <div className="oauth-link">
+                      <label>{t('accounts.oauth.linkLabel', '授权链接')}</label>
+                      <div className="oauth-url-box"><input type="text" value={oauthUrl} readOnly /><button onClick={handleCopyOauthUrl}>{oauthUrlCopied ? <Check size={16} /> : <Copy size={16} />}</button></div>
+                    </div>
                     {!oauthUrl.includes('user_code=') && oauthUserCode && (
                       <div className="oauth-url-box"><input type="text" value={oauthUserCode} readOnly /><button onClick={handleCopyOauthUserCode}>{oauthUserCodeCopied ? <Check size={16} /> : <Copy size={16} />}</button></div>
                     )}
                     {oauthMeta && (<p className="oauth-hint">{t('common.shared.oauth.meta', '授权有效期：{{expires}}s；轮询间隔：{{interval}}s', { expires: oauthMeta.expiresIn, interval: oauthMeta.intervalSeconds })}</p>)}
                     <button className="btn btn-primary btn-full" onClick={handleOpenOauthUrl}><Globe size={16} />{t('common.shared.oauth.openBrowser', '在浏览器中打开')}</button>
+                    {oauthSupportsManualCallback && (
+                      <div className="oauth-link">
+                        <label>{t('common.shared.oauth.manualCallbackLabel', '手动输入回调地址')}</label>
+                        <div className="oauth-url-box oauth-manual-input">
+                          <input
+                            type="text"
+                            value={oauthManualCallbackInput}
+                            onChange={(e) => setOauthManualCallbackInput(e.target.value)}
+                            placeholder={t('common.shared.oauth.manualCallbackPlaceholder', '粘贴完整回调地址，例如：http://localhost:1455/auth/callback?code=...&state=...')}
+                          />
+                          <button
+                            className="oauth-copy-button"
+                            onClick={() => void handleSubmitOauthCallbackUrl()}
+                            disabled={oauthManualCallbackSubmitting || !oauthManualCallbackInput.trim()}
+                          >
+                            {oauthManualCallbackSubmitting ? <RefreshCw size={16} className="loading-spinner" /> : <Check size={16} />}
+                            {t('accounts.oauth.continue', '我已授权，继续')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {oauthManualCallbackError && (
+                      <div className="add-status error"><CircleAlert size={16} /><span>{oauthManualCallbackError}</span></div>
+                    )}
                     {oauthPolling && (<div className="add-status loading"><RefreshCw size={16} className="loading-spinner" /><span>{t('common.shared.oauth.waiting', '等待授权完成...')}</span></div>)}
                     {oauthCompleteError && (<div className="add-status error"><CircleAlert size={16} /><span>{oauthCompleteError}</span>{oauthTimedOut && (<button className="btn btn-sm btn-outline" onClick={handleRetryOauth}>{t('common.shared.oauth.timeoutRetry', '刷新授权链接')}</button>)}</div>)}
                     <p className="oauth-hint">{t('common.shared.oauth.hint', 'Once authorized, this window will update automatically')}</p>

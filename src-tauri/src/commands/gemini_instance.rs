@@ -12,6 +12,7 @@ fn is_profile_initialized(user_data_dir: &str) -> bool {
     modules::gemini_instance::is_profile_initialized(Path::new(user_data_dir))
 }
 
+#[cfg(not(target_os = "windows"))]
 fn posix_shell_quote(value: &str) -> String {
     if value.is_empty() {
         return "''".to_string();
@@ -170,15 +171,16 @@ pub async fn gemini_create_instance(
     copy_source_instance_id: Option<String>,
     init_mode: Option<String>,
 ) -> Result<InstanceProfileView, String> {
-    let instance =
-        modules::gemini_instance::create_instance(modules::gemini_instance::CreateInstanceParams {
+    let instance = modules::gemini_instance::create_instance(
+        modules::gemini_instance::CreateInstanceParams {
             name,
             user_data_dir,
             extra_args: extra_args.unwrap_or_default(),
             bind_account_id,
             copy_source_instance_id,
             init_mode,
-        })?;
+        },
+    )?;
 
     let initialized = is_profile_initialized(&instance.user_data_dir);
     Ok(InstanceProfileView::from_profile(
@@ -237,13 +239,14 @@ pub async fn gemini_update_instance(
         }
     }
 
-    let instance =
-        modules::gemini_instance::update_instance(modules::gemini_instance::UpdateInstanceParams {
+    let instance = modules::gemini_instance::update_instance(
+        modules::gemini_instance::UpdateInstanceParams {
             instance_id,
             name,
             extra_args,
             bind_account_id,
-        })?;
+        },
+    )?;
     let initialized = is_profile_initialized(&instance.user_data_dir);
     Ok(InstanceProfileView::from_profile(
         instance,
@@ -294,7 +297,10 @@ pub async fn gemini_start_instance(instance_id: String) -> Result<InstanceProfil
         .ok_or("实例不存在")?;
 
     if let Some(ref account_id) = instance.bind_account_id {
-        modules::gemini_account::inject_to_gemini_home(account_id, Some(Path::new(&instance.user_data_dir)))?;
+        modules::gemini_account::inject_to_gemini_home(
+            account_id,
+            Some(Path::new(&instance.user_data_dir)),
+        )?;
     }
 
     let updated = modules::gemini_instance::update_instance_last_launched(&instance.id)?;
@@ -340,7 +346,7 @@ pub async fn gemini_stop_instance(instance_id: String) -> Result<InstanceProfile
 
 #[tauri::command]
 pub async fn gemini_open_instance_window(_instance_id: String) -> Result<(), String> {
-    Err("Gemini CLI 不支持窗口定位，请使用“启动”后的命令在终端中运行".to_string())
+    Err("Gemini Cli 不支持窗口定位，请使用“启动”后的命令在终端中运行".to_string())
 }
 
 #[tauri::command]
@@ -360,6 +366,7 @@ pub async fn gemini_get_instance_launch_command(
     })
 }
 
+#[cfg(target_os = "macos")]
 fn escape_applescript(value: &str) -> String {
     value
         .replace('\\', "\\\\")
@@ -389,7 +396,7 @@ pub async fn gemini_execute_instance_launch_command(instance_id: String) -> Resu
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(format!("终端执行失败: {}", stderr.trim()));
         }
-        return Ok("已在终端执行 Gemini 命令".to_string());
+        return Ok("已在终端执行 Gemini Cli 命令".to_string());
     }
 
     #[cfg(target_os = "windows")]
@@ -398,7 +405,7 @@ pub async fn gemini_execute_instance_launch_command(instance_id: String) -> Resu
             .args(["/C", "start", "", "cmd", "/K", &command])
             .spawn()
             .map_err(|e| format!("打开终端失败: {}", e))?;
-        return Ok("已在终端执行 Gemini 命令".to_string());
+        return Ok("已在终端执行 Gemini Cli 命令".to_string());
     }
 
     #[cfg(target_os = "linux")]
@@ -418,8 +425,8 @@ pub async fn gemini_execute_instance_launch_command(instance_id: String) -> Resu
                     .spawn()
             })
             .or_else(|_| Command::new("sh").args(["-lc", &command]).spawn())
-            .map_err(|e| format!("执行 Gemini 命令失败: {}", e))?;
-        return Ok("已执行 Gemini 命令".to_string());
+            .map_err(|e| format!("执行 Gemini Cli 命令失败: {}", e))?;
+        return Ok("已执行 Gemini Cli 命令".to_string());
     }
 
     #[allow(unreachable_code)]

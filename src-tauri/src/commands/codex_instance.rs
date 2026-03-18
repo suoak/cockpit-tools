@@ -201,7 +201,8 @@ pub async fn codex_start_instance(instance_id: String) -> Result<InstanceProfile
         if let Some(ref account_id) = default_bind_account_id {
             modules::codex_instance::inject_account_to_profile(&default_dir, account_id).await?;
         }
-        let pid = modules::process::start_codex_default()?;
+        let extra_args = modules::process::parse_extra_args(&default_settings.extra_args);
+        let pid = modules::process::start_codex_default(&extra_args)?;
         let _ = modules::codex_instance::update_default_pid(Some(pid))?;
         let running = modules::process::is_pid_running(pid);
         return Ok(InstanceProfileView {

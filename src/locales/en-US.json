@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Add-on prompt credits",
         "credits": "Credits",
         "email": "Email",
-        "promptCredits": "User Prompt credits"
+        "promptCredits": "User Prompt credits",
+        "creditPackage": "Credit Package",
+        "sharedCreditPackage": "Shared Credit Package",
+        "account": "Account",
+        "createdAt": "Created Time"
       },
       "empty": {
         "title": "No Accounts"
@@ -49,7 +53,17 @@
         "label": "Import",
         "importing": "Importing...",
         "pickFile": "Select JSON file to import",
-        "orJson": "Or import from JSON file"
+        "orJson": "Or import from JSON file",
+        "progress": {
+          "overallLine": "Overall progress {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platforms, {{processedAccounts}}/{{totalAccounts}} accounts processed)",
+          "currentPlatformLine": "Importing: {{platform}} ({{count}} accounts)",
+          "currentStatusLine": "Current platform status: {{status}}",
+          "platformDetailsTitle": "Platform details",
+          "statusProcessing": "Processing...",
+          "statusRunning": "Importing...",
+          "statusSkipped": "Skipped",
+          "statusPending": "Pending import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Preparing authorization info...",
         "retry": "Regenerate authorization info",
         "timeoutRetry": "Refresh authorization link",
-        "waiting": "Waiting for authorization..."
+        "waiting": "Waiting for authorization...",
+        "manualCallbackLabel": "Manual callback URL",
+        "manualCallbackPlaceholder": "Paste the full callback URL, e.g. http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Refresh All",
       "refreshQuota": "Refresh Quota",
@@ -141,39 +157,74 @@
       "usage": {
         "resetLine": "Allowance resets {{dateText}}.",
         "resetUnknown": "Allowance resets -"
+      },
+      "updated": {
+        "label": "Updated {{relative}} ago"
       }
     }
   },
   "nav": {
-    "overview": "Antigravity Account",
+    "overview": "Antigravity",
     "accounts": "Accounts",
     "wakeup": "Wakeup Tasks",
     "fingerprints": "Fingerprints",
     "settings": "Settings",
-    "codex": "Codex Accounts",
+    "codex": "Codex",
+    "codebuddy": "CodeBuddy",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
-    "gemini": "Gemini",
+    "gemini": "Gemini Cli",
     "dashboard": "Dashboard",
     "morePlatforms": "More Platforms",
     "instances": "Multi-Instance",
     "manual": "User Manual",
     "quickUpdate": {
       "update": "Update",
-      "restart": "Restart"
-    }
+      "restart": "Restart",
+      "installing": "Installing"
+    },
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Platform Layout",
     "sidebarSelected": "Sidebar selected {{count}}/{{max}}",
     "reset": "Reset to default",
     "tip": "Drag to reorder. Up to two platforms can be shown in the sidebar. If only one is selected, only one is shown.",
+    "tipWithGroups": "Drag to reorder. Up to two entries can appear in the sidebar. Group children do not have sidebar/dashboard toggles and are only used for tray visibility and default-platform switching.",
+    "addGroup": "Add group",
+    "editGroup": "Edit",
+    "deleteGroup": "Delete group",
+    "groupBadge": "Group",
     "sidebarToggle": "Show in sidebar",
     "dashboardToggle": "Show in dashboard",
     "trayToggle": "Show in tray",
+    "groupDefault": "Default platform",
+    "groupName": "Group name",
+    "groupNamePlaceholder": "Example: CodeBuddy Suite",
+    "groupIcon": "Group icon",
+    "groupIconFromPlatform": "Platform icon",
+    "groupIconCustom": "Custom image",
+    "groupIconPreview": "Icon preview",
+    "groupChildren": "Child platforms",
+    "groupNameRequired": "Please enter a group name",
+    "groupChildrenRequired": "Select at least one child platform",
+    "groupCustomIconRequired": "Please upload a custom icon",
+    "groupSwitchLabel": "Switch platform in this group",
     "hiddenBadge": "Hidden",
     "openFromMore": "Manage platform layout",
-    "dragHandleLabel": "Drag to reorder"
+    "dragHandleLabel": "Drag to reorder",
+    "collapseAllChildren": "Collapse all child platforms",
+    "expandAllChildren": "Expand all child platforms",
+    "addChildPlatform": "Add child platform",
+    "collapseChildren": "Collapse child platforms",
+    "expandChildren": "Expand child platforms",
+    "noAvailableChildren": "No platforms available to add",
+    "customIconDeleteConfirm": "Delete this custom icon?",
+    "editChildPlatform": "Edit child platform",
+    "setAsDefaultInGroup": "Set as the default platform in this group",
+    "removeFromGroup": "Remove from group"
   },
   "privacy": {
     "hideSensitive": "Hide emails",
@@ -376,6 +427,8 @@
       "themeLight": "Light",
       "themeDark": "Dark",
       "themeSystem": "System",
+      "uiScale": "UI Scale",
+      "uiScaleDesc": "Adjust interface scale",
       "accountManagement": "Account Management",
       "autoRefresh": "Antigravity Auto Refresh Quota",
       "codexAutoRefresh": "Codex Auto Refresh Quota",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Control Dock icon visibility independently; not affected by window minimize behavior",
       "hideDockIconOff": "No (Show Dock icon)",
       "hideDockIconOn": "Yes (Hide Dock icon)",
-      "storageTitle": "Directories & Storage",
       "dataDir": "Data Directory",
       "dataDirDesc": "Storage location for accounts and configuration files.",
       "fpDir": "Antigravity Storage",
@@ -453,13 +505,34 @@
       "kiroAppPathPlaceholder": "Default path",
       "kiroPathSelect": "Select",
       "kiroPathReset": "Reset to default",
+      "codebuddySettingsTitle": "CodeBuddy Settings",
+      "codebuddyAutoRefresh": "CodeBuddy Auto Refresh Quota",
+      "codebuddyAutoRefreshDesc": "Background auto-refresh interval",
+      "codebuddyAppPath": "CodeBuddy Launch Path",
+      "codebuddyAppPathDesc": "Leave empty for default path",
+      "codebuddyAppPathPlaceholder": "Default path",
+      "codebuddyPathSelect": "Select",
+      "codebuddyPathReset": "Reset to default",
       "cursorPathReset": "Reset default",
       "codexLaunchOnSwitch": "Launch Codex App when switching Codex",
       "codexLaunchOnSwitchDesc": "Start or restart Codex App after switching accounts",
       "autoUpdate": "Background Auto Update",
       "autoUpdateDesc": "When a new version is detected, update in the background and prompt for restart when ready.",
       "autoUpdateOff": "Off (manual update)",
-      "autoUpdateOn": "On (silent update)"
+      "autoUpdateOn": "On (silent update)",
+      "qoderPathReset": "Reset to default",
+      "traeAutoRefresh": "Trae Auto Refresh Quota",
+      "traeAutoRefreshDesc": "Background auto-refresh interval",
+      "traeAppPath": "Trae Launch Path",
+      "traeAppPathDesc": "Leave empty for default path",
+      "traeAppPathPlaceholder": "Default path",
+      "traePathSelect": "Select",
+      "traePathReset": "Reset to default",
+      "workbuddyAppPath": "WorkBuddy Launch Path",
+      "workbuddyAppPathDesc": "Leave empty for default path",
+      "workbuddyAppPathPlaceholder": "Default path",
+      "workbuddyPathSelect": "Select",
+      "workbuddyPathReset": "Reset to default"
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -473,7 +546,22 @@
       "restartRequired": "Configuration changed, please restart the app to apply",
       "saveSuccess": "Settings saved!",
       "saveSuccessRestart": "Settings saved! Please restart the app for port changes to take effect.",
-      "saveFailed": "Save failed: {{error}}"
+      "saveFailed": "Save failed: {{error}}",
+      "reportTitle": "Web Query Service",
+      "reportService": "HTTP Report Service",
+      "reportServiceDesc": "Expose a token-protected HTTP endpoint for usage summaries",
+      "reportPort": "Report Port",
+      "reportPortDesc": "Default is {{port}}, restart required after change",
+      "reportToken": "Access Token",
+      "reportTokenDesc": "Required when requesting /report, keep it private",
+      "reportTokenRequired": "Access token cannot be empty when report service is enabled.",
+      "generateToken": "Generate",
+      "reportUrlPreview": "Endpoint Preview",
+      "reportUrlPreviewDesc": "Supports format=md / format=yaml, and render=true for HTML view",
+      "reportUrlRaw": "Raw Output",
+      "reportUrlRendered": "Rendered View",
+      "firewallHintTitle": "Firewall Tip",
+      "firewallHint": "If the URL is unreachable, check your system firewall settings."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "AI Credits"
     },
     "empty": {
       "title": "No Accounts",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "All ({{count}})",
       "pro": "PRO ({{count}})",
-      "ultra": "ULTRA ({{count}})",
-      "free": "FREE ({{count}})"
+      "ultra": "ULTRA ({{count}})"
     },
     "sortLabel": "Sort",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "By {{group}} reset time",
       "descTooltip": "Desc, click to switch to Asc",
       "ascTooltip": "Asc, click to switch to Desc",
-      "toggleDirection": "Toggle sort direction"
+      "toggleDirection": "Toggle sort direction",
+      "plan": "By plan",
+      "quota": "By quota"
     },
     "filterTags": "Filter Tags",
     "filterTagsCount": "Tags",
@@ -632,9 +723,33 @@
       "importSuccess": "Imported {{count}} accounts",
       "importPartial": "Imported {{success}} accounts, failed {{fail}}",
       "importFailed": "Import failed, please check refresh_token",
-    "importPartialFailed": "{{failCount}} failed: {{failList}}",
-    "refreshingQuota": "Refreshing quota {{done}}/{{total}} (you may close this dialog)",
-    "quotaRefreshDone": "Quota refresh complete"
+      "importPartialFailed": "{{failCount}} failed: {{failList}}",
+      "refreshingQuota": "Refreshing quota {{done}}/{{total}} (you may close this dialog)",
+      "quotaRefreshDone": "Quota refresh complete"
+    },
+    "groups": {
+      "manageTitle": "Group Management",
+      "title": "Account Groups",
+      "create": "Create",
+      "newPlaceholder": "Enter group name...",
+      "empty": "No groups yet, create one to get started",
+      "accountCount": "{{count}} account(s)",
+      "rename": "Rename",
+      "addToGroup": "Add to Group",
+      "createAndAdd": "Create group and add...",
+      "removeFromGroup": "Remove from Group",
+      "allGroups": "All Groups",
+      "noGroups": "No Groups",
+      "noGroupsDesc": "Create groups to manage your accounts in batches",
+      "manage": "Manage",
+      "error": {
+        "duplicate": "Group name already exists",
+        "createFailed": "Failed to create group: {{error}}",
+        "renameFailed": "Failed to rename group: {{error}}",
+        "deleteFailed": "Failed to delete group: {{error}}",
+        "addFailed": "Failed to add to group: {{error}}",
+        "createAndAddFailed": "Failed to create group and add: {{error}}"
+      }
     }
   },
   "overview": {
@@ -737,9 +852,9 @@
       "fpLabel": "Fingerprint:",
       "generateFailed": "Generate failed",
       "importFailed": "Import failed",
-    "importPartialFailed": "{{failCount}} failed: {{failList}}",
-    "refreshingQuota": "Refreshing quota {{done}}/{{total}} (you may close this dialog)",
-    "quotaRefreshDone": "Quota refresh complete",
+      "importPartialFailed": "{{failCount}} failed: {{failList}}",
+      "refreshingQuota": "Refreshing quota {{done}}/{{total}} (you may close this dialog)",
+      "quotaRefreshDone": "Quota refresh complete",
       "importing": "Importing...",
       "loadFailed": "Failed to load fingerprint list",
       "processing": "Processing...",
@@ -971,7 +1086,7 @@
       "taskName": "Task name",
       "taskStatus": "Task status",
       "triggerMode": "Trigger mode",
-      "triggerModeHint": "1. Scheduled: trigger at set times.\\n2. Crontab: define with an expression.\\n3. Quota reset: trigger once when quota is full.",
+      "triggerModeHint": "1. Scheduled: trigger at set times.\n2. Crontab: define with an expression.\n3. Quota reset: trigger once when quota is full.",
       "modeScheduled": "📅 Scheduled",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Quota reset",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "View details",
     "hideErrorDetails": "Hide details",
     "autoUpdateFailedAfterRetries": "Auto-update failed after {{count}} attempts. Try again later or download manually.",
-    "updateCancelled": "Update canceled."
+    "updateCancelled": "Update canceled.",
+    "cancelDownload": "Cancel download",
+    "installing": "Installing...",
+    "authorizing": "Waiting for system authorization...",
+    "installFailed": "System installation failed. Try again later or download manually.",
+    "restartRequiredAfterInstall": "The update is installed. Restart the app manually to finish switching."
   },
   "closeDialog": {
     "title": "Close Window",
@@ -1100,6 +1220,9 @@
     "switched": "Switched to {{email}}",
     "switchFailed": "Switch failed: {{error}}",
     "current": "Current",
+    "account": {
+      "personal": "Personal account"
+    },
     "empty": {
       "description": "Click \"Add Account\" to get started"
     },
@@ -1141,7 +1264,8 @@
     "quotaError": {
       "badge": "Quota error",
       "generic": "Quota refresh failed, please try again later",
-      "deactivatedWorkspace": "Workspace is deactivated, switch account or re-authorize"
+      "deactivatedWorkspace": "Workspace is deactivated, switch account or re-authorize",
+      "requestFailedManualRetry": "Request failed, please retry manually: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1273,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Show Code Review quota"
     },
     "time": {
       "today": "Today {{time}}",
@@ -1180,6 +1307,99 @@
     "noAvailableTags": "No tags available",
     "clearFilter": "Clear Filter",
     "editTags": "Edit Tags"
+  },
+  "codebuddy": {
+    "title": "CodeBuddy Account Management",
+    "noAccounts": "No CodeBuddy accounts",
+    "addAccount": "Add CodeBuddy Account",
+    "flowNotice": {
+      "title": "CodeBuddy Account Management Info (click to expand/collapse)",
+      "desc": "Switching accounts requires reading CodeBuddy local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
+      "permission": "Permission scope: read CodeBuddy auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
+      "network": "Network scope: OAuth login and token refresh require network requests to codebuddy.ai; quota queries call billing APIs. No local keys or credentials are uploaded."
+    },
+    "nickname": "Nickname",
+    "enterprise": "Enterprise",
+    "usage": "Usage Status",
+    "creditsBalance": "Credits Balance",
+    "usageNormal": "Normal",
+    "oauthWaiting": "Waiting for authorization...",
+    "oauthDesc": "Click the button below to open the CodeBuddy authorization page in your browser.",
+    "oauthDescWebview": "Click the button below to open the CodeBuddy authorization page in built-in WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "IDE sign-in only",
+        "item1": "Add the account after completing OAuth in your browser, then use it for IDE switching.",
+        "item2": "Resource-package quota data will refresh automatically after authorization.",
+        "item3": "Account cards show quota amount, progress, and refresh/expiry time by resource package."
+      }
+    },
+    "oauthWebviewTab": "WebView OAuth",
+    "oauthOpenWebview": "Open in WebView",
+    "oauthOpenWebviewIncognito": "Open in Incognito WebView",
+    "oauthOpenWebviewFailed": "Failed to open WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Open in Browser (Fallback)",
+    "oauthOpenBrowserFailed": "Failed to open browser: {{error}}",
+    "oauthWebviewProgressHint": "A horizontal step bar is shown at the top of the WebView to locate stuck stages.",
+    "oauthFlow": {
+      "prepare": "Prepare OAuth link",
+      "authorize": "Open authorization link and confirm",
+      "bind": "Poll auth result and bind account",
+      "retryPrepare": "Regenerate OAuth link",
+      "retryAuthorize": "Request authorization link again",
+      "retryBind": "Retry auth polling",
+      "error": "Flow error: {{error}}"
+    },
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Prepare OAuth link",
+        "authorize": "2 Open authorization link and confirm",
+        "bind": "3 Poll auth result and bind account",
+        "complete": "5 Done (close manually)"
+      },
+      "status": {
+        "loginConfirm": "Please complete sign-in and authorization on this page."
+      }
+    },
+    "tokenDesc": "Paste your CodeBuddy access token:",
+    "jsonDesc": "Select a JSON file containing CodeBuddy accounts:",
+    "import": {
+      "localDesc": "Import account data from local CodeBuddy client or a JSON file.",
+      "localClient": "Import from local CodeBuddy"
+    },
+    "search": "Search CodeBuddy accounts...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Quota query failed",
+      "sectionTitle": "Quota Query",
+      "empty": "No quota data available",
+      "packageUnknown": "Unknown package",
+      "quotaLabel": "Remaining quota",
+      "updatedAt": "Next refresh time: {{time}}",
+      "cycleRange": "Cycle: {{start}} - {{end}}",
+      "cycleUnknown": "Cycle info unavailable",
+      "expireAt": "Expires at: {{time}}",
+      "expireUnknown": "Expires at: N/A",
+      "packageTitle": {
+        "base": "Base Experience Package",
+        "activity": "Activity Gift Package"
+      }
+    },
+    "extraCredit": {
+      "title": "Credit Package"
+    },
+    "oauthUrlInputPlaceholder": "You can enter an authorization URL manually",
+    "oauthInvalidUrl": "Invalid authorization URL. Please enter a full URL.",
+    "oauthGotoWebview": "Navigate opened WebView to input URL",
+    "oauthGotoWebviewSuccess": "Requested WebView to navigate to the input URL.",
+    "oauthGotoWebviewFailed": "Failed to navigate WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Enter a URL to navigate within this WebView",
+    "oauthWebviewInlineGo": "Go",
+    "oauthSuccessClosePrompt": "Account added successfully. Close this WebView now?\nChoose \"Close WebView\" to close now, or \"Later\" to keep it open.",
+    "oauthSuccessCloseTitle": "Account Added",
+    "oauthSuccessCloseNowLabel": "Close WebView",
+    "oauthSuccessCloseLaterLabel": "Later",
+    "oauthSuccessCloseNowStatus": "✅ Account added. Closing window...",
+    "oauthSuccessCloseLaterStatus": "✅ Account added. This WebView stays open."
   },
   "githubCopilot": {
     "title": "GitHub Copilot Account Management",
@@ -1287,7 +1507,8 @@
       "errorInfo": "Error Details",
       "filePath": "File Location",
       "helpText": "Please open the folder to repair manually or delete the file, then restart the application.",
-      "openFolder": "Open Folder"
+      "openFolder": "Open Folder",
+      "openFolderFailed": "Failed to open folder: {{error}}"
     }
   },
   "quickSettings": {
@@ -1339,11 +1560,36 @@
       "appPath": "Cursor Path"
     },
     "cursorRefreshInterval": "Quota Auto Refresh",
-    "gemini": {
-      "title": "Gemini Settings",
-      "appPath": "Gemini CLI Path"
+    "codebuddy": {
+      "title": "CodeBuddy Settings",
+      "appPath": "CodeBuddy Path"
     },
-    "geminiRefreshInterval": "Quota Auto Refresh"
+    "gemini": {
+      "title": "Gemini Cli Settings",
+      "appPath": "Gemini Cli Path"
+    },
+    "geminiRefreshInterval": "Quota Auto Refresh",
+    "error": {
+      "loadFailed": "Failed to load config: {{error}}",
+      "saveFailed": "Failed to save config: {{error}}",
+      "pickPathFailed": "Failed to pick path: {{error}}",
+      "resetPathFailed": "Failed to reset path: {{error}}"
+    },
+    "qoder": {
+      "title": "Qoder Settings",
+      "appPath": "Qoder Path"
+    },
+    "trae": {
+      "title": "Trae Settings",
+      "appPath": "Trae Path"
+    },
+    "codebuddyCn": {
+      "appPath": "CodeBuddy CN Path"
+    },
+    "workbuddy": {
+      "title": "WorkBuddy Settings",
+      "appPath": "WorkBuddy Path"
+    }
   },
   "quotaAlert": {
     "bannerText": "Quota alert for {{email}} (threshold {{threshold}}%, lowest {{lowest}}%, models: {{models}})",
@@ -1526,7 +1772,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Switch to Gemini",
+    "injectToGemini": "Switch to Gemini Cli",
     "updated": {
       "label": "Updated {{relative}} ago"
     },
@@ -1539,10 +1785,10 @@
       "resetsUnknown": "Reset time unknown",
       "onDemand": "On-Demand"
     },
-    "title": "Gemini Account Management",
+    "title": "Gemini Cli Account Management",
     "instances": {
-      "unsupported": "Gemini multi-instance management is not supported yet.",
-      "unsupportedDescPlatform": "Gemini multi-instance is supported on macOS, Windows, and Linux only.",
+      "unsupported": "Gemini Cli multi-instance management is not supported yet.",
+      "unsupportedDescPlatform": "Gemini Cli multi-instance is supported on macOS, Windows, and Linux only.",
       "launchDialogTitle": "Launch Instance",
       "launchHint": "Copy the command and run manually, or execute it directly in terminal.",
       "runInTerminal": "Run in Terminal"
@@ -1551,28 +1797,28 @@
       "success": "Account switched successfully"
     },
     "empty": {
-      "description": "Click \"Add Account\" to start managing your Gemini accounts"
+      "description": "Click \"Add Account\" to start managing your Gemini Cli accounts"
     },
     "addModal": {
-      "title": "Add Gemini Account"
+      "title": "Add Gemini Cli Account"
     },
     "oauth": {
-      "desc": "Click the button below and complete Gemini OAuth authorization in your browser."
+      "desc": "Click the button below and complete Gemini Cli OAuth authorization in your browser."
     },
     "token": {
-      "desc": "Paste your Gemini Access Token (JWT) or exported JSON data.",
+      "desc": "Paste your Gemini Cli Access Token (JWT) or exported JSON data.",
       "formatHint": "Required fields & examples (click to expand)",
       "formatRequired": "Single token: paste JWT directly; batch import: use JSON array format",
       "singleExample": "Single example (JWT)",
       "batchExample": "Batch example (JSON)"
     },
     "import": {
-      "localDesc": "Import Gemini account data from local Gemini config directory (~/.gemini) or a JSON file.",
-      "localClient": "Import from local Gemini"
+      "localDesc": "Import Gemini Cli account data from local Gemini Cli config directory (~/.gemini) or a JSON file.",
+      "localClient": "Import from local Gemini Cli"
     },
     "flowNotice": {
-      "title": "Gemini account guide (click to expand/collapse)",
-      "desc": "Manage Gemini accounts by importing from local Gemini config, pasting a JWT token, or signing in via OAuth.",
+      "title": "Gemini Cli account guide (click to expand/collapse)",
+      "desc": "Manage Gemini Cli accounts by importing from local Gemini Cli config, pasting a JWT token, or signing in via OAuth.",
       "reason": "Permission scope: read and write oauth_creds.json, google_accounts.json, and settings.json under default ~/.gemini or instance path (GEMINI_CLI_HOME/.gemini) for account import and local credential injection (account switching).",
       "storage": "Network scope: OAuth and refresh call official Google/Gemini APIs (such as oauth2.googleapis.com and googleapis.com). Only required auth/quota fields are sent; local account files are not uploaded to third-party servers."
     }
@@ -1896,6 +2142,205 @@
       },
       "summary": "Used for scheduled wakeup tasks and batch verification, helping continuous tracking of account availability and status.",
       "title": "Wakeup Tasks & Verification"
+    }
+  },
+  "qoder": {
+    "title": "Qoder Account Management",
+    "flowNotice": {
+      "title": "Qoder account guide (click to expand/collapse)",
+      "desc": "Supports official CLI device login authorization, local import, JSON import, account switching injection, multi-instance binding, and quota overview. Browser authorization does not require Qoder to stay running; injection writes back using Qoder client's actual on-disk rules.",
+      "permission": "Permission scope: reads Qoder local auth storage, user info, and machine identity caches such as machine_token.json and cache/id for official authorization, local import, account switching, and session injection. All data is processed locally on your machine.",
+      "network": "Network scope: OAuth authorization opens Qoder's official device login page in your browser and polls Qoder official OpenAPI to finish authorization. Quota queries call Qoder APIs for usage data. No local keys, credentials, or raw storage contents are uploaded."
+    },
+    "oauth": {
+      "hint": "Click the button below to complete Qoder authorization in your browser. This uses the official CLI device login flow and does not require Qoder to stay running.",
+      "copyLoginUrl": "Copy Sign In URL"
+    },
+    "usageOverview": {
+      "title": "Usage Overview",
+      "viewDetails": "View Details",
+      "includedCredits": "Included Credits",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Upgrade your plan to increase monthly quota",
+      "upgradeAction": "Upgrade"
+    },
+    "comingSoon": {
+      "title": "Qoder Account Integration In Progress",
+      "desc": "This release supports Qoder multi-instance, platform management, and tray entry. Account login and quota panels will arrive in a later release."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Qoder multi-instance is available only on macOS, Windows, and Linux."
+      }
+    },
+    "addModal": {
+      "title": "Add Qoder Account"
+    },
+    "import": {
+      "localDesc": "Read the current sign-in state from the local Qoder client, including user info, plan, and credits usage."
+    }
+  },
+  "trae": {
+    "title": "Trae Account Management",
+    "empty": {
+      "description": "Click \"Add Account\" to start managing your Trae accounts, or import from local Trae data or a JSON file."
+    },
+    "addModal": {
+      "title": "Add Trae Account"
+    },
+    "oauth": {
+      "desc": "Click the button below and complete Trae OAuth authorization in your browser."
+    },
+    "import": {
+      "localDesc": "Import the current signed-in account, plan information, and cached quota data from the local Trae configuration directory.",
+      "jsonTab": "JSON File"
+    },
+    "quota": {
+      "usedOfTotal": "${{used}} / ${{total}}",
+      "usageUnknown": "Usage: --",
+      "resetAt": "Subscription reset: {{date}}",
+      "resetUnknown": "Subscription reset: --",
+      "statusUnknown": "Status: --",
+      "statusNormal": "Status: Normal",
+      "statusExhaustedFree": "Status: Usage exhausted, upgrade recommended",
+      "statusExhaustedPro": "Status: Usage exhausted, upgrade or enable on-demand usage",
+      "bonusUsed": "Bonus: +{{amount}}",
+      "bonusIncluded": "Bonus: Included",
+      "bonusEmpty": "Bonus: --",
+      "packageConsuming": "Package: Consuming",
+      "packageAvailable": "Package: Available",
+      "packageEmpty": "Package: --",
+      "payAsYouGoConsuming": "On-Demand Usage: Consuming",
+      "payAsYouGoEnabled": "On-Demand Usage: Enabled",
+      "payAsYouGoEmpty": "On-Demand Usage: --"
+    },
+    "flowNotice": {
+      "title": "Trae account guide (click to expand/collapse)",
+      "desc": "Supports official OAuth sign-in, local import, JSON import, and local injection-based account switching. Account switching writes back using Trae client's actual on-disk rules.",
+      "permission": "Permission scope: read and write login-related fields in the local Trae storage.json for account import, account switching injection, and plan display. All data is processed locally on your machine.",
+      "network": "Network scope: OAuth sign-in, token refresh, and plan queries call official Trae APIs. Local account files and raw storage contents are not uploaded to third-party services."
+    }
+  },
+  "codebuddyCn": {
+    "title": "CodeBuddy CN Account Management",
+    "noAccounts": "No CodeBuddy CN accounts",
+    "addAccount": "Add CodeBuddy CN Account",
+    "search": "Search CodeBuddy CN accounts...",
+    "oauthDesc": "Click the button below to open the CodeBuddy CN authorization page in your browser.",
+    "tokenDesc": "Paste your CodeBuddy CN access token:",
+    "flowNotice": {
+      "title": "CodeBuddy CN Account Management Info (click to expand/collapse)",
+      "desc": "Switching accounts requires reading CodeBuddy CN local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
+      "permission": "Permission scope: read CodeBuddy CN auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
+      "network": "Network scope: OAuth login and token refresh require network requests to codebuddy.cn and copilot.tencent.com; resource-package quota refresh calls billing APIs. No local keys or credentials are uploaded."
+    },
+    "import": {
+      "localDesc": "Import account data from local CodeBuddy CN client or a JSON file.",
+      "localClient": "Import from local CodeBuddy CN"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "CodeBuddy CN multi-instance is supported on macOS, Windows, and Linux only."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "WorkBuddy Account Management",
+    "noAccounts": "No WorkBuddy accounts",
+    "addAccount": "Add WorkBuddy Account",
+    "flowNotice": {
+      "title": "WorkBuddy Account Management Info (click to expand/collapse)",
+      "desc": "Switching accounts requires reading WorkBuddy local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
+      "permission": "Permission scope: read WorkBuddy auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
+      "network": "Network scope: OAuth login and token refresh require network requests to WorkBuddy; quota queries call billing APIs. No local keys or credentials are uploaded."
+    },
+    "nickname": "Nickname",
+    "enterprise": "Enterprise",
+    "usage": "Usage Status",
+    "creditsBalance": "Credits Balance",
+    "usageNormal": "Normal",
+    "oauthWaiting": "Waiting for authorization...",
+    "oauthDesc": "Click the button below to open the WorkBuddy authorization page in your browser.",
+    "oauthDescWebview": "Click the button below to open the WorkBuddy authorization page in built-in WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "IDE sign-in only",
+        "item1": "Add the account after completing OAuth in your browser, then use it for IDE switching.",
+        "item2": "Resource-package quota data will refresh automatically after authorization.",
+        "item3": "Account cards show quota amount, progress, and refresh/expiry time by resource package."
+      }
+    },
+    "oauthWebviewTab": "WebView OAuth",
+    "oauthOpenWebview": "Open in WebView",
+    "oauthOpenWebviewIncognito": "Open in Incognito WebView",
+    "oauthOpenWebviewFailed": "Failed to open WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Open in Browser (Fallback)",
+    "oauthOpenBrowserFailed": "Failed to open browser: {{error}}",
+    "oauthWebviewProgressHint": "A horizontal step bar is shown at the top of the WebView to locate stuck stages.",
+    "oauthFlow": {
+      "prepare": "Prepare OAuth link",
+      "authorize": "Open authorization link and confirm",
+      "bind": "Poll auth result and bind account",
+      "retryPrepare": "Regenerate OAuth link",
+      "retryAuthorize": "Request authorization link again",
+      "retryBind": "Retry auth polling",
+      "error": "Flow error: {{error}}"
+    },
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Prepare OAuth link",
+        "authorize": "2 Open authorization link and confirm",
+        "bind": "3 Poll auth result and bind account",
+        "complete": "5 Done (close manually)"
+      },
+      "status": {
+        "loginConfirm": "Please complete sign-in and authorization on this page."
+      }
+    },
+    "tokenDesc": "Paste your WorkBuddy access token:",
+    "jsonDesc": "Select a JSON file containing WorkBuddy accounts:",
+    "import": {
+      "localDesc": "Import account data from local WorkBuddy client or a JSON file.",
+      "localClient": "Import from local WorkBuddy"
+    },
+    "search": "Search WorkBuddy accounts...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Quota query failed",
+      "sectionTitle": "Quota Query",
+      "empty": "No quota data available",
+      "packageUnknown": "Unknown package",
+      "quotaLabel": "Remaining quota",
+      "updatedAt": "Next refresh time: {{time}}",
+      "cycleRange": "Cycle: {{start}} - {{end}}",
+      "cycleUnknown": "Cycle info unavailable",
+      "expireAt": "Expires at: {{time}}",
+      "expireUnknown": "Expires at: N/A",
+      "packageTitle": {
+        "base": "Base Experience Package",
+        "activity": "Activity Gift Package"
+      }
+    },
+    "extraCredit": {
+      "title": "Credit Package"
+    },
+    "oauthUrlInputPlaceholder": "You can enter an authorization URL manually",
+    "oauthInvalidUrl": "Invalid authorization URL. Please enter a full URL.",
+    "oauthGotoWebview": "Navigate opened WebView to input URL",
+    "oauthGotoWebviewSuccess": "Requested WebView to navigate to the input URL.",
+    "oauthGotoWebviewFailed": "Failed to navigate WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Enter a URL to navigate within this WebView",
+    "oauthWebviewInlineGo": "Go",
+    "oauthSuccessClosePrompt": "Account added successfully. Close this WebView now?\nChoose \"Close WebView\" to close now, or \"Later\" to keep it open.",
+    "oauthSuccessCloseTitle": "Account Added",
+    "oauthSuccessCloseNowLabel": "Close WebView",
+    "oauthSuccessCloseLaterLabel": "Later",
+    "oauthSuccessCloseNowStatus": "✅ Account added. Closing window...",
+    "oauthSuccessCloseLaterStatus": "✅ Account added. This WebView stays open.",
+    "instances": {
+      "unsupported": {
+        "descPlatform": "WorkBuddy multi-instance is supported on macOS, Windows, and Linux only."
+      }
     }
   }
 }

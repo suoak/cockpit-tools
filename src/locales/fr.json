@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Crédits de prompts additionnels",
         "credits": "Crédits",
         "email": "E-mail",
-        "promptCredits": "Crédits de prompts"
+        "promptCredits": "Crédits de prompts",
+        "creditPackage": "Pack de crédits",
+        "sharedCreditPackage": "Pack de crédits partagé",
+        "account": "Compte",
+        "createdAt": "Date de création"
       },
       "empty": {
         "title": "Aucun compte"
@@ -49,7 +53,17 @@
         "label": "Importer",
         "importing": "Importation du compte local...",
         "pickFile": "Sélectionner un fichier JSON à importer",
-        "orJson": "Ou importer depuis un fichier JSON"
+        "orJson": "Ou importer depuis un fichier JSON",
+        "progress": {
+          "overallLine": "Progression globale {{percent}} % ({{completedPlatforms}}/{{totalPlatforms}} plateformes, {{processedAccounts}}/{{totalAccounts}} comptes traités)",
+          "currentPlatformLine": "Import en cours : {{platform}} ({{count}} comptes)",
+          "currentStatusLine": "Statut actuel de la plateforme : {{status}}",
+          "platformDetailsTitle": "Détails des plateformes",
+          "statusProcessing": "Traitement en cours...",
+          "statusRunning": "Import en cours...",
+          "statusSkipped": "Ignoré",
+          "statusPending": "En attente d'import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Préparation du lien d'autorisation...",
         "retry": "Régénérer les informations d'autorisation",
         "timeoutRetry": "Actualiser le lien d'autorisation",
-        "waiting": "En attente d'autorisation..."
+        "waiting": "En attente d'autorisation...",
+        "manualCallbackLabel": "Saisir l'URL de callback manuellement",
+        "manualCallbackPlaceholder": "Collez l'URL de callback complète, par ex. http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Tout rafraîchir",
       "refreshQuota": "Rafraîchir le quota",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "L'allocation se réinitialise {{dateText}}.",
         "resetUnknown": "Réinitialisation de l'allocation -"
+      },
+      "updated": {
+        "label": "Mis à jour il y a {{relative}}"
       }
     }
   },
   "nav": {
-    "overview": "Compte Antigravity",
+    "overview": "Antigravity",
     "accounts": "Comptes",
     "wakeup": "Tâches de réveil",
     "fingerprints": "Empreintes",
     "settings": "Paramètres",
-    "codex": "Comptes Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Tableau de bord",
@@ -159,9 +178,14 @@
     "manual": "Guide d'utilisation",
     "quickUpdate": {
       "update": "Mettre à jour",
-      "restart": "Redémarrer"
+      "restart": "Redémarrer",
+      "installing": "Installation"
     },
-    "gemini": "Comptes Gemini"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Disposition des plateformes",
@@ -173,7 +197,34 @@
     "trayToggle": "Afficher dans la zone de notification",
     "hiddenBadge": "Masqué",
     "openFromMore": "Gérer la disposition des plateformes",
-    "dragHandleLabel": "Glisser pour réorganiser"
+    "dragHandleLabel": "Glisser pour réorganiser",
+    "tipWithGroups": "Faites glisser pour réordonner. Deux entrées maximum peuvent être affichées dans la barre latérale. Les sous-plateformes d’un groupe n’ont pas de bascules barre latérale/tableau de bord et servent uniquement pour la barre de menu et le changement de plateforme par défaut.",
+    "addGroup": "Ajouter un groupe",
+    "editGroup": "Modifier le groupe",
+    "deleteGroup": "Supprimer le groupe",
+    "groupBadge": "Groupe",
+    "groupDefault": "Plateforme par défaut",
+    "groupName": "Nom du groupe",
+    "groupNamePlaceholder": "Exemple : Suite CodeBuddy",
+    "groupIcon": "Icône du groupe",
+    "groupIconFromPlatform": "Icône de la plateforme",
+    "groupIconCustom": "Image personnalisée",
+    "groupIconPreview": "Aperçu de l’icône",
+    "groupChildren": "Sous-plateformes",
+    "groupNameRequired": "Veuillez saisir un nom de groupe",
+    "groupChildrenRequired": "Sélectionnez au moins une sous-plateforme",
+    "groupCustomIconRequired": "Veuillez téléverser une icône personnalisée",
+    "groupSwitchLabel": "Changer de plateforme du groupe",
+    "collapseAllChildren": "Réduire toutes les sous-plateformes",
+    "expandAllChildren": "Développer toutes les sous-plateformes",
+    "addChildPlatform": "Ajouter une sous-plateforme",
+    "collapseChildren": "Réduire les sous-plateformes",
+    "expandChildren": "Développer les sous-plateformes",
+    "noAvailableChildren": "Aucune plateforme disponible à ajouter",
+    "customIconDeleteConfirm": "Supprimer cette icône personnalisée ?",
+    "editChildPlatform": "Modifier la sous-plateforme",
+    "setAsDefaultInGroup": "Définir comme plateforme par défaut de ce groupe",
+    "removeFromGroup": "Retirer du groupe"
   },
   "privacy": {
     "hideSensitive": "Masquer les e-mails",
@@ -376,6 +427,8 @@
       "themeLight": "Clair",
       "themeDark": "Sombre",
       "themeSystem": "Système",
+      "uiScale": "Échelle de l'interface",
+      "uiScaleDesc": "Ajuster l'échelle de l'interface",
       "accountManagement": "Gestion des comptes",
       "autoRefresh": "Actualisation automatique du quota Antigravity",
       "codexAutoRefresh": "Actualisation automatique du quota Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Contrôle l’affichage de l’icône du Dock indépendamment du comportement de minimisation de la fenêtre",
       "hideDockIconOff": "Non (Afficher l’icône du Dock)",
       "hideDockIconOn": "Oui (Masquer l’icône du Dock)",
-      "storageTitle": "Répertoires et stockage",
       "dataDir": "Répertoire de données",
       "dataDirDesc": "Emplacement de stockage des comptes et fichiers de configuration.",
       "fpDir": "Stockage Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Activé (mise à jour silencieuse)",
       "opencodeAuthOverwrite": "Écraser la connexion OpenCode lors du changement de Codex",
       "opencodeAuthOverwriteDesc": "Si désactivé, seul Codex est changé et OpenCode conserve son état de connexion actuel",
-      "opencodeRestartRequiresOverwrite": "Activez d’abord « Écraser la connexion OpenCode lors du changement de Codex »"
+      "opencodeRestartRequiresOverwrite": "Activez d’abord « Écraser la connexion OpenCode lors du changement de Codex »",
+      "codebuddySettingsTitle": "Parametres CodeBuddy",
+      "codebuddyAutoRefresh": "Actualisation automatique du quota CodeBuddy",
+      "codebuddyAutoRefreshDesc": "Intervalle d'actualisation en arriere-plan",
+      "codebuddyAppPath": "Chemin de lancement de CodeBuddy",
+      "codebuddyAppPathDesc": "Laisser vide pour utiliser le chemin par defaut",
+      "codebuddyAppPathPlaceholder": "Chemin par defaut",
+      "codebuddyPathSelect": "Selectionner",
+      "codebuddyPathReset": "Reinitialiser par defaut",
+      "qoderPathReset": "Reinitialiser par defaut",
+      "traeAutoRefresh": "Actualisation automatique du quota Trae",
+      "traeAutoRefreshDesc": "Intervalle d'actualisation en arriere-plan",
+      "traeAppPath": "Chemin de lancement de Trae",
+      "traeAppPathDesc": "Laisser vide pour utiliser le chemin par defaut",
+      "traeAppPathPlaceholder": "Chemin par defaut",
+      "traePathSelect": "Selectionner",
+      "traePathReset": "Reinitialiser par defaut",
+      "workbuddyAppPath": "Chemin de lancement de WorkBuddy",
+      "workbuddyAppPathDesc": "Laisser vide pour utiliser le chemin par defaut",
+      "workbuddyAppPathPlaceholder": "Chemin par defaut",
+      "workbuddyPathSelect": "Selectionner",
+      "workbuddyPathReset": "Reinitialiser par defaut"
     },
     "network": {
       "apiTitle": "API du cockpit antigravité",
@@ -473,7 +546,22 @@
       "restartRequired": "Configuration modifiée, veuillez redémarrer l'application pour appliquer",
       "saveSuccess": "Paramètres enregistrés !",
       "saveSuccessRestart": "Paramètres enregistrés ! Veuillez redémarrer l'application pour que les changements de port prennent effet.",
-      "saveFailed": "Échec de l'enregistrement : {{error}}"
+      "saveFailed": "Échec de l'enregistrement : {{error}}",
+      "reportTitle": "Service de requête Web",
+      "reportService": "Service de rapport HTTP",
+      "reportServiceDesc": "Expose un endpoint HTTP protégé par jeton pour les résumés d’utilisation",
+      "reportPort": "Port du rapport",
+      "reportPortDesc": "La valeur par défaut est {{port}}, redémarrage requis après modification",
+      "reportToken": "Jeton d’accès",
+      "reportTokenDesc": "Requis pour /report, gardez-le privé",
+      "reportTokenRequired": "Le jeton d’accès ne peut pas être vide lorsque le service Web est activé.",
+      "generateToken": "Générer",
+      "reportUrlPreview": "Aperçu de l’endpoint",
+      "reportUrlPreviewDesc": "Prend en charge format=md / format=yaml et render=true pour la vue HTML",
+      "reportUrlRaw": "Sortie brute",
+      "reportUrlRendered": "Vue rendue",
+      "firewallHintTitle": "Conseil pare-feu",
+      "firewallHint": "Si l’URL est inaccessible, vérifiez les paramètres du pare-feu système."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "Crédits IA"
     },
     "empty": {
       "title": "Aucun compte",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Tous ({{count}})",
       "pro": "PRO ({{count}})",
-      "ultra": "ULTRA ({{count}})",
-      "free": "GRATUIT ({{count}})"
+      "ultra": "ULTRA ({{count}})"
     },
     "sortLabel": "Trier",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "Par heure de réinitialisation de {{group}}",
       "descTooltip": "Descendant, cliquer pour Ascendant",
       "ascTooltip": "Ascendant, cliquer pour Descendant",
-      "toggleDirection": "Changer la direction"
+      "toggleDirection": "Changer la direction",
+      "plan": "Par forfait",
+      "quota": "Par quota"
     },
     "filterTags": "Filtrer les tags",
     "filterTagsCount": "Balises",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} échecs : {{failList}}",
       "refreshingQuota": "Actualisation du quota {{done}}/{{total}} (vous pouvez fermer cette fenêtre)",
       "quotaRefreshDone": "Actualisation du quota terminée"
+    },
+    "groups": {
+      "manageTitle": "Gestion des groupes",
+      "title": "Groupes de comptes",
+      "create": "Créer",
+      "newPlaceholder": "Entrez le nom du groupe...",
+      "empty": "Aucun groupe. Créez-en un pour commencer",
+      "accountCount": "{{count}} compte(s)",
+      "rename": "Renommer",
+      "addToGroup": "Ajouter au groupe",
+      "createAndAdd": "Créer un groupe et ajouter...",
+      "removeFromGroup": "Retirer du groupe",
+      "allGroups": "Tous les groupes",
+      "noGroups": "Aucun groupe",
+      "noGroupsDesc": "Créez des groupes pour gérer vos comptes",
+      "manage": "Gérer",
+      "error": {
+        "duplicate": "Le nom du groupe existe déjà",
+        "createFailed": "Échec de la création du groupe : {{error}}",
+        "renameFailed": "Échec du renommage du groupe : {{error}}",
+        "deleteFailed": "Échec de la suppression du groupe : {{error}}",
+        "addFailed": "Échec de l'ajout au groupe : {{error}}",
+        "createAndAddFailed": "Échec de la création et de l'ajout : {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Nom de la tâche",
       "taskStatus": "Statut de la tâche",
       "triggerMode": "Mode de déclenchement",
-      "triggerModeHint": "1. Planifié : déclenche à des heures définies.\\n2. Crontab : définir via une expression.\\n3. Reset quota : déclenche une fois quand le quota est plein.",
+      "triggerModeHint": "1. Planifié : déclenche à des heures définies.\n2. Crontab : définir via une expression.\n3. Reset quota : déclenche une fois quand le quota est plein.",
       "modeScheduled": "📅 Planifié",
       "modeCrontab": "🧩Crontab",
       "modeQuotaReset": "🔄 Reset de quota",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Voir les détails",
     "hideErrorDetails": "Masquer les détails",
     "autoUpdateFailedAfterRetries": "La mise à jour automatique a échoué après {{count}} tentatives. Réessayez plus tard ou téléchargez manuellement.",
-    "updateCancelled": "Mise à jour annulée."
+    "updateCancelled": "Mise à jour annulée.",
+    "cancelDownload": "Annuler le téléchargement",
+    "installing": "Installation en cours...",
+    "authorizing": "En attente de l'autorisation système...",
+    "installFailed": "L'installation système a échoué. Réessayez plus tard ou téléchargez le paquet manuellement.",
+    "restartRequiredAfterInstall": "La mise à jour est installée. Redémarrez l'application manuellement pour terminer le basculement."
   },
   "closeDialog": {
     "title": "Fermer la fenêtre",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Erreur de quota",
       "generic": "Échec de l’actualisation du quota, veuillez réessayer plus tard",
-      "deactivatedWorkspace": "L’espace de travail est désactivé, changez de compte ou réautorisez"
+      "deactivatedWorkspace": "L’espace de travail est désactivé, changez de compte ou réautorisez",
+      "requestFailedManualRetry": "Échec de la requête, veuillez réessayer manuellement : {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Afficher le quota Code Review"
     },
     "time": {
       "today": "Aujourd'hui {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Balises",
     "noAvailableTags": "Aucun tag disponible",
     "clearFilter": "Effacer le filtre",
-    "editTags": "Modifier les tags"
+    "editTags": "Modifier les tags",
+    "account": {
+      "personal": "Compte personnel"
+    }
   },
   "githubCopilot": {
     "title": "Gestion des comptes GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Détails de l'erreur",
       "filePath": "Emplacement du fichier",
       "helpText": "Veuillez ouvrir le dossier pour réparer manuellement ou supprimer le fichier, puis redémarrez l'application.",
-      "openFolder": "Ouvrir le dossier"
+      "openFolder": "Ouvrir le dossier",
+      "openFolderFailed": "Impossible d'ouvrir le dossier : {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Actualisation auto du quota",
     "gemini": {
-      "title": "Paramètres Gemini",
-      "appPath": "Chemin Gemini"
+      "title": "Paramètres Gemini Cli",
+      "appPath": "Chemin Gemini Cli"
     },
-    "geminiRefreshInterval": "Actualisation auto du quota"
+    "geminiRefreshInterval": "Actualisation auto du quota",
+    "codebuddy": {
+      "title": "Parametres CodeBuddy",
+      "appPath": "Chemin CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Échec du chargement de la configuration : {{error}}",
+      "saveFailed": "Échec de la sauvegarde de la configuration : {{error}}",
+      "pickPathFailed": "Échec de la sélection du chemin : {{error}}",
+      "resetPathFailed": "Échec de la réinitialisation du chemin : {{error}}"
+    },
+    "qoder": {
+      "title": "Parametres Qoder",
+      "appPath": "Chemin Qoder"
+    },
+    "trae": {
+      "title": "Parametres Trae",
+      "appPath": "Chemin Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "Chemin CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "Parametres WorkBuddy",
+      "appPath": "Chemin WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "Alerte de quota pour {{email}} (seuil {{threshold}} %, minimum {{lowest}} %, modèles : {{models}})",
@@ -1847,7 +2000,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Basculer vers Gemini",
+    "injectToGemini": "Basculer vers Gemini Cli",
     "updated": {
       "label": "Mis à jour il y a {{relative}}"
     },
@@ -1860,10 +2013,10 @@
       "resetsUnknown": "Heure de réinitialisation inconnue",
       "onDemand": "À la demande"
     },
-    "title": "Gestion des comptes Gemini",
+    "title": "Gestion des comptes Gemini Cli",
     "instances": {
-      "unsupported": "La gestion multi-instances Gemini n’est pas encore prise en charge.",
-      "unsupportedDescPlatform": "Le mode multi-instances Gemini est pris en charge uniquement sur macOS, Windows et Linux.",
+      "unsupported": "La gestion multi-instances Gemini Cli n’est pas encore prise en charge.",
+      "unsupportedDescPlatform": "Le mode multi-instances Gemini Cli est pris en charge uniquement sur macOS, Windows et Linux.",
       "launchDialogTitle": "Lancer l’instance",
       "launchHint": "Copiez la commande et exécutez-la manuellement, ou lancez-la directement dans le terminal.",
       "runInTerminal": "Exécuter dans le terminal"
@@ -1872,30 +2025,322 @@
       "success": "Compte changé avec succès"
     },
     "empty": {
-      "description": "Cliquez sur « Ajouter un compte » pour commencer à gérer vos comptes Gemini"
+      "description": "Cliquez sur « Ajouter un compte » pour commencer à gérer vos comptes Gemini Cli"
     },
     "addModal": {
-      "title": "Ajouter un compte Gemini"
+      "title": "Ajouter un compte Gemini Cli"
     },
     "oauth": {
-      "desc": "Cliquez sur le bouton ci-dessous et terminez l'autorisation Gemini dans le navigateur."
+      "desc": "Cliquez sur le bouton ci-dessous et terminez l'autorisation Gemini Cli dans le navigateur."
     },
     "token": {
-      "desc": "Collez votre jeton d'accès Gemini (JWT) ou des données JSON exportées.",
+      "desc": "Collez votre jeton d'accès Gemini Cli (JWT) ou des données JSON exportées.",
       "formatHint": "Champs obligatoires et exemples (cliquer pour développer)",
       "formatRequired": "Jeton unique : collez le JWT directement ; import en lot : utilisez le format tableau JSON",
       "singleExample": "Exemple unique (JWT)",
       "batchExample": "Exemple en lot (JSON)"
     },
     "import": {
-      "localDesc": "Importer les données de compte depuis le client Gemini local ou un fichier JSON.",
-      "localClient": "Importer depuis Gemini local"
+      "localDesc": "Importer les données de compte depuis le client Gemini Cli local ou un fichier JSON.",
+      "localClient": "Importer depuis Gemini Cli local"
     },
     "flowNotice": {
-      "title": "Guide du compte Gemini (cliquer pour développer/réduire)",
-      "desc": "Gérez les comptes Gemini en important depuis l'installation locale de Gemini ou en collant des jetons JWT. Les données sont traitées uniquement en local.",
+      "title": "Guide du compte Gemini Cli (cliquer pour développer/réduire)",
+      "desc": "Gérez les comptes Gemini Cli en important depuis l'installation locale de Gemini Cli ou en collant des jetons JWT. Les données sont traitées uniquement en local.",
       "reason": "Portée des autorisations : lecture et écriture de oauth_creds.json, google_accounts.json et settings.json sous ~/.gemini par défaut ou le chemin d’instance (GEMINI_CLI_HOME/.gemini) pour l’import de comptes et l’injection locale d’identifiants (changement de compte).",
       "storage": "Portée réseau : OAuth et l’actualisation du quota appellent les API officielles Google/Gemini (comme oauth2.googleapis.com et googleapis.com). Seuls les champs d’authentification/quota nécessaires sont envoyés ; les fichiers locaux ne sont pas téléversés vers des serveurs tiers."
+    }
+  },
+  "codebuddy": {
+    "title": "Gestion des comptes CodeBuddy",
+    "noAccounts": "Aucun compte CodeBuddy",
+    "addAccount": "Ajouter un compte CodeBuddy",
+    "flowNotice": {
+      "title": "Informations sur la gestion des comptes CodeBuddy (cliquer pour developper/reduire)",
+      "desc": "Le changement de compte necessite la lecture du stockage d'authentification local de CodeBuddy et l'appel aux services d'identifiants du systeme pour dechiffrer/rechiffrer. Les donnees sont traitees uniquement en local.",
+      "permission": "Portee des autorisations : lire la base d'authentification CodeBuddy (state.vscdb), appeler les capacites d'identifiants du systeme (Trousseau macOS / DPAPI Windows / Secret Service Linux) pour le dechiffrement et la reecriture.",
+      "network": "Portee reseau : la connexion OAuth et l'actualisation du jeton necessitent des requetes vers codebuddy.ai ; les requetes de quota appellent les API de facturation. Aucune cle locale ni information d'identification n'est televersee."
+    },
+    "nickname": "Surnom",
+    "enterprise": "Entreprise",
+    "usage": "Etat d'utilisation",
+    "creditsBalance": "Solde de credits",
+    "usageNormal": "Etat normal",
+    "oauthWaiting": "En attente d'autorisation...",
+    "oauthDesc": "Cliquez sur le bouton ci-dessous pour ouvrir la page d'autorisation CodeBuddy dans votre navigateur.",
+    "oauthDescWebview": "Cliquez sur le bouton ci-dessous pour ouvrir la page d'autorisation CodeBuddy dans la WebView integree.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Connexion IDE uniquement",
+        "item1": "Ajoutez le compte apres avoir termine OAuth dans votre navigateur, puis utilisez-le pour le changement dans l'IDE.",
+        "item2": "Les parametres de requete de quota ne sont pas associes automatiquement.",
+        "item3": "Si vous avez besoin du quota, lancez manuellement « Interroger le quota » sur la carte du compte."
+      }
+    },
+    "oauthWebviewTab": "OAuth en WebView",
+    "oauthOpenWebview": "Ouvrir dans la WebView",
+    "oauthOpenWebviewIncognito": "Ouvrir dans la WebView privee",
+    "oauthOpenWebviewFailed": "Echec de l'ouverture de la WebView : {{error}}",
+    "oauthOpenBrowserFallback": "Ouvrir dans le navigateur (secours)",
+    "oauthOpenBrowserFailed": "Echec de l'ouverture du navigateur : {{error}}",
+    "oauthWebviewProgressHint": "Une barre d'etapes horizontale s'affiche en haut de la WebView pour reperer les etapes bloquees.",
+    "oauthFlow": {
+      "prepare": "Preparer le lien OAuth",
+      "authorize": "Ouvrir le lien d'autorisation et confirmer",
+      "bind": "Sonder le resultat d'authentification et associer le compte",
+      "retryPrepare": "Regenerer le lien OAuth",
+      "retryAuthorize": "Redemander le lien d'autorisation",
+      "retryBind": "Reessayer le sondage d'authentification",
+      "error": "Erreur de flux : {{error}}"
+    },
+    "tokenDesc": "Collez votre jeton d'acces CodeBuddy :",
+    "jsonDesc": "Selectionnez un fichier JSON contenant des comptes CodeBuddy :",
+    "import": {
+      "localDesc": "Importez les donnees de compte depuis le client CodeBuddy local ou depuis un fichier JSON.",
+      "localClient": "Importer depuis CodeBuddy local"
+    },
+    "search": "Rechercher des comptes CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Echec de l'actualisation du quota",
+      "sectionTitle": "Interrogation du quota",
+      "empty": "Aucune information de requete de quota associee pour le moment",
+      "packageUnknown": "Forfait inconnu",
+      "quotaLabel": "Quota restant",
+      "updatedAt": "Derniere interrogation : {{time}}",
+      "cycleRange": "Cycle : {{start}} - {{end}}",
+      "cycleUnknown": "Informations de cycle indisponibles",
+      "expireAt": "Expire le : {{time}}",
+      "expireUnknown": "Expiration : N/A",
+      "packageTitle": {
+        "base": "Pack d’expérience de base",
+        "activity": "Pack cadeau d’activité"
+      }
+    },
+    "extraCredit": {
+      "title": "Pack de credit"
+    },
+    "oauthUrlInputPlaceholder": "Vous pouvez saisir manuellement une URL dautorisation",
+    "oauthInvalidUrl": "URL dautorisation invalide. Veuillez saisir une URL complete.",
+    "oauthGotoWebview": "Naviguer dans la WebView ouverte vers lURL saisie",
+    "oauthGotoWebviewSuccess": "Demande envoyee a la WebView pour naviguer vers lURL saisie.",
+    "oauthGotoWebviewFailed": "Echec de la navigation de la WebView : {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Saisissez une URL a ouvrir dans cette WebView",
+    "oauthWebviewInlineGo": "Aller",
+    "oauthSuccessClosePrompt": "Compte ajoute avec succes. Fermer cette WebView maintenant ?\nChoisissez \"Fermer la WebView\" pour fermer maintenant, ou \"Plus tard\" pour la garder ouverte.",
+    "oauthSuccessCloseTitle": "Compte ajoute",
+    "oauthSuccessCloseNowLabel": "Fermer la WebView",
+    "oauthSuccessCloseLaterLabel": "Plus tard",
+    "oauthSuccessCloseNowStatus": "✅ Compte ajoute. Fermeture de la fenetre...",
+    "oauthSuccessCloseLaterStatus": "✅ Compte ajoute. Cette WebView reste ouverte.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Preparer le lien OAuth",
+        "authorize": "2 Ouvrir le lien d'autorisation et confirmer",
+        "bind": "3 Sonder le resultat d'authentification et associer le compte",
+        "complete": "5 Terminé (fermer manuellement)"
+      },
+      "status": {
+        "loginConfirm": "Veuillez terminer la connexion et l'autorisation sur cette page."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Gestion des comptes Qoder",
+    "comingSoon": {
+      "title": "Multi-Instance Bientôt Disponible",
+      "desc": "Exécutez plusieurs instances Qoder.app avec différents comptes simultanément."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Les instances multiples de Qoder sont prises en charge uniquement sur macOS, Windows et Linux."
+      }
+    },
+    "oauth": {
+      "hint": "Veuillez terminer la connexion dans la page du navigateur ouverte : si la page de connexion ne s’est pas ouverte automatiquement, cliquez sur « Copier le lien de connexion », copiez le lien puis collez-le dans votre navigateur pour terminer la connexion.",
+      "copyLoginUrl": "Copier le lien de connexion"
+    },
+    "usageOverview": {
+      "title": "Aperçu de l'utilisation",
+      "viewDetails": "Voir les détails",
+      "includedCredits": "Crédits inclus dans l'abonnement",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Passez à une offre supérieure pour augmenter le quota mensuel",
+      "upgradeAction": "Mettre à niveau"
+    },
+    "flowNotice": {
+      "title": "Guide du compte Qoder (cliquez pour developper/reduire)",
+      "desc": "Prend en charge la connexion OAuth officielle (callback), l'import local, l'import JSON, l'injection pour changer de compte, l'association multi-instance et la vue d'ensemble du quota. Le flux de connexion suit les donnees reellement stockees par le client Qoder.",
+      "permission": "Portee des autorisations : lit le stockage d'authentification local de Qoder (identifiants auth et informations utilisateur) pour le changement de compte et l'injection de session ; toutes les donnees sont traitees localement sur votre machine.",
+      "network": "Portee reseau : la connexion OAuth requiert l'acces aux services officiels de Qoder pour terminer le callback ; les requetes de quota utilisent l'API Qoder. Aucune cle ni aucun identifiant local n'est televerse."
+    },
+    "addModal": {
+      "title": "Ajouter un compte Qoder"
+    },
+    "import": {
+      "localDesc": "Lit l’état de connexion actuel depuis le client Qoder local, y compris les informations utilisateur, le forfait et l’utilisation des crédits."
+    }
+  },
+  "trae": {
+    "title": "Gestion des comptes Trae",
+    "empty": {
+      "description": "Cliquez sur \"Ajouter un compte\" pour commencer a gerer vos comptes Trae, ou importez-les depuis les donnees locales de Trae ou un fichier JSON."
+    },
+    "addModal": {
+      "title": "Ajouter un compte Trae"
+    },
+    "oauth": {
+      "desc": "Cliquez sur le bouton ci-dessous et terminez l'autorisation OAuth de Trae dans votre navigateur."
+    },
+    "import": {
+      "localDesc": "Importe le compte actuellement connecte, les informations de forfait et les donnees de quota en cache depuis le dossier de configuration local de Trae.",
+      "jsonTab": "Fichier JSON"
+    },
+    "quota": {
+      "usedOfTotal": "Utilise $ {{used}} sur $ {{total}}",
+      "usageUnknown": "Utilisation : --",
+      "resetAt": "Reinitialisation : {{date}}",
+      "resetUnknown": "Heure de reinitialisation inconnue",
+      "statusUnknown": "Statut : inconnu",
+      "statusNormal": "Statut : normal",
+      "statusExhaustedFree": "Statut : utilisation epuisee, mise a niveau recommandee",
+      "statusExhaustedPro": "Statut : utilisation epuisee, mettez a niveau ou activez la facturation a l'usage",
+      "bonusUsed": "Bonus : +{{amount}}",
+      "bonusIncluded": "Bonus : inclus",
+      "bonusEmpty": "Bonus : --",
+      "packageConsuming": "Pack d'utilisation : en cours",
+      "packageAvailable": "Pack d'utilisation : disponible",
+      "packageEmpty": "Pack d'utilisation : --",
+      "payAsYouGoConsuming": "Paiement a l'usage : en cours",
+      "payAsYouGoEnabled": "Paiement a l'usage : active",
+      "payAsYouGoEmpty": "Paiement a l'usage : --"
+    },
+    "flowNotice": {
+      "title": "Guide du compte Trae (cliquez pour developper/reduire)",
+      "desc": "Prend en charge la connexion OAuth officielle, l'import local, l'import JSON et le changement de compte par injection locale. Lors du changement, les donnees sont reecrites selon les regles reelles de stockage du client Trae.",
+      "permission": "Portee des autorisations : lit et ecrit les champs lies a la connexion dans le storage.json local de Trae pour l'import de compte, l'injection de changement de compte et l'affichage du forfait. Toutes les donnees sont traitees localement sur votre machine.",
+      "network": "Portee reseau : la connexion OAuth, l'actualisation du jeton et les requetes de forfait appellent les API officielles de Trae. Les fichiers de compte locaux et le contenu brut du stockage ne sont pas televerses vers des services tiers."
+    }
+  },
+  "codebuddyCn": {
+    "title": "Gestion des comptes CodeBuddy CN",
+    "noAccounts": "Aucun compte CodeBuddy CN",
+    "addAccount": "Ajouter un compte CodeBuddy CN",
+    "search": "Rechercher des comptes CodeBuddy CN...",
+    "oauthDesc": "Cliquez sur le bouton ci-dessous pour ouvrir la page d'autorisation CodeBuddy CN dans votre navigateur.",
+    "tokenDesc": "Collez votre jeton d'acces CodeBuddy CN :",
+    "flowNotice": {
+      "title": "Informations sur la gestion des comptes CodeBuddy CN (cliquer pour developper/reduire)",
+      "desc": "Le changement de compte necessite la lecture du stockage d'authentification local de CodeBuddy CN et l'appel aux services d'identifiants du systeme pour dechiffrer/rechiffrer. Les donnees sont traitees uniquement en local.",
+      "permission": "Portee des autorisations : lire la base d'authentification CodeBuddy CN (state.vscdb), appeler les capacites d'identifiants du systeme (Trousseau macOS / DPAPI Windows / Secret Service Linux) pour le dechiffrement et la reecriture.",
+      "network": "Portee reseau : la connexion OAuth et l'actualisation du jeton necessitent des requetes vers codebuddy.cn / copilot.tencent.com ; les requetes de quota appellent les API de facturation. Aucune cle locale ni information d'identification n'est televersee."
+    },
+    "import": {
+      "localDesc": "Importez les donnees de compte depuis le client CodeBuddy CN local ou depuis un fichier JSON.",
+      "localClient": "Importer depuis CodeBuddy CN local"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Le mode multi-instances CodeBuddy CN est pris en charge uniquement sur macOS, Windows et Linux."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "Gestion des comptes WorkBuddy",
+    "noAccounts": "Aucun compte WorkBuddy",
+    "addAccount": "Ajouter un compte WorkBuddy",
+    "flowNotice": {
+      "title": "Informations sur la gestion des comptes WorkBuddy (cliquer pour developper/reduire)",
+      "desc": "Le changement de compte necessite la lecture du stockage d'authentification local de WorkBuddy et l'appel aux services d'identifiants du systeme pour dechiffrer/rechiffrer. Les donnees sont traitees uniquement en local.",
+      "permission": "Portee des autorisations : lire la base d'authentification WorkBuddy (state.vscdb), appeler les capacites d'identifiants du systeme (Trousseau macOS / DPAPI Windows / Secret Service Linux) pour le dechiffrement et la reecriture.",
+      "network": "Portee reseau : la connexion OAuth et l'actualisation du jeton necessitent des requetes vers WorkBuddy ; les requetes de quota appellent les API de facturation. Aucune cle locale ni information d'identification n'est televersee."
+    },
+    "nickname": "Surnom",
+    "enterprise": "Entreprise",
+    "usage": "Etat d'utilisation",
+    "creditsBalance": "Solde de credits",
+    "usageNormal": "Etat normal",
+    "oauthWaiting": "En attente d'autorisation...",
+    "oauthDesc": "Cliquez sur le bouton ci-dessous pour ouvrir la page d'autorisation WorkBuddy dans votre navigateur.",
+    "oauthDescWebview": "Cliquez sur le bouton ci-dessous pour ouvrir la page d'autorisation WorkBuddy dans la WebView integree.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Connexion IDE uniquement",
+        "item1": "Ajoutez le compte apres avoir termine OAuth dans votre navigateur, puis utilisez-le pour le changement dans l'IDE.",
+        "item2": "Les parametres de requete de quota ne sont pas associes automatiquement.",
+        "item3": "Si vous avez besoin du quota, lancez manuellement « Interroger le quota » sur la carte du compte."
+      }
+    },
+    "oauthWebviewTab": "OAuth en WebView",
+    "oauthOpenWebview": "Ouvrir dans la WebView",
+    "oauthOpenWebviewIncognito": "Ouvrir dans la WebView privee",
+    "oauthOpenWebviewFailed": "Echec de l'ouverture de la WebView : {{error}}",
+    "oauthOpenBrowserFallback": "Ouvrir dans le navigateur (secours)",
+    "oauthOpenBrowserFailed": "Echec de l'ouverture du navigateur : {{error}}",
+    "oauthWebviewProgressHint": "Une barre d'etapes horizontale s'affiche en haut de la WebView pour reperer les etapes bloquees.",
+    "oauthFlow": {
+      "prepare": "Preparer le lien OAuth",
+      "authorize": "Ouvrir le lien d'autorisation et confirmer",
+      "bind": "Sonder le resultat d'authentification et associer le compte",
+      "retryPrepare": "Regenerer le lien OAuth",
+      "retryAuthorize": "Redemander le lien d'autorisation",
+      "retryBind": "Reessayer le sondage d'authentification",
+      "error": "Erreur de flux : {{error}}"
+    },
+    "tokenDesc": "Collez votre jeton d'acces WorkBuddy :",
+    "jsonDesc": "Selectionnez un fichier JSON contenant des comptes WorkBuddy :",
+    "import": {
+      "localDesc": "Importez les donnees de compte depuis le client WorkBuddy local ou depuis un fichier JSON.",
+      "localClient": "Importer depuis WorkBuddy local"
+    },
+    "search": "Rechercher des comptes WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Echec de l'actualisation du quota",
+      "sectionTitle": "Interrogation du quota",
+      "empty": "Aucune information de requete de quota associee pour le moment",
+      "packageUnknown": "Forfait inconnu",
+      "quotaLabel": "Quota restant",
+      "updatedAt": "Derniere interrogation : {{time}}",
+      "cycleRange": "Cycle : {{start}} - {{end}}",
+      "cycleUnknown": "Informations de cycle indisponibles",
+      "expireAt": "Expire le : {{time}}",
+      "expireUnknown": "Expiration : N/A",
+      "packageTitle": {
+        "base": "Pack d’expérience de base",
+        "activity": "Pack cadeau d’activité"
+      }
+    },
+    "extraCredit": {
+      "title": "Pack de credit"
+    },
+    "oauthUrlInputPlaceholder": "Vous pouvez saisir manuellement une URL dautorisation",
+    "oauthInvalidUrl": "URL dautorisation invalide. Veuillez saisir une URL complete.",
+    "oauthGotoWebview": "Naviguer dans la WebView ouverte vers lURL saisie",
+    "oauthGotoWebviewSuccess": "Demande envoyee a la WebView pour naviguer vers lURL saisie.",
+    "oauthGotoWebviewFailed": "Echec de la navigation de la WebView : {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Saisissez une URL a ouvrir dans cette WebView",
+    "oauthWebviewInlineGo": "Aller",
+    "oauthSuccessClosePrompt": "Compte ajoute avec succes. Fermer cette WebView maintenant ?\nChoisissez \"Fermer la WebView\" pour fermer maintenant, ou \"Plus tard\" pour la garder ouverte.",
+    "oauthSuccessCloseTitle": "Compte ajoute",
+    "oauthSuccessCloseNowLabel": "Fermer la WebView",
+    "oauthSuccessCloseLaterLabel": "Plus tard",
+    "oauthSuccessCloseNowStatus": "✅ Compte ajoute. Fermeture de la fenetre...",
+    "oauthSuccessCloseLaterStatus": "✅ Compte ajoute. Cette WebView reste ouverte.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Preparer le lien OAuth",
+        "authorize": "2 Ouvrir le lien d'autorisation et confirmer",
+        "bind": "3 Sonder le resultat d'authentification et associer le compte",
+        "complete": "5 Terminé (fermer manuellement)"
+      },
+      "status": {
+        "loginConfirm": "Veuillez terminer la connexion et l'autorisation sur cette page."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Le mode multi-instances WorkBuddy est pris en charge uniquement sur macOS, Windows et Linux."
+      }
     }
   }
 }

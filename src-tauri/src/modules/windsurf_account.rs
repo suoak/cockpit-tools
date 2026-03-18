@@ -209,53 +209,6 @@ fn resolve_payload_api_key(payload: &WindsurfOAuthCompletePayload) -> Option<Str
         })
 }
 
-fn resolve_payload_email(payload: &WindsurfOAuthCompletePayload) -> Option<String> {
-    normalize_email(payload.github_email.as_deref())
-        .or_else(|| pick_string_from_object(payload.windsurf_auth_status_raw.as_ref(), &["email"]))
-        .and_then(|email| normalize_email(Some(email.as_str())))
-}
-
-fn build_account_identity_keys(account: &WindsurfAccount) -> Vec<String> {
-    let mut keys = Vec::new();
-    if let Some(api_key) = resolve_account_api_key(account) {
-        keys.push(format!("api:{}", api_key));
-    }
-    if let Some(email) = resolve_account_email(account) {
-        keys.push(format!("email:{}", email));
-    }
-    keys
-}
-
-fn build_payload_identity_keys(
-    payload: &WindsurfOAuthCompletePayload,
-    normalized_login: &str,
-) -> Vec<String> {
-    let mut keys = Vec::new();
-    if let Some(api_key) = resolve_payload_api_key(payload) {
-        keys.push(format!("api:{}", api_key));
-    }
-    if let Some(email) = resolve_payload_email(payload) {
-        keys.push(format!("email:{}", email));
-    }
-    if keys.is_empty() && !normalized_login.trim().is_empty() {
-        keys.push(format!("login:{}", normalized_login.trim().to_lowercase()));
-    }
-    keys
-}
-
-fn build_account_match_keys(account: &WindsurfAccount) -> Vec<String> {
-    let mut keys = build_account_identity_keys(account);
-    if let Some(login) = normalize_non_empty(Some(account.github_login.as_str())) {
-        keys.push(format!("login:{}", login.to_lowercase()));
-    }
-    keys
-}
-
-fn has_shared_identity_keys(left: &[String], right: &[String]) -> bool {
-    left.iter()
-        .any(|left_key| right.iter().any(|right_key| left_key == right_key))
-}
-
 fn account_apis_are_compatible(left: &WindsurfAccount, right: &WindsurfAccount) -> bool {
     match (
         resolve_account_api_key(left),
@@ -686,6 +639,7 @@ pub fn upsert_account(payload: WindsurfOAuthCompletePayload) -> Result<WindsurfA
     let mut index = load_account_index();
     let normalized_login = normalize_login(&payload);
     let payload_api_key = resolve_payload_api_key(&payload);
+    // lgtm[rs/weak-cryptographic-algorithm] 仅用于生成本地稳定账号 ID（非密码学用途，不参与认证/签名/加密）
     let generated_id = format!(
         "windsurf_{:x}",
         md5::compute(format!("{}:{}", normalized_login, payload.github_id))
@@ -762,7 +716,7 @@ pub fn upsert_account(payload: WindsurfOAuthCompletePayload) -> Result<WindsurfA
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<WindsurfAccount, String> {
     let started_at = Instant::now();
     let mut account = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
@@ -804,6 +758,13 @@ pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, 
         started_at.elapsed().as_millis()
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Windsurf Refresh", account_id, || async {
+        refresh_account_token_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<WindsurfAccount, String>)>, String>
@@ -1218,6 +1179,7 @@ pub fn run_quota_alert_if_needed(
         current_account_id: current_id,
         current_email: display_email(current),
         threshold,
+        threshold_display: None,
         lowest_percentage,
         low_models: low_models.into_iter().map(|(name, _)| name).collect(),
         recommended_account_id: recommendation.as_ref().map(|account| account.id.clone()),

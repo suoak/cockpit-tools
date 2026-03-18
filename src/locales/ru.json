@@ -29,7 +29,11 @@
         "addOnPromptCredits": "Доп. кредиты промптов",
         "credits": "Кредиты",
         "email": "Электронная почта",
-        "promptCredits": "Кредиты промптов"
+        "promptCredits": "Кредиты промптов",
+        "creditPackage": "Пакет кредитов",
+        "sharedCreditPackage": "Общий пакет кредитов",
+        "account": "Аккаунт",
+        "createdAt": "Время создания"
       },
       "empty": {
         "title": "Нет аккаунтов"
@@ -49,7 +53,17 @@
         "label": "Импорт",
         "importing": "Импорт локального аккаунта...",
         "pickFile": "Выберите JSON-файл для импорта",
-        "orJson": "Или импортируйте из файла JSON."
+        "orJson": "Или импортируйте из файла JSON.",
+        "progress": {
+          "overallLine": "Общий прогресс {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} платформ, {{processedAccounts}}/{{totalAccounts}} аккаунтов обработано)",
+          "currentPlatformLine": "Импортируется: {{platform}} ({{count}} аккаунтов)",
+          "currentStatusLine": "Текущий статус платформы: {{status}}",
+          "platformDetailsTitle": "Детали платформ",
+          "statusProcessing": "Обработка...",
+          "statusRunning": "Импорт...",
+          "statusSkipped": "Пропущено",
+          "statusPending": "Ожидает импорта"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "Подготовка ссылки авторизации...",
         "retry": "Сгенерировать данные авторизации заново",
         "timeoutRetry": "Обновить ссылку авторизации",
-        "waiting": "Ожидание авторизации..."
+        "waiting": "Ожидание авторизации...",
+        "manualCallbackLabel": "Ввести URL callback вручную",
+        "manualCallbackPlaceholder": "Вставьте полный URL callback, например: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "Обновить все",
       "refreshQuota": "Обновить квоту",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "Лимит будет сброшен {{dateText}}.",
         "resetUnknown": "Лимит сбрасывается через -"
+      },
+      "updated": {
+        "label": "Обновлено {{relative}} назад"
       }
     }
   },
   "nav": {
-    "overview": "Аккаунт Antigravity",
+    "overview": "Antigravity",
     "accounts": "Аккаунты",
     "wakeup": "Задачи пробуждения",
     "fingerprints": "Отпечатки",
     "settings": "Настройки",
-    "codex": "Аккаунты Codex",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "Панель",
@@ -159,9 +178,14 @@
     "manual": "Руководство пользователя",
     "quickUpdate": {
       "update": "Обновить",
-      "restart": "Перезапустить"
+      "restart": "Перезапустить",
+      "installing": "Установка"
     },
-    "gemini": "Близнецы"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "Макет платформ",
@@ -173,7 +197,34 @@
     "trayToggle": "Показывать в трее",
     "hiddenBadge": "Скрыто",
     "openFromMore": "Управление макетом платформ",
-    "dragHandleLabel": "Перетащите для изменения порядка"
+    "dragHandleLabel": "Перетащите для изменения порядка",
+    "tipWithGroups": "Перетаскивайте для сортировки. В боковой панели можно показывать не более двух пунктов. Дочерние платформы группы не имеют переключателей боковой панели/дашборда и используются только для меню в строке и смены платформы по умолчанию.",
+    "addGroup": "Добавить группу",
+    "editGroup": "Редактировать группу",
+    "deleteGroup": "Удалить группу",
+    "groupBadge": "Группа",
+    "groupDefault": "Платформа по умолчанию",
+    "groupName": "Название группы",
+    "groupNamePlaceholder": "Например: Набор CodeBuddy",
+    "groupIcon": "Иконка группы",
+    "groupIconFromPlatform": "Иконка платформы",
+    "groupIconCustom": "Пользовательское изображение",
+    "groupIconPreview": "Предпросмотр иконки",
+    "groupChildren": "Дочерние платформы",
+    "groupNameRequired": "Введите название группы",
+    "groupChildrenRequired": "Выберите хотя бы одну дочернюю платформу",
+    "groupCustomIconRequired": "Загрузите пользовательскую иконку",
+    "groupSwitchLabel": "Переключить платформу в группе",
+    "collapseAllChildren": "Свернуть все дочерние платформы",
+    "expandAllChildren": "Развернуть все дочерние платформы",
+    "addChildPlatform": "Добавить дочернюю платформу",
+    "collapseChildren": "Свернуть дочерние платформы",
+    "expandChildren": "Развернуть дочерние платформы",
+    "noAvailableChildren": "Нет платформ для добавления",
+    "customIconDeleteConfirm": "Удалить этот пользовательский значок?",
+    "editChildPlatform": "Редактировать дочернюю платформу",
+    "setAsDefaultInGroup": "Сделать платформой по умолчанию в этой группе",
+    "removeFromGroup": "Удалить из группы"
   },
   "privacy": {
     "hideSensitive": "Скрыть e-mail",
@@ -376,6 +427,8 @@
       "themeLight": "Светлая",
       "themeDark": "Темная",
       "themeSystem": "Системная",
+      "uiScale": "Масштаб интерфейса",
+      "uiScaleDesc": "Настройте масштаб интерфейса",
       "accountManagement": "Управление аккаунтами",
       "autoRefresh": "Автообновление квоты Antigravity",
       "codexAutoRefresh": "Автообновление квоты Codex",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "Независимо управляет отображением значка Dock, без привязки к поведению сворачивания окна",
       "hideDockIconOff": "Нет (Показывать значок Dock)",
       "hideDockIconOn": "Да (Скрывать значок Dock)",
-      "storageTitle": "Каталоги и хранилище",
       "dataDir": "Каталог данных",
       "dataDirDesc": "Место хранения аккаунтов и конфигурационных файлов.",
       "fpDir": "Хранилище Antigravity",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "Включено (тихое обновление)",
       "opencodeAuthOverwrite": "Перезаписать логин OpenCode при переключении Кодекса",
       "opencodeAuthOverwriteDesc": "Если выключено, переключается только Codex, а OpenCode сохраняет текущее состояние входа в систему.",
-      "opencodeRestartRequiresOverwrite": "Сначала включите «Перезаписывать логин OpenCode при переключении Кодекса»."
+      "opencodeRestartRequiresOverwrite": "Сначала включите «Перезаписывать логин OpenCode при переключении Кодекса».",
+      "codebuddySettingsTitle": "Настройки CodeBuddy",
+      "codebuddyAutoRefresh": "Автообновление квоты CodeBuddy",
+      "codebuddyAutoRefreshDesc": "Интервал фонового автообновления",
+      "codebuddyAppPath": "Путь запуска CodeBuddy",
+      "codebuddyAppPathDesc": "Оставьте пустым, чтобы использовать путь по умолчанию",
+      "codebuddyAppPathPlaceholder": "Путь по умолчанию",
+      "codebuddyPathSelect": "Выбрать",
+      "codebuddyPathReset": "Сбросить по умолчанию",
+      "qoderPathReset": "Сбросить по умолчанию",
+      "traeAutoRefresh": "Автообновление квоты Trae",
+      "traeAutoRefreshDesc": "Интервал фонового автообновления",
+      "traeAppPath": "Путь запуска Trae",
+      "traeAppPathDesc": "Оставьте пустым, чтобы использовать путь по умолчанию",
+      "traeAppPathPlaceholder": "Путь по умолчанию",
+      "traePathSelect": "Выбрать",
+      "traePathReset": "Сбросить по умолчанию",
+      "workbuddyAppPath": "Путь запуска WorkBuddy",
+      "workbuddyAppPathDesc": "Оставьте пустым, чтобы использовать путь по умолчанию",
+      "workbuddyAppPathPlaceholder": "Путь по умолчанию",
+      "workbuddyPathSelect": "Выбрать",
+      "workbuddyPathReset": "Сбросить по умолчанию"
     },
     "network": {
       "apiTitle": "API антигравитационной кабины",
@@ -473,7 +546,22 @@
       "restartRequired": "Конфигурация изменена, пожалуйста, перезапустите приложение",
       "saveSuccess": "Настройки сохранены!",
       "saveSuccessRestart": "Настройки сохранены! Пожалуйста, перезапустите приложение для применения изменений порта.",
-      "saveFailed": "Ошибка сохранения: {{error}}"
+      "saveFailed": "Ошибка сохранения: {{error}}",
+      "reportTitle": "Сервис веб-запросов",
+      "reportService": "Сервис HTTP-отчётов",
+      "reportServiceDesc": "Открывает защищённый токеном HTTP-эндпоинт для сводки использования",
+      "reportPort": "Порт отчёта",
+      "reportPortDesc": "По умолчанию {{port}}, после изменения требуется перезапуск",
+      "reportToken": "Токен доступа",
+      "reportTokenDesc": "Обязателен при запросе /report, храните его в секрете",
+      "reportTokenRequired": "Токен доступа не может быть пустым, когда веб-сервис включён.",
+      "generateToken": "Сгенерировать",
+      "reportUrlPreview": "Предпросмотр эндпоинта",
+      "reportUrlPreviewDesc": "Поддерживает format=md / format=yaml и render=true для HTML-представления",
+      "reportUrlRaw": "Сырой вывод",
+      "reportUrlRendered": "Отрендеренный вид",
+      "firewallHintTitle": "Подсказка по брандмауэру",
+      "firewallHint": "Если URL недоступен, проверьте настройки системного брандмауэра."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "Кредиты ИИ"
     },
     "empty": {
       "title": "Нет аккаунтов",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "Все ({{count}})",
       "pro": "ПРО ({{count}})",
-      "ultra": "УЛЬТРА ({{count}})",
-      "free": "БЕСПЛАТНО ({{count}})"
+      "ultra": "УЛЬТРА ({{count}})"
     },
     "sortLabel": "Сортировка",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "По времени сброса {{group}}",
       "descTooltip": "По убыванию, переключить на возрастание",
       "ascTooltip": "По возрастанию, переключить на убывание",
-      "toggleDirection": "Изменить направление"
+      "toggleDirection": "Изменить направление",
+      "plan": "По тарифу",
+      "quota": "По квоте"
     },
     "filterTags": "Фильтр по тегам",
     "filterTagsCount": "Теги",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}} не удалось: {{failList}}",
       "refreshingQuota": "Обновление квоты {{done}}/{{total}} (вы можете закрыть это диалоговое окно)",
       "quotaRefreshDone": "Обновление квоты завершено"
+    },
+    "groups": {
+      "manageTitle": "Управление группами",
+      "title": "Группы аккаунтов",
+      "create": "Создать",
+      "newPlaceholder": "Введите название группы...",
+      "empty": "Пока нет групп. Создайте одну",
+      "accountCount": "{{count}} аккаунт(ов)",
+      "rename": "Переименовать",
+      "addToGroup": "Добавить в группу",
+      "createAndAdd": "Создать группу и добавить...",
+      "removeFromGroup": "Удалить из группы",
+      "allGroups": "Все группы",
+      "noGroups": "Нет групп",
+      "noGroupsDesc": "Создайте группы для управления аккаунтами",
+      "manage": "Управление",
+      "error": {
+        "duplicate": "Название группы уже существует",
+        "createFailed": "Не удалось создать группу: {{error}}",
+        "renameFailed": "Не удалось переименовать группу: {{error}}",
+        "deleteFailed": "Не удалось удалить группу: {{error}}",
+        "addFailed": "Не удалось добавить в группу: {{error}}",
+        "createAndAddFailed": "Не удалось создать группу и добавить: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "Название задачи",
       "taskStatus": "Статус задачи",
       "triggerMode": "Режим запуска",
-      "triggerModeHint": "1. По расписанию: запуск в заданные времена.\\n2. Crontab: определяется выражением.\\n3. Сброс квоты: запуск один раз при полной квоте.",
+      "triggerModeHint": "1. По расписанию: запуск в заданные времена.\n2. Crontab: определяется выражением.\n3. Сброс квоты: запуск один раз при полной квоте.",
       "modeScheduled": "📅 По расписанию",
       "modeCrontab": "🧩 Кронтаб",
       "modeQuotaReset": "🔄 Сброс квоты",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "Показать детали",
     "hideErrorDetails": "Скрыть детали",
     "autoUpdateFailedAfterRetries": "Автообновление не удалось после {{count}} попыток. Повторите позже или скачайте вручную.",
-    "updateCancelled": "Обновление отменено."
+    "updateCancelled": "Обновление отменено.",
+    "cancelDownload": "Отменить загрузку",
+    "installing": "Установка...",
+    "authorizing": "Ожидание системной авторизации...",
+    "installFailed": "Системная установка не удалась. Повторите попытку позже или скачайте пакет вручную.",
+    "restartRequiredAfterInstall": "Обновление установлено. Перезапустите приложение вручную, чтобы завершить переключение."
   },
   "closeDialog": {
     "title": "Закрыть окно",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "Ошибка квоты",
       "generic": "Не удалось обновить квоту, попробуйте позже",
-      "deactivatedWorkspace": "Рабочее пространство деактивировано, переключите аккаунт или авторизуйтесь заново"
+      "deactivatedWorkspace": "Рабочее пространство деактивировано, переключите аккаунт или авторизуйтесь заново",
+      "requestFailedManualRetry": "Не удалось выполнить запрос, повторите вручную: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Показать квоту Code Review"
     },
     "time": {
       "today": "Сегодня {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "Теги",
     "noAvailableTags": "Нет доступных тегов",
     "clearFilter": "Очистить фильтр",
-    "editTags": "Редактировать теги"
+    "editTags": "Редактировать теги",
+    "account": {
+      "personal": "Личный аккаунт"
+    }
   },
   "githubCopilot": {
     "title": "Управление аккаунтами GitHub Copilot",
@@ -1287,7 +1414,8 @@
       "errorInfo": "Подробности ошибки",
       "filePath": "Расположение файла",
       "helpText": "Пожалуйста, откройте папку, чтобы исправить вручную или удалить файл, затем перезапустите приложение.",
-      "openFolder": "Открыть папку"
+      "openFolder": "Открыть папку",
+      "openFolderFailed": "Не удалось открыть папку: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "Автообновление квоты",
     "gemini": {
-      "title": "Настройки Близнецов",
-      "appPath": "Путь CLI Gemini"
+      "title": "Настройки Gemini Cli",
+      "appPath": "Путь Gemini Cli"
     },
-    "geminiRefreshInterval": "Автоматическое обновление квоты"
+    "geminiRefreshInterval": "Автоматическое обновление квоты",
+    "codebuddy": {
+      "title": "Настройки CodeBuddy",
+      "appPath": "Путь CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Не удалось загрузить настройки: {{error}}",
+      "saveFailed": "Не удалось сохранить настройки: {{error}}",
+      "pickPathFailed": "Не удалось выбрать путь: {{error}}",
+      "resetPathFailed": "Не удалось сбросить путь: {{error}}"
+    },
+    "qoder": {
+      "title": "Настройки Qoder",
+      "appPath": "Путь Qoder"
+    },
+    "trae": {
+      "title": "Настройки Trae",
+      "appPath": "Путь Trae"
+    },
+    "codebuddyCn": {
+      "appPath": "Путь CodeBuddy CN"
+    },
+    "workbuddy": {
+      "title": "Настройки WorkBuddy",
+      "appPath": "Путь WorkBuddy"
+    }
   },
   "quotaAlert": {
     "bannerText": "Предупреждение о квоте для {{email}} (порог {{threshold}}%, минимум {{lowest}}%, модели: {{models}})",
@@ -1847,31 +2000,31 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Переключиться на Близнецов",
-    "title": "Управление аккаунтом Близнецов",
+    "injectToGemini": "Переключиться на Gemini Cli",
+    "title": "Управление аккаунтами Gemini Cli",
     "empty": {
-      "description": "Нажмите «Добавить учетную запись», чтобы начать управлять своими учетными записями Gemini."
+      "description": "Нажмите «Добавить учетную запись», чтобы начать управлять своими учетными записями Gemini Cli."
     },
     "addModal": {
-      "title": "Добавить учетную запись Gemini"
+      "title": "Добавить учетную запись Gemini Cli"
     },
     "oauth": {
-      "desc": "Нажмите кнопку ниже и завершите авторизацию Gemini OAuth в своем браузере."
+      "desc": "Нажмите кнопку ниже и завершите авторизацию Gemini Cli OAuth в своем браузере."
     },
     "token": {
-      "desc": "Вставьте свой токен доступа Gemini (JWT) или экспортированные данные JSON.",
+      "desc": "Вставьте свой токен доступа Gemini Cli (JWT) или экспортированные данные JSON.",
       "formatHint": "Обязательные поля и примеры (нажмите, чтобы развернуть)",
       "formatRequired": "Один токен: вставьте JWT напрямую; пакетный импорт: используйте формат массива JSON",
       "singleExample": "Одиночный пример (JWT)",
       "batchExample": "Пример пакетной обработки (JSON)"
     },
     "import": {
-      "localDesc": "Импортируйте данные учетной записи Gemini из локального каталога конфигурации Gemini (~/.gemini) или файла JSON.",
-      "localClient": "Импорт из локального Gemini"
+      "localDesc": "Импортируйте данные учетной записи Gemini Cli из локального каталога конфигурации Gemini Cli (~/.gemini) или файла JSON.",
+      "localClient": "Импорт из локального Gemini Cli"
     },
     "flowNotice": {
-      "title": "Руководство по учетной записи Gemini (нажмите, чтобы развернуть/свернуть)",
-      "desc": "Управляйте учетными записями Gemini, импортируя их из локальной конфигурации Gemini, вставляя токен JWT или входя в систему через OAuth.",
+      "title": "Руководство по учетной записи Gemini Cli (нажмите, чтобы развернуть/свернуть)",
+      "desc": "Управляйте учетными записями Gemini Cli, импортируя их из локальной конфигурации Gemini Cli, вставляя токен JWT или входя в систему через OAuth.",
       "reason": "Область разрешений: чтение и запись oauth_creds.json, google_accounts.json и settings.json по умолчанию ~/.gemini или пути экземпляра (GEMINI_CLI_HOME/.gemini) для импорта учетной записи и локального внедрения учетных данных (переключение учетной записи).",
       "storage": "Область сети: OAuth и обновление вызывают официальные API Google/Gemini (например, oauth2.googleapis.com и googleapis.com). Отправляются только обязательные поля аутентификации/квоты; файлы локальной учетной записи не загружаются на сторонние серверы."
     },
@@ -1888,14 +2041,306 @@
       "onDemand": "По требованию"
     },
     "instances": {
-      "unsupported": "Управление несколькими экземплярами Gemini пока не поддерживается.",
-      "unsupportedDescPlatform": "Мультиэкземпляр Gemini поддерживается только в macOS, Windows и Linux.",
+      "unsupported": "Управление несколькими экземплярами Gemini Cli пока не поддерживается.",
+      "unsupportedDescPlatform": "Мультиэкземпляр Gemini Cli поддерживается только в macOS, Windows и Linux.",
       "launchDialogTitle": "Запустить экземпляр",
       "launchHint": "Скопируйте команду и запустите вручную или выполните ее непосредственно в терминале.",
       "runInTerminal": "Запустить в терминале"
     },
     "switch": {
       "success": "Аккаунт успешно переключен"
+    }
+  },
+  "codebuddy": {
+    "title": "Управление аккаунтами CodeBuddy",
+    "noAccounts": "Нет аккаунтов CodeBuddy",
+    "addAccount": "Добавить аккаунт CodeBuddy",
+    "flowNotice": {
+      "title": "Информация об управлении аккаунтами CodeBuddy (нажмите, чтобы развернуть/свернуть)",
+      "desc": "Переключение аккаунтов требует чтения локального хранилища аутентификации CodeBuddy и вызова системных сервисов учетных данных для расшифровки и повторного шифрования. Данные обрабатываются только локально.",
+      "permission": "Область доступа: чтение базы аутентификации CodeBuddy (state.vscdb), вызов системных возможностей хранения учетных данных (macOS Keychain / Windows DPAPI / Linux Secret Service) для расшифровки и обратной записи.",
+      "network": "Сетевой доступ: вход по OAuth и обновление токена требуют запросов к codebuddy.ai; запросы квоты обращаются к billing API. Никакие локальные ключи или учетные данные не загружаются."
+    },
+    "nickname": "Псевдоним",
+    "enterprise": "Корпоративный",
+    "usage": "Статус использования",
+    "creditsBalance": "Баланс кредитов",
+    "usageNormal": "В норме",
+    "oauthWaiting": "Ожидание авторизации...",
+    "oauthDesc": "Нажмите кнопку ниже, чтобы открыть страницу авторизации CodeBuddy в браузере.",
+    "oauthDescWebview": "Нажмите кнопку ниже, чтобы открыть страницу авторизации CodeBuddy во встроенном WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Только вход в IDE",
+        "item1": "Добавьте аккаунт после завершения OAuth в браузере, затем используйте его для переключения в IDE.",
+        "item2": "Параметры запроса квоты не привязываются автоматически.",
+        "item3": "Если нужен показ квоты, вручную запустите «Запросить квоту» на карточке аккаунта."
+      }
+    },
+    "oauthWebviewTab": "OAuth в WebView",
+    "oauthOpenWebview": "Открыть в WebView",
+    "oauthOpenWebviewIncognito": "Открыть в WebView инкогнито",
+    "oauthOpenWebviewFailed": "Не удалось открыть WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Открыть в браузере (резервный вариант)",
+    "oauthOpenBrowserFailed": "Не удалось открыть браузер: {{error}}",
+    "oauthWebviewProgressHint": "В верхней части WebView отображается горизонтальная шкала шагов, чтобы легче было найти зависший этап.",
+    "oauthFlow": {
+      "prepare": "Подготовить ссылку OAuth",
+      "authorize": "Открыть ссылку авторизации и подтвердить",
+      "bind": "Опросить результат авторизации и привязать аккаунт",
+      "retryPrepare": "Сгенерировать ссылку OAuth заново",
+      "retryAuthorize": "Повторно запросить ссылку авторизации",
+      "retryBind": "Повторить опрос авторизации",
+      "error": "Ошибка потока: {{error}}"
+    },
+    "tokenDesc": "Вставьте токен доступа CodeBuddy:",
+    "jsonDesc": "Выберите JSON-файл с аккаунтами CodeBuddy:",
+    "import": {
+      "localDesc": "Импортируйте данные аккаунта из локального клиента CodeBuddy или из JSON-файла.",
+      "localClient": "Импорт из локального CodeBuddy"
+    },
+    "search": "Поиск аккаунтов CodeBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Не удалось обновить квоту",
+      "sectionTitle": "Запрос квоты",
+      "empty": "Привязанной информации о запросе квоты пока нет",
+      "packageUnknown": "Неизвестный пакет",
+      "quotaLabel": "Оставшаяся квота",
+      "updatedAt": "Последний запрос: {{time}}",
+      "cycleRange": "Цикл: {{start}} - {{end}}",
+      "cycleUnknown": "Информация о цикле недоступна",
+      "expireAt": "Истекает: {{time}}",
+      "expireUnknown": "Срок действия: Н/Д",
+      "packageTitle": {
+        "base": "Базовый пакет опыта",
+        "activity": "Подарочный пакет активности"
+      }
+    },
+    "extraCredit": {
+      "title": "Пакет кредитов"
+    },
+    "oauthUrlInputPlaceholder": "Вы можете вручную ввести URL авторизации",
+    "oauthInvalidUrl": "Недопустимый URL авторизации. Введите полный URL.",
+    "oauthGotoWebview": "Перейти в открытом WebView по введенному URL",
+    "oauthGotoWebviewSuccess": "В WebView отправлен запрос на переход по введенному URL.",
+    "oauthGotoWebviewFailed": "Не удалось выполнить переход в WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Введите URL для перехода в этом WebView",
+    "oauthWebviewInlineGo": "Перейти",
+    "oauthSuccessClosePrompt": "Аккаунт успешно добавлен. Закрыть этот WebView сейчас?\nВыберите \"Закрыть WebView\", чтобы закрыть сейчас, или \"Позже\", чтобы оставить его открытым.",
+    "oauthSuccessCloseTitle": "Аккаунт добавлен",
+    "oauthSuccessCloseNowLabel": "Закрыть WebView",
+    "oauthSuccessCloseLaterLabel": "Позже",
+    "oauthSuccessCloseNowStatus": "✅ Аккаунт добавлен. Закрываем окно...",
+    "oauthSuccessCloseLaterStatus": "✅ Аккаунт добавлен. Этот WebView останется открытым.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Подготовить ссылку OAuth",
+        "authorize": "2 Открыть ссылку авторизации и подтвердить",
+        "bind": "3 Опросить результат авторизации и привязать аккаунт",
+        "complete": "5 Готово (закройте вручную)"
+      },
+      "status": {
+        "loginConfirm": "Пожалуйста, завершите вход и авторизацию на этой странице."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Управление аккаунтами Qoder",
+    "comingSoon": {
+      "title": "Мульти-инстанс скоро",
+      "desc": "Запускайте несколько экземпляров Qoder.app с разными аккаунтами одновременно."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Несколько экземпляров Qoder поддерживаются только на macOS, Windows и Linux."
+      }
+    },
+    "oauth": {
+      "hint": "Завершите вход на открытой странице браузера: если страница входа не открылась автоматически, нажмите «Скопировать ссылку для входа», скопируйте ссылку и вставьте её в браузер, чтобы завершить вход.",
+      "copyLoginUrl": "Скопировать ссылку для входа"
+    },
+    "usageOverview": {
+      "title": "Обзор использования",
+      "viewDetails": "Подробнее",
+      "includedCredits": "Кредиты в рамках тарифа",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "Обновите тариф, чтобы увеличить месячный лимит",
+      "upgradeAction": "Обновить"
+    },
+    "flowNotice": {
+      "title": "Руководство по аккаунту Qoder (нажмите, чтобы развернуть или свернуть)",
+      "desc": "Поддерживает официальный вход через OAuth (callback), локальный импорт, импорт JSON, инъекцию переключения аккаунта, привязку нескольких инстансов и обзор квоты. Поток входа использует реальные данные, сохраненные клиентом Qoder.",
+      "permission": "Область разрешений: читает локальное хранилище аутентификации Qoder (auth-учетные данные и информацию пользователя) для переключения аккаунта и инъекции сессии; все данные обрабатываются локально на вашем устройстве.",
+      "network": "Сетевой диапазон: вход OAuth требует подключения к официальным сервисам Qoder для выполнения callback; запросы квоты используют API Qoder. Локальные ключи и учетные данные не загружаются."
+    },
+    "addModal": {
+      "title": "Добавить аккаунт Qoder"
+    },
+    "import": {
+      "localDesc": "Читает текущее состояние входа из локального клиента Qoder, включая данные пользователя, тариф и использование кредитов."
+    }
+  },
+  "trae": {
+    "title": "Управление аккаунтами Trae",
+    "empty": {
+      "description": "Нажмите «Добавить аккаунт», чтобы начать управлять аккаунтами Trae, или импортируйте их из локальных данных Trae либо из JSON-файла."
+    },
+    "addModal": {
+      "title": "Добавить аккаунт Trae"
+    },
+    "oauth": {
+      "desc": "Нажмите кнопку ниже и завершите авторизацию Trae OAuth в браузере."
+    },
+    "import": {
+      "localDesc": "Импортирует текущий авторизованный аккаунт, информацию о плане и кэшированные данные квоты из локального каталога конфигурации Trae.",
+      "jsonTab": "JSON-файл"
+    },
+    "quota": {
+      "usedOfTotal": "Использовано $ {{used}} из $ {{total}}",
+      "usageUnknown": "Использование: --",
+      "resetAt": "Сброс: {{date}}",
+      "resetUnknown": "Время сброса неизвестно",
+      "statusUnknown": "Статус: неизвестно",
+      "statusNormal": "Статус: нормально",
+      "statusExhaustedFree": "Статус: лимит использования исчерпан, рекомендуем повысить тариф",
+      "statusExhaustedPro": "Статус: лимит использования исчерпан, повысьте тариф или включите оплату по факту",
+      "bonusUsed": "Бонус: +{{amount}}",
+      "bonusIncluded": "Бонус: включен",
+      "bonusEmpty": "Бонус: --",
+      "packageConsuming": "Пакет использования: расходуется",
+      "packageAvailable": "Пакет использования: доступен",
+      "packageEmpty": "Пакет использования: --",
+      "payAsYouGoConsuming": "Оплата по факту: расходуется",
+      "payAsYouGoEnabled": "Оплата по факту: включена",
+      "payAsYouGoEmpty": "Оплата по факту: --"
+    },
+    "flowNotice": {
+      "title": "Руководство по аккаунту Trae (нажмите, чтобы развернуть или свернуть)",
+      "desc": "Поддерживает официальный вход через OAuth, локальный импорт, импорт JSON и переключение аккаунта через локальную инъекцию. При переключении данные записываются по реальным правилам хранения клиента Trae.",
+      "permission": "Область разрешений: читает и записывает поля, связанные со входом, в локальном Trae storage.json для импорта аккаунта, инъекции переключения аккаунта и отображения плана. Все данные обрабатываются только локально на вашем устройстве.",
+      "network": "Сетевой диапазон: вход OAuth, обновление токена и запросы плана вызывают официальные API Trae. Локальные файлы аккаунтов и сырое содержимое хранилища не загружаются в сторонние сервисы."
+    }
+  },
+  "codebuddyCn": {
+    "title": "Управление аккаунтами CodeBuddy CN",
+    "noAccounts": "Нет аккаунтов CodeBuddy CN",
+    "addAccount": "Добавить аккаунт CodeBuddy CN",
+    "search": "Поиск аккаунтов CodeBuddy CN...",
+    "oauthDesc": "Нажмите кнопку ниже, чтобы открыть страницу авторизации CodeBuddy CN в браузере.",
+    "tokenDesc": "Вставьте токен доступа CodeBuddy CN:",
+    "flowNotice": {
+      "title": "Информация об управлении аккаунтами CodeBuddy CN (нажмите, чтобы развернуть/свернуть)",
+      "desc": "Переключение аккаунтов требует чтения локального хранилища аутентификации CodeBuddy CN и вызова системных сервисов учетных данных для расшифровки и повторного шифрования. Данные обрабатываются только локально.",
+      "permission": "Область доступа: чтение базы аутентификации CodeBuddy CN (state.vscdb), вызов системных возможностей хранения учетных данных (macOS Keychain / Windows DPAPI / Linux Secret Service) для расшифровки и обратной записи.",
+      "network": "Сетевой доступ: вход по OAuth и обновление токена требуют запросов к codebuddy.cn / copilot.tencent.com; запросы квоты обращаются к billing API. Никакие локальные ключи или учетные данные не загружаются."
+    },
+    "import": {
+      "localDesc": "Импортируйте данные аккаунта из локального клиента CodeBuddy CN или из JSON-файла.",
+      "localClient": "Импорт из локального CodeBuddy CN"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Мультиэкземпляр CodeBuddy CN поддерживается только в macOS, Windows и Linux."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "Управление аккаунтами WorkBuddy",
+    "noAccounts": "Нет аккаунтов WorkBuddy",
+    "addAccount": "Добавить аккаунт WorkBuddy",
+    "flowNotice": {
+      "title": "Информация об управлении аккаунтами WorkBuddy (нажмите, чтобы развернуть/свернуть)",
+      "desc": "Переключение аккаунтов требует чтения локального хранилища аутентификации WorkBuddy и вызова системных сервисов учетных данных для расшифровки и повторного шифрования. Данные обрабатываются только локально.",
+      "permission": "Область доступа: чтение базы аутентификации WorkBuddy (state.vscdb), вызов системных возможностей хранения учетных данных (macOS Keychain / Windows DPAPI / Linux Secret Service) для расшифровки и обратной записи.",
+      "network": "Сетевой доступ: вход по OAuth и обновление токена требуют запросов к WorkBuddy; запросы квоты обращаются к billing API. Никакие локальные ключи или учетные данные не загружаются."
+    },
+    "nickname": "Псевдоним",
+    "enterprise": "Корпоративный",
+    "usage": "Статус использования",
+    "creditsBalance": "Баланс кредитов",
+    "usageNormal": "В норме",
+    "oauthWaiting": "Ожидание авторизации...",
+    "oauthDesc": "Нажмите кнопку ниже, чтобы открыть страницу авторизации WorkBuddy в браузере.",
+    "oauthDescWebview": "Нажмите кнопку ниже, чтобы открыть страницу авторизации WorkBuddy во встроенном WebView.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "Только вход в IDE",
+        "item1": "Добавьте аккаунт после завершения OAuth в браузере, затем используйте его для переключения в IDE.",
+        "item2": "Параметры запроса квоты не привязываются автоматически.",
+        "item3": "Если нужен показ квоты, вручную запустите «Запросить квоту» на карточке аккаунта."
+      }
+    },
+    "oauthWebviewTab": "OAuth в WebView",
+    "oauthOpenWebview": "Открыть в WebView",
+    "oauthOpenWebviewIncognito": "Открыть в WebView инкогнито",
+    "oauthOpenWebviewFailed": "Не удалось открыть WebView: {{error}}",
+    "oauthOpenBrowserFallback": "Открыть в браузере (резервный вариант)",
+    "oauthOpenBrowserFailed": "Не удалось открыть браузер: {{error}}",
+    "oauthWebviewProgressHint": "В верхней части WebView отображается горизонтальная шкала шагов, чтобы легче было найти зависший этап.",
+    "oauthFlow": {
+      "prepare": "Подготовить ссылку OAuth",
+      "authorize": "Открыть ссылку авторизации и подтвердить",
+      "bind": "Опросить результат авторизации и привязать аккаунт",
+      "retryPrepare": "Сгенерировать ссылку OAuth заново",
+      "retryAuthorize": "Повторно запросить ссылку авторизации",
+      "retryBind": "Повторить опрос авторизации",
+      "error": "Ошибка потока: {{error}}"
+    },
+    "tokenDesc": "Вставьте токен доступа WorkBuddy:",
+    "jsonDesc": "Выберите JSON-файл с аккаунтами WorkBuddy:",
+    "import": {
+      "localDesc": "Импортируйте данные аккаунта из локального клиента WorkBuddy или из JSON-файла.",
+      "localClient": "Импорт из локального WorkBuddy"
+    },
+    "search": "Поиск аккаунтов WorkBuddy...",
+    "quotaQuery": {
+      "failedRefreshCompact": "Не удалось обновить квоту",
+      "sectionTitle": "Запрос квоты",
+      "empty": "Привязанной информации о запросе квоты пока нет",
+      "packageUnknown": "Неизвестный пакет",
+      "quotaLabel": "Оставшаяся квота",
+      "updatedAt": "Последний запрос: {{time}}",
+      "cycleRange": "Цикл: {{start}} - {{end}}",
+      "cycleUnknown": "Информация о цикле недоступна",
+      "expireAt": "Истекает: {{time}}",
+      "expireUnknown": "Срок действия: Н/Д",
+      "packageTitle": {
+        "base": "Базовый пакет опыта",
+        "activity": "Подарочный пакет активности"
+      }
+    },
+    "extraCredit": {
+      "title": "Пакет кредитов"
+    },
+    "oauthUrlInputPlaceholder": "Вы можете вручную ввести URL авторизации",
+    "oauthInvalidUrl": "Недопустимый URL авторизации. Введите полный URL.",
+    "oauthGotoWebview": "Перейти в открытом WebView по введенному URL",
+    "oauthGotoWebviewSuccess": "В WebView отправлен запрос на переход по введенному URL.",
+    "oauthGotoWebviewFailed": "Не удалось выполнить переход в WebView: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "Введите URL для перехода в этом WebView",
+    "oauthWebviewInlineGo": "Перейти",
+    "oauthSuccessClosePrompt": "Аккаунт успешно добавлен. Закрыть этот WebView сейчас?\nВыберите \"Закрыть WebView\", чтобы закрыть сейчас, или \"Позже\", чтобы оставить его открытым.",
+    "oauthSuccessCloseTitle": "Аккаунт добавлен",
+    "oauthSuccessCloseNowLabel": "Закрыть WebView",
+    "oauthSuccessCloseLaterLabel": "Позже",
+    "oauthSuccessCloseNowStatus": "✅ Аккаунт добавлен. Закрываем окно...",
+    "oauthSuccessCloseLaterStatus": "✅ Аккаунт добавлен. Этот WebView останется открытым.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 Подготовить ссылку OAuth",
+        "authorize": "2 Открыть ссылку авторизации и подтвердить",
+        "bind": "3 Опросить результат авторизации и привязать аккаунт",
+        "complete": "5 Готово (закройте вручную)"
+      },
+      "status": {
+        "loginConfirm": "Пожалуйста, завершите вход и авторизацию на этой странице."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Мультиэкземпляр WorkBuddy поддерживается только в macOS, Windows и Linux."
+      }
     }
   }
 }

@@ -29,7 +29,11 @@
         "addOnPromptCredits": "추가 프롬프트 크레딧",
         "credits": "크레딧",
         "email": "이메일",
-        "promptCredits": "프롬프트 크레딧"
+        "promptCredits": "프롬프트 크레딧",
+        "creditPackage": "추가 Credits",
+        "sharedCreditPackage": "공유 Credits 패키지",
+        "account": "계정",
+        "createdAt": "생성 시간"
       },
       "empty": {
         "title": "계정 없음"
@@ -49,7 +53,17 @@
         "label": "가져오기",
         "importing": "로컬 계정 가져오는 중...",
         "pickFile": "가져올 JSON 파일 선택",
-        "orJson": "또는 JSON 파일에서 가져오기"
+        "orJson": "또는 JSON 파일에서 가져오기",
+        "progress": {
+          "overallLine": "전체 진행률 {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}}개 플랫폼, {{processedAccounts}}/{{totalAccounts}}개 계정 처리됨)",
+          "currentPlatformLine": "가져오는 중: {{platform}} ({{count}}개 계정)",
+          "currentStatusLine": "현재 플랫폼 상태: {{status}}",
+          "platformDetailsTitle": "플랫폼 상세",
+          "statusProcessing": "처리 중...",
+          "statusRunning": "가져오는 중...",
+          "statusSkipped": "건너뜀",
+          "statusPending": "가져오기 대기"
+        }
       },
       "instances": {
         "unsupported": {
@@ -75,7 +89,9 @@
         "preparing": "인증 링크 준비 중...",
         "retry": "인증 정보 다시 생성",
         "timeoutRetry": "인증 링크 새로고침",
-        "waiting": "인증 대기 중..."
+        "waiting": "인증 대기 중...",
+        "manualCallbackLabel": "수동으로 콜백 URL 입력",
+        "manualCallbackPlaceholder": "전체 콜백 URL을 붙여넣으세요. 예: http://localhost:1455/auth/callback?code=...&state=..."
       },
       "refreshAll": "전체 새로고침",
       "refreshQuota": "쿼터 새로고침",
@@ -141,16 +157,19 @@
       "usage": {
         "resetLine": "할당량은 {{dateText}}에 재설정됩니다.",
         "resetUnknown": "할당량 재설정까지 -"
+      },
+      "updated": {
+        "label": "{{relative}} 전에 업데이트"
       }
     }
   },
   "nav": {
-    "overview": "Antigravity 계정",
+    "overview": "Antigravity",
     "accounts": "계정 관리",
     "wakeup": "깨우기 작업",
     "fingerprints": "기기 지문",
     "settings": "설정",
-    "codex": "Codex 계정",
+    "codex": "Codex",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
     "dashboard": "대시보드",
@@ -159,9 +178,14 @@
     "manual": "사용자 매뉴얼",
     "quickUpdate": {
       "update": "업데이트",
-      "restart": "재시작"
+      "restart": "재시작",
+      "installing": "설치 중"
     },
-    "gemini": "Gemini 계정"
+    "gemini": "Gemini Cli",
+    "codebuddy": "CodeBuddy",
+    "qoder": "Qoder",
+    "trae": "Trae",
+    "codebuddyCn": "CodeBuddy CN"
   },
   "platformLayout": {
     "title": "플랫폼 레이아웃",
@@ -173,7 +197,34 @@
     "trayToggle": "트레이에 표시",
     "hiddenBadge": "숨김",
     "openFromMore": "플랫폼 레이아웃 관리",
-    "dragHandleLabel": "드래그하여 순서 변경"
+    "dragHandleLabel": "드래그하여 순서 변경",
+    "tipWithGroups": "드래그로 정렬할 수 있습니다. 사이드바에는 최대 2개의 항목만 표시할 수 있습니다. 그룹 하위 플랫폼은 사이드바/대시보드 토글을 제공하지 않으며 메뉴바 표시와 기본 플랫폼 전환에만 사용됩니다.",
+    "addGroup": "그룹 추가",
+    "editGroup": "그룹 편집",
+    "deleteGroup": "그룹 삭제",
+    "groupBadge": "그룹",
+    "groupDefault": "기본 플랫폼",
+    "groupName": "그룹 이름",
+    "groupNamePlaceholder": "예: CodeBuddy 모음",
+    "groupIcon": "그룹 아이콘",
+    "groupIconFromPlatform": "플랫폼 아이콘",
+    "groupIconCustom": "사용자 지정 이미지",
+    "groupIconPreview": "아이콘 미리보기",
+    "groupChildren": "하위 플랫폼",
+    "groupNameRequired": "그룹 이름을 입력하세요",
+    "groupChildrenRequired": "하위 플랫폼을 하나 이상 선택하세요",
+    "groupCustomIconRequired": "사용자 지정 아이콘을 업로드하세요",
+    "groupSwitchLabel": "같은 그룹 플랫폼 전환",
+    "collapseAllChildren": "모든 하위 플랫폼 접기",
+    "expandAllChildren": "모든 하위 플랫폼 펼치기",
+    "addChildPlatform": "하위 플랫폼 추가",
+    "collapseChildren": "하위 플랫폼 접기",
+    "expandChildren": "하위 플랫폼 펼치기",
+    "noAvailableChildren": "추가할 수 있는 플랫폼이 없습니다",
+    "customIconDeleteConfirm": "이 사용자 지정 아이콘을 삭제하시겠습니까?",
+    "editChildPlatform": "하위 플랫폼 편집",
+    "setAsDefaultInGroup": "이 그룹의 기본 플랫폼으로 설정",
+    "removeFromGroup": "그룹에서 제거"
   },
   "privacy": {
     "hideSensitive": "이메일 숨기기",
@@ -376,6 +427,8 @@
       "themeLight": "라이트",
       "themeDark": "다크",
       "themeSystem": "시스템 설정",
+      "uiScale": "UI 배율",
+      "uiScaleDesc": "인터페이스 배율 조정",
       "accountManagement": "계정 관리",
       "autoRefresh": "Antigravity 자동 새로고침 할당량",
       "codexAutoRefresh": "Codex 자동 새로고침 할당량",
@@ -401,7 +454,6 @@
       "hideDockIconDesc": "창 최소화 동작과 무관하게 Dock 아이콘 표시 상태를 독립적으로 제어합니다",
       "hideDockIconOff": "아니요 (Dock 아이콘 표시)",
       "hideDockIconOn": "예 (Dock 아이콘 숨기기)",
-      "storageTitle": "디렉터리 및 저장소",
       "dataDir": "데이터 디렉터리",
       "dataDirDesc": "계정 및 구성 파일 저장 위치.",
       "fpDir": "Antigravity 저장소",
@@ -459,7 +511,28 @@
       "autoUpdateOn": "켬(자동 업데이트)",
       "opencodeAuthOverwrite": "Codex 전환 시 OpenCode 로그인 덮어쓰기",
       "opencodeAuthOverwriteDesc": "끄면 Codex만 전환되고 OpenCode는 현재 로그인 상태를 유지합니다",
-      "opencodeRestartRequiresOverwrite": "먼저 \"Codex 전환 시 OpenCode 로그인 덮어쓰기\"를 활성화하세요"
+      "opencodeRestartRequiresOverwrite": "먼저 \"Codex 전환 시 OpenCode 로그인 덮어쓰기\"를 활성화하세요",
+      "codebuddySettingsTitle": "CodeBuddy 설정",
+      "codebuddyAutoRefresh": "CodeBuddy 자동 할당량 새로고침",
+      "codebuddyAutoRefreshDesc": "백그라운드 자동 업데이트 주기",
+      "codebuddyAppPath": "CodeBuddy 실행 경로",
+      "codebuddyAppPathDesc": "비워 두면 기본 경로를 사용합니다",
+      "codebuddyAppPathPlaceholder": "기본 경로",
+      "codebuddyPathSelect": "선택",
+      "codebuddyPathReset": "기본값으로 재설정",
+      "qoderPathReset": "기본값으로 재설정",
+      "traeAutoRefresh": "Trae 자동 할당량 새로고침",
+      "traeAutoRefreshDesc": "백그라운드 자동 업데이트 주기",
+      "traeAppPath": "Trae 실행 경로",
+      "traeAppPathDesc": "비워 두면 기본 경로를 사용합니다",
+      "traeAppPathPlaceholder": "기본 경로",
+      "traePathSelect": "선택",
+      "traePathReset": "기본값으로 재설정",
+      "workbuddyAppPath": "WorkBuddy 실행 경로",
+      "workbuddyAppPathDesc": "비워 두면 기본 경로를 사용합니다",
+      "workbuddyAppPathPlaceholder": "기본 경로",
+      "workbuddyPathSelect": "선택",
+      "workbuddyPathReset": "기본값으로 재설정"
     },
     "network": {
       "apiTitle": "반중력 조종석 API",
@@ -473,7 +546,22 @@
       "restartRequired": "설정이 변경되었습니다. 적용하려면 앱을 재시작하십시오",
       "saveSuccess": "설정이 저장되었습니다!",
       "saveSuccessRestart": "설정이 저장되었습니다! 포트 변경을 적용하려면 앱을 재시작하십시오",
-      "saveFailed": "저장 실패: {{error}}"
+      "saveFailed": "저장 실패: {{error}}",
+      "reportTitle": "웹 조회 서비스",
+      "reportService": "HTTP 리포트 서비스",
+      "reportServiceDesc": "사용량 요약을 위한 토큰 보호 HTTP 엔드포인트를 제공합니다",
+      "reportPort": "리포트 포트",
+      "reportPortDesc": "기본값은 {{port}}이며, 변경 후 재시작이 필요합니다",
+      "reportToken": "접근 토큰",
+      "reportTokenDesc": "/report 요청 시 필수이며, 안전하게 보관하세요",
+      "reportTokenRequired": "웹 조회 서비스를 활성화하면 접근 토큰은 비워둘 수 없습니다.",
+      "generateToken": "생성",
+      "reportUrlPreview": "엔드포인트 미리보기",
+      "reportUrlPreviewDesc": "format=md / format=yaml 및 render=true HTML 보기를 지원합니다",
+      "reportUrlRaw": "원본 출력",
+      "reportUrlRendered": "렌더링 보기",
+      "firewallHintTitle": "방화벽 안내",
+      "firewallHint": "URL에 접속할 수 없으면 시스템 방화벽 설정을 확인하세요."
     },
     "about": {
       "appName": "Cockpit Tools",
@@ -538,8 +626,10 @@
     },
     "tier": {
       "pro": "PRO",
-      "ultra": "ULTRA",
-      "free": "FREE"
+      "ultra": "ULTRA"
+    },
+    "credits": {
+      "label": "AI 크레딧"
     },
     "empty": {
       "title": "계정 없음",
@@ -559,8 +649,7 @@
     "filter": {
       "all": "전체 ({{count}})",
       "pro": "프로({{count}})",
-      "ultra": "울트라({{count}})",
-      "free": "무료({{count}})"
+      "ultra": "울트라({{count}})"
     },
     "sortLabel": "정렬",
     "sort": {
@@ -571,7 +660,9 @@
       "byGroupReset": "{{group}} 재설정 시간",
       "descTooltip": "내림차순, 오름차순으로 전환 클릭",
       "ascTooltip": "오름차순, 내림차순으로 전환 클릭",
-      "toggleDirection": "정렬 방향 전환"
+      "toggleDirection": "정렬 방향 전환",
+      "plan": "플랜순",
+      "quota": "할당량순"
     },
     "filterTags": "태그 필터",
     "filterTagsCount": "태그",
@@ -635,6 +726,30 @@
       "importPartialFailed": "{{failCount}}개 실패: {{failList}}",
       "refreshingQuota": "할당량 갱신 중 {{done}}/{{total}} (이 창은 닫아도 됩니다)",
       "quotaRefreshDone": "할당량 갱신 완료"
+    },
+    "groups": {
+      "manageTitle": "그룹 관리",
+      "title": "계정 그룹",
+      "create": "만들기",
+      "newPlaceholder": "그룹 이름 입력...",
+      "empty": "그룹이 없습니다. 하나 만들어 시작하세요",
+      "accountCount": "{{count}}개 계정",
+      "rename": "이름 바꾸기",
+      "addToGroup": "그룹에 추가",
+      "createAndAdd": "새 그룹 만들고 추가...",
+      "removeFromGroup": "그룹에서 제거",
+      "allGroups": "모든 그룹",
+      "noGroups": "그룹 없음",
+      "noGroupsDesc": "그룹을 만들어 계정을 일괄 관리하세요",
+      "manage": "관리",
+      "error": {
+        "duplicate": "그룹 이름이 이미 존재합니다",
+        "createFailed": "그룹 생성 실패: {{error}}",
+        "renameFailed": "그룹 이름 변경 실패: {{error}}",
+        "deleteFailed": "그룹 삭제 실패: {{error}}",
+        "addFailed": "그룹 추가 실패: {{error}}",
+        "createAndAddFailed": "그룹 생성 및 추가 실패: {{error}}"
+      }
     }
   },
   "overview": {
@@ -971,7 +1086,7 @@
       "taskName": "작업 이름",
       "taskStatus": "작업 상태",
       "triggerMode": "트리거 방식",
-      "triggerModeHint": "1. 예약: 설정된 시간에 트리거됩니다.\\n2. Crontab: 표현식으로 정의합니다.\\n3. 할당량 재설정: 할당량이 가득 찼을 때 한 번 실행됩니다.",
+      "triggerModeHint": "1. 예약: 설정된 시간에 트리거됩니다.\n2. Crontab: 표현식으로 정의합니다.\n3. 할당량 재설정: 할당량이 가득 찼을 때 한 번 실행됩니다.",
       "modeScheduled": "📅 예약",
       "modeCrontab": "🧩 크론탭",
       "modeQuotaReset": "🔄 할당량 재설정",
@@ -1047,7 +1162,12 @@
     "showErrorDetails": "상세 보기",
     "hideErrorDetails": "상세 숨기기",
     "autoUpdateFailedAfterRetries": "{{count}}회 시도 후에도 자동 업데이트에 실패했습니다. 잠시 후 다시 시도하거나 수동으로 다운로드하세요.",
-    "updateCancelled": "업데이트가 취소되었습니다."
+    "updateCancelled": "업데이트가 취소되었습니다.",
+    "cancelDownload": "다운로드 취소",
+    "installing": "설치 중...",
+    "authorizing": "시스템 권한 승인을 기다리는 중...",
+    "installFailed": "시스템 설치에 실패했습니다. 나중에 다시 시도하거나 수동으로 다운로드하세요.",
+    "restartRequiredAfterInstall": "업데이트는 설치되었습니다. 전환을 완료하려면 앱을 수동으로 다시 시작하세요."
   },
   "closeDialog": {
     "title": "창 닫기",
@@ -1141,7 +1261,8 @@
     "quotaError": {
       "badge": "할당량 오류",
       "generic": "할당량 새로고침에 실패했습니다. 나중에 다시 시도하세요",
-      "deactivatedWorkspace": "워크스페이스가 비활성화되었습니다. 계정을 전환하거나 다시 인증하세요"
+      "deactivatedWorkspace": "워크스페이스가 비활성화되었습니다. 계정을 전환하거나 다시 인증하세요",
+      "requestFailedManualRetry": "요청에 실패했습니다. 수동으로 다시 시도하세요: {{error}}"
     },
     "plan": {
       "free": "FREE",
@@ -1149,6 +1270,9 @@
       "pro": "PRO",
       "team": "TEAM",
       "enterprise": "ENTERPRISE"
+    },
+    "list": {
+      "showCodeReviewQuota": "Code Review 할당량 표시"
     },
     "time": {
       "today": "오늘 {{time}}",
@@ -1179,7 +1303,10 @@
     "filterTagsCount": "태그",
     "noAvailableTags": "사용 가능한 태그가 없습니다",
     "clearFilter": "필터 지우기",
-    "editTags": "태그 편집"
+    "editTags": "태그 편집",
+    "account": {
+      "personal": "개인 계정"
+    }
   },
   "githubCopilot": {
     "title": "GitHub Copilot 계정 관리",
@@ -1287,7 +1414,8 @@
       "errorInfo": "오류 상세",
       "filePath": "파일 위치",
       "helpText": "폴더를 열어 수동으로 복구하거나 파일을 삭제한 후 애플리케이션을 다시 시작하십시오.",
-      "openFolder": "폴더 열기"
+      "openFolder": "폴더 열기",
+      "openFolderFailed": "폴더 열기 실패: {{error}}"
     }
   },
   "quickSettings": {
@@ -1340,10 +1468,35 @@
     },
     "cursorRefreshInterval": "할당량 자동 새로고침",
     "gemini": {
-      "title": "Gemini 설정",
-      "appPath": "Gemini 경로"
+      "title": "Gemini Cli 설정",
+      "appPath": "Gemini Cli 경로"
     },
-    "geminiRefreshInterval": "할당량 자동 새로고침"
+    "geminiRefreshInterval": "할당량 자동 새로고침",
+    "codebuddy": {
+      "title": "CodeBuddy 설정",
+      "appPath": "CodeBuddy 경로"
+    },
+    "error": {
+      "loadFailed": "설정 불러오기 실패: {{error}}",
+      "saveFailed": "설정 저장 실패: {{error}}",
+      "pickPathFailed": "경로 선택 실패: {{error}}",
+      "resetPathFailed": "경로 초기화 실패: {{error}}"
+    },
+    "qoder": {
+      "title": "Qoder 설정",
+      "appPath": "Qoder 경로"
+    },
+    "trae": {
+      "title": "Trae 설정",
+      "appPath": "Trae 경로"
+    },
+    "codebuddyCn": {
+      "appPath": "CodeBuddy CN 경로"
+    },
+    "workbuddy": {
+      "title": "WorkBuddy 설정",
+      "appPath": "WorkBuddy 경로"
+    }
   },
   "quotaAlert": {
     "bannerText": "{{email}} 할당량 경고 (임계값 {{threshold}}%, 최저 {{lowest}}%, 모델: {{models}})",
@@ -1847,7 +2000,7 @@
     }
   },
   "gemini": {
-    "injectToGemini": "Gemini로 전환",
+    "injectToGemini": "Gemini Cli로 전환",
     "updated": {
       "label": "{{relative}} 전에 업데이트됨"
     },
@@ -1860,10 +2013,10 @@
       "resetsUnknown": "재설정 시간 알 수 없음",
       "onDemand": "온디맨드"
     },
-    "title": "Gemini 계정 관리",
+    "title": "Gemini Cli 계정 관리",
     "instances": {
-      "unsupported": "Gemini 다중 인스턴스 관리는 아직 지원되지 않습니다.",
-      "unsupportedDescPlatform": "Gemini 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다.",
+      "unsupported": "Gemini Cli 다중 인스턴스 관리는 아직 지원되지 않습니다.",
+      "unsupportedDescPlatform": "Gemini Cli 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다.",
       "launchDialogTitle": "인스턴스 실행",
       "launchHint": "명령을 복사해 수동으로 실행하거나 터미널에서 바로 실행하세요.",
       "runInTerminal": "터미널에서 실행"
@@ -1872,30 +2025,322 @@
       "success": "계정 전환에 성공했습니다"
     },
     "empty": {
-      "description": "\"계정 추가\"를 클릭하여 Gemini 계정 관리를 시작하세요"
+      "description": "\"계정 추가\"를 클릭하여 Gemini Cli 계정 관리를 시작하세요"
     },
     "addModal": {
-      "title": "Gemini 계정 추가"
+      "title": "Gemini Cli 계정 추가"
     },
     "oauth": {
-      "desc": "아래 버튼을 클릭하고 브라우저에서 Gemini 인증을 완료하세요."
+      "desc": "아래 버튼을 클릭하고 브라우저에서 Gemini Cli 인증을 완료하세요."
     },
     "token": {
-      "desc": "Gemini 액세스 토큰(JWT) 또는 내보낸 JSON 데이터를 붙여넣으세요.",
+      "desc": "Gemini Cli 액세스 토큰(JWT) 또는 내보낸 JSON 데이터를 붙여넣으세요.",
       "formatHint": "필수 필드 및 예시 (클릭하여 펼치기)",
       "formatRequired": "단일 토큰: JWT를 직접 붙여넣기; 일괄 가져오기: JSON 배열 형식 사용",
       "singleExample": "단일 예시 (JWT)",
       "batchExample": "일괄 예시 (JSON)"
     },
     "import": {
-      "localDesc": "로컬 Gemini 클라이언트 또는 JSON 파일에서 계정 데이터를 가져옵니다.",
-      "localClient": "로컬 Gemini에서 가져오기"
+      "localDesc": "로컬 Gemini Cli 클라이언트 또는 JSON 파일에서 계정 데이터를 가져옵니다.",
+      "localClient": "로컬 Gemini Cli에서 가져오기"
     },
     "flowNotice": {
-      "title": "Gemini 계정 안내 (클릭하여 펼치기/접기)",
-      "desc": "로컬 Gemini 설치에서 가져오기 또는 JWT 토큰을 붙여넣어 Gemini 계정을 관리합니다. 데이터는 로컬에서만 처리됩니다.",
+      "title": "Gemini Cli 계정 안내 (클릭하여 펼치기/접기)",
+      "desc": "로컬 Gemini Cli 설치에서 가져오기 또는 JWT 토큰을 붙여넣어 Gemini Cli 계정을 관리합니다. 데이터는 로컬에서만 처리됩니다.",
       "reason": "권한 범위: 계정 가져오기 및 로컬 자격 증명 주입(계정 전환)을 위해 기본 ~/.gemini 또는 인스턴스 경로(GEMINI_CLI_HOME/.gemini)의 oauth_creds.json, google_accounts.json, settings.json을 읽고 씁니다.",
       "storage": "네트워크 범위: OAuth 및 할당량 갱신 시 Google/Gemini 공식 API(oauth2.googleapis.com, googleapis.com 등)를 호출합니다. 필요한 인증/할당량 필드만 전송되며, 로컬 계정 파일은 제3자 서버로 업로드되지 않습니다."
+    }
+  },
+  "codebuddy": {
+    "title": "CodeBuddy 계정 관리",
+    "noAccounts": "CodeBuddy 계정이 없습니다",
+    "addAccount": "CodeBuddy 계정 추가",
+    "flowNotice": {
+      "title": "CodeBuddy 계정 관리 안내 (클릭하여 펼치기/접기)",
+      "desc": "계정 전환 시 CodeBuddy 로컬 인증 저장소를 읽고 시스템 자격 증명 서비스를 호출해 복호화 및 재암호화를 수행해야 합니다. 데이터는 로컬에서만 처리됩니다.",
+      "permission": "권한 범위: CodeBuddy 인증 데이터베이스(state.vscdb)를 읽고, 시스템 자격 증명 기능(macOS Keychain / Windows DPAPI / Linux Secret Service)을 호출하여 복호화 및 다시 쓰기를 수행합니다.",
+      "network": "네트워크 범위: OAuth 로그인과 Token 갱신은 codebuddy.ai 요청이 필요하고, 할당량 조회는 과금 API를 호출합니다. 로컬 키나 자격 증명은 업로드되지 않습니다."
+    },
+    "nickname": "닉네임",
+    "enterprise": "기업",
+    "usage": "사용 상태",
+    "creditsBalance": "크레딧 잔액",
+    "usageNormal": "정상",
+    "oauthWaiting": "인증 완료를 기다리는 중...",
+    "oauthDesc": "아래 버튼을 클릭하면 브라우저에서 CodeBuddy 인증 페이지를 엽니다.",
+    "oauthDescWebview": "아래 버튼을 클릭하면 내장 WebView에서 CodeBuddy 인증 페이지를 엽니다.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "IDE 로그인 정보만 인증",
+        "item1": "브라우저에서 OAuth를 완료하면 계정을 추가해 IDE 전환에 사용할 수 있습니다.",
+        "item2": "할당량 조회 파라미터는 자동으로 바인딩되지 않습니다.",
+        "item3": "할당량 표시가 필요하면 계정 카드에서 \"할당량 조회\"를 수동 실행하세요."
+      }
+    },
+    "oauthWebviewTab": "WebView 인증",
+    "oauthOpenWebview": "WebView에서 열기",
+    "oauthOpenWebviewIncognito": "시크릿 WebView에서 열기",
+    "oauthOpenWebviewFailed": "WebView 열기 실패: {{error}}",
+    "oauthOpenBrowserFallback": "브라우저에서 열기 (대체)",
+    "oauthOpenBrowserFailed": "브라우저 열기 실패: {{error}}",
+    "oauthWebviewProgressHint": "WebView 상단에 가로 단계 표시줄이 표시되어 멈춘 단계를 쉽게 찾을 수 있습니다.",
+    "oauthFlow": {
+      "prepare": "인증 링크 준비",
+      "authorize": "인증 링크를 열고 승인",
+      "bind": "인증 결과를 폴링해 계정 바인딩",
+      "retryPrepare": "인증 링크 다시 생성",
+      "retryAuthorize": "인증 링크 다시 요청",
+      "retryBind": "인증 폴링 다시 시도",
+      "error": "흐름 오류: {{error}}"
+    },
+    "tokenDesc": "CodeBuddy access token을 붙여 넣으세요:",
+    "jsonDesc": "CodeBuddy 계정이 포함된 JSON 파일을 선택하세요:",
+    "import": {
+      "localDesc": "로컬 CodeBuddy 클라이언트 또는 JSON 파일에서 계정 데이터를 가져올 수 있습니다.",
+      "localClient": "로컬 CodeBuddy에서 가져오기"
+    },
+    "search": "CodeBuddy 계정 검색...",
+    "quotaQuery": {
+      "failedRefreshCompact": "할당량 새로고침 실패",
+      "sectionTitle": "할당량 조회",
+      "empty": "아직 바인딩된 할당량 조회 정보가 없습니다",
+      "packageUnknown": "플랜 정보 알 수 없음",
+      "quotaLabel": "남은 할당량",
+      "updatedAt": "최근 조회: {{time}}",
+      "cycleRange": "주기: {{start}} - {{end}}",
+      "cycleUnknown": "주기 정보 없음",
+      "expireAt": "만료 시간: {{time}}",
+      "expireUnknown": "만료 시간: 없음",
+      "packageTitle": {
+        "base": "기본 체험 패키지",
+        "activity": "활동 증정 패키지"
+      }
+    },
+    "extraCredit": {
+      "title": "추가 크레딧"
+    },
+    "oauthUrlInputPlaceholder": "인증 URL을 수동으로 입력할 수 있습니다",
+    "oauthInvalidUrl": "인증 URL 형식이 올바르지 않습니다. 전체 URL을 입력하세요.",
+    "oauthGotoWebview": "열려 있는 WebView를 입력한 URL로 이동",
+    "oauthGotoWebviewSuccess": "WebView에 입력한 URL로 이동하도록 요청했습니다.",
+    "oauthGotoWebviewFailed": "WebView 이동 실패: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "이 WebView 안에서 이동할 URL 입력",
+    "oauthWebviewInlineGo": "이동",
+    "oauthSuccessClosePrompt": "계정 추가가 완료되었습니다. 지금 이 WebView를 닫을까요?\n\"WebView 닫기\"를 선택하면 바로 닫고, \"나중에\"를 선택하면 그대로 유지합니다.",
+    "oauthSuccessCloseTitle": "계정 추가 완료",
+    "oauthSuccessCloseNowLabel": "WebView 닫기",
+    "oauthSuccessCloseLaterLabel": "나중에",
+    "oauthSuccessCloseNowStatus": "✅ 계정 추가가 완료되었습니다. 창을 닫는 중...",
+    "oauthSuccessCloseLaterStatus": "✅ 계정 추가가 완료되었습니다. 이 WebView는 계속 열려 있습니다.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 인증 링크 준비",
+        "authorize": "2 인증 링크를 열고 승인",
+        "bind": "3 인증 결과를 폴링해 계정 바인딩",
+        "complete": "5 완료(수동으로 닫기)"
+      },
+      "status": {
+        "loginConfirm": "이 페이지에서 로그인 및 권한 부여를 완료하세요."
+      }
+    }
+  },
+  "qoder": {
+    "title": "Qoder 계정 관리",
+    "comingSoon": {
+      "title": "멀티 인스턴스 곧 출시",
+      "desc": "다른 계정으로 여러 Qoder.app 인스턴스를 동시에 실행할 수 있습니다."
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "Qoder 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다."
+      }
+    },
+    "oauth": {
+      "hint": "열린 브라우저 페이지에서 로그인을 완료하세요. 로그인 페이지가 자동으로 열리지 않으면 \"로그인 링크 복사\"를 클릭해 링크를 복사한 뒤 브라우저에 붙여 넣어 로그인을 완료하세요.",
+      "copyLoginUrl": "로그인 링크 복사"
+    },
+    "usageOverview": {
+      "title": "사용량 개요",
+      "viewDetails": "자세히 보기",
+      "includedCredits": "플랜 포함 크레딧",
+      "usedOfTotal": "{{used}} / {{total}}",
+      "usedEmpty": "-- / --",
+      "upgradeHint": "월간 한도를 늘리려면 플랜을 업그레이드하세요",
+      "upgradeAction": "업그레이드"
+    },
+    "flowNotice": {
+      "title": "Qoder 계정 안내 (클릭하여 펼치기/접기)",
+      "desc": "공식 OAuth 로그인(콜백), 로컬 가져오기, JSON 가져오기, 계정 전환 주입, 멀티 인스턴스 바인딩 및 할당량 개요를 지원합니다. 로그인 흐름은 Qoder 클라이언트의 실제 저장 데이터 형식을 따릅니다.",
+      "permission": "권한 범위: 계정 전환과 세션 주입을 위해 Qoder 로컬 인증 저장소(auth 자격 증명 및 사용자 정보)를 읽습니다. 모든 데이터는 사용자 기기에서만 처리됩니다.",
+      "network": "네트워크 범위: OAuth 로그인은 콜백 처리를 위해 Qoder 공식 서비스 연결이 필요하며, 할당량 조회는 Qoder API 를 사용합니다. 로컬 키나 자격 증명은 업로드되지 않습니다."
+    },
+    "addModal": {
+      "title": "Qoder 계정 추가"
+    },
+    "import": {
+      "localDesc": "로컬 Qoder 클라이언트에서 현재 로그인 상태를 읽어옵니다. 사용자 정보, 플랜, 크레딧 사용량이 포함됩니다."
+    }
+  },
+  "trae": {
+    "title": "Trae 계정 관리",
+    "empty": {
+      "description": "\"계정 추가\"를 클릭해 Trae 계정 관리를 시작하거나 로컬 Trae 데이터 또는 JSON 파일에서 가져올 수 있습니다."
+    },
+    "addModal": {
+      "title": "Trae 계정 추가"
+    },
+    "oauth": {
+      "desc": "아래 버튼을 눌러 브라우저에서 Trae OAuth 인증을 완료하세요."
+    },
+    "import": {
+      "localDesc": "로컬 Trae 설정 디렉터리에서 현재 로그인된 계정, 요금제 정보, 캐시된 할당량 데이터를 가져옵니다.",
+      "jsonTab": "JSON 파일"
+    },
+    "quota": {
+      "usedOfTotal": "사용량 $ {{used}} / $ {{total}}",
+      "usageUnknown": "사용량: --",
+      "resetAt": "재설정 시간: {{date}}",
+      "resetUnknown": "재설정 시간 알 수 없음",
+      "statusUnknown": "상태: 알 수 없음",
+      "statusNormal": "상태: 정상",
+      "statusExhaustedFree": "상태: 사용량이 모두 소진되었습니다. 요금제 업그레이드를 권장합니다",
+      "statusExhaustedPro": "상태: 사용량이 모두 소진되었습니다. 요금제를 업그레이드하거나 종량제를 활성화하세요",
+      "bonusUsed": "보너스: +{{amount}}",
+      "bonusIncluded": "보너스: 포함됨",
+      "bonusEmpty": "보너스: --",
+      "packageConsuming": "사용 패키지: 사용 중",
+      "packageAvailable": "사용 패키지: 사용 가능",
+      "packageEmpty": "사용 패키지: --",
+      "payAsYouGoConsuming": "종량제 사용: 사용 중",
+      "payAsYouGoEnabled": "종량제 사용: 활성화됨",
+      "payAsYouGoEmpty": "종량제 사용: --"
+    },
+    "flowNotice": {
+      "title": "Trae 계정 안내 (클릭하여 펼치기/접기)",
+      "desc": "공식 OAuth 로그인, 로컬 가져오기, JSON 가져오기, 로컬 주입 방식의 계정 전환을 지원합니다. 계정 전환 시 Trae 클라이언트의 실제 디스크 기록 규칙에 따라 다시 저장합니다.",
+      "permission": "권한 범위: 로컬 Trae storage.json 의 로그인 관련 필드를 읽고 써서 계정 가져오기, 계정 전환 주입, 요금제 표시에 사용합니다. 모든 데이터는 사용자 기기에서만 처리됩니다.",
+      "network": "네트워크 범위: OAuth 로그인, 토큰 갱신, 요금제 조회는 Trae 공식 API 를 호출합니다. 로컬 계정 파일이나 원본 저장 데이터는 제3자 서비스로 업로드되지 않습니다."
+    }
+  },
+  "codebuddyCn": {
+    "title": "CodeBuddy CN 계정 관리",
+    "noAccounts": "CodeBuddy CN 계정이 없습니다",
+    "addAccount": "CodeBuddy CN 계정 추가",
+    "search": "CodeBuddy CN 계정 검색...",
+    "oauthDesc": "아래 버튼을 클릭하면 브라우저에서 CodeBuddy CN 인증 페이지를 엽니다.",
+    "tokenDesc": "CodeBuddy CN access token을 붙여 넣으세요:",
+    "flowNotice": {
+      "title": "CodeBuddy CN 계정 관리 안내 (클릭하여 펼치기/접기)",
+      "desc": "계정 전환 시 CodeBuddy CN 로컬 인증 저장소를 읽고 시스템 자격 증명 서비스를 호출해 복호화 및 재암호화를 수행해야 합니다. 데이터는 로컬에서만 처리됩니다.",
+      "permission": "권한 범위: CodeBuddy CN 인증 데이터베이스(state.vscdb)를 읽고, 시스템 자격 증명 기능(macOS Keychain / Windows DPAPI / Linux Secret Service)을 호출하여 복호화 및 다시 쓰기를 수행합니다.",
+      "network": "네트워크 범위: OAuth 로그인과 Token 갱신은 codebuddy.cn / copilot.tencent.com 요청이 필요하고, 할당량 조회는 과금 API를 호출합니다. 로컬 키나 자격 증명은 업로드되지 않습니다."
+    },
+    "import": {
+      "localDesc": "로컬 CodeBuddy CN 클라이언트 또는 JSON 파일에서 계정 데이터를 가져올 수 있습니다.",
+      "localClient": "로컬 CodeBuddy CN에서 가져오기"
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "CodeBuddy CN 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다."
+      }
+    }
+  },
+  "workbuddy": {
+    "title": "WorkBuddy 계정 관리",
+    "noAccounts": "WorkBuddy 계정이 없습니다",
+    "addAccount": "WorkBuddy 계정 추가",
+    "flowNotice": {
+      "title": "WorkBuddy 계정 관리 안내 (클릭하여 펼치기/접기)",
+      "desc": "계정 전환 시 WorkBuddy 로컬 인증 저장소를 읽고 시스템 자격 증명 서비스를 호출해 복호화 및 재암호화를 수행해야 합니다. 데이터는 로컬에서만 처리됩니다.",
+      "permission": "권한 범위: WorkBuddy 인증 데이터베이스(state.vscdb)를 읽고, 시스템 자격 증명 기능(macOS Keychain / Windows DPAPI / Linux Secret Service)을 호출하여 복호화 및 다시 쓰기를 수행합니다.",
+      "network": "네트워크 범위: OAuth 로그인과 Token 갱신은 WorkBuddy 요청이 필요하고, 할당량 조회는 과금 API를 호출합니다. 로컬 키나 자격 증명은 업로드되지 않습니다."
+    },
+    "nickname": "닉네임",
+    "enterprise": "기업",
+    "usage": "사용 상태",
+    "creditsBalance": "크레딧 잔액",
+    "usageNormal": "정상",
+    "oauthWaiting": "인증 완료를 기다리는 중...",
+    "oauthDesc": "아래 버튼을 클릭하면 브라우저에서 WorkBuddy 인증 페이지를 엽니다.",
+    "oauthDescWebview": "아래 버튼을 클릭하면 내장 WebView에서 WorkBuddy 인증 페이지를 엽니다.",
+    "oauthFeature": {
+      "oauth": {
+        "title": "IDE 로그인 정보만 인증",
+        "item1": "브라우저에서 OAuth를 완료하면 계정을 추가해 IDE 전환에 사용할 수 있습니다.",
+        "item2": "할당량 조회 파라미터는 자동으로 바인딩되지 않습니다.",
+        "item3": "할당량 표시가 필요하면 계정 카드에서 \"할당량 조회\"를 수동 실행하세요."
+      }
+    },
+    "oauthWebviewTab": "WebView 인증",
+    "oauthOpenWebview": "WebView에서 열기",
+    "oauthOpenWebviewIncognito": "시크릿 WebView에서 열기",
+    "oauthOpenWebviewFailed": "WebView 열기 실패: {{error}}",
+    "oauthOpenBrowserFallback": "브라우저에서 열기 (대체)",
+    "oauthOpenBrowserFailed": "브라우저 열기 실패: {{error}}",
+    "oauthWebviewProgressHint": "WebView 상단에 가로 단계 표시줄이 표시되어 멈춘 단계를 쉽게 찾을 수 있습니다.",
+    "oauthFlow": {
+      "prepare": "인증 링크 준비",
+      "authorize": "인증 링크를 열고 승인",
+      "bind": "인증 결과를 폴링해 계정 바인딩",
+      "retryPrepare": "인증 링크 다시 생성",
+      "retryAuthorize": "인증 링크 다시 요청",
+      "retryBind": "인증 폴링 다시 시도",
+      "error": "흐름 오류: {{error}}"
+    },
+    "tokenDesc": "WorkBuddy access token을 붙여 넣으세요:",
+    "jsonDesc": "WorkBuddy 계정이 포함된 JSON 파일을 선택하세요:",
+    "import": {
+      "localDesc": "로컬 WorkBuddy 클라이언트 또는 JSON 파일에서 계정 데이터를 가져올 수 있습니다.",
+      "localClient": "로컬 WorkBuddy에서 가져오기"
+    },
+    "search": "WorkBuddy 계정 검색...",
+    "quotaQuery": {
+      "failedRefreshCompact": "할당량 새로고침 실패",
+      "sectionTitle": "할당량 조회",
+      "empty": "아직 바인딩된 할당량 조회 정보가 없습니다",
+      "packageUnknown": "플랜 정보 알 수 없음",
+      "quotaLabel": "남은 할당량",
+      "updatedAt": "최근 조회: {{time}}",
+      "cycleRange": "주기: {{start}} - {{end}}",
+      "cycleUnknown": "주기 정보 없음",
+      "expireAt": "만료 시간: {{time}}",
+      "expireUnknown": "만료 시간: 없음",
+      "packageTitle": {
+        "base": "기본 체험 패키지",
+        "activity": "활동 증정 패키지"
+      }
+    },
+    "extraCredit": {
+      "title": "추가 크레딧"
+    },
+    "oauthUrlInputPlaceholder": "인증 URL을 수동으로 입력할 수 있습니다",
+    "oauthInvalidUrl": "인증 URL 형식이 올바르지 않습니다. 전체 URL을 입력하세요.",
+    "oauthGotoWebview": "열려 있는 WebView를 입력한 URL로 이동",
+    "oauthGotoWebviewSuccess": "WebView에 입력한 URL로 이동하도록 요청했습니다.",
+    "oauthGotoWebviewFailed": "WebView 이동 실패: {{error}}",
+    "oauthWebviewInlineUrlPlaceholder": "이 WebView 안에서 이동할 URL 입력",
+    "oauthWebviewInlineGo": "이동",
+    "oauthSuccessClosePrompt": "계정 추가가 완료되었습니다. 지금 이 WebView를 닫을까요?\n\"WebView 닫기\"를 선택하면 바로 닫고, \"나중에\"를 선택하면 그대로 유지합니다.",
+    "oauthSuccessCloseTitle": "계정 추가 완료",
+    "oauthSuccessCloseNowLabel": "WebView 닫기",
+    "oauthSuccessCloseLaterLabel": "나중에",
+    "oauthSuccessCloseNowStatus": "✅ 계정 추가가 완료되었습니다. 창을 닫는 중...",
+    "oauthSuccessCloseLaterStatus": "✅ 계정 추가가 완료되었습니다. 이 WebView는 계속 열려 있습니다.",
+    "oauthWebviewOverlay": {
+      "steps": {
+        "prepare": "1 인증 링크 준비",
+        "authorize": "2 인증 링크를 열고 승인",
+        "bind": "3 인증 결과를 폴링해 계정 바인딩",
+        "complete": "5 완료(수동으로 닫기)"
+      },
+      "status": {
+        "loginConfirm": "이 페이지에서 로그인 및 권한 부여를 완료하세요."
+      }
+    },
+    "instances": {
+      "unsupported": {
+        "descPlatform": "WorkBuddy 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다."
+      }
     }
   }
 }

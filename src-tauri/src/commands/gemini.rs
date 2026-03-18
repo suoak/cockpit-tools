@@ -34,11 +34,8 @@ pub async fn import_gemini_from_json(
                     "[Gemini Command] JSON 导入后刷新失败: account_id={}, error={}",
                     account.id, error
                 ));
-                let _ = gemini_account::set_account_status(
-                    &account.id,
-                    Some("error"),
-                    Some(&error),
-                );
+                let _ =
+                    gemini_account::set_account_status(&account.id, Some("error"), Some(&error));
                 account.status = Some("error".to_string());
                 account.status_reason = Some(error);
             }
@@ -63,11 +60,7 @@ pub async fn import_gemini_from_local(app: AppHandle) -> Result<Vec<GeminiAccoun
                 "[Gemini Command] 本地导入后刷新失败: account_id={}, error={}",
                 account.id, error
             ));
-            let _ = gemini_account::set_account_status(
-                &account.id,
-                Some("error"),
-                Some(&error),
-            );
+            let _ = gemini_account::set_account_status(&account.id, Some("error"), Some(&error));
             account.status = Some("error".to_string());
             account.status_reason = Some(error);
         }
@@ -114,11 +107,7 @@ pub async fn refresh_gemini_token(
                 started_at.elapsed().as_millis(),
                 err
             ));
-            let _ = gemini_account::set_account_status(
-                &account_id,
-                Some("error"),
-                Some(&err),
-            );
+            let _ = gemini_account::set_account_status(&account_id, Some("error"), Some(&err));
             Err(err)
         }
     }
@@ -180,11 +169,7 @@ pub async fn gemini_oauth_login_complete(
                 "[Gemini OAuth] 登录后自动刷新配额失败: account_id={}, error={}",
                 account.id, error
             ));
-            let _ = gemini_account::set_account_status(
-                &account.id,
-                Some("error"),
-                Some(&error),
-            );
+            let _ = gemini_account::set_account_status(&account.id, Some("error"), Some(&error));
             account.status = Some("error".to_string());
             account.status_reason = Some(error);
         }
@@ -205,6 +190,14 @@ pub fn gemini_oauth_login_cancel(login_id: Option<String>) -> Result<(), String>
         login_id.as_deref().unwrap_or("<none>")
     ));
     gemini_oauth::cancel_login(login_id.as_deref())
+}
+
+#[tauri::command]
+pub fn gemini_oauth_submit_callback_url(
+    login_id: String,
+    callback_url: String,
+) -> Result<(), String> {
+    gemini_oauth::submit_callback_url(login_id.as_str(), callback_url.as_str())
 }
 
 #[tauri::command]
@@ -240,11 +233,7 @@ pub async fn add_gemini_account_with_token(
                 "[Gemini Command] Token 导入后刷新失败: account_id={}, error={}",
                 account.id, error
             ));
-            let _ = gemini_account::set_account_status(
-                &account.id,
-                Some("error"),
-                Some(&error),
-            );
+            let _ = gemini_account::set_account_status(&account.id, Some("error"), Some(&error));
             account.status = Some("error".to_string());
             account.status_reason = Some(error);
         }

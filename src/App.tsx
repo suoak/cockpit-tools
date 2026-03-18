@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -21,6 +22,11 @@ import { useWindsurfAccountStore } from './stores/useWindsurfAccountStore';
 import { useKiroAccountStore } from './stores/useKiroAccountStore';
 import { useCursorAccountStore } from './stores/useCursorAccountStore';
 import { useGeminiAccountStore } from './stores/useGeminiAccountStore';
+import { useCodebuddyAccountStore } from './stores/useCodebuddyAccountStore';
+import { useCodebuddyCnAccountStore } from './stores/useCodebuddyCnAccountStore';
+import { useQoderAccountStore } from './stores/useQoderAccountStore';
+import { useTraeAccountStore } from './stores/useTraeAccountStore';
+import { useWorkbuddyAccountStore } from './stores/useWorkbuddyAccountStore';
 import type { UpdateCheckResult } from './components/UpdateNotification';
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
 import { parseUpdaterReleaseNotes } from './utils/updaterReleaseNotes';
@@ -59,6 +65,21 @@ const CursorAccountsPage = lazy(() =>
 );
 const GeminiAccountsPage = lazy(() =>
   import('./pages/GeminiAccountsPage').then((module) => ({ default: module.GeminiAccountsPage })),
+);
+const CodebuddyAccountsPage = lazy(() =>
+  import('./pages/CodebuddyAccountsPage').then((module) => ({ default: module.CodebuddyAccountsPage })),
+);
+const CodebuddyCnAccountsPage = lazy(() =>
+  import('./pages/CodebuddyCnAccountsPage').then((module) => ({ default: module.CodebuddyCnAccountsPage })),
+);
+const QoderAccountsPage = lazy(() =>
+  import('./pages/QoderAccountsPage').then((module) => ({ default: module.QoderAccountsPage })),
+);
+const TraeAccountsPage = lazy(() =>
+  import('./pages/TraeAccountsPage').then((module) => ({ default: module.TraeAccountsPage })),
+);
+const WorkbuddyAccountsPage = lazy(() =>
+  import('./pages/WorkbuddyAccountsPage').then((module) => ({ default: module.WorkbuddyAccountsPage })),
 );
 const FingerprintsPage = lazy(() =>
   import('./pages/FingerprintsPage').then((module) => ({ default: module.FingerprintsPage })),
@@ -100,6 +121,7 @@ const BreakoutModal = lazy(() =>
 
 interface GeneralConfigTheme {
   theme: string;
+  ui_scale?: number;
 }
 
 interface GeneralConfig extends GeneralConfigTheme {
@@ -110,10 +132,24 @@ interface GeneralConfig extends GeneralConfigTheme {
   windsurf_app_path: string;
   kiro_app_path: string;
   cursor_app_path: string;
+  codebuddy_app_path: string;
+  codebuddy_cn_app_path: string;
+  qoder_app_path: string;
+  trae_app_path: string;
 }
 
 type AppPathMissingDetail = {
-  app: 'antigravity' | 'codex' | 'vscode' | 'windsurf' | 'kiro' | 'cursor';
+  app:
+    | 'antigravity'
+    | 'codex'
+    | 'vscode'
+    | 'windsurf'
+    | 'kiro'
+    | 'cursor'
+    | 'codebuddy'
+    | 'codebuddy_cn'
+    | 'qoder'
+    | 'trae';
   retry?:
     | { kind: 'default' }
     | { kind: 'instance'; instanceId?: string }
@@ -149,6 +185,7 @@ type QuotaAlertPayload = {
   current_account_id: string;
   current_email: string;
   threshold: number;
+  threshold_display?: string | null;
   lowest_percentage: number;
   low_models: string[];
   recommended_account_id?: string | null;
@@ -156,9 +193,42 @@ type QuotaAlertPayload = {
   triggered_at: number;
 };
 
-type QuotaAlertPlatform = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro' | 'cursor' | 'gemini';
+type QuotaAlertPlatform =
+  | 'antigravity'
+  | 'codex'
+  | 'github_copilot'
+  | 'windsurf'
+  | 'kiro'
+  | 'cursor'
+  | 'gemini'
+  | 'codebuddy'
+  | 'codebuddy_cn'
+  | 'qoder'
+  | 'trae'
+  | 'workbuddy';
 type UpdateCheckSource = 'auto' | 'manual';
-type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'ready';
+type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
+
+type UpdateRuntimeInfo = {
+  platform: string;
+  linux_install_kind: string;
+  linux_managed_install_supported: boolean;
+  updater_target?: string | null;
+};
+
+type LinuxUpdateProgressPhase =
+  | 'download_started'
+  | 'downloading'
+  | 'downloaded'
+  | 'auth_required'
+  | 'installing'
+  | 'completed';
+
+type LinuxUpdateProgressPayload = {
+  version: string;
+  phase: LinuxUpdateProgressPhase;
+  progress?: number | null;
+};
 
 type UpdateAction = {
   state: UpdateActionState;
@@ -181,6 +251,14 @@ function normalizeQuotaAlertPlatform(platform: string | undefined): QuotaAlertPl
       return 'cursor';
     case 'gemini':
       return 'gemini';
+    case 'codebuddy':
+      return 'codebuddy';
+    case 'codebuddy_cn':
+      return 'codebuddy_cn';
+    case 'qoder':
+      return 'qoder';
+    case 'trae':
+      return 'trae';
     default:
       return 'antigravity';
   }
@@ -202,7 +280,15 @@ function getQuotaAlertPlatformLabel(
     case 'cursor':
       return 'Cursor';
     case 'gemini':
-      return t('nav.gemini', 'Gemini');
+      return 'Gemini Cli';
+    case 'codebuddy':
+      return 'CodeBuddy';
+    case 'codebuddy_cn':
+      return t('nav.codebuddyCn', 'CodeBuddy CN');
+    case 'qoder':
+      return t('nav.qoder', 'Qoder');
+    case 'trae':
+      return t('nav.trae', 'Trae');
     default:
       return t('nav.overview', 'Antigravity');
   }
@@ -222,6 +308,16 @@ function getQuotaAlertTargetPage(platform: QuotaAlertPlatform): Page {
       return 'cursor';
     case 'gemini':
       return 'gemini';
+    case 'codebuddy':
+      return 'codebuddy';
+    case 'codebuddy_cn':
+      return 'codebuddy-cn';
+    case 'qoder':
+      return 'qoder';
+    case 'trae':
+      return 'trae';
+    case 'workbuddy':
+      return 'workbuddy';
     default:
       return 'overview';
   }
@@ -241,6 +337,16 @@ function getQuotaAlertQuickSettingsType(platform: QuotaAlertPlatform): QuickSett
       return 'cursor';
     case 'gemini':
       return 'gemini';
+    case 'codebuddy':
+      return 'codebuddy';
+    case 'codebuddy_cn':
+      return 'codebuddy_cn';
+    case 'qoder':
+      return 'qoder';
+    case 'trae':
+      return 'trae';
+    case 'workbuddy':
+      return 'workbuddy';
     default:
       return 'antigravity';
   }
@@ -254,6 +360,7 @@ function App() {
   const [updateCheckSource, setUpdateCheckSource] = useState<UpdateCheckSource>('auto');
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showPlatformLayoutModal, setShowPlatformLayoutModal] = useState(false);
+  const [platformLayoutRequestedGroupId, setPlatformLayoutRequestedGroupId] = useState<string | null>(null);
   const [showBreakout, setShowBreakout] = useState(false);
   const [hasBreakoutSession, setHasBreakoutSession] = useState(false);
   const [appPathMissing, setAppPathMissing] = useState<AppPathMissingDetail | null>(null);
@@ -267,6 +374,8 @@ function App() {
     release_notes: string;
     release_notes_zh: string;
   } | null>(null);
+  const [updateRuntimeInfo, setUpdateRuntimeInfo] = useState<UpdateRuntimeInfo | null>(null);
+  const [updateRuntimeInfoLoaded, setUpdateRuntimeInfoLoaded] = useState(false);
   const [silentUpdateVersion, setSilentUpdateVersion] = useState<string | null>(null);
   const [updateAction, setUpdateAction] = useState<UpdateAction>({
     state: 'hidden',
@@ -333,6 +442,55 @@ function App() {
     void invoke('update_log', { level, message }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    invoke<UpdateRuntimeInfo>('get_update_runtime_info')
+      .then((info) => {
+        if (cancelled) {
+          return;
+        }
+        setUpdateRuntimeInfo(info);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        console.error('[App] Failed to load update runtime info:', error);
+        writeUpdateLog('warn', `加载更新运行时信息失败: error=${sanitizeUpdaterErrorMessage(error)}`);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setUpdateRuntimeInfoLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [writeUpdateLog]);
+
+  const isLinuxManagedUpdate = updateRuntimeInfo?.platform === 'linux'
+    && updateRuntimeInfo.linux_managed_install_supported;
+
+  const getUpdaterCheckTarget = useCallback((): string | undefined => {
+    if (updateRuntimeInfo?.platform !== 'windows') {
+      return undefined;
+    }
+    if (typeof updateRuntimeInfo.updater_target !== 'string') {
+      return undefined;
+    }
+
+    const target = updateRuntimeInfo.updater_target.trim();
+    return target.length > 0 ? target : undefined;
+  }, [updateRuntimeInfo]);
+
+  const runUpdaterCheck = useCallback(async () => {
+    const { check } = await import('@tauri-apps/plugin-updater');
+    const target = getUpdaterCheckTarget();
+    return target ? check({ target }) : check();
+  }, [getUpdaterCheckTarget]);
+
   const closeUpdaterHandle = useCallback(async (handle: UpdaterUpdate | null | undefined) => {
     if (!handle) {
       return;
@@ -376,6 +534,75 @@ function App() {
     }
   }, [silentUpdateVersion, updateAction, writeUpdateLog]);
 
+  const runLinuxManagedUpdate = useCallback(async (expectedVersion: string) => {
+    setUpdateRetryStatus('');
+    setUpdateDownloadError('');
+    setUpdateErrorDetails('');
+    setSilentUpdateVersion(null);
+    setUpdateAction({
+      state: 'downloading',
+      version: expectedVersion,
+      progress: 0,
+      requiresInstall: false,
+    });
+
+    if (pendingSilentUpdateRef.current) {
+      await closeUpdaterHandle(pendingSilentUpdateRef.current);
+      pendingSilentUpdateRef.current = null;
+    }
+
+    writeUpdateLog('info', `Linux 托管更新开始执行: version=${expectedVersion}`);
+
+    try {
+      await invoke('install_linux_update', {
+        expectedVersion,
+      });
+
+      setUpdateAction({
+        state: 'ready',
+        version: expectedVersion,
+        progress: 100,
+        requiresInstall: false,
+      });
+      setUpdateRetryStatus(t('update_notification.installSuccess', '更新已安装，正在重启...'));
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+
+      try {
+        const { relaunch } = await import('@tauri-apps/plugin-process');
+        await relaunch();
+      } catch (error) {
+        const compactError = sanitizeUpdaterErrorMessage(error);
+        console.error('[App] Linux managed update installed but relaunch failed:', error);
+        writeUpdateLog(
+          'error',
+          `Linux 托管更新安装完成但重启失败: version=${expectedVersion}, error=${compactError}`,
+        );
+        setUpdateRetryStatus('');
+        setUpdateDownloadError(
+          t('update_notification.restartRequiredAfterInstall', '更新已安装，请手动重启应用完成切换。'),
+        );
+        setUpdateErrorDetails(compactError);
+      }
+    } catch (error) {
+      console.error('[App] Linux managed update failed:', error);
+      const compactError = sanitizeUpdaterErrorMessage(error);
+      writeUpdateLog('error', `Linux 托管更新失败: version=${expectedVersion}, error=${compactError}`);
+      setUpdateRetryStatus('');
+      setUpdateDownloadError(
+        t('update_notification.installFailed', '系统安装失败，请稍后重试或手动下载安装。'),
+      );
+      setUpdateErrorDetails(compactError);
+      setUpdateAction({
+        state: 'available',
+        version: expectedVersion,
+        progress: 0,
+        requiresInstall: true,
+      });
+      throw error;
+    }
+  }, [closeUpdaterHandle, t, writeUpdateLog]);
+
   const runSharedUpdateDownload = useCallback(async (expectedVersion: string) => {
     const taskId = Date.now();
     updateDownloadTaskIdRef.current = taskId;
@@ -394,7 +621,6 @@ function App() {
 
     let usedAttempts = 0;
     try {
-      const { check } = await import('@tauri-apps/plugin-updater');
       const downloadedUpdate = await retryWithBackoff(
         async (attempt) => {
           usedAttempts = attempt;
@@ -404,7 +630,7 @@ function App() {
 
           let candidate: UpdaterUpdate | null = null;
           try {
-            candidate = await check();
+            candidate = await runUpdaterCheck();
             if (!candidate) {
               throw new Error('No update available from updater plugin');
             }
@@ -558,7 +784,7 @@ function App() {
         updateDownloadOwnerRef.current = 'none';
       }
     }
-  }, [closeUpdaterHandle, t, writeUpdateLog]);
+  }, [closeUpdaterHandle, runUpdaterCheck, t, writeUpdateLog]);
 
   const cancelUpdateDownload = useCallback(async () => {
     if (updateAction.state !== 'downloading') {
@@ -603,6 +829,10 @@ function App() {
 
   const handleQuickUpdateActionClick = useCallback(async () => {
     if (updateAction.state === 'downloading') {
+      setShowUpdateNotification(true);
+      return;
+    }
+    if (updateAction.state === 'installing') {
       return;
     }
 
@@ -617,13 +847,25 @@ function App() {
 
     const expectedVersion = updateAction.version;
     try {
-      await runSharedUpdateDownload(expectedVersion);
+      if (isLinuxManagedUpdate) {
+        await runLinuxManagedUpdate(expectedVersion);
+      } else {
+        await runSharedUpdateDownload(expectedVersion);
+      }
     } catch (error) {
       console.error('[App] Quick update download failed:', error);
       writeUpdateLog('error', `侧边栏更新失败: error=${sanitizeUpdaterErrorMessage(error)}`);
       openUpdateNotification('manual');
     }
-  }, [handleApplyPendingUpdate, openUpdateNotification, runSharedUpdateDownload, updateAction, writeUpdateLog]);
+  }, [
+    handleApplyPendingUpdate,
+    isLinuxManagedUpdate,
+    openUpdateNotification,
+    runLinuxManagedUpdate,
+    runSharedUpdateDownload,
+    updateAction,
+    writeUpdateLog,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -664,6 +906,16 @@ function App() {
       }
     };
 
+    const applyUiScale = async (rawScale?: number) => {
+      const scale = typeof rawScale === 'number' && Number.isFinite(rawScale) ? rawScale : 1;
+      const normalizedScale = Math.min(2, Math.max(0.8, scale));
+      try {
+        await getCurrentWebview().setZoom(normalizedScale);
+      } catch (error) {
+        console.error('Failed to apply UI scale:', error);
+      }
+    };
+
     const watchSystemTheme = () => {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => applyTheme('system');
@@ -687,6 +939,7 @@ function App() {
       try {
         const config = await invoke<GeneralConfigTheme>('get_general_config');
         applyTheme(config.theme);
+        void applyUiScale(config.ui_scale);
         if (config.theme === 'system') {
           cleanup = watchSystemTheme();
         }
@@ -790,16 +1043,27 @@ function App() {
 
   // Check for updates on startup
   useEffect(() => {
+    if (!updateRuntimeInfoLoaded) {
+      return;
+    }
+
     const checkUpdates = async () => {
+      const updateFlowStartedAt = performance.now();
       try {
         console.log('[App] Startup update check triggered; interval gating is ignored.');
+        console.log('[StartupPerf][UpdateCheck] startup update check started');
         writeUpdateLog('info', '启动触发自动更新检查流程（忽略检查周期）');
 
+        const settingsInvokeStartedAt = performance.now();
         const settings = await invoke<{
           auto_check?: boolean;
           check_interval_hours?: number;
           auto_install?: boolean;
         }>('get_update_settings');
+        const settingsInvokeElapsed = performance.now() - settingsInvokeStartedAt;
+        console.log(
+          `[StartupPerf][UpdateCheck] get_update_settings completed in ${settingsInvokeElapsed.toFixed(2)}ms`,
+        );
         const autoCheck = settings?.auto_check ?? true;
         const checkIntervalHours = Number(settings?.check_interval_hours ?? 0);
         const autoInstall = settings?.auto_install ?? false;
@@ -815,14 +1079,14 @@ function App() {
 
         writeUpdateLog('info', '启动检查不受检查周期限制，立即执行更新检查');
 
-        if (autoInstall) {
+        if (autoInstall && !isLinuxManagedUpdate) {
           // Silent update: check and download in background, install on restart
           console.log('[App] Auto-install enabled, attempting silent update...');
           writeUpdateLog('info', '后台自动更新已开启，尝试静默检查并下载');
           try {
-            const { check } = await import('@tauri-apps/plugin-updater');
+            const silentCheckStartedAt = performance.now();
             const update = await retryWithBackoff(
-              async () => check(),
+              async () => runUpdaterCheck(),
               {
                 delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
                 shouldRetry: isRetryableUpdaterError,
@@ -838,6 +1102,9 @@ function App() {
                   );
                 },
               },
+            );
+            console.log(
+              `[StartupPerf][UpdateCheck] silent runUpdaterCheck completed in ${(performance.now() - silentCheckStartedAt).toFixed(2)}ms; hasUpdate=${Boolean(update)}`,
             );
             if (update) {
               console.log('[App] Update found, downloading silently with retry...');
@@ -870,6 +1137,7 @@ function App() {
                 );
               });
 
+              const silentDownloadStartedAt = performance.now();
               const downloadedUpdate = await retryWithBackoff(
                 async (attempt) => {
                   let candidate: UpdaterUpdate | null = null;
@@ -877,7 +1145,7 @@ function App() {
                     if (attempt === 1) {
                       candidate = update;
                     } else {
-                      candidate = await check();
+                      candidate = await runUpdaterCheck();
                     }
 
                     if (!candidate) {
@@ -960,6 +1228,9 @@ function App() {
                   },
                 },
               );
+              console.log(
+                `[StartupPerf][UpdateCheck] silent update download completed in ${(performance.now() - silentDownloadStartedAt).toFixed(2)}ms; version=${downloadedUpdate.version}`,
+              );
 
               if (pendingSilentUpdateRef.current) {
                 await pendingSilentUpdateRef.current.close();
@@ -1011,16 +1282,84 @@ function App() {
             openUpdateNotification('auto');
           }
         } else {
-          // Manual update: show notification dialog
-          writeUpdateLog('info', '后台自动更新关闭，展示手动更新弹窗');
-          openUpdateNotification('auto');
+          // Auto-check only opens the dialog after a real update is found.
+          if (autoInstall && isLinuxManagedUpdate) {
+            writeUpdateLog(
+              'info',
+              `Linux 包管理安装(${updateRuntimeInfo?.linux_install_kind || 'unknown'})跳过静默下载，改为一键安装弹窗`,
+            );
+          }
+          writeUpdateLog('info', '后台自动更新关闭，先执行无弹窗检查，仅在发现新版本时展示弹窗');
+          try {
+            const manualCheckStartedAt = performance.now();
+            const update = await retryWithBackoff(
+              async () => runUpdaterCheck(),
+              {
+                delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
+                shouldRetry: isRetryableUpdaterError,
+                onRetry: ({ retryIndex, totalRetries, delayMs, error }) => {
+                  const compactError = sanitizeUpdaterErrorMessage(error);
+                  console.warn(
+                    `[App] Background manual update check failed, retrying (${retryIndex}/${totalRetries}) in ${delayMs}ms:`,
+                    error,
+                  );
+                  writeUpdateLog(
+                    'warn',
+                    `后台手动更新检查失败，准备重试(${retryIndex}/${totalRetries})，delay=${delayMs}ms，error=${compactError}`,
+                  );
+                },
+              },
+            );
+            console.log(
+              `[StartupPerf][UpdateCheck] manual runUpdaterCheck completed in ${(performance.now() - manualCheckStartedAt).toFixed(2)}ms; hasUpdate=${Boolean(update)}`,
+            );
+
+            if (update) {
+              writeUpdateLog('info', `检测到新版本，展示手动更新弹窗: version=${update.version}`);
+              await closeUpdaterHandle(update);
+              openUpdateNotification('auto');
+            } else {
+              writeUpdateLog('info', '更新检查完成：当前已是最新版本');
+              setUpdateRetryStatus('');
+              setUpdateDownloadError('');
+              setUpdateErrorDetails('');
+              setUpdateAction((prev) => {
+                if (prev.state === 'ready') {
+                  return prev;
+                }
+                return {
+                  state: 'hidden',
+                  version: null,
+                  progress: 0,
+                  requiresInstall: true,
+                };
+              });
+            }
+          } catch (err) {
+            console.error('[App] Background update check failed:', err);
+            writeUpdateLog(
+              'warn',
+              `后台手动更新检查失败，跳过弹窗: error=${sanitizeUpdaterErrorMessage(err)}`,
+            );
+          }
         }
 
+        const updateLastCheckStartedAt = performance.now();
         await invoke('update_last_check_time');
+        console.log(
+          `[StartupPerf][UpdateCheck] update_last_check_time completed in ${(performance.now() - updateLastCheckStartedAt).toFixed(2)}ms`,
+        );
         writeUpdateLog('info', '已更新 last_check_time，结束本次更新检查流程');
         console.log('[App] Update check cycle completed.');
+        console.log(
+          `[StartupPerf][UpdateCheck] startup update check completed in ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms`,
+        );
       } catch (error) {
         console.error('Failed to check update settings:', error);
+        console.error(
+          `[StartupPerf][UpdateCheck] startup update check failed after ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms:`,
+          error,
+        );
         writeUpdateLog('error', `更新检查流程异常中断: error=${sanitizeUpdaterErrorMessage(error)}`);
       }
     };
@@ -1029,24 +1368,55 @@ function App() {
       void checkUpdates();
     }, 8000);
     return () => clearTimeout(timer);
-  }, [openUpdateNotification, writeUpdateLog]);
+  }, [
+    closeUpdaterHandle,
+    isLinuxManagedUpdate,
+    openUpdateNotification,
+    runUpdaterCheck,
+    updateRuntimeInfo?.linux_install_kind,
+    updateRuntimeInfoLoaded,
+    writeUpdateLog,
+  ]);
 
   // Version jump detection (post-update changelog)
   useEffect(() => {
     const detectVersionJump = async () => {
+      const versionJumpStartedAt = performance.now();
       try {
+        console.log('[StartupPerf][VersionJump] detection started');
+        const versionJumpInvokeStartedAt = performance.now();
         const jumpInfo = await invoke<{
           previous_version: string;
           current_version: string;
           release_notes: string;
           release_notes_zh: string;
         } | null>('check_version_jump');
+        console.log(
+          `[StartupPerf][VersionJump] check_version_jump completed in ${(performance.now() - versionJumpInvokeStartedAt).toFixed(2)}ms; hasJump=${Boolean(jumpInfo)}`,
+        );
         if (jumpInfo) {
           console.log('[App] Version jump detected:', jumpInfo.previous_version, '->', jumpInfo.current_version);
+          (
+            window as Window & {
+              __agtoolsVersionJumpModalRequestedAt?: number;
+            }
+          ).__agtoolsVersionJumpModalRequestedAt = performance.now();
           setVersionJumpInfo(jumpInfo);
+          requestAnimationFrame(() => {
+            console.log(
+              `[StartupPerf][VersionJump] first frame after setVersionJumpInfo in ${(performance.now() - versionJumpStartedAt).toFixed(2)}ms`,
+            );
+          });
         }
+        console.log(
+          `[StartupPerf][VersionJump] detection finished in ${(performance.now() - versionJumpStartedAt).toFixed(2)}ms`,
+        );
       } catch (error) {
         console.error('Failed to check version jump:', error);
+        console.error(
+          `[StartupPerf][VersionJump] detection failed after ${(performance.now() - versionJumpStartedAt).toFixed(2)}ms:`,
+          error,
+        );
       }
     };
 
@@ -1110,7 +1480,7 @@ function App() {
             </div>
             <div className="quota-alert-modal-row">
               <span>{t('quotaAlert.modal.threshold', '预警阈值')}</span>
-              <strong>{payload.threshold}%</strong>
+              <strong>{payload.threshold_display || `${payload.threshold}%`}</strong>
             </div>
             <div className="quota-alert-modal-row">
               <span>{t('quotaAlert.modal.lowest', '当前最低')}</span>
@@ -1172,6 +1542,21 @@ function App() {
                     } else if (platform === 'gemini') {
                       await useGeminiAccountStore.getState().switchAccount(targetAccountId);
                       setPage('gemini');
+                    } else if (platform === 'codebuddy') {
+                      await useCodebuddyAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('codebuddy');
+                    } else if (platform === 'codebuddy_cn') {
+                      await useCodebuddyCnAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('codebuddy-cn');
+                    } else if (platform === 'qoder') {
+                      await useQoderAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('qoder');
+                    } else if (platform === 'trae') {
+                      await useTraeAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('trae');
+                    } else if (platform === 'workbuddy') {
+                      await useWorkbuddyAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('workbuddy');
                     } else {
                       await useAccountStore.getState().switchAccount(targetAccountId);
                       setPage('overview');
@@ -1271,6 +1656,9 @@ function App() {
         if (prev.state === 'downloading' && prev.version === latestVersion) {
           return prev;
         }
+        if (prev.state === 'installing' && prev.version === latestVersion) {
+          return prev;
+        }
         if (prev.state === 'ready' && prev.version === latestVersion) {
           return prev;
         }
@@ -1284,7 +1672,7 @@ function App() {
       setUpdateRetryStatus('');
     } else if (result.status === 'up_to_date') {
       setUpdateAction((prev) => {
-        if (prev.state === 'ready' || prev.state === 'downloading') {
+        if (prev.state === 'ready' || prev.state === 'downloading' || prev.state === 'installing') {
           return prev;
         }
         return {
@@ -1303,6 +1691,82 @@ function App() {
       window.dispatchEvent(new CustomEvent('update-check-finished', { detail: result }));
     }
   }, []);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+
+    listen<LinuxUpdateProgressPayload>('update://linux-progress', (event) => {
+      const { phase, progress, version } = event.payload;
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+
+      setUpdateAction((prev) => {
+        if (
+          prev.version
+          && prev.version !== version
+          && (prev.state === 'downloading' || prev.state === 'installing' || prev.state === 'ready')
+        ) {
+          return prev;
+        }
+
+        if (phase === 'completed') {
+          return {
+            state: 'ready',
+            version,
+            progress: 100,
+            requiresInstall: false,
+          };
+        }
+
+        if (phase === 'auth_required' || phase === 'installing' || phase === 'downloaded') {
+          return {
+            state: 'installing',
+            version,
+            progress: 100,
+            requiresInstall: false,
+          };
+        }
+
+        return {
+          state: 'downloading',
+          version,
+          progress: Math.max(0, Math.min(100, Math.round(progress ?? 0))),
+          requiresInstall: false,
+        };
+      });
+
+      if (phase === 'auth_required' || phase === 'downloaded') {
+        setUpdateRetryStatus(
+          t('update_notification.authorizing', '等待系统授权安装...'),
+        );
+        return;
+      }
+
+      if (phase === 'installing') {
+        setUpdateRetryStatus(
+          t('update_notification.installing', '安装中...'),
+        );
+        return;
+      }
+
+      if (phase === 'completed') {
+        setUpdateRetryStatus(
+          t('update_notification.installSuccess', '更新已安装，正在重启...'),
+        );
+        return;
+      }
+
+      setUpdateRetryStatus('');
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [t]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -1335,6 +1799,22 @@ function App() {
       {
         command: 'refresh_all_gemini_tokens',
         errorMessage: 'Failed to refresh Gemini:',
+      },
+      {
+        command: 'refresh_all_codebuddy_tokens',
+        errorMessage: 'Failed to refresh CodeBuddy:',
+      },
+      {
+        command: 'refresh_all_codebuddy_cn_tokens',
+        errorMessage: 'Failed to refresh CodeBuddy CN:',
+      },
+      {
+        command: 'refresh_all_qoder_tokens',
+        errorMessage: 'Failed to refresh Qoder:',
+      },
+      {
+        command: 'refresh_all_trae_tokens',
+        errorMessage: 'Failed to refresh Trae:',
       },
     ] as const;
 
@@ -1375,7 +1855,11 @@ function App() {
         detail.app !== 'vscode' &&
         detail.app !== 'windsurf' &&
         detail.app !== 'kiro' &&
-        detail.app !== 'cursor'
+        detail.app !== 'cursor' &&
+        detail.app !== 'codebuddy' &&
+        detail.app !== 'codebuddy_cn' &&
+        detail.app !== 'qoder' &&
+        detail.app !== 'trae'
       ) {
         return;
       }
@@ -1425,6 +1909,14 @@ function App() {
                 ? config.kiro_app_path
               : appPathMissing.app === 'cursor'
                 ? config.cursor_app_path
+              : appPathMissing.app === 'codebuddy'
+                ? config.codebuddy_app_path
+              : appPathMissing.app === 'codebuddy_cn'
+                ? config.codebuddy_cn_app_path
+              : appPathMissing.app === 'qoder'
+                ? config.qoder_app_path
+              : appPathMissing.app === 'trae'
+                ? config.trae_app_path
               : config.antigravity_app_path;
         if (active) {
           setAppPathDraft(currentPath || '');
@@ -1482,6 +1974,14 @@ function App() {
           await invoke('kiro_start_instance', { instanceId: retry.instanceId });
         } else if (app === 'cursor') {
           await invoke('cursor_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'codebuddy') {
+          await invoke('codebuddy_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'codebuddy_cn') {
+          await invoke('codebuddy_cn_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'qoder') {
+          await invoke('qoder_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'trae') {
+          await invoke('trae_start_instance', { instanceId: retry.instanceId });
         } else {
           await invoke('start_instance', { instanceId: retry.instanceId });
         }
@@ -1496,6 +1996,14 @@ function App() {
           await invoke('kiro_start_instance', { instanceId: '__default__' });
         } else if (app === 'cursor') {
           await invoke('cursor_start_instance', { instanceId: '__default__' });
+        } else if (app === 'codebuddy') {
+          await invoke('codebuddy_start_instance', { instanceId: '__default__' });
+        } else if (app === 'codebuddy_cn') {
+          await invoke('codebuddy_cn_start_instance', { instanceId: '__default__' });
+        } else if (app === 'qoder') {
+          await invoke('qoder_start_instance', { instanceId: '__default__' });
+        } else if (app === 'trae') {
+          await invoke('trae_start_instance', { instanceId: '__default__' });
         } else {
           await invoke('start_instance', { instanceId: '__default__' });
         }
@@ -1554,6 +2062,11 @@ function App() {
             case 'kiro':
             case 'cursor':
             case 'gemini':
+            case 'codebuddy':
+            case 'codebuddy-cn':
+            case 'qoder':
+            case 'trae':
+            case 'workbuddy':
             case 'manual':
             case 'settings':
               setPage(target as Page);
@@ -1587,6 +2100,23 @@ function App() {
       window.removeEventListener('app-request-navigate', handleRequestNavigate as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    const handleOpenPlatformLayout = (e: Event) => {
+      const custom = e as CustomEvent<{ groupId?: string | null }>;
+      const groupId =
+        custom.detail && typeof custom.detail.groupId === 'string' && custom.detail.groupId.trim()
+          ? custom.detail.groupId.trim()
+          : null;
+      setPlatformLayoutRequestedGroupId(groupId);
+      setShowPlatformLayoutModal(true);
+    };
+
+    window.addEventListener('app-open-platform-layout', handleOpenPlatformLayout as EventListener);
+    return () => {
+      window.removeEventListener('app-open-platform-layout', handleOpenPlatformLayout as EventListener);
+    };
+  }, []);
   const suspenseFallback = (
     <div className="loading-state">
       {t('common.loading', '加载中...')}
@@ -1603,7 +2133,15 @@ function App() {
           : appPathMissing.app === 'kiro'
             ? 'Kiro'
             : appPathMissing.app === 'cursor'
-              ? 'Cursor'
+            ? 'Cursor'
+            : appPathMissing.app === 'codebuddy'
+              ? 'CodeBuddy'
+              : appPathMissing.app === 'codebuddy_cn'
+                ? 'CodeBuddy CN'
+              : appPathMissing.app === 'qoder'
+                ? 'Qoder'
+              : appPathMissing.app === 'trae'
+                ? 'Trae'
               : 'Antigravity'
     : '';
 
@@ -1617,18 +2155,29 @@ function App() {
           : appPathMissing.app === 'kiro'
             ? t('quickSettings.kiro.appPath', 'Kiro 路径')
             : appPathMissing.app === 'cursor'
-              ? t('quickSettings.cursor.appPath', 'Cursor 路径')
+            ? t('quickSettings.cursor.appPath', 'Cursor 路径')
+            : appPathMissing.app === 'codebuddy'
+              ? t('quickSettings.codebuddy.appPath', 'CodeBuddy 路径')
+              : appPathMissing.app === 'codebuddy_cn'
+                ? t('quickSettings.codebuddyCn.appPath', 'CodeBuddy CN 路径')
+              : appPathMissing.app === 'qoder'
+                ? t('quickSettings.qoder.appPath', 'Qoder 路径')
+              : appPathMissing.app === 'trae'
+                ? t('quickSettings.trae.appPath', 'Trae 路径')
               : t('quickSettings.antigravity.appPath', '启动路径')
     : t('quickSettings.antigravity.appPath', '启动路径');
 
   return (
     <div className="app-container">
-      {/* 更新通知 */}
-      {showUpdateNotification && (
+      {/* 更新通知：活跃状态时保持挂载（CSS 隐藏），避免重新打开时再次网络请求 */}
+      {(showUpdateNotification || updateAction.state !== 'hidden') && (
+        <div style={showUpdateNotification ? undefined : { display: 'none' }}>
         <Suspense fallback={null}>
           <UpdateNotification
             key={updateNotificationKey}
             source={updateCheckSource}
+            updaterTarget={getUpdaterCheckTarget() ?? null}
+            updaterCheckReady={updateRuntimeInfoLoaded}
             preparedUpdateVersion={updateAction.state === 'ready' ? updateAction.version : null}
             onRestartUpdate={handleApplyPendingUpdate}
             actionState={updateAction.state}
@@ -1666,6 +2215,9 @@ function App() {
                 if (prev.state === 'downloading' && prev.version === version) {
                   return prev;
                 }
+                if (prev.state === 'installing' && prev.version === version) {
+                  return prev;
+                }
                 if (prev.state === 'ready' && prev.version === version) {
                   return prev;
                 }
@@ -1685,6 +2237,7 @@ function App() {
             onClose={() => setShowUpdateNotification(false)}
           />
         </Suspense>
+        </div>
       )}
       {/* 版本跳跃通知（更新后首次启动） */}
       {versionJumpInfo && (
@@ -1715,7 +2268,7 @@ function App() {
       )}
 
       {appPathMissing && (
-        <div className="qs-overlay">
+        <div className="qs-overlay" style={{ zIndex: 10100 }}>
           <div className="qs-modal app-path-missing-modal" onClick={(e) => e.stopPropagation()}>
             <div className="qs-header">
               <span className="qs-title">{t('appPath.missing.title', '未找到应用程序路径')}</span>
@@ -1774,7 +2327,15 @@ function App() {
                                 : appPathMissing.app === 'kiro'
                                   ? t('settings.general.kiroPathReset', '重置默认')
                                   : appPathMissing.app === 'cursor'
-                                    ? t('settings.general.cursorPathReset', '重置默认')
+                                  ? t('settings.general.cursorPathReset', '重置默认')
+                                    : appPathMissing.app === 'codebuddy'
+                                      ? t('settings.general.codebuddyPathReset', '重置默认')
+                                    : appPathMissing.app === 'codebuddy_cn'
+                                      ? t('settings.general.codebuddyPathReset', '重置默认')
+                                    : appPathMissing.app === 'qoder'
+                                      ? t('settings.general.qoderPathReset', '重置默认')
+                                    : appPathMissing.app === 'trae'
+                                      ? t('settings.general.traePathReset', '重置默认')
                                     : t('settings.general.codexPathReset', '重置默认')
                           )
                       }
@@ -1822,7 +2383,10 @@ function App() {
       <SideNav
         page={page}
         setPage={setPage}
-        onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+        onOpenPlatformLayout={() => {
+          setPlatformLayoutRequestedGroupId(null);
+          setShowPlatformLayoutModal(true);
+        }}
         easterEggClickCount={easterEggClickCount}
         onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
         hasBreakoutSession={hasBreakoutSession}
@@ -1832,7 +2396,14 @@ function App() {
       />
 
       <Suspense fallback={null}>
-        <PlatformLayoutModal open={showPlatformLayoutModal} onClose={() => setShowPlatformLayoutModal(false)} />
+        <PlatformLayoutModal
+          open={showPlatformLayoutModal}
+          requestedEditGroupId={platformLayoutRequestedGroupId}
+          onClose={() => {
+            setShowPlatformLayoutModal(false);
+            setPlatformLayoutRequestedGroupId(null);
+          }}
+        />
       </Suspense>
 
       <div className="main-wrapper">
@@ -1841,7 +2412,10 @@ function App() {
           {page === 'dashboard' && (
             <DashboardPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+              onOpenPlatformLayout={() => {
+                setPlatformLayoutRequestedGroupId(null);
+                setShowPlatformLayoutModal(true);
+              }}
               onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
             />
           )}
@@ -1852,6 +2426,11 @@ function App() {
           {page === 'kiro' && <KiroAccountsPage />}
           {page === 'cursor' && <CursorAccountsPage />}
           {page === 'gemini' && <GeminiAccountsPage />}
+          {page === 'codebuddy' && <CodebuddyAccountsPage />}
+          {page === 'codebuddy-cn' && <CodebuddyCnAccountsPage />}
+          {page === 'qoder' && <QoderAccountsPage />}
+          {page === 'trae' && <TraeAccountsPage />}
+          {page === 'workbuddy' && <WorkbuddyAccountsPage />}
           {page === 'instances' && <InstancesPage onNavigate={setPage} />}
           {page === 'fingerprints' && <FingerprintsPage onNavigate={setPage} />}
           {page === 'wakeup' && <WakeupTasksPage onNavigate={setPage} />}
@@ -1859,7 +2438,10 @@ function App() {
           {page === 'manual' && (
             <ManualPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+              onOpenPlatformLayout={() => {
+                setPlatformLayoutRequestedGroupId(null);
+                setShowPlatformLayoutModal(true);
+              }}
             />
           )}
           {page === 'settings' && <SettingsPage />}

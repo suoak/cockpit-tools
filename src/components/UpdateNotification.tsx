@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { X, Download, Sparkles, RefreshCw, Check } from 'lucide-react';
+import { X, Download, Sparkles, RefreshCw, Check, XCircle } from 'lucide-react';
 import { getVersion } from '@tauri-apps/api/app';
 import { useTranslation } from 'react-i18next';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -24,7 +24,7 @@ interface UpdateInfo {
 
 type UpdateCheckSource = 'auto' | 'manual';
 type UpdateCheckStatus = 'has_update' | 'up_to_date' | 'failed';
-type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'ready';
+type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
 
 export interface UpdateCheckResult {
   source: UpdateCheckSource;
@@ -42,6 +42,8 @@ export interface UpdateNotificationStateChange {
 interface UpdateNotificationProps {
   onClose: () => void;
   source?: UpdateCheckSource;
+  updaterTarget?: string | null;
+  updaterCheckReady?: boolean;
   onResult?: (result: UpdateCheckResult) => void;
   onStateChange?: (state: UpdateNotificationStateChange) => void;
   preparedUpdateVersion?: string | null;
@@ -59,6 +61,8 @@ interface UpdateNotificationProps {
 export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   onClose,
   source = 'auto',
+  updaterTarget = null,
+  updaterCheckReady = true,
   onResult,
   onStateChange,
   preparedUpdateVersion,
@@ -74,85 +78,121 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
   const [retryStatus, setRetryStatus] = useState('');
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
 
   useEffect(() => {
-    void checkForUpdates();
-  }, []);
+    if (!updaterCheckReady) {
+      return;
+    }
 
-  const checkForUpdates = async () => {
-    try {
-      const { check } = await import('@tauri-apps/plugin-updater');
-      const update = await retryWithBackoff(
-        async () => check(),
-        {
-          delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
-          shouldRetry: isRetryableUpdaterError,
-          onRetry: ({ retryIndex, totalRetries }) => {
-            setRetryStatus(
-              t('update_notification.checkRetrying', {
-                attempt: retryIndex,
-                total: totalRetries,
-              }),
-            );
+    let cancelled = false;
+
+    const checkForUpdates = async () => {
+      setIsChecking(true);
+      try {
+        const { check } = await import('@tauri-apps/plugin-updater');
+        const target = typeof updaterTarget === 'string' ? updaterTarget.trim() : '';
+        const update = await retryWithBackoff(
+          async () => (target ? check({ target }) : check()),
+          {
+            delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
+            shouldRetry: isRetryableUpdaterError,
+            onRetry: ({ retryIndex, totalRetries }) => {
+              if (cancelled) {
+                return;
+              }
+              setRetryStatus(
+                t('update_notification.checkRetrying', {
+                  attempt: retryIndex,
+                  total: totalRetries,
+                }),
+              );
+            },
           },
-        },
-      );
-      setRetryStatus('');
-      if (update) {
-        const preparedOrReadyVersion =
-          preparedUpdateVersion || (actionState === 'ready' ? actionVersion : null);
+        );
+        if (cancelled) {
+          return;
+        }
+        setRetryStatus('');
+        if (update) {
+          const preparedOrReadyVersion =
+            preparedUpdateVersion || (actionState === 'ready' ? actionVersion : null);
 
-        if (preparedOrReadyVersion === update.version) {
-          onStateChange?.({
-            phase: 'ready',
-            version: update.version,
+          if (preparedOrReadyVersion === update.version) {
+            onStateChange?.({
+              phase: 'ready',
+              version: update.version,
+            });
+          } else {
+            onStateChange?.({
+              phase: 'available',
+              version: update.version,
+            });
+          }
+
+          const { releaseNotes, releaseNotesZh } = parseUpdaterReleaseNotes(update.body);
+          const currentVersion = update.currentVersion || (await getVersion());
+          if (cancelled) {
+            return;
+          }
+          onResult?.({
+            source,
+            status: 'has_update',
+            currentVersion,
+            latestVersion: update.version,
+          });
+          setUpdateInfo({
+            current_version: currentVersion,
+            latest_version: update.version,
+            download_url: resolveUpdaterDownloadUrl(update.version, update.rawJson),
+            release_notes: releaseNotes,
+            release_notes_zh: releaseNotesZh,
           });
         } else {
-          onStateChange?.({
-            phase: 'available',
-            version: update.version,
+          const currentVersion = await getVersion();
+          if (cancelled) {
+            return;
+          }
+          onResult?.({
+            source,
+            status: 'up_to_date',
+            currentVersion,
+            latestVersion: currentVersion,
           });
+          onClose();
         }
-
-        const { releaseNotes, releaseNotesZh } = parseUpdaterReleaseNotes(update.body);
-        const currentVersion = update.currentVersion || (await getVersion());
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.error('Failed to check for updates:', error);
+        setRetryStatus('');
         onResult?.({
           source,
-          status: 'has_update',
-          currentVersion,
-          latestVersion: update.version,
-        });
-        setUpdateInfo({
-          current_version: currentVersion,
-          latest_version: update.version,
-          download_url: resolveUpdaterDownloadUrl(update.version, update.rawJson),
-          release_notes: releaseNotes,
-          release_notes_zh: releaseNotesZh,
-        });
-      } else {
-        const currentVersion = await getVersion();
-        onResult?.({
-          source,
-          status: 'up_to_date',
-          currentVersion,
-          latestVersion: currentVersion,
+          status: 'failed',
+          error: String(error),
         });
         onClose();
+      } finally {
+        if (!cancelled) {
+          setIsChecking(false);
+        }
       }
-    } catch (error) {
-      console.error('Failed to check for updates:', error);
-      setRetryStatus('');
-      onResult?.({
-        source,
-        status: 'failed',
-        error: String(error),
-      });
-      onClose();
-    }
-  };
+    };
+
+    void checkForUpdates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    source,
+    updaterCheckReady,
+    updaterTarget,
+  ]);
 
   const handleTriggerUpdate = useCallback(async () => {
     if (!onPrimaryAction) {
@@ -239,26 +279,68 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
     ) : null;
   }, [releaseNotes]);
 
-  if (!updateInfo) {
-    return null;
-  }
-
-  const versionMatched = actionVersion === updateInfo.latest_version;
-  const isDownloading = actionState === 'downloading' && versionMatched;
-  const isDownloaded = actionState === 'ready' && versionMatched;
+  const versionMatched = updateInfo ? actionVersion === updateInfo.latest_version : false;
+  const isDownloading = Boolean(updateInfo) && actionState === 'downloading' && versionMatched;
+  const isInstalling = actionState === 'installing';
+  const isDownloaded = Boolean(updateInfo) && actionState === 'ready' && versionMatched;
   const clampedProgress = Math.max(0, Math.min(100, Math.round(actionProgress)));
   const mergedRetryStatus = actionRetryStatus || retryStatus;
-  const isError = Boolean(actionError) && !isDownloading && !isDownloaded;
+  const isError =
+    Boolean(actionError) && !isChecking && !isDownloading && !isInstalling && !isDownloaded;
+  const modalTitle = updateInfo
+    ? t('update_notification.title')
+    : t('settings.about.checkUpdate');
 
   const handleClose = () => {
-    if (isRestarting) {
+    if (isRestarting || isInstalling) {
       return;
-    }
-    if (isDownloading && onCancelUpdate) {
-      void onCancelUpdate();
     }
     onClose();
   };
+
+  if (!updateInfo) {
+    const waitingMessage = updaterCheckReady
+      ? mergedRetryStatus || t('settings.about.checking')
+      : t('common.loading');
+
+    return (
+      <div className="modal-overlay update-overlay" onClick={handleClose}>
+        <div className="modal update-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-header">
+            <h2 className="update-modal-title">
+              <span className="update-icon">
+                <Sparkles size={18} />
+              </span>
+              {modalTitle}
+            </h2>
+            <button
+              className="modal-close"
+              onClick={handleClose}
+              aria-label={t('common.cancel')}
+              disabled={isRestarting || isInstalling}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="modal-body update-modal-body">
+            <div className="update-status update-status-retrying">
+              <RefreshCw size={14} className="spin" />
+              <span>{waitingMessage}</span>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={handleClose}
+              disabled={isRestarting || isInstalling}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-overlay update-overlay" onClick={handleClose}>
@@ -268,13 +350,13 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             <span className="update-icon">
               <Sparkles size={18} />
             </span>
-            {t('update_notification.title')}
+            {modalTitle}
           </h2>
           <button
             className="modal-close"
             onClick={handleClose}
             aria-label={t('common.cancel')}
-            disabled={isRestarting}
+            disabled={isRestarting || isInstalling}
           >
             <X size={18} />
           </button>
@@ -287,11 +369,23 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
 
           {isDownloading && (
             <div className="update-progress-container">
-              <div className="update-progress-bar">
-                <div
-                  className="update-progress-fill"
-                  style={{ width: `${clampedProgress}%` }}
-                />
+              <div className="update-progress-bar-row">
+                <div className="update-progress-bar">
+                  <div
+                    className="update-progress-fill"
+                    style={{ width: `${clampedProgress}%` }}
+                  />
+                </div>
+                {onCancelUpdate && (
+                  <button
+                    type="button"
+                    className="update-progress-cancel"
+                    onClick={onCancelUpdate}
+                    title={t('update_notification.cancelDownload', 'Cancel download')}
+                  >
+                    <XCircle size={16} />
+                  </button>
+                )}
               </div>
               <span className="update-progress-text">
                 {t('update_notification.downloading', 'Downloading...')} {clampedProgress}%
@@ -352,10 +446,10 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
           <button
             className="btn btn-secondary"
             onClick={handleClose}
-            disabled={isRestarting}
+            disabled={isRestarting || isInstalling}
           >
             {isDownloading
-              ? t('update_notification.cancelUpdate', 'Cancel Update')
+              ? t('update_notification.later', 'Later')
               : isDownloaded
                 ? t('update_notification.later', 'Later')
                 : t('common.cancel')}
@@ -371,6 +465,11 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
                 {t('update_notification.action')}
               </button>
             </>
+          ) : isInstalling ? (
+            <button className="btn btn-primary" disabled>
+              <RefreshCw size={16} className="spin" />
+              {t('update_notification.installing', 'Installing...')}
+            </button>
           ) : isRestarting ? (
             <button className="btn btn-primary" disabled>
               <RefreshCw size={16} className="spin" />
