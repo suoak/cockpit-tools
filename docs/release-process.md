@@ -1,6 +1,6 @@
 # Release Process (Open Source, No Code Signing)
 
-> 适用于 Cockpit Tools 当前开源发布流程（未接入代码签名）。
+> 适用于 SC-Cockpit Tools 当前开源发布流程（未接入代码签名）。
 
 ## 1. 目标
 

@@ -2,7 +2,7 @@
 
 简体中文 · [English](CHANGELOG.md)
 
-本文件记录 Cockpit Tools 的所有重要变更。
+本文件记录 SC-Cockpit Tools 的所有重要变更。
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
@@ -131,7 +131,7 @@
 ## [0.12.3] - 2026-03-11
 
 ### 修复
-- **macOS 权限弹窗不再归因到 Cockpit Tools**：macOS 上所有 IDE 启动（Codex、VS Code、CodeBuddy）统一改为通过 `open -a`（LaunchServices）方式启动，不再直接执行二进制文件，使 macOS TCC 权限弹窗（如"访问下载文件夹"）正确归因到被启动的 IDE 而非 Cockpit Tools。多开实例的 PID 跟踪通过启动后进程轮询实现，不受影响。
+- **macOS 权限弹窗不再归因到 SC-Cockpit Tools**：macOS 上所有 IDE 启动（Codex、VS Code、CodeBuddy）统一改为通过 `open -a`（LaunchServices）方式启动，不再直接执行二进制文件，使 macOS TCC 权限弹窗（如"访问下载文件夹"）正确归因到被启动的 IDE 而非 SC-Cockpit Tools。多开实例的 PID 跟踪通过启动后进程轮询实现，不受影响。
 
 ---
 ## [0.12.2] - 2026-03-11
@@ -536,7 +536,7 @@
 
 ### 修复
 - **Windows 启动黑色命令行窗口闪烁**：修复 VS Code 路径注册表回退探测中 `cmd /c reg query` 未隐藏窗口的问题，后台命令改为隐藏执行，减少部分 Windows 用户启动时出现多个黑色窗口闪现。
-- **品牌名与套餐标签误翻译**：修复非英语语言中品牌名/产品名与原始套餐标签被本地化的问题，恢复 `Cockpit Tools`、`Antigravity`、`Codex`、`GitHub Copilot`、`Windsurf` 以及 `accounts.tier.*`、`codex.plan.*`、`kiro.plan.*` 的原始显示值。
+- **品牌名与套餐标签误翻译**：修复非英语语言中品牌名/产品名与原始套餐标签被本地化的问题，恢复 `SC-Cockpit Tools`、`Antigravity`、`Codex`、`GitHub Copilot`、`Windsurf` 以及 `accounts.tier.*`、`codex.plan.*`、`kiro.plan.*` 的原始显示值。
 - **翻译校验误报品牌名**：为多语言校验脚本补充品牌名英文复用白名单，避免后续再次将品牌名误判为“未本地化”。
 
 ---
@@ -990,7 +990,7 @@
   - 查看 5小时 (Hourly) 和周 (Weekly) 配额。
   - 自动识别账号订阅计划 (Basic, Plus, Team, Enterprise)。
   - 独立的账号列表和卡片视图。
-- **品牌重塑**: 项目正式更名为 **Cockpit Tools**。
+- **品牌重塑**: 项目正式更名为 **SC-Cockpit Tools**。
 - **赞助与反馈**: 在 设置 -> 关于 页面新增 "赞助支持" 和 "意见反馈" 入口，加强社区互动。
 
 ### 变更

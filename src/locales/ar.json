@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "تأكيد",
     "cancel": "إلغاء",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "إعدادات التطبيق",
-    "subtitle": "قم بتخصيص تجربة Antigravity Cockpit Tools الخاصة بك.",
+    "subtitle": "قم بتخصيص تجربة Antigravity SC-Cockpit Tools الخاصة بك.",
     "tabs": {
       "general": "عام",
       "network": "خدمات الشبكة",
@@ -564,7 +564,7 @@
       "firewallHint": "إذا تعذر الوصول إلى الرابط، فتحقق من إعدادات جدار الحماية في النظام."
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "حل احترافي لإدارة الحسابات",
       "author": "المؤلف الرئيسي",
       "wechat": "حساب WeChat الرسمي",

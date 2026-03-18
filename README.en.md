@@ -1,4 +1,4 @@
-# Cockpit Tools
+# SC-Cockpit Tools
 
 English · [简体中文](README.md)
 
@@ -303,10 +303,10 @@ If you hit the macOS "App is damaged" warning, you can also install with `--no-q
 brew install --cask --no-quarantine cockpit-tools
 ```
 
-If Homebrew says the app already exists (e.g. `already an App at '/Applications/Cockpit Tools.app'`), remove the old app and install again:
+If Homebrew says the app already exists (e.g. `already an App at '/Applications/SC-Cockpit Tools.app'`), remove the old app and install again:
 
 ```bash
-rm -rf "/Applications/Cockpit Tools.app"
+rm -rf "/Applications/SC-Cockpit Tools.app"
 brew install --cask cockpit-tools
 ```
 
@@ -324,7 +324,7 @@ Due to macOS security mechanisms, apps not downloaded from the App Store may tri
 1.  **Command Line Fix** (Recommended):
     Open Terminal and run the following command:
     ```bash
-    sudo xattr -rd com.apple.quarantine "/Applications/Cockpit Tools.app"
+    sudo xattr -rd com.apple.quarantine "/Applications/SC-Cockpit Tools.app"
     ```
     > **Note**: If you changed the app name, please adjust the path in the command accordingly.
 

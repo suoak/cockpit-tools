@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "Подтвердить",
     "cancel": "Отмена",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "Настройки приложения",
-    "subtitle": "Настройте работу Cockpit Tools под себя.",
+    "subtitle": "Настройте работу SC-Cockpit Tools под себя.",
     "tabs": {
       "general": "Общие",
       "network": "Сеть",
@@ -564,7 +564,7 @@
       "firewallHint": "Если URL недоступен, проверьте настройки системного брандмауэра."
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "Профессиональное решение для управления аккаунтами",
       "author": "Автор",
       "wechat": "Вичат",

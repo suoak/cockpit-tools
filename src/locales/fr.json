@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "Confirmer",
     "cancel": "Annuler",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "Paramètres de l'application",
-    "subtitle": "Personnalisez votre expérience Cockpit Tools.",
+    "subtitle": "Personnalisez votre expérience SC-Cockpit Tools.",
     "tabs": {
       "general": "Général",
       "network": "Réseau",
@@ -564,7 +564,7 @@
       "firewallHint": "Si l’URL est inaccessible, vérifiez les paramètres du pare-feu système."
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "Solution professionnelle de gestion de comptes",
       "author": "Auteur",
       "wechat": "WeChat",

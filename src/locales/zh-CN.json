@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "确认",
     "cancel": "取消",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "应用设置",
-    "subtitle": "个性化您的 Cockpit Tools 体验。",
+    "subtitle": "个性化您的 SC-Cockpit Tools 体验。",
     "tabs": {
       "general": "通用",
       "network": "网络服务",
@@ -564,7 +564,7 @@
       "firewallHint": "如果访问不了，请检查系统防火墙设置。"
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "专业账号管理解决方案",
       "author": "主作者",
       "wechat": "微信公众号",

@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "확인",
     "cancel": "취소",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "앱 설정",
-    "subtitle": "Cockpit Tools 환경을 설정합니다.",
+    "subtitle": "SC-Cockpit Tools 환경을 설정합니다.",
     "tabs": {
       "general": "일반",
       "network": "네트워크",
@@ -564,7 +564,7 @@
       "firewallHint": "URL에 접속할 수 없으면 시스템 방화벽 설정을 확인하세요."
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "전문적인 계정 관리 솔루션",
       "author": "제작자",
       "wechat": "WeChat 플러스",

@@ -194,7 +194,7 @@ function resolveSourceDmgPath(version, options) {
     'release',
     'bundle',
     'dmg',
-    `Cockpit Tools_${version}_universal.dmg`
+    `SC-Cockpit Tools_${version}_universal.dmg`
   );
 
   ensureFileExists(defaultPath, 'Universal DMG');
@@ -372,7 +372,7 @@ function main() {
   const version = readPackageVersion();
   const tag = options.tag || `v${version}`;
 
-  console.log('Cockpit Tools GitHub Release + Homebrew cask publisher');
+  console.log('SC-Cockpit Tools GitHub Release + Homebrew cask publisher');
   console.log(`version: ${version}`);
   console.log(`tag: ${tag}`);
   console.log(`repo: ${options.repo}`);

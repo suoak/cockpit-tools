@@ -76,7 +76,7 @@ pub fn run() {
             });
         }))
         .setup(|app| {
-            info!("Cockpit Tools 启动...");
+            info!("SC-Cockpit Tools 启动...");
 
             // 存储全局 AppHandle
             let _ = APP_HANDLE.set(app.handle().clone());

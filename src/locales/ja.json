@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "確認",
     "cancel": "キャンセル",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "アプリ設定",
-    "subtitle": "Cockpit Tools の利用体験をカスタマイズします。",
+    "subtitle": "SC-Cockpit Tools の利用体験をカスタマイズします。",
     "tabs": {
       "general": "全般",
       "network": "ネットワーク設定",
@@ -564,7 +564,7 @@
       "firewallHint": "URL にアクセスできない場合は、システムのファイアウォール設定を確認してください。"
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "プロフェッショナルなアカウント管理ソリューション",
       "author": "著者",
       "wechat": "WeChat 公衆号",

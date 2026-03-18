@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "confirm": "Potvrdit",
     "cancel": "Zrušit",
@@ -412,7 +412,7 @@
   },
   "settings": {
     "title": "Nastavení aplikace",
-    "subtitle": "Přizpůsobte si prostředí Cockpit Tools.",
+    "subtitle": "Přizpůsobte si prostředí SC-Cockpit Tools.",
     "tabs": {
       "general": "Obecné",
       "network": "Síť",
@@ -564,7 +564,7 @@
       "firewallHint": "Pokud URL není dostupná, zkontrolujte nastavení systémového firewallu."
     },
     "about": {
-      "appName": "Cockpit Tools",
+      "appName": "SC-SC-Cockpit Tools",
       "slogan": "Profesionální řešení pro správu účtů",
       "author": "Autor",
       "wechat": "WeChat",

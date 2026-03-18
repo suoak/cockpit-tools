@@ -1,4 +1,4 @@
-# Cockpit Tools
+# SC-Cockpit Tools
 
 [English](README.en.md) · 简体中文
 
@@ -298,10 +298,10 @@ brew install --cask cockpit-tools
 brew install --cask --no-quarantine cockpit-tools
 ```
 
-如果提示已存在应用（例如：`already an App at '/Applications/Cockpit Tools.app'`），请先删除旧版本再安装：
+如果提示已存在应用（例如：`already an App at '/Applications/SC-Cockpit Tools.app'`），请先删除旧版本再安装：
 
 ```bash
-rm -rf "/Applications/Cockpit Tools.app"
+rm -rf "/Applications/SC-Cockpit Tools.app"
 brew install --cask cockpit-tools
 ```
 
@@ -319,7 +319,7 @@ brew install --cask --force cockpit-tools
 1.  **命令行修复** (推荐):
     打开终端，执行以下命令：
     ```bash
-    sudo xattr -rd com.apple.quarantine "/Applications/Cockpit Tools.app"
+    sudo xattr -rd com.apple.quarantine "/Applications/SC-Cockpit Tools.app"
     ```
     > **注意**: 如果您修改了应用名称，请在命令中相应调整路径。
 
