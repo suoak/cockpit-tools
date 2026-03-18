@@ -2485,7 +2485,6 @@ fn resolve_vscode_launch_path() -> Result<std::path::PathBuf, String> {
     Err(app_path_missing_error("vscode"))
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn resolve_codebuddy_launch_path() -> Result<std::path::PathBuf, String> {
     if let Some(custom) = normalize_custom_path(Some(&config::get_user_config().codebuddy_app_path))
     {
@@ -6130,13 +6129,8 @@ pub fn start_codex_with_args(user_data_dir: &str, extra_args: &[String]) -> Resu
 
     #[cfg(target_os = "macos")]
     {
-        let app_root = resolve_macos_app_root_from_config("codex").or_else(|| {
-            resolve_codex_launch_path()
-                .ok()
-                .and_then(|p| resolve_macos_app_root_from_launch_path(&p))
-        });
-        let app_root = app_root.ok_or_else(|| app_path_missing_error("codex"))?;
-
+        let launch_path = resolve_codex_launch_path()?;
+        let app_root = resolve_macos_app_root_from_launch_path(&launch_path);
         let codex_home_trimmed = target.trim();
         let mut args: Vec<String> = Vec::new();
         for arg in extra_args {
@@ -6145,51 +6139,57 @@ pub fn start_codex_with_args(user_data_dir: &str, extra_args: &[String]) -> Resu
             }
         }
 
-        // 使用 open -a 启动，避免 macOS Responsible Process 归因
-        // 注意：CODEX_HOME 环境变量无法通过 open -a 传递，
-        // 如果指定了 codex_home 则需要回退到直接执行
+        // 如果指定了 codex_home（实例模式），需要通过环境变量传递 CODEX_HOME
+        // open -a 无法传递环境变量，因此需要直接执行
         if !codex_home_trimmed.is_empty() {
-            if let Ok(launch_path) = resolve_codex_launch_path() {
-                let mut cmd = Command::new(&launch_path);
-                sanitize_macos_gui_launch_env(&mut cmd);
-                cmd.env("CODEX_HOME", codex_home_trimmed);
-                for arg in &args {
-                    cmd.arg(arg);
-                }
-                let child =
-                    spawn_detached_unix(&mut cmd).map_err(|e| format!("启动 Codex 失败: {}", e))?;
-                crate::modules::logger::log_info("Codex 启动命令已发送（直接执行，带 CODEX_HOME）");
-                // 轮询获取真实 PID
-                let probe_started = Instant::now();
-                let timeout = Duration::from_secs(6);
-                while probe_started.elapsed() < timeout {
-                    if let Some(resolved_pid) = resolve_codex_pid(None, Some(codex_home_trimmed)) {
-                        return Ok(resolved_pid);
-                    }
-                    thread::sleep(Duration::from_millis(200));
-                }
-                return Ok(child.id());
+            let mut cmd = Command::new(&launch_path);
+            cmd.env("CODEX_HOME", codex_home_trimmed);
+            cmd.arg("--user-data-dir").arg(codex_home_trimmed);
+            cmd.arg("--new-window");
+            for arg in &args {
+                cmd.arg(arg);
             }
-            return Err(app_path_missing_error("codex"));
+            cmd.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+
+            let child =
+                cmd.spawn().map_err(|e| format!("启动 Codex 失败: {}", e))?;
+            crate::modules::logger::log_info("Codex 启动命令已发送（直接执行，带 CODEX_HOME）");
+            // 轮询获取真实 PID
+            let probe_started = Instant::now();
+            let timeout = Duration::from_secs(6);
+            while probe_started.elapsed() < timeout {
+                if let Some(resolved_pid) = resolve_codex_pid(None, Some(codex_home_trimmed)) {
+                    return Ok(resolved_pid);
+                }
+                thread::sleep(Duration::from_millis(200));
+            }
+            return Ok(child.id());
         }
 
-        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
-            .map_err(|e| format!("启动 Codex 失败: {}", e))?;
-        crate::modules::logger::log_info("Codex 启动命令已发送（open -n -a）");
-        // 轮询获取真实 PID
-        let probe_started = Instant::now();
-        let timeout = Duration::from_secs(6);
-        while probe_started.elapsed() < timeout {
-            if let Some(resolved_pid) = resolve_codex_pid(None, None) {
-                return Ok(resolved_pid);
+        // 默认模式：使用 open -a 启动
+        if let Some(ref root) = app_root {
+            let open_pid = spawn_open_app_with_options(root, &args, true)
+                .map_err(|e| format!("启动 Codex 失败: {}", e))?;
+            crate::modules::logger::log_info("Codex 启动命令已发送（open -n -a）");
+            // 轮询获取真实 PID
+            let probe_started = Instant::now();
+            let timeout = Duration::from_secs(6);
+            while probe_started.elapsed() < timeout {
+                if let Some(resolved_pid) = resolve_codex_pid(None, None) {
+                    return Ok(resolved_pid);
+                }
+                thread::sleep(Duration::from_millis(200));
             }
-            thread::sleep(Duration::from_millis(200));
+            crate::modules::logger::log_warn(&format!(
+                "[Codex Start] 启动后 6s 内未匹配到默认实例 PID，回退 open pid={}",
+                open_pid
+            ));
+            return Ok(open_pid);
         }
-        crate::modules::logger::log_warn(&format!(
-            "[Codex Start] 启动后 6s 内未匹配到默认实例 PID，回退 open pid={}",
-            open_pid
-        ));
-        return Ok(open_pid);
+
+        return Err(app_path_missing_error("codex"));
     }
 
     #[cfg(target_os = "windows")]
@@ -6235,11 +6235,9 @@ pub fn start_codex_with_args(user_data_dir: &str, extra_args: &[String]) -> Resu
 pub fn start_codex_default(extra_args: &[String]) -> Result<u32, String> {
     #[cfg(target_os = "macos")]
     {
-        let app_root = resolve_macos_app_root_from_config("codex").or_else(|| {
-            resolve_codex_launch_path()
-                .ok()
-                .and_then(|p| resolve_macos_app_root_from_launch_path(&p))
-        });
+        let app_root = resolve_codex_launch_path()
+            .ok()
+            .and_then(|p| resolve_macos_app_root_from_launch_path(&p));
         let app_root = app_root.ok_or_else(|| app_path_missing_error("codex"))?;
 
         let mut args: Vec<String> = Vec::new();
