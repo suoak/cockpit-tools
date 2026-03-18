@@ -64,6 +64,33 @@ fn parse_env_bool(value: &str) -> Option<bool> {
     }
 }
 
+fn parse_env_value(input: &str) -> Option<String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    
+    // Handle quoted values
+    if (trimmed.starts_with('"') && trimmed.contains('"')) 
+        || (trimmed.starts_with('\'') && trimmed.contains('\'')) {
+        let quote_char = trimmed.chars().next()?;
+        let end_pos = trimmed[1..].find(quote_char)?;
+        return Some(trimmed[1..=end_pos].to_string());
+    }
+    
+    // Handle unquoted values (up to first whitespace)
+    let value = trimmed
+        .split_whitespace()
+        .next()?
+        .to_string();
+    
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
 fn command_trace_enabled() -> bool {
     if let Ok(value) = std::env::var("COCKPIT_COMMAND_TRACE") {
         if let Some(enabled) = parse_env_bool(&value) {
