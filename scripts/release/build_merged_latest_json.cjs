@@ -106,7 +106,6 @@ function main() {
   const darwinAarch64Tar = findAsset(assets, /_aarch64\.app\.tar\.gz$/, 'darwin-aarch64');
   const darwinX64Tar = findAsset(assets, /_x64\.app\.tar\.gz$/, 'darwin-x86_64');
   const windowsMsi = findAsset(assets, /_x64_en-US\.msi$/, 'windows-x86_64-msi');
-  const windowsNsis = findAsset(assets, /_x64-setup\.exe$/, 'windows-x86_64-nsis');
   const linuxX64AppImage = findAsset(assets, /_amd64\.AppImage$/, 'linux-x86_64-appimage');
   const linuxArmAppImage = findAsset(assets, /_aarch64\.AppImage$/, 'linux-aarch64-appimage');
   const linuxX64Deb = findAsset(assets, /_amd64\.deb$/, 'linux-x86_64-deb');
@@ -117,7 +116,6 @@ function main() {
   const darwinAarch64Entry = buildPlatformEntry(darwinAarch64Tar, signatures, repo, version);
   const darwinX64Entry = buildPlatformEntry(darwinX64Tar, signatures, repo, version);
   const windowsMsiEntry = buildPlatformEntry(windowsMsi, signatures, repo, version);
-  const windowsNsisEntry = buildPlatformEntry(windowsNsis, signatures, repo, version);
   const linuxX64AppImageEntry = buildPlatformEntry(linuxX64AppImage, signatures, repo, version);
   const linuxArmAppImageEntry = buildPlatformEntry(linuxArmAppImage, signatures, repo, version);
   const linuxX64DebEntry = buildPlatformEntry(linuxX64Deb, signatures, repo, version);
@@ -134,10 +132,9 @@ function main() {
       'darwin-aarch64-app': cloneEntry(darwinAarch64Entry),
       'darwin-x86_64': darwinX64Entry,
       'darwin-x86_64-app': cloneEntry(darwinX64Entry),
-      // Keep Windows fallback aligned to NSIS so updater fallback does not switch installer type.
-      'windows-x86_64': windowsNsisEntry,
+      // Use MSI as default Windows installer
+      'windows-x86_64': windowsMsiEntry,
       'windows-x86_64-msi': cloneEntry(windowsMsiEntry),
-      'windows-x86_64-nsis': windowsNsisEntry,
       'linux-x86_64': linuxX64AppImageEntry,
       'linux-x86_64-appimage': cloneEntry(linuxX64AppImageEntry),
       'linux-x86_64-deb': linuxX64DebEntry,

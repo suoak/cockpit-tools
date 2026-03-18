@@ -41,12 +41,15 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "nsis": {
-        "compression": "lzma",
-        "installerIcon": "icons/icon.ico",
-        "installMode": "perUser",
-        "languages": ["English", "SimpChinese"],
-        "displayLanguageSelector": false
+      "wix": {
+        "language": ["en-US", "zh-CN"],
+        "template": null,
+        "fragmentPaths": [],
+        "componentRefs": [],
+        "featureRefs": [],
+        "mergeRefs": [],
+        "bannerPath": null,
+        "dialogImagePath": null
       }
     }
   },

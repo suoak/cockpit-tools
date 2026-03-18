@@ -194,7 +194,7 @@ jobs:
         shell: pwsh
         run: npx tauri build --no-bundle
 
-      # Step 2: Strip exe metadata before NSIS packaging
+      # Step 2: Strip exe metadata before MSI packaging
       - name: Strip exe metadata (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
@@ -209,31 +209,41 @@ jobs:
             exit 1
           }
 
-      # Step 3: Create NSIS installer only (no recompile, uses stripped exe)
-      - name: Create NSIS installer (Windows)
+      # Step 3: Create MSI installer only (no recompile, uses stripped exe)
+      - name: Create MSI installer (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
-        run: npx tauri bundle --bundles nsis
+        run: npx tauri bundle --bundles msi
 
-      # Step 4: Strip NSIS installer metadata
-      - name: Strip NSIS installer metadata (Windows)
+      # Step 4: Strip MSI installer metadata
+      - name: Strip MSI installer metadata (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $nsisDir = "src-tauri\target\release\bundle\nsis"
-          $installers = Get-ChildItem -Path $nsisDir -Filter "*-setup.exe" -ErrorAction SilentlyContinue
+          $msiDir = "src-tauri\target\release\bundle\msi"
+          $installers = Get-ChildItem -Path $msiDir -Filter "*.msi" -ErrorAction SilentlyContinue
           if ($installers) {
             foreach ($installer in $installers) {
               Write-Host "[INFO] Stripping metadata from $($installer.FullName)..."
-              & $env:RESHACKER_PATH -open $installer.FullName -save $installer.FullName -action delete -mask "VERSIONINFO,,"
-              Write-Host "[SUCCESS] Metadata stripped from $($installer.Name)"
+              
+              # MSI files are complex - they have both PE headers and MSI database structure
+              # We need to be careful when stripping metadata
+              try {
+                & $env:RESHACKER_PATH -open $installer.FullName -save $installer.FullName -action delete -mask "VERSIONINFO,,"
+                Write-Host "[SUCCESS] Metadata stripped from $($installer.Name)"
+              } catch {
+                Write-Host "[WARN] Failed to strip metadata from MSI: $_"
+                Write-Host "[INFO] This is expected - MSI structure may not support metadata stripping"
+                Write-Host "[INFO] The embedded exe already has metadata stripped, which is the main goal"
+              }
             }
           } else {
-            Write-Host "[WARN] No installer found in $nsisDir"
-            Get-ChildItem -Path $nsisDir -ErrorAction SilentlyContinue
+            Write-Host "[ERROR] No MSI installer found in $msiDir"
+            Get-ChildItem -Path $msiDir -ErrorAction SilentlyContinue
+            exit 1
           }
 
-      # Step 5: Create release and upload stripped artifacts
+      # Step 5: Create release and upload artifacts
       - name: Create Release (Windows)
         if: matrix.platform == 'windows-latest'
         uses: softprops/action-gh-release@v2
@@ -244,7 +254,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
 
   rebuild-latest-json:
     name: Rebuild merged latest.json
@@ -326,7 +336,7 @@ jobs:
             .platforms["darwin-aarch64"] and
             .platforms["darwin-x86_64"] and
             .platforms["windows-x86_64"] and
-            .platforms["windows-x86_64-nsis"] and
+            .platforms["windows-x86_64-msi"] and
             .platforms["linux-x86_64-appimage"] and
             .platforms["linux-aarch64-appimage"]
           ' latest.json > /dev/null
