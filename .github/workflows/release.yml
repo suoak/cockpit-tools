@@ -199,7 +199,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = "src-tauri\target\release\sc-cockpit-tools.exe"
+          $exePath = "src-tauri\target\release\cockpit-tools.exe"
           if (Test-Path $exePath) {
             Write-Host "[INFO] Stripping metadata from exe..."
             & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
