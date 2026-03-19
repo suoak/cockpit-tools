@@ -500,7 +500,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Cockpit.Tools_${VERSION}_universal.dmg"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/SC-Cockpit.Tools_${VERSION}_universal.dmg"
           echo "Downloading: $URL"
           for i in $(seq 1 30); do
             if curl -fL --retry 3 --retry-delay 1 -o cockpit-tools.dmg "$URL"; then

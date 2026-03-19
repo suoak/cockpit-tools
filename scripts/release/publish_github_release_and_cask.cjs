@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -8,7 +8,7 @@ const { spawnSync } = require('node:child_process');
 const DEFAULT_REPO = 'suoak/cockpit-tools';
 const DEFAULT_CASK_PATH = 'Casks/cockpit-tools.rb';
 const DEFAULT_TARGET = 'universal-apple-darwin';
-const DEFAULT_RELEASE_ASSET_PREFIX = 'Cockpit.Tools';
+const DEFAULT_RELEASE_ASSET_PREFIX = 'SC-Cockpit.Tools';
 
 function printHelp() {
   console.log('Usage: node scripts/release/publish_github_release_and_cask.cjs [options]');
