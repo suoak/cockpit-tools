@@ -8,7 +8,7 @@ if (!$env:RESHACKER_PATH) {
 }
 
 # exe 路径（相对于 src-tauri 目录）
-$exePath = "target\release\cockpit-tools.exe"
+$exePath = "target\release\sc-cockpit-tools.exe"
 
 if (!(Test-Path $exePath)) {
     Write-Host "[WARN] Exe not found: $exePath"

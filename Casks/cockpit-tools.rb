@@ -1,6 +1,6 @@
 cask "cockpit-tools" do
-  version "0.16.0"
-  sha256 "43f52172fcb49f067f92fa0dd230e941992590f97974726889af61457c04d768"
+  version "0.16.1"
+  sha256 "b28686984d0d4a58725eb50e27b48f8ffe9ffe6e612a04a50b26190a88bfb98a"
 
   url "https://github.com/suoak/cockpit-tools/releases/download/v#{version}/Cockpit.Tools_#{version}_universal.dmg",
       verified: "github.com/suoak/cockpit-tools/"
@@ -19,10 +19,10 @@ cask "cockpit-tools" do
   app "SC-Cockpit Tools.app"
 
   zap trash: [
-    "~/Library/Application Support/com.jlcodes.sc-cockpit-tools",
-    "~/Library/Caches/com.jlcodes.sc-cockpit-tools",
-    "~/Library/Preferences/com.jlcodes.sc-cockpit-tools.plist",
-    "~/Library/Saved Application State/com.jlcodes.sc-cockpit-tools.savedState",
+    "~/Library/Application Support/com.jlcodes.cockpit-tools",
+    "~/Library/Caches/com.jlcodes.cockpit-tools",
+    "~/Library/Preferences/com.jlcodes.cockpit-tools.plist",
+    "~/Library/Saved Application State/com.jlcodes.cockpit-tools.savedState",
   ]
 
   caveats <<~EOS

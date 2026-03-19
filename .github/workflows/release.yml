@@ -199,7 +199,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = "src-tauri\target\release\cockpit-tools.exe"
+          $exePath = "src-tauri\target\release\sc-cockpit-tools.exe"
           if (Test-Path $exePath) {
             Write-Host "[INFO] Stripping metadata from exe..."
             & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
@@ -209,11 +209,11 @@ jobs:
             exit 1
           }
 
-      # Step 3: Create MSI installer only (no recompile, uses stripped exe)
-      - name: Create MSI installer (Windows)
+      # Step 3: Create NSIS + MSI installers (no recompile, uses stripped exe)
+      - name: Create NSIS + MSI installers (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
-        run: npx tauri bundle --bundles msi
+        run: npx tauri bundle --bundles nsis,msi
 
       # Step 4: Strip MSI installer metadata (SummaryInformation stream)
       # Uses Windows Installer API via inline C# to clear metadata PIDs.
@@ -292,6 +292,8 @@ jobs:
           draft: true
           prerelease: false
           files: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
 
