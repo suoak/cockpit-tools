@@ -591,6 +591,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "cockpit-tools"
+version = "0.16.3"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "anyhow",
+ "base64 0.22.1",
+ "cbc",
+ "chrono",
+ "dirs 5.0.1",
+ "futures",
+ "futures-util",
+ "lazy_static",
+ "libc",
+ "mac-notification-sys",
+ "md5",
+ "minisign-verify",
+ "pbkdf2",
+ "rand 0.8.5",
+ "rcgen",
+ "regex",
+ "reqwest 0.12.28",
+ "rusqlite",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "thiserror 2.0.17",
+ "tiny_http",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "toml_edit 0.20.2",
+ "tracing",
+ "tracing-appender",
+ "tracing-log",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
+ "uuid",
+ "windows 0.58.0",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3938,60 +3993,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "sc-cockpit-tools"
-version = "0.16.1"
-dependencies = [
- "aes",
- "aes-gcm",
- "anyhow",
- "base64 0.22.1",
- "cbc",
- "chrono",
- "dirs 5.0.1",
- "futures",
- "futures-util",
- "lazy_static",
- "libc",
- "mac-notification-sys",
- "md5",
- "minisign-verify",
- "pbkdf2",
- "rand 0.8.5",
- "rcgen",
- "regex",
- "reqwest 0.12.28",
- "rusqlite",
- "rustls",
- "serde",
- "serde_json",
- "sha1",
- "sha2",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "thiserror 2.0.17",
- "tiny_http",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "tracing",
- "tracing-appender",
- "tracing-log",
- "tracing-subscriber",
- "url",
- "urlencoding",
- "uuid",
- "windows 0.58.0",
 ]
 
 [[package]]
