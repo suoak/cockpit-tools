@@ -52,6 +52,10 @@ function buildUrl(repo, version, fileName) {
 function findAsset(assets, pattern, label) {
   const hit = assets.find((name) => pattern.test(name));
   if (!hit) {
+    console.error(`Available assets (${assets.length}):`);
+    for (const name of assets) {
+      console.error(`  - ${name}`);
+    }
     throw new Error(`Missing required updater asset for ${label}. Pattern: ${pattern}`);
   }
   return hit;

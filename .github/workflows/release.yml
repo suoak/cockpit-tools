@@ -411,6 +411,14 @@ jobs:
           fi
           echo "PUBLISHED_AT=${PUBLISHED_AT}" >> "$GITHUB_ENV"
 
+      - name: List downloaded release assets
+        shell: bash
+        run: |
+          echo "=== Downloaded release assets ==="
+          ls -la release-assets/
+          echo "=== Asset filenames ==="
+          ls -1 release-assets/
+
       - name: Build merged latest.json
         shell: bash
         run: |
