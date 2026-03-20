@@ -6240,7 +6240,7 @@ pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     collect_codex_process_entries_from_powershell(expected)
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     Vec::new()
 }
