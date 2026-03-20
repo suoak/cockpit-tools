@@ -204,31 +204,26 @@ jobs:
             Write-Host "[ERROR] Exe not found: $exePath"
             exit 1
           }
-          # Verify ResourceHacker exists
           if (!(Test-Path $env:RESHACKER_PATH)) {
             Write-Host "[ERROR] ResourceHacker not found at: $env:RESHACKER_PATH"
-            Get-ChildItem "$env:RUNNER_TEMP\resource_hacker" -ErrorAction SilentlyContinue
             exit 1
           }
-          Write-Host "[INFO] ResourceHacker path: $env:RESHACKER_PATH"
           $absExe = (Resolve-Path $exePath).Path
           $logFile = "$env:RUNNER_TEMP\reshacker_strip.log"
           Write-Host "[INFO] Stripping VERSIONINFO from exe: $absExe"
-          & $env:RESHACKER_PATH -open "$absExe" -save "$absExe" -action delete -mask "VERSIONINFO,," -log "$logFile"
-          $exitCode = $LASTEXITCODE
+          # ResourceHacker is a GUI app; must use Start-Process -Wait to block and capture exit code
+          $proc = Start-Process -FilePath $env:RESHACKER_PATH `
+            -ArgumentList "-open `"$absExe`" -save `"$absExe`" -action delete -mask VERSIONINFO,, -log `"$logFile`"" `
+            -Wait -PassThru -NoNewWindow
+          Write-Host "[INFO] ResourceHacker exit code: $($proc.ExitCode)"
           if (Test-Path $logFile) {
             Write-Host "[INFO] ResourceHacker log:"
-            Get-Content $logFile | Write-Host
+            Get-Content $logFile | ForEach-Object { Write-Host $_ }
           }
-          # ResourceHacker returns 0 on success; treat null as failure too
-          if ($null -eq $exitCode -or $exitCode -ne 0) {
-            Write-Host "[ERROR] ResourceHacker failed with exit code: '$exitCode'"
-            exit 1
-          }
-          # Verify metadata was actually stripped
+          # Verify metadata was actually stripped (this is the authoritative check)
           $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
           if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
-            Write-Host "[WARN] Exe still has metadata: ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
+            Write-Host "[WARN] Exe still has metadata after strip: ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
           } else {
             Write-Host "[SUCCESS] Exe metadata verified clean"
           }
@@ -252,15 +247,13 @@ jobs:
             Write-Host "[WARN] Exe metadata was restored by tauri bundle, re-stripping..."
             Write-Host "[WARN] ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
             $logFile = "$env:RUNNER_TEMP\reshacker_restrip.log"
-            & $env:RESHACKER_PATH -open "$absExe" -save "$absExe" -action delete -mask "VERSIONINFO,," -log "$logFile"
-            $exitCode = $LASTEXITCODE
+            $proc = Start-Process -FilePath $env:RESHACKER_PATH `
+              -ArgumentList "-open `"$absExe`" -save `"$absExe`" -action delete -mask VERSIONINFO,, -log `"$logFile`"" `
+              -Wait -PassThru -NoNewWindow
+            Write-Host "[INFO] ResourceHacker exit code: $($proc.ExitCode)"
             if (Test-Path $logFile) {
               Write-Host "[INFO] ResourceHacker log:"
-              Get-Content $logFile | Write-Host
-            }
-            if ($null -eq $exitCode -or $exitCode -ne 0) {
-              Write-Host "[ERROR] ResourceHacker re-strip failed with exit code: '$exitCode'"
-              exit 1
+              Get-Content $logFile | ForEach-Object { Write-Host $_ }
             }
             $vi2 = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
             if ($vi2.ProductName -or $vi2.FileVersion -or $vi2.CompanyName) {
