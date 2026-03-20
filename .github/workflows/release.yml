@@ -204,14 +204,29 @@ jobs:
             Write-Host "[ERROR] Exe not found: $exePath"
             exit 1
           }
-          Write-Host "[INFO] Stripping VERSIONINFO from exe..."
-          & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "[ERROR] ResourceHacker failed with exit code $LASTEXITCODE"
+          # Verify ResourceHacker exists
+          if (!(Test-Path $env:RESHACKER_PATH)) {
+            Write-Host "[ERROR] ResourceHacker not found at: $env:RESHACKER_PATH"
+            Get-ChildItem "$env:RUNNER_TEMP\resource_hacker" -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Write-Host "[INFO] ResourceHacker path: $env:RESHACKER_PATH"
+          $absExe = (Resolve-Path $exePath).Path
+          $logFile = "$env:RUNNER_TEMP\reshacker_strip.log"
+          Write-Host "[INFO] Stripping VERSIONINFO from exe: $absExe"
+          & $env:RESHACKER_PATH -open "$absExe" -save "$absExe" -action delete -mask "VERSIONINFO,," -log "$logFile"
+          $exitCode = $LASTEXITCODE
+          if (Test-Path $logFile) {
+            Write-Host "[INFO] ResourceHacker log:"
+            Get-Content $logFile | Write-Host
+          }
+          # ResourceHacker returns 0 on success; treat null as failure too
+          if ($null -eq $exitCode -or $exitCode -ne 0) {
+            Write-Host "[ERROR] ResourceHacker failed with exit code: '$exitCode'"
             exit 1
           }
           # Verify metadata was actually stripped
-          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
           if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
             Write-Host "[WARN] Exe still has metadata: ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
           } else {
@@ -231,16 +246,23 @@ jobs:
         shell: pwsh
         run: |
           $exePath = "src-tauri\target\release\cockpit-tools.exe"
-          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+          $absExe = (Resolve-Path $exePath).Path
+          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
           if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
             Write-Host "[WARN] Exe metadata was restored by tauri bundle, re-stripping..."
             Write-Host "[WARN] ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
-            & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "[ERROR] ResourceHacker re-strip failed with exit code $LASTEXITCODE"
+            $logFile = "$env:RUNNER_TEMP\reshacker_restrip.log"
+            & $env:RESHACKER_PATH -open "$absExe" -save "$absExe" -action delete -mask "VERSIONINFO,," -log "$logFile"
+            $exitCode = $LASTEXITCODE
+            if (Test-Path $logFile) {
+              Write-Host "[INFO] ResourceHacker log:"
+              Get-Content $logFile | Write-Host
+            }
+            if ($null -eq $exitCode -or $exitCode -ne 0) {
+              Write-Host "[ERROR] ResourceHacker re-strip failed with exit code: '$exitCode'"
               exit 1
             }
-            $vi2 = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+            $vi2 = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
             if ($vi2.ProductName -or $vi2.FileVersion -or $vi2.CompanyName) {
               Write-Host "[ERROR] Exe metadata STILL present after re-strip!"
               exit 1
