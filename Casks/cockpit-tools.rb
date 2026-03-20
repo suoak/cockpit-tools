@@ -19,10 +19,10 @@ cask "cockpit-tools" do
   app "SC-Cockpit Tools.app"
 
   zap trash: [
-    "~/Library/Application Support/com.jlcodes.cockpit-tools",
-    "~/Library/Caches/com.jlcodes.cockpit-tools",
-    "~/Library/Preferences/com.jlcodes.cockpit-tools.plist",
-    "~/Library/Saved Application State/com.jlcodes.cockpit-tools.savedState",
+    "~/Library/Application Support/com.suoak.cockpit-tools",
+    "~/Library/Caches/com.suoak.cockpit-tools",
+    "~/Library/Preferences/com.suoak.cockpit-tools.plist",
+    "~/Library/Saved Application State/com.suoak.cockpit-tools.savedState",
   ]
 
   caveats <<~EOS

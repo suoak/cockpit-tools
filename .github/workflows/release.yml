@@ -284,7 +284,7 @@ jobs:
       # Step 5: Create release and upload artifacts
       - name: Create Release (Windows)
         if: matrix.platform == 'windows-latest'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.6.1
         with:
           tag_name: "v${{ steps.app_version.outputs.VERSION }}"
           name: "SC-Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
@@ -537,7 +537,7 @@ jobs:
 
       - name: Create pull request
         id: create_cask_pr
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(homebrew): update cask for v${{ env.VERSION }}"
           title: "chore(homebrew): update cask for v${{ env.VERSION }}"
