@@ -30,6 +30,9 @@ interface NetworkConfig {
   report_actual_port: number | null;
   report_default_port: number;
   report_token: string;
+  global_proxy_enabled: boolean;
+  global_proxy_url: string;
+  global_proxy_no_proxy: string;
 }
 
 /** 通用配置类型 */
@@ -73,6 +76,7 @@ interface GeneralConfig {
   trae_quota_alert_threshold: number;
   opencode_sync_on_switch: boolean;
   opencode_auth_overwrite_on_switch: boolean;
+  openclaw_auth_overwrite_on_switch: boolean;
   codex_launch_on_switch: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
@@ -218,6 +222,7 @@ export function SettingsPage() {
   const [appPathResetDetectingTargets, setAppPathResetDetectingTargets] = useState<Set<AppPathTarget>>(new Set());
   const [opencodeSyncOnSwitch, setOpencodeSyncOnSwitch] = useState(true);
   const [opencodeAuthOverwriteOnSwitch, setOpencodeAuthOverwriteOnSwitch] = useState(true);
+  const [openclawAuthOverwriteOnSwitch, setOpenclawAuthOverwriteOnSwitch] = useState(false);
   const [codexLaunchOnSwitch, setCodexLaunchOnSwitch] = useState(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(false);
   const [autoSwitchThreshold, setAutoSwitchThreshold] = useState('20');
@@ -340,6 +345,9 @@ export function SettingsPage() {
   const [reportActualPort, setReportActualPort] = useState<number | null>(null);
   const [reportDefaultPort, setReportDefaultPort] = useState(18081);
   const [reportToken, setReportToken] = useState('');
+  const [globalProxyEnabled, setGlobalProxyEnabled] = useState(false);
+  const [globalProxyUrl, setGlobalProxyUrl] = useState('');
+  const [globalProxyNoProxy, setGlobalProxyNoProxy] = useState('');
   const reportPreviewPort = reportActualPort ?? (parseInt(reportPort, 10) || reportDefaultPort);
   const reportPreviewToken = encodeURIComponent((reportToken || 'your-token').trim() || 'your-token');
   const reportRawPreviewUrl = `http://<当前IP>:${reportPreviewPort}/report?token=${reportPreviewToken}`;
@@ -462,6 +470,7 @@ export function SettingsPage() {
           workbuddyAppPath,
           opencodeSyncOnSwitch,
           opencodeAuthOverwriteOnSwitch,
+          openclawAuthOverwriteOnSwitch,
           codexLaunchOnSwitch,
           autoSwitchEnabled,
           autoSwitchThreshold: Number.isNaN(parsedAutoSwitchThreshold) ? 20 : parsedAutoSwitchThreshold,
@@ -550,6 +559,7 @@ export function SettingsPage() {
     workbuddyAppPath,
     opencodeSyncOnSwitch,
     opencodeAuthOverwriteOnSwitch,
+    openclawAuthOverwriteOnSwitch,
     codexLaunchOnSwitch,
     autoSwitchEnabled,
     autoSwitchThreshold,
@@ -772,6 +782,7 @@ export function SettingsPage() {
       setTraeQuotaAlertThreshold(String(config.trae_quota_alert_threshold ?? 20));
       setOpencodeSyncOnSwitch(config.opencode_sync_on_switch ?? true);
       setOpencodeAuthOverwriteOnSwitch(config.opencode_auth_overwrite_on_switch ?? true);
+      setOpenclawAuthOverwriteOnSwitch(config.openclaw_auth_overwrite_on_switch ?? false);
       setCodexLaunchOnSwitch(config.codex_launch_on_switch ?? true);
       setAutoSwitchEnabled(config.auto_switch_enabled ?? false);
       setAutoSwitchThreshold(String(config.auto_switch_threshold ?? 20));
@@ -831,6 +842,9 @@ export function SettingsPage() {
       setReportActualPort(config.report_actual_port);
       setReportDefaultPort(config.report_default_port);
       setReportToken(config.report_token || '');
+      setGlobalProxyEnabled(Boolean(config.global_proxy_enabled));
+      setGlobalProxyUrl(config.global_proxy_url || '');
+      setGlobalProxyNoProxy(config.global_proxy_no_proxy || '');
       setNeedsRestart(false);
     } catch (err) {
       console.error('加载网络配置失败:', err);
@@ -849,6 +863,12 @@ export function SettingsPage() {
         alert(t('settings.network.reportTokenRequired'));
         return;
       }
+      const normalizedGlobalProxyUrl = globalProxyUrl.trim();
+      const normalizedGlobalProxyNoProxy = globalProxyNoProxy.trim();
+      if (globalProxyEnabled && !normalizedGlobalProxyUrl) {
+        alert(t('settings.network.proxyUrlRequired'));
+        return;
+      }
 
       const result = await invoke<boolean>('save_network_config', {
         wsEnabled,
@@ -856,6 +876,9 @@ export function SettingsPage() {
         reportEnabled,
         reportPort: reportPortNum,
         reportToken: normalizedToken,
+        globalProxyEnabled,
+        globalProxyUrl: normalizedGlobalProxyUrl,
+        globalProxyNoProxy: normalizedGlobalProxyNoProxy,
       });
       
       if (result) {
@@ -1611,7 +1634,30 @@ export function SettingsPage() {
                     <input
                       type="checkbox"
                       checked={opencodeAuthOverwriteOnSwitch}
-                      onChange={(e) => setOpencodeAuthOverwriteOnSwitch(e.target.checked)}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        setOpencodeAuthOverwriteOnSwitch(enabled);
+                        if (!enabled) {
+                          setOpencodeSyncOnSwitch(false);
+                        }
+                      }}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="row-label">
+                  <div className="row-title">{t('settings.general.openclawAuthOverwrite')}</div>
+                  <div className="row-desc">{t('settings.general.openclawAuthOverwriteDesc')}</div>
+                </div>
+                <div className="row-control">
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={openclawAuthOverwriteOnSwitch}
+                      onChange={(e) => setOpenclawAuthOverwriteOnSwitch(e.target.checked)}
                     />
                     <span className="slider"></span>
                   </label>
@@ -3291,7 +3337,7 @@ export function SettingsPage() {
         {/* === Network Tab === */}
         {activeTab === 'network' && (
           <>
-            <div className="group-title">{t('settings.network.apiTitle')}</div>
+            <div className="group-title">Antigravity Cockpit API</div>
             <div className="settings-group">
               <div className="settings-row">
                 <div className="row-label">
@@ -3475,6 +3521,62 @@ export function SettingsPage() {
                     <div className="row-label">
                       <div className="row-title">{t('settings.network.firewallHintTitle')}</div>
                       <div className="row-desc">{t('settings.network.firewallHint')}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="group-title">{t('settings.network.proxyTitle')}</div>
+            <div className="settings-group">
+              <div className="settings-row">
+                <div className="row-label">
+                  <div className="row-title">{t('settings.network.proxyEnabled')}</div>
+                  <div className="row-desc">{t('settings.network.proxyEnabledDesc')}</div>
+                </div>
+                <div className="row-control">
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={globalProxyEnabled}
+                      onChange={(e) => setGlobalProxyEnabled(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              {globalProxyEnabled && (
+                <>
+                  <div className="settings-row" style={{ animation: 'fadeUp 0.3s ease both' }}>
+                    <div className="row-label">
+                      <div className="row-title">{t('settings.network.proxyUrl')}</div>
+                      <div className="row-desc">{t('settings.network.proxyUrlDesc')}</div>
+                    </div>
+                    <div className="row-control">
+                      <input
+                        type="text"
+                        className="settings-input"
+                        value={globalProxyUrl}
+                        onChange={(e) => setGlobalProxyUrl(e.target.value)}
+                        placeholder={t('settings.network.proxyUrlPlaceholder')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="settings-row" style={{ animation: 'fadeUp 0.3s ease both' }}>
+                    <div className="row-label">
+                      <div className="row-title">{t('settings.network.proxyNoProxy')}</div>
+                      <div className="row-desc">{t('settings.network.proxyNoProxyDesc')}</div>
+                    </div>
+                    <div className="row-control">
+                      <input
+                        type="text"
+                        className="settings-input"
+                        value={globalProxyNoProxy}
+                        onChange={(e) => setGlobalProxyNoProxy(e.target.value)}
+                        placeholder={t('settings.network.proxyNoProxyPlaceholder')}
+                      />
                     </div>
                   </div>
                 </>

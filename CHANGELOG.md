@@ -7,6 +7,37 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.17.2] - 2026-03-20
+
+### Changed
+- **Windows Codex launch now aligns to the Microsoft Store system registration entry by default**: startup now prefers Store AppUserModelId (`shell:AppsFolder`) instead of directly executing `WindowsApps/.../Codex.exe`, with exe-path fallback only when Store entry launch is unavailable.
+- **Windows Codex launch precheck now validates Store installation availability first**: launch-path readiness now succeeds on detected Store registration entry and only falls back to executable-path validation when needed.
+
+### Added
+- **Windows Codex launch logs now explicitly expose startup strategy selection**: launch logs now print whether `system-store-entry` or `exe-path` was used, including matched app id/path and resolved pid for troubleshooting.
+
+---
+## [0.17.1] - 2026-03-20
+
+### Added
+- **Network settings now support a managed global proxy for launched platform processes**: added `global_proxy_enabled`/`global_proxy_url`/`global_proxy_no_proxy`, with env injection into Cockpit-launched platform apps and instance start flows across macOS/Linux/Windows.
+- **GitHub Copilot switching now supports OpenCode sync controls and launch toggle**: added quick-settings/general-config options to control GitHub Copilot app auto-launch, OpenCode auth overwrite, and OpenCode restart after switch.
+
+### Changed
+- **OpenCode restart toggles now follow auth-overwrite dependency in both Settings and Quick Settings**: when auth overwrite is turned off, related restart toggles are now automatically turned off for both Codex and GitHub Copilot switch flows.
+
+---
+## [0.17.0] - 2026-03-19
+
+### Added
+- **Codex account switching now supports an optional OpenClaw login-overwrite toggle**: Settings and Quick Settings now expose `openclaw_auth_overwrite_on_switch`; when disabled, only Codex is switched and OpenClaw keeps its current login state.
+
+### Changed
+- **Codex-to-OpenClaw credential sync now writes and verifies `openai-codex:default` end-to-end**: switch flow now updates OpenClaw `auth-profiles.json`, cleans stale `openai-codex:*` profiles, syncs candidate paths, and validates account/email/expiry consistency with Codex credentials.
+- **macOS Codex switching now updates keychain `Codex Auth` alongside `auth.json`**: keeps external-cli/OpenClaw credential reads aligned with the active Codex account.
+- **OpenClaw post-sync runtime refresh now retries reload/restart for faster effect**: after sync it attempts `secrets reload` and `gateway restart`, then performs one retry and logs actionable diagnostics if consistency checks still fail.
+
+---
 ## [0.16.3] - 2026-03-19
 
 ### Added

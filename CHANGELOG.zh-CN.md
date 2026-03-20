@@ -7,6 +7,37 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
 ---
+## [0.17.2] - 2026-03-20
+
+### 变更
+- **Windows 下 Codex 启动默认改为对齐 Microsoft Store 系统注册入口**：启动优先使用 Store AppUserModelId（`shell:AppsFolder`），不再默认直启 `WindowsApps/.../Codex.exe`；仅在系统入口不可用时回退到 exe 路径启动。
+- **Windows 下 Codex 启动前置校验改为优先检查商店安装可用性**：检测到 Store 注册入口即可通过启动可用性校验，只有必要时才回退到可执行路径校验。
+
+### 新增
+- **Windows 下 Codex 启动日志新增策略可观测性**：日志会明确打印本次走的是 `system-store-entry` 还是 `exe-path`，并附带命中的 app id/路径与解析到的 pid，便于排障确认。
+
+---
+## [0.17.1] - 2026-03-20
+
+### 新增
+- **网络设置新增“全局代理”能力并支持注入到受管启动进程**：新增 `global_proxy_enabled`/`global_proxy_url`/`global_proxy_no_proxy`，并在 Cockpit 启动的平台应用与实例启动链路中按 macOS/Linux/Windows 注入代理环境变量。
+- **GitHub Copilot 切号新增 OpenCode 联动与启动开关配置**：通用设置与快捷设置新增 GitHub Copilot 自动启动、OpenCode 登录覆盖、切号后自动重启 OpenCode 三项控制。
+
+### 变更
+- **OpenCode 自动重启开关现在与登录覆盖开关保持依赖一致**：在设置页和快捷设置中，关闭登录覆盖时会自动关闭对应的自动重启开关，覆盖 Codex 与 GitHub Copilot 两条切号链路。
+
+---
+## [0.17.0] - 2026-03-19
+
+### 新增
+- **Codex 切号新增可选的 OpenClaw 登录覆盖开关**：设置页与快捷设置新增 `openclaw_auth_overwrite_on_switch`；关闭时仅切换 Codex，不改写 OpenClaw 当前登录态。
+
+### 变更
+- **Codex 到 OpenClaw 的凭据同步升级为 `openai-codex:default` 全链路写入与校验**：切号时会更新 OpenClaw `auth-profiles.json`、清理旧 `openai-codex:*` 档案、同步候选路径，并校验账号/邮箱/过期时间与 Codex 凭据一致。
+- **macOS 上 Codex 切号会同时更新 Keychain 的 `Codex Auth` 记录**：保证 external-cli/OpenClaw 读取到的凭据与当前 Codex 账号一致。
+- **OpenClaw 同步后的运行态刷新增加重试机制以加快生效**：同步后会尝试执行 `secrets reload` 与 `gateway restart`，失败时自动再试一次并输出可诊断日志。
+
+---
 ## [0.16.3] - 2026-03-19
 
 ### 新增

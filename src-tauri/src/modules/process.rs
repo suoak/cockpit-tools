@@ -1053,6 +1053,95 @@ fn sanitize_macos_gui_launch_env(cmd: &mut Command) {
     cmd.env_remove("XPC_SERVICE_NAME");
 }
 
+fn managed_proxy_env_pairs() -> Vec<(&'static str, String)> {
+    let config = config::get_user_config();
+    if !config.global_proxy_enabled {
+        return Vec::new();
+    }
+
+    let proxy_url = config.global_proxy_url.trim();
+    if proxy_url.is_empty() {
+        crate::modules::logger::log_warn("[Proxy] 全局代理已启用，但代理地址为空，跳过注入");
+        return Vec::new();
+    }
+
+    let mut pairs = vec![
+        ("http_proxy", proxy_url.to_string()),
+        ("https_proxy", proxy_url.to_string()),
+        ("HTTP_PROXY", proxy_url.to_string()),
+        ("HTTPS_PROXY", proxy_url.to_string()),
+        ("all_proxy", proxy_url.to_string()),
+        ("ALL_PROXY", proxy_url.to_string()),
+    ];
+
+    let no_proxy = config.global_proxy_no_proxy.trim();
+    if !no_proxy.is_empty() {
+        pairs.push(("no_proxy", no_proxy.to_string()));
+        pairs.push(("NO_PROXY", no_proxy.to_string()));
+    }
+
+    pairs
+}
+
+fn log_managed_proxy_injection(mode: &str, cmd: &Command, pairs: &[(&'static str, String)]) {
+    if pairs.is_empty() {
+        return;
+    }
+
+    let proxy_url = pairs
+        .iter()
+        .find_map(|(key, value)| (*key == "http_proxy").then_some(value.as_str()))
+        .unwrap_or("");
+    let no_proxy = pairs
+        .iter()
+        .find_map(|(key, value)| (*key == "no_proxy").then_some(value.as_str()))
+        .unwrap_or("");
+    let keys = pairs
+        .iter()
+        .map(|(key, _)| *key)
+        .collect::<Vec<&str>>()
+        .join(",");
+
+    crate::modules::logger::log_info(&format!(
+        "[Proxy] 已注入全局代理 mode={} program={} proxy_url={} no_proxy={} keys={}",
+        mode,
+        cmd.get_program().to_string_lossy(),
+        proxy_url,
+        if no_proxy.is_empty() {
+            "<empty>"
+        } else {
+            no_proxy
+        },
+        keys
+    ));
+}
+
+pub fn apply_managed_proxy_env_to_command(cmd: &mut Command) {
+    let pairs = managed_proxy_env_pairs();
+    if pairs.is_empty() {
+        return;
+    }
+    log_managed_proxy_injection("env", cmd, &pairs);
+    for (key, value) in pairs {
+        cmd.env(key, value);
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn append_managed_proxy_env_to_open_args(cmd: &mut Command) {
+    let pairs = managed_proxy_env_pairs();
+    if pairs.is_empty() {
+        return;
+    }
+    log_managed_proxy_injection("open-arg", cmd, &pairs);
+    for (key, value) in pairs {
+        cmd.arg("--env").arg(format!("{}={}", key, value));
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn append_managed_proxy_env_to_open_args(_cmd: &mut Command) {}
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn spawn_detached_unix(cmd: &mut Command) -> Result<Child, String> {
     use std::os::unix::process::CommandExt;
@@ -1261,6 +1350,7 @@ fn spawn_open_app_with_options_and_env(
     for (key, value) in extra_envs {
         cmd.env(key, value);
     }
+    append_managed_proxy_env_to_open_args(&mut cmd);
     if force_new_instance {
         cmd.arg("-n");
     }
@@ -2362,6 +2452,114 @@ if ($pkg -and -not [string]::IsNullOrWhiteSpace($pkg.InstallLocation)) {
     None
 }
 
+#[cfg(target_os = "windows")]
+fn detect_codex_store_app_user_model_id_by_startapps() -> Option<String> {
+    let script = r#"$entry = Get-StartApps | Where-Object { $_.AppID -like 'OpenAI.Codex_*' } |
+  Select-Object -First 1
+if ($entry -and -not [string]::IsNullOrWhiteSpace($entry.AppID)) {
+  Write-Output ([string]$entry.AppID.Trim())
+}"#;
+
+    let output = match powershell_output(&["-Command", script]) {
+        Ok(value) => value,
+        Err(_) => powershell_output_file(script).ok()?,
+    };
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let app_user_model_id = line.trim().trim_matches('"');
+        if !app_user_model_id.is_empty() {
+            return Some(app_user_model_id.to_string());
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn detect_codex_store_app_user_model_id_by_appx_fallback() -> Option<String> {
+    let script = r#"$pkg = Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue |
+  Sort-Object -Property Version -Descending |
+  Select-Object -First 1
+if ($pkg -and -not [string]::IsNullOrWhiteSpace($pkg.PackageFamilyName)) {
+  Write-Output ([string]($pkg.PackageFamilyName.Trim() + '!App'))
+}"#;
+
+    let output = match powershell_output(&["-Command", script]) {
+        Ok(value) => value,
+        Err(_) => powershell_output_file(script).ok()?,
+    };
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let app_user_model_id = line.trim().trim_matches('"');
+        if !app_user_model_id.is_empty() {
+            return Some(app_user_model_id.to_string());
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn detect_codex_store_app_user_model_id() -> Option<String> {
+    if let Some(app_user_model_id) = detect_codex_store_app_user_model_id_by_startapps() {
+        crate::modules::logger::log_info(&format!(
+            "[Codex Store] StartApps 命中 AppUserModelId: {}",
+            app_user_model_id
+        ));
+        return Some(app_user_model_id);
+    }
+    if let Some(app_user_model_id) = detect_codex_store_app_user_model_id_by_appx_fallback() {
+        crate::modules::logger::log_info(&format!(
+            "[Codex Store] Appx fallback 命中 AppUserModelId: {}",
+            app_user_model_id
+        ));
+        return Some(app_user_model_id);
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn launch_codex_via_store_app_user_model_id(app_user_model_id: &str) -> Result<(), String> {
+    let app_user_model_id = app_user_model_id.trim();
+    if app_user_model_id.is_empty() {
+        return Err("Codex AppUserModelId 为空".to_string());
+    }
+
+    let escaped = escape_powershell_single_quoted(app_user_model_id);
+    let script = format!(
+        r#"$appId='{escaped}';
+$target='shell:AppsFolder\' + $appId
+Start-Process -FilePath $target -ErrorAction Stop | Out-Null"#
+    );
+
+    let output = match powershell_output(&["-Command", &script]) {
+        Ok(value) => value,
+        Err(_) => {
+            powershell_output_file(&script).map_err(|e| format!("系统入口启动调用失败: {}", e))?
+        }
+    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr_head = stderr.trim().chars().take(400).collect::<String>();
+        return Err(format!(
+            "系统入口启动失败: status={}, stderr={}",
+            output.status,
+            if stderr_head.is_empty() {
+                "<empty>".to_string()
+            } else {
+                stderr_head
+            }
+        ));
+    }
+    Ok(())
+}
+
 fn detect_codex_exec_path() -> Option<std::path::PathBuf> {
     #[cfg(target_os = "macos")]
     {
@@ -2464,7 +2662,21 @@ pub fn ensure_vscode_launch_path_configured() -> Result<(), String> {
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn ensure_codex_launch_path_configured() -> Result<(), String> {
-    resolve_codex_launch_path().map(|_| ())
+    #[cfg(target_os = "windows")]
+    {
+        if detect_codex_store_app_user_model_id().is_some() {
+            return Ok(());
+        }
+        if resolve_codex_launch_path().is_ok() {
+            return Ok(());
+        }
+        return Err("未检测到 Codex 商店安装，请先在 Microsoft Store 安装 Codex".to_string());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        resolve_codex_launch_path().map(|_| ())
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -5700,6 +5912,7 @@ pub fn start_antigravity_with_args(
         use std::os::windows::process::CommandExt;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS); // CREATE_NO_WINDOW | detached
             cmd.stdin(Stdio::null())
@@ -5730,6 +5943,7 @@ pub fn start_antigravity_with_args(
     #[cfg(target_os = "linux")]
     {
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -6026,7 +6240,7 @@ pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     collect_codex_process_entries_from_powershell(expected)
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))
 pub fn collect_codex_process_entries() -> Vec<(u32, Option<String>)> {
     Vec::new()
 }
@@ -6170,6 +6384,8 @@ pub fn start_codex_with_args(user_data_dir: &str, extra_args: &[String]) -> Resu
         // open -a 无法传递环境变量，因此需要直接执行
         if !codex_home_trimmed.is_empty() {
             let mut cmd = Command::new(&launch_path);
+            apply_managed_proxy_env_to_command(&mut cmd);
+            sanitize_macos_gui_launch_env(&mut cmd);
             cmd.env("CODEX_HOME", codex_home_trimmed);
             cmd.arg("--user-data-dir").arg(codex_home_trimmed);
             cmd.arg("--new-window");
@@ -6299,8 +6515,81 @@ pub fn start_codex_default(extra_args: &[String]) -> Result<u32, String> {
     {
         use std::os::windows::process::CommandExt;
 
+        let before_pids: HashSet<u32> = collect_codex_process_entries()
+            .into_iter()
+            .map(|(pid, _)| pid)
+            .collect();
+        let app_user_model_id = detect_codex_store_app_user_model_id();
+        if let Some(app_user_model_id) = app_user_model_id {
+            crate::modules::logger::log_info(&format!(
+                "[Codex Start] 启动策略候选=system-store-entry app_id={}",
+                app_user_model_id
+            ));
+            match launch_codex_via_store_app_user_model_id(&app_user_model_id) {
+                Ok(()) => {
+                    crate::modules::logger::log_info(&format!(
+                        "[Codex Start] 已通过系统入口启动 Codex: {}",
+                        app_user_model_id
+                    ));
+                    let probe_started = Instant::now();
+                    let timeout = Duration::from_secs(15);
+                    while probe_started.elapsed() < timeout {
+                        let entries = collect_codex_process_entries();
+                        let mut new_pids: Vec<u32> = entries
+                            .iter()
+                            .map(|(pid, _)| *pid)
+                            .filter(|pid| !before_pids.contains(pid))
+                            .collect();
+                        if let Some(pid) = pick_preferred_pid(new_pids.clone()) {
+                            crate::modules::logger::log_info(&format!(
+                                "[Codex Start] 启动策略=system-store-entry app_id={} pid={}",
+                                app_user_model_id, pid
+                            ));
+                            return Ok(pid);
+                        }
+                        if before_pids.is_empty() {
+                            new_pids = entries.iter().map(|(pid, _)| *pid).collect();
+                            if let Some(pid) = pick_preferred_pid(new_pids) {
+                                crate::modules::logger::log_info(&format!(
+                                    "[Codex Start] 启动策略=system-store-entry app_id={} pid={}",
+                                    app_user_model_id, pid
+                                ));
+                                return Ok(pid);
+                            }
+                        }
+                        thread::sleep(Duration::from_millis(250));
+                    }
+                    if let Some(pid) = resolve_codex_pid(None, None) {
+                        crate::modules::logger::log_info(&format!(
+                            "[Codex Start] 启动策略=system-store-entry app_id={} pid={}",
+                            app_user_model_id, pid
+                        ));
+                        return Ok(pid);
+                    }
+                    crate::modules::logger::log_warn(
+                        "[Codex Start] 系统入口已调用，但 15s 内未探测到 Codex 主进程，准备回退可执行路径",
+                    );
+                }
+                Err(err) => {
+                    crate::modules::logger::log_warn(&format!(
+                        "[Codex Start] 系统入口启动失败，准备回退可执行路径: {}",
+                        err
+                    ));
+                }
+            }
+        } else {
+            crate::modules::logger::log_warn(
+                "[Codex Start] 未探测到 Codex AppUserModelId，准备回退可执行路径",
+            );
+        }
+
         let launch_path = resolve_codex_launch_path()?;
+        crate::modules::logger::log_info(&format!(
+            "[Codex Start] 启动策略=exe-path launch_path={}",
+            launch_path.to_string_lossy()
+        ));
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             // Codex 是 GUI 应用，不设置 CREATE_NO_WINDOW，否则会导致其内部 spawn CLI 子进程失败
             cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
@@ -6317,8 +6606,9 @@ pub fn start_codex_default(extra_args: &[String]) -> Result<u32, String> {
         let child =
             spawn_command_with_trace(&mut cmd).map_err(|e| format!("启动 Codex 失败: {}", e))?;
         crate::modules::logger::log_info(&format!(
-            "Codex 默认实例已启动: {}",
-            launch_path.to_string_lossy()
+            "[Codex Start] 启动策略=exe-path launch_path={} pid={}",
+            launch_path.to_string_lossy(),
+            child.id()
         ));
         return Ok(child.id());
     }
@@ -6829,8 +7119,12 @@ pub fn start_opencode_with_path(custom_path: Option<&str>) -> Result<(), String>
         let target =
             normalize_custom_path(custom_path).unwrap_or_else(|| OPENCODE_APP_NAME.to_string());
 
-        let output = Command::new("open")
-            .args(["-a", &target])
+        let mut cmd = Command::new("open");
+        sanitize_macos_gui_launch_env(&mut cmd);
+        append_managed_proxy_env_to_open_args(&mut cmd);
+        cmd.args(["-a", &target]);
+
+        let output = cmd
             .output()
             .map_err(|e| format!("启动 OpenCode 失败: {}", e))?;
 
@@ -6868,6 +7162,7 @@ pub fn start_opencode_with_path(custom_path: Option<&str>) -> Result<(), String>
                 }
             }
             let mut cmd = Command::new(&candidate);
+            apply_managed_proxy_env_to_command(&mut cmd);
             cmd.creation_flags(0x08000000);
             if spawn_command_with_trace(&mut cmd).is_ok() {
                 crate::modules::logger::log_info(&format!("OpenCode 已启动: {}", candidate));
@@ -6896,6 +7191,7 @@ pub fn start_opencode_with_path(custom_path: Option<&str>) -> Result<(), String>
                 }
             }
             let mut cmd = Command::new(&candidate);
+            apply_managed_proxy_env_to_command(&mut cmd);
             if spawn_command_with_trace(&mut cmd).is_ok() {
                 crate::modules::logger::log_info(&format!("OpenCode 已启动: {}", candidate));
                 return Ok(());
@@ -7087,6 +7383,7 @@ pub fn start_vscode_with_args_with_new_window(
         let launch_path = resolve_vscode_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7123,6 +7420,7 @@ pub fn start_vscode_with_args_with_new_window(
         let launch_path = resolve_vscode_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7218,6 +7516,7 @@ pub fn start_codebuddy_with_args_with_new_window(
         let launch_path = resolve_codebuddy_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7254,6 +7553,7 @@ pub fn start_codebuddy_with_args_with_new_window(
         let launch_path = resolve_codebuddy_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7337,6 +7637,7 @@ pub fn start_codebuddy_default_with_args_with_new_window(
 
         let launch_path = resolve_codebuddy_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7366,6 +7667,7 @@ pub fn start_codebuddy_default_with_args_with_new_window(
     {
         let launch_path = resolve_codebuddy_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7459,6 +7761,7 @@ pub fn start_codebuddy_cn_with_args_with_new_window(
         let launch_path = resolve_codebuddy_cn_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7495,6 +7798,7 @@ pub fn start_codebuddy_cn_with_args_with_new_window(
         let launch_path = resolve_codebuddy_cn_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7578,6 +7882,7 @@ pub fn start_codebuddy_cn_default_with_args_with_new_window(
 
         let launch_path = resolve_codebuddy_cn_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7607,6 +7912,7 @@ pub fn start_codebuddy_cn_default_with_args_with_new_window(
     {
         let launch_path = resolve_codebuddy_cn_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7698,6 +8004,7 @@ pub fn start_workbuddy_with_args_with_new_window(
         let launch_path = resolve_workbuddy_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7734,6 +8041,7 @@ pub fn start_workbuddy_with_args_with_new_window(
         let launch_path = resolve_workbuddy_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7815,6 +8123,7 @@ pub fn start_workbuddy_default_with_args_with_new_window(
 
         let launch_path = resolve_workbuddy_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7844,6 +8153,7 @@ pub fn start_workbuddy_default_with_args_with_new_window(
     {
         let launch_path = resolve_workbuddy_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -7932,6 +8242,7 @@ pub fn start_qoder_with_args_with_new_window(
         let launch_path = resolve_qoder_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -7968,6 +8279,7 @@ pub fn start_qoder_with_args_with_new_window(
         let launch_path = resolve_qoder_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -8045,6 +8357,7 @@ pub fn start_qoder_default_with_args_with_new_window(
 
         let launch_path = resolve_qoder_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -8074,6 +8387,7 @@ pub fn start_qoder_default_with_args_with_new_window(
     {
         let launch_path = resolve_qoder_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -8161,6 +8475,7 @@ pub fn start_trae_with_args_with_new_window(
         let launch_path = resolve_trae_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -8197,6 +8512,7 @@ pub fn start_trae_with_args_with_new_window(
         let launch_path = resolve_trae_launch_path()?;
 
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -8274,6 +8590,7 @@ pub fn start_trae_default_with_args_with_new_window(
 
         let launch_path = resolve_trae_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -8303,6 +8620,7 @@ pub fn start_trae_default_with_args_with_new_window(
     {
         let launch_path = resolve_trae_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -8383,6 +8701,7 @@ pub fn start_vscode_default_with_args_with_new_window(
 
         let launch_path = resolve_vscode_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.creation_flags(0x08000000 | CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
             cmd.stdin(Stdio::null())
@@ -8412,6 +8731,7 @@ pub fn start_vscode_default_with_args_with_new_window(
     {
         let launch_path = resolve_vscode_launch_path()?;
         let mut cmd = Command::new(&launch_path);
+        apply_managed_proxy_env_to_command(&mut cmd);
         if should_detach_child() {
             cmd.stdin(Stdio::null())
                 .stdout(Stdio::null())

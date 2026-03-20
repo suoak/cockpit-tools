@@ -1,6 +1,6 @@
 cask "cockpit-tools" do
-  version "0.16.3"
-  sha256 "95fcf1b5c730ef6d5361051b46cc61b15d9151b736b8af49ce8f104e422a2761"
+  version "0.17.1"
+  sha256 "e11eb09ac18cc0c9fd428d57bd9640a906892a52b7fb172b0c0f229d8b737fd2"
 
   url "https://github.com/suoak/cockpit-tools/releases/download/v#{version}/SC-Cockpit.Tools_#{version}_universal.dmg",
       verified: "github.com/suoak/cockpit-tools/"
@@ -28,6 +28,6 @@ cask "cockpit-tools" do
   caveats <<~EOS
     The app is automatically quarantined by macOS. A postflight hook has been added to remove this quarantine.
     If you still encounter the "App is damaged" error, please run:
-      sudo xattr -rd com.apple.quarantine "/Applications/SC-Cockpit Tools.app"
+      sudo xattr -rd com.apple.quarantine "/Applications/Cockpit Tools.app"
   EOS
 end

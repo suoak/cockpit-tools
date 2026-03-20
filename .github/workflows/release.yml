@@ -200,13 +200,22 @@ jobs:
         shell: pwsh
         run: |
           $exePath = "src-tauri\target\release\cockpit-tools.exe"
-          if (Test-Path $exePath) {
-            Write-Host "[INFO] Stripping metadata from exe..."
-            & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
-            Write-Host "[SUCCESS] Exe metadata stripped!"
-          } else {
+          if (!(Test-Path $exePath)) {
             Write-Host "[ERROR] Exe not found: $exePath"
             exit 1
+          }
+          Write-Host "[INFO] Stripping VERSIONINFO from exe..."
+          & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] ResourceHacker failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+          # Verify metadata was actually stripped
+          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+          if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
+            Write-Host "[WARN] Exe still has metadata: ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
+          } else {
+            Write-Host "[SUCCESS] Exe metadata verified clean"
           }
 
       # Step 3: Create NSIS + MSI installers (no recompile, uses stripped exe)
@@ -214,6 +223,32 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: npx tauri bundle --bundles nsis,msi
+
+      # Step 3.5: Verify exe metadata is still stripped after bundling
+      # (tauri bundle may trigger recompilation, re-adding VERSIONINFO)
+      - name: Verify and re-strip exe metadata if needed (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $exePath = "src-tauri\target\release\cockpit-tools.exe"
+          $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+          if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
+            Write-Host "[WARN] Exe metadata was restored by tauri bundle, re-stripping..."
+            Write-Host "[WARN] ProductName=$($vi.ProductName), FileVersion=$($vi.FileVersion), CompanyName=$($vi.CompanyName)"
+            & $env:RESHACKER_PATH -open $exePath -save $exePath -action delete -mask "VERSIONINFO,,"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "[ERROR] ResourceHacker re-strip failed with exit code $LASTEXITCODE"
+              exit 1
+            }
+            $vi2 = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exePath).Path)
+            if ($vi2.ProductName -or $vi2.FileVersion -or $vi2.CompanyName) {
+              Write-Host "[ERROR] Exe metadata STILL present after re-strip!"
+              exit 1
+            }
+            Write-Host "[SUCCESS] Exe metadata re-stripped and verified clean"
+          } else {
+            Write-Host "[SUCCESS] Exe metadata is still clean after bundling"
+          }
 
       # Step 4: Strip MSI installer metadata (SummaryInformation stream)
       # Uses Windows Installer API via inline C# to clear metadata PIDs.
