@@ -1343,6 +1343,9 @@
     "usage": "Usage Status",
     "creditsBalance": "Credits Balance",
     "usageNormal": "Normal",
+    "usageAbnormal": "Abnormal",
+    "usageViewDetail": "View details",
+    "usageDetailTitle": "Usage Status Details",
     "oauthWaiting": "Waiting for authorization...",
     "oauthDesc": "Click the button below to open the CodeBuddy authorization page in your browser.",
     "oauthDescWebview": "Click the button below to open the CodeBuddy authorization page in built-in WebView.",
@@ -1661,15 +1664,24 @@
     "credits": {
       "title": "Plan",
       "renewMonthly": "Credits renew every month",
-      "left": "{{count}} credits left",
+      "left": "{{value}} credits left",
       "leftUnknown": "Credits left -",
       "promptLeft": "{{remaining}}/{{total}} prompt credits left",
       "promptLeftNoTotal": "{{remaining}} prompt credits left",
       "promptLeftUnknown": "Prompt credits left -",
-      "addOnAvailable": "{{count}} add-on credits available"
+      "addOnAvailable": "{{count}} add-on credits available",
+      "promptCreditsLeftLabel": "prompt credits left",
+      "addOnCreditsAvailableLabel": "add-on credits available"
     },
     "columns": {
       "plan": "Tag"
+    },
+    "usageSummary": {
+      "dailyQuota": "Daily quota usage",
+      "weeklyQuota": "Weekly quota usage",
+      "extraUsageBalance": "Extra usage balance",
+      "autoRecharge": "Auto recharge",
+      "remaining": "{{value}} remaining"
     },
     "injectToVSCode": "Switch to Windsurf",
     "injectSuccess": "Switch completed. Windsurf is launching.",
@@ -2280,6 +2292,9 @@
     "usage": "Usage Status",
     "creditsBalance": "Credits Balance",
     "usageNormal": "Normal",
+    "usageAbnormal": "Abnormal",
+    "usageViewDetail": "View details",
+    "usageDetailTitle": "Usage Status Details",
     "oauthWaiting": "Waiting for authorization...",
     "oauthDesc": "Click the button below to open the WorkBuddy authorization page in your browser.",
     "oauthDescWebview": "Click the button below to open the WorkBuddy authorization page in built-in WebView.",

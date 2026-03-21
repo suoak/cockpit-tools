@@ -7,6 +7,37 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.17.6] - 2026-03-20
+
+### Changed
+- **Windsurf usage-mode detection now follows the official billing-strategy enums end-to-end**: the account page now normalizes raw `BILLING_STRATEGY_*` values before deciding between quota and credits, preventing official quota accounts from being misclassified when Windsurf stores enum-style strategy strings.
+- **Windsurf quota panels now keep the official three-field summary visible**: quota-billed accounts now always render daily quota usage, weekly quota usage, and extra usage balance, defaulting the extra-balance row to `$0.00` when the local snapshot does not include an upstream balance value.
+
+---
+## [0.17.5] - 2026-03-20
+
+### Changed
+- **Windsurf account usage now follows the official billing mode presentation**: quota-billed accounts now show daily/weekly quota usage, reset times, and extra usage balance, while credits-billed accounts show combined credits left with prompt/add-on breakdown.
+- **Manual help entry is now unified across dashboard and overview headers**: dashboard and platform overview headers now reuse one shared help icon button with consistent sizing, hover feedback, and navigation behavior.
+
+---
+## [0.17.4] - 2026-03-20
+
+### Changed
+- **Account plan filtering now supports multi-select across major account pages**: Accounts, Codex, Cursor, Gemini, GitHub Copilot, Kiro, Qoder, Trae, Windsurf, CodeBuddy, CodeBuddy CN, and WorkBuddy pages now allow selecting multiple plan/status types in one pass.
+- **Plan filter interaction is now unified through a shared dropdown component**: introduced reusable multi-select filter UI with selected-count indicator, one-click clear, and consistent filtering behavior across provider pages.
+
+---
+## [0.17.3] - 2026-03-20
+
+### Added
+- **Desktop now includes a built-in live log viewer for runtime diagnostics**: added a floating log entry button in the main window, with latest-log tail view, auto refresh, line-limit control, clear/copy content, copy log path, and one-click open log directory.
+- **Backend log commands now support latest-file snapshot and bounded tail reads**: added latest `app.log*` discovery, tail line clamping, and cross-platform log-directory open commands for frontend diagnostics.
+
+### Changed
+- **CodeBuddy and WorkBuddy usage-state rendering is now unified with explicit abnormal details**: account cards/tables now show a normalized abnormal state with a detail modal and masked account context, and CodeBuddy/WorkBuddy instance quota previews now use shared dosage-notify renderers for consistent output.
+
+---
 ## [0.17.2] - 2026-03-20
 
 ### Changed

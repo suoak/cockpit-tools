@@ -62,10 +62,33 @@
   width: 100%;
 }
 
+.workbuddy-accounts-page .workbuddy-usage-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workbuddy-accounts-page .workbuddy-usage-detail-trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.workbuddy-accounts-page .workbuddy-usage-detail-trigger:hover {
+  text-decoration: underline;
+}
+
 .workbuddy-accounts-page .quota-error-detail {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.4;
+}
+
+.workbuddy-accounts-page .workbuddy-usage-detail-modal {
+  max-width: 560px;
 }
 
 .workbuddy-accounts-page .workbuddy-quota-query-modal {
@@ -206,4 +229,3 @@
     grid-template-columns: 1fr;
   }
 }
-

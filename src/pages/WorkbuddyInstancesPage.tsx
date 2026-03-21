@@ -9,6 +9,7 @@ import {
   getWorkbuddyUsage,
 } from '../types/workbuddy';
 import { usePlatformRuntimeSupport } from '../hooks/usePlatformRuntimeSupport';
+import { DosageNotifyQuotaPreview } from '../components/platform/DosageNotifyQuotaPreview';
 
 interface WorkbuddyInstancesContentProps {
   accountsForSelect?: WorkbuddyAccount[];
@@ -26,31 +27,15 @@ export function WorkbuddyInstancesContent({
 
   const renderWorkbuddyQuotaPreview = (account: WorkbuddyAccount) => {
     const usage = getWorkbuddyUsage(account);
-    if (!usage.dosageNotifyCode) {
-      return <span className="account-quota-empty">{t('instances.quota.empty', '暂无配额缓存')}</span>;
-    }
-    if (usage.isNormal) {
-      return (
-        <div className="account-quota-preview">
-          <span className="account-quota-item">
-            <span className="quota-dot high" />
-            <span className="quota-text high">{t('workbuddy.usageNormal', '正常')}</span>
-          </span>
-        </div>
-      );
-    }
-
-    const text = locale.startsWith('zh')
-      ? (usage.dosageNotifyZh || usage.dosageNotifyCode)
-      : (usage.dosageNotifyEn || usage.dosageNotifyCode);
-
     return (
-      <div className="account-quota-preview">
-        <span className="account-quota-item">
-          <span className="quota-dot critical" />
-          <span className="quota-text critical">{text}</span>
-        </span>
-      </div>
+      <DosageNotifyQuotaPreview
+        usage={usage}
+        locale={locale}
+        emptyText={t('instances.quota.empty', '暂无配额缓存')}
+        normalText={t('workbuddy.usageNormal', '正常')}
+        abnormalText={t('workbuddy.usageAbnormal', '异常')}
+        abnormalDisplay="short"
+      />
     );
   };
 

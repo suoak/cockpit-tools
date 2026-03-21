@@ -62,10 +62,33 @@
   width: 100%;
 }
 
+.codebuddy-accounts-page .codebuddy-usage-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.codebuddy-accounts-page .codebuddy-usage-detail-trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.codebuddy-accounts-page .codebuddy-usage-detail-trigger:hover {
+  text-decoration: underline;
+}
+
 .codebuddy-accounts-page .quota-error-detail {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.4;
+}
+
+.codebuddy-accounts-page .codebuddy-usage-detail-modal {
+  max-width: 560px;
 }
 
 .codebuddy-accounts-page .codebuddy-quota-query-modal {

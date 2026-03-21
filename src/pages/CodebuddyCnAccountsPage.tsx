@@ -21,6 +21,8 @@ import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
 import { PlatformOverviewTabsHeader, PlatformOverviewTab } from '../components/platform/PlatformOverviewTabsHeader';
 import { CodebuddyCnInstancesContent } from './CodebuddyCnInstancesPage';
+import { DosageNotifyUsageStatus } from '../components/platform/DosageNotifyUsageStatus';
+import { MultiSelectFilterDropdown, type MultiSelectFilterOption } from '../components/MultiSelectFilterDropdown';
 
 const CB_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.codebuddycn.flow_notice_collapsed';
 const CB_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddycn.current_account_id';
@@ -50,6 +52,7 @@ function getQuotaClassByRemainPercent(remainPercent: number | null): string {
 
 export function CodebuddyCnAccountsPage() {
   const [activeTab, setActiveTab] = useState<PlatformOverviewTab>('overview');
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const untaggedKey = '__untagged__';
   const store = useCodebuddyCnAccountStore();
 
@@ -86,7 +89,7 @@ export function CodebuddyCnAccountsPage() {
 
   const {
     t, locale, privacyModeEnabled, togglePrivacyMode, maskAccountText,
-    viewMode, setViewMode, searchQuery, setSearchQuery, filterType, setFilterType,
+    viewMode, setViewMode, searchQuery, setSearchQuery,
     sortDirection, sortBy,
     selected, toggleSelect, toggleSelectAll,
     tagFilter, groupByTag, setGroupByTag, showTagFilter, setShowTagFilter,
@@ -114,6 +117,19 @@ export function CodebuddyCnAccountsPage() {
     isFlowNoticeCollapsed, setIsFlowNoticeCollapsed,
     currentAccountId, formatDate, normalizeTag,
   } = page;
+
+  const toggleFilterTypeValue = useCallback((value: string) => {
+    setFilterTypes((prev) => {
+      if (prev.includes(value)) {
+        return prev.filter((item) => item !== value);
+      }
+      return [...prev, value];
+    });
+  }, []);
+
+  const clearFilterTypes = useCallback(() => {
+    setFilterTypes([]);
+  }, []);
 
   const accounts = store.accounts;
   const loading = store.loading;
@@ -167,6 +183,22 @@ export function CodebuddyCnAccountsPage() {
     return { all: accounts.length, dynamicCounts, extraKeys };
   }, [accounts, resolvePlanKey]);
 
+  const tierFilterOptions = useMemo<MultiSelectFilterOption[]>(() => {
+    const options: MultiSelectFilterOption[] = [];
+    CB_KNOWN_PLAN_FILTERS.forEach((plan) => {
+      const count = tierSummary.dynamicCounts.get(plan) ?? 0;
+      if (count === 0) return;
+      options.push({ value: plan, label: `${plan} (${count})` });
+    });
+    tierSummary.extraKeys.forEach((key) => {
+      options.push({
+        value: key,
+        label: `${key} (${tierSummary.dynamicCounts.get(key) ?? 0})`,
+      });
+    });
+    return options;
+  }, [tierSummary.dynamicCounts, tierSummary.extraKeys]);
+
   const filteredAccounts = useMemo(() => {
     let result = [...accounts];
     if (searchQuery.trim()) {
@@ -176,8 +208,9 @@ export function CodebuddyCnAccountsPage() {
           .some((item) => item.toLowerCase().includes(query)),
       );
     }
-    if (filterType !== 'all') {
-      result = result.filter((account) => resolvePlanKey(account) === filterType);
+    if (filterTypes.length > 0) {
+      const selectedTypes = new Set(filterTypes);
+      result = result.filter((account) => selectedTypes.has(resolvePlanKey(account)));
     }
     if (tagFilter.length > 0) {
       const selectedTags = new Set(tagFilter.map(normalizeTag));
@@ -188,7 +221,7 @@ export function CodebuddyCnAccountsPage() {
       return sortDirection === 'desc' ? diff : -diff;
     });
     return result;
-  }, [accounts, searchQuery, filterType, resolvePlanKey, tagFilter, normalizeTag, sortBy, sortDirection]);
+  }, [accounts, searchQuery, filterTypes, resolvePlanKey, tagFilter, normalizeTag, sortBy, sortDirection]);
 
   const groupedAccounts = useMemo(() => {
     if (!groupByTag) return [] as Array<[string, typeof filteredAccounts]>;
@@ -328,13 +361,22 @@ export function CodebuddyCnAccountsPage() {
 
   const renderUsageInfo = useCallback((account: CodebuddyAccount) => {
     const usage = getCodebuddyUsage(account);
-    if (!usage.dosageNotifyCode) return <span className="quota-empty">--</span>;
-    if (usage.isNormal) return <span className="quota-value high">{t('codebuddy.usageNormal', '正常')}</span>;
-    const msg = locale.startsWith('zh')
-      ? (usage.dosageNotifyZh || usage.dosageNotifyCode)
-      : (usage.dosageNotifyEn || usage.dosageNotifyCode);
-    return <span className="quota-value critical" title={msg}>{msg}</span>;
-  }, [locale, t]);
+    return (
+      <DosageNotifyUsageStatus
+        usage={usage}
+        locale={locale}
+        accountLabel={maskAccountText(getCodebuddyAccountDisplayEmail(account))}
+        normalText={t('codebuddy.usageNormal', '正常')}
+        abnormalText={t('codebuddy.usageAbnormal', '异常')}
+        viewDetailText={t('codebuddy.usageViewDetail', '查看详情')}
+        detailTitle={t('codebuddy.usageDetailTitle', '用量状态详情')}
+        accountText={t('common.shared.columns.account', '账号')}
+        confirmText={t('common.confirm', '确认')}
+        closeText={t('common.close', '关闭')}
+        classPrefix="codebuddy"
+      />
+    );
+  }, [locale, maskAccountText, t]);
 
   const renderQuotaQuerySection = useCallback((account: CodebuddyAccount, variant: 'card' | 'table') => {
     const model = getCodebuddyOfficialQuotaModel(account);
@@ -507,17 +549,17 @@ export function CodebuddyCnAccountsPage() {
             <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title={t('common.shared.view.list', '列表视图')}><List size={16} /></button>
             <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title={t('common.shared.view.grid', '卡片视图')}><LayoutGrid size={16} /></button>
           </div>
-          <div className="filter-select">
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-              <option value="all">{`ALL (${tierSummary.all})`}</option>
-              {CB_KNOWN_PLAN_FILTERS.map((plan) => {
-                const count = tierSummary.dynamicCounts.get(plan) ?? 0;
-                if (count === 0) return null;
-                return <option key={plan} value={plan}>{`${plan} (${count})`}</option>;
-              })}
-              {tierSummary.extraKeys.map((key) => <option key={key} value={key}>{`${key} (${tierSummary.dynamicCounts.get(key) ?? 0})`}</option>)}
-            </select>
-          </div>
+          <MultiSelectFilterDropdown
+            options={tierFilterOptions}
+            selectedValues={filterTypes}
+            allLabel={`ALL (${tierSummary.all})`}
+            filterLabel={t('common.shared.filterLabel', '筛选')}
+            clearLabel={t('accounts.clearFilter', '清空筛选')}
+            emptyLabel={t('common.none', '暂无')}
+            ariaLabel={t('common.shared.filterLabel', '筛选')}
+            onToggleValue={toggleFilterTypeValue}
+            onClear={clearFilterTypes}
+          />
           <div className="tag-filter" ref={tagFilterRef}>
             <button type="button" className={`tag-filter-btn ${tagFilter.length > 0 ? 'active' : ''}`} onClick={() => setShowTagFilter((prev) => !prev)}>
               <Tag size={14} />

@@ -1568,15 +1568,24 @@
     "credits": {
       "title": "プラン",
       "renewMonthly": "クレジットは毎月更新されます",
-      "left": "残り {{count}} クレジット",
+      "left": "{{value}} クレジット残り",
       "leftUnknown": "残りクレジット -",
       "promptLeft": "残り {{remaining}}/{{total}} プロンプトクレジット",
       "promptLeftNoTotal": "残り {{remaining}} プロンプトクレジット",
       "promptLeftUnknown": "残りプロンプトクレジット -",
-      "addOnAvailable": "追加クレジット {{count}} が利用可能"
+      "addOnAvailable": "追加クレジット {{count}} が利用可能",
+      "promptCreditsLeftLabel": "残りのプロンプトクレジット",
+      "addOnCreditsAvailableLabel": "利用可能な追加クレジット"
     },
     "columns": {
       "plan": "タグ"
+    },
+    "usageSummary": {
+      "dailyQuota": "1日あたりのクォータ使用量",
+      "weeklyQuota": "週間クォータ使用量",
+      "extraUsageBalance": "追加利用残高",
+      "autoRecharge": "自動チャージ",
+      "remaining": "残り {{value}}"
     },
     "injectToVSCode": "Windsurfに切り替え",
     "injectSuccess": "切り替えが完了しました。Windsurf を起動しています。",
@@ -2086,6 +2095,9 @@
     "usage": "使用状況",
     "creditsBalance": "クレジット残高",
     "usageNormal": "正常",
+    "usageAbnormal": "異常",
+    "usageViewDetail": "詳細を見る",
+    "usageDetailTitle": "利用状態の詳細",
     "oauthWaiting": "認証完了を待機中...",
     "oauthDesc": "下のボタンをクリックすると、ブラウザで CodeBuddy の認証ページを開きます。",
     "oauthDescWebview": "下のボタンをクリックすると、内蔵 WebView で CodeBuddy の認証ページを開きます。",
@@ -2280,6 +2292,9 @@
     "usage": "使用状況",
     "creditsBalance": "クレジット残高",
     "usageNormal": "正常",
+    "usageAbnormal": "異常",
+    "usageViewDetail": "詳細を見る",
+    "usageDetailTitle": "利用状態の詳細",
     "oauthWaiting": "認証完了を待機中...",
     "oauthDesc": "下のボタンをクリックすると、ブラウザで WorkBuddy の認証ページを開きます。",
     "oauthDescWebview": "下のボタンをクリックすると、内蔵 WebView で WorkBuddy の認証ページを開きます。",
