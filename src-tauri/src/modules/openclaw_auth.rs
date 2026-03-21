@@ -1,7 +1,6 @@
 use crate::models::codex::CodexAccount;
 use crate::modules::{codex_account, codex_oauth, logger};
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -366,6 +365,7 @@ fn read_codex_auth_snapshot() -> Result<CodexCredentialSnapshot, String> {
 
 #[cfg(target_os = "macos")]
 fn build_codex_keychain_account(base_dir: &Path) -> String {
+    use sha2::{Digest, Sha256};
     let resolved_home = fs::canonicalize(base_dir).unwrap_or_else(|_| base_dir.to_path_buf());
     let mut hasher = Sha256::new();
     hasher.update(resolved_home.to_string_lossy().as_bytes());

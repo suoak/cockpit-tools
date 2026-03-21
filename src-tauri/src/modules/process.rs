@@ -64,6 +64,7 @@ fn parse_env_bool(value: &str) -> Option<bool> {
     }
 }
 
+#[allow(dead_code)]
 fn parse_env_value(input: &str) -> Option<String> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
@@ -1140,6 +1141,7 @@ pub fn append_managed_proxy_env_to_open_args(cmd: &mut Command) {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 pub fn append_managed_proxy_env_to_open_args(_cmd: &mut Command) {}
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -2315,6 +2317,7 @@ fn resolve_codebuddy_macos_exec_path(path_str: &str) -> Option<std::path::PathBu
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn compare_windows_store_version(left: &[u32], right: &[u32]) -> std::cmp::Ordering {
     let max_len = left.len().max(right.len());
     for idx in 0..max_len {
@@ -2329,6 +2332,7 @@ fn compare_windows_store_version(left: &[u32], right: &[u32]) -> std::cmp::Order
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn parse_codex_store_version_from_dir_name(dir_name: &str) -> Option<Vec<u32>> {
     let lower = dir_name.to_ascii_lowercase();
     if !lower.starts_with("openai.codex_") {
@@ -2353,6 +2357,7 @@ fn parse_codex_store_version_from_dir_name(dir_name: &str) -> Option<Vec<u32>> {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn detect_codex_exec_path_by_windowsapps_scan() -> Option<std::path::PathBuf> {
     let mut best: Option<(Vec<u32>, std::path::PathBuf)> = None;
 
@@ -2416,6 +2421,7 @@ fn detect_codex_exec_path_by_windowsapps_scan() -> Option<std::path::PathBuf> {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn detect_codex_exec_path_by_appx_install_location() -> Option<std::path::PathBuf> {
     let script = r#"$pkg = Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue |
   Sort-Object -Property Version -Descending |
@@ -6349,6 +6355,7 @@ pub fn list_codex_home_dirs(default_home: &str) -> Vec<String> {
 
 /// 判断 Codex 是否在运行
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+#[allow(dead_code)]
 pub fn is_codex_running() -> bool {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
@@ -6761,6 +6768,7 @@ pub fn close_codex_instance(user_data_dir: &str, timeout_secs: u64) -> Result<()
 }
 
 fn get_trae_pids() -> Vec<u32> {
+    #[allow(unused_mut)]
     let mut pids = Vec::new();
 
     #[cfg(target_os = "macos")]
