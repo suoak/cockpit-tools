@@ -1049,6 +1049,7 @@ fn build_auth_file_value(account: &CodexAccount) -> Result<serde_json::Value, St
 
 #[cfg(target_os = "macos")]
 fn build_codex_keychain_account(base_dir: &Path) -> String {
+    use sha2::{Digest, Sha256};
     let resolved_home = fs::canonicalize(base_dir).unwrap_or_else(|_| base_dir.to_path_buf());
     let mut hasher = Sha256::new();
     hasher.update(resolved_home.to_string_lossy().as_bytes());
