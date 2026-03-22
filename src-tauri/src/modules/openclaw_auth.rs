@@ -145,8 +145,7 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
 
     if let Err(err) = fs::rename(&tmp_path, path) {
         if path.exists() {
-            fs::remove_file(path)
-                .map_err(|e| format!("删除旧 auth-profiles.json 失败: {}", e))?;
+            fs::remove_file(path).map_err(|e| format!("删除旧 auth-profiles.json 失败: {}", e))?;
             fs::rename(&tmp_path, path)
                 .map_err(|e| format!("替换 auth-profiles.json 失败: {}", e))?;
         } else {
@@ -179,7 +178,11 @@ fn build_openclaw_codex_payload(account: &CodexAccount) -> Result<Value, String>
         "expires": expires,
     });
 
-    if let Some(account_id) = account.account_id.clone().filter(|value| !value.trim().is_empty()) {
+    if let Some(account_id) = account
+        .account_id
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+    {
         payload["accountId"] = json!(account_id);
     }
     if !account.email.trim().is_empty() {
@@ -316,8 +319,11 @@ fn has_active_openclaw_codex_lockout(auth_json: &Value) -> bool {
 
 fn expected_snapshot_from_account(account: &CodexAccount) -> CodexCredentialSnapshot {
     CodexCredentialSnapshot {
-        account_id: normalize_non_empty(account.account_id.as_deref())
-            .or_else(|| codex_account::extract_chatgpt_account_id_from_access_token(&account.tokens.access_token)),
+        account_id: normalize_non_empty(account.account_id.as_deref()).or_else(|| {
+            codex_account::extract_chatgpt_account_id_from_access_token(
+                &account.tokens.access_token,
+            )
+        }),
         email: normalize_email(Some(account.email.as_str())),
         expires_ms: decode_token_exp_ms(&account.tokens.access_token),
     }
@@ -332,7 +338,8 @@ fn snapshot_from_access_token(
     let payload = codex_account::decode_jwt_payload(access_token).ok();
     let account_id = account_id_hint
         .or_else(|| codex_account::extract_chatgpt_account_id_from_access_token(access_token));
-    let email = email_hint.or_else(|| normalize_email(payload.as_ref().and_then(|item| item.email.as_deref())));
+    let email = email_hint
+        .or_else(|| normalize_email(payload.as_ref().and_then(|item| item.email.as_deref())));
     let expires_ms = expires_hint.or_else(|| decode_token_exp_ms(access_token));
     CodexCredentialSnapshot {
         account_id,
@@ -354,7 +361,12 @@ fn read_codex_auth_snapshot() -> Result<CodexCredentialSnapshot, String> {
     let access_token = tokens
         .get("access_token")
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("Codex auth.json 缺少 tokens.access_token ({})", auth_path.display()))?;
+        .ok_or_else(|| {
+            format!(
+                "Codex auth.json 缺少 tokens.access_token ({})",
+                auth_path.display()
+            )
+        })?;
     Ok(snapshot_from_access_token(
         access_token,
         normalize_non_empty(tokens.get("account_id").and_then(Value::as_str)),
@@ -401,8 +413,8 @@ fn read_codex_keychain_snapshot() -> Result<Option<CodexCredentialSnapshot>, Str
         return Err("读取 Codex keychain 失败: 返回值为空".to_string());
     }
 
-    let parsed: Value =
-        serde_json::from_str(&secret).map_err(|e| format!("解析 Codex keychain JSON 失败: {}", e))?;
+    let parsed: Value = serde_json::from_str(&secret)
+        .map_err(|e| format!("解析 Codex keychain JSON 失败: {}", e))?;
     let tokens = parsed
         .get("tokens")
         .and_then(Value::as_object)
@@ -426,10 +438,20 @@ fn read_codex_keychain_snapshot() -> Result<Option<CodexCredentialSnapshot>, Str
 }
 
 fn read_openclaw_default_snapshot(path: &Path) -> Result<CodexCredentialSnapshot, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("读取 OpenClaw auth-profiles.json 失败 ({}): {}", path.display(), e))?;
-    let parsed: Value = serde_json::from_str(&content)
-        .map_err(|e| format!("解析 OpenClaw auth-profiles.json 失败 ({}): {}", path.display(), e))?;
+    let content = fs::read_to_string(path).map_err(|e| {
+        format!(
+            "读取 OpenClaw auth-profiles.json 失败 ({}): {}",
+            path.display(),
+            e
+        )
+    })?;
+    let parsed: Value = serde_json::from_str(&content).map_err(|e| {
+        format!(
+            "解析 OpenClaw auth-profiles.json 失败 ({}): {}",
+            path.display(),
+            e
+        )
+    })?;
     let profile = parsed
         .get("profiles")
         .and_then(Value::as_object)
@@ -446,7 +468,13 @@ fn read_openclaw_default_snapshot(path: &Path) -> Result<CodexCredentialSnapshot
     let access_token = profile
         .get("access")
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("OpenClaw {} 缺少 access ({})", OPENCLAW_CODEX_PROFILE_ID, path.display()))?;
+        .ok_or_else(|| {
+            format!(
+                "OpenClaw {} 缺少 access ({})",
+                OPENCLAW_CODEX_PROFILE_ID,
+                path.display()
+            )
+        })?;
     Ok(snapshot_from_access_token(
         access_token,
         normalize_non_empty(profile.get("accountId").and_then(Value::as_str)),
@@ -486,7 +514,10 @@ fn snapshot_to_log(snapshot: &CodexCredentialSnapshot) -> String {
     )
 }
 
-fn verify_openclaw_codex_sync(account: &CodexAccount, openclaw_auth_path: &Path) -> Result<(), String> {
+fn verify_openclaw_codex_sync(
+    account: &CodexAccount,
+    openclaw_auth_path: &Path,
+) -> Result<(), String> {
     let expected = expected_snapshot_from_account(account);
     let codex_auth_snapshot = read_codex_auth_snapshot()?;
     let openclaw_snapshot = read_openclaw_default_snapshot(openclaw_auth_path)?;
@@ -619,10 +650,10 @@ fn try_reload_openclaw_secrets() -> bool {
     let commands = get_reload_commands();
     let mut not_found_labels: Vec<String> = Vec::new();
 
-        for reload_command in commands {
-            let mut command = Command::new(&reload_command.program);
-            command.args(&reload_command.args);
-            command.env("CODEX_HOME", codex_account::get_codex_home());
+    for reload_command in commands {
+        let mut command = Command::new(&reload_command.program);
+        command.args(&reload_command.args);
+        command.env("CODEX_HOME", codex_account::get_codex_home());
 
         #[cfg(target_os = "windows")]
         {
@@ -645,8 +676,16 @@ fn try_reload_openclaw_secrets() -> bool {
                         "OpenClaw secrets.reload 执行失败（{}，status={}）: stderr={}, stdout={}",
                         reload_command.label,
                         output.status,
-                        if stderr.is_empty() { "<empty>" } else { &stderr },
-                        if stdout.is_empty() { "<empty>" } else { &stdout }
+                        if stderr.is_empty() {
+                            "<empty>"
+                        } else {
+                            &stderr
+                        },
+                        if stdout.is_empty() {
+                            "<empty>"
+                        } else {
+                            &stdout
+                        }
                     ));
                 }
                 continue;
@@ -795,8 +834,16 @@ fn try_restart_openclaw_gateway() -> bool {
                         "OpenClaw gateway.restart 执行失败（{}，status={}）: stderr={}, stdout={}",
                         restart_command.label,
                         output.status,
-                        if stderr.is_empty() { "<empty>" } else { &stderr },
-                        if stdout.is_empty() { "<empty>" } else { &stdout }
+                        if stderr.is_empty() {
+                            "<empty>"
+                        } else {
+                            &stderr
+                        },
+                        if stdout.is_empty() {
+                            "<empty>"
+                        } else {
+                            &stdout
+                        }
                     ));
                 }
                 continue;

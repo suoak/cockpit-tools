@@ -103,6 +103,8 @@ export interface ProviderPageConfig<TAccount extends ProviderAccountBase> {
     account: TAccount | undefined;
     displayEmail: string;
   }) => void | Promise<void>;
+  /** OAuth 成功后的提示文案（可选） */
+  resolveOauthSuccessMessage?: () => string;
 }
 
 export interface ProviderAccountBase {
@@ -859,7 +861,9 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
     });
     await fetchAccounts();
     setAddStatus('success');
-    setAddMessage(t('common.shared.oauth.success', '授权成功'));
+    setAddMessage(
+      config.resolveOauthSuccessMessage?.() ?? t('common.shared.oauth.success', '授权成功'),
+    );
     // 授权完成后不再触发 cancelLogin，避免误关仍需用户手动确认的授权页
     oauthLoginIdRef.current = null;
     oauthActiveRef.current = false;
@@ -880,7 +884,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       setShowAddModal(false);
       resetAddModalState();
     }, 1200);
-  }, [fetchAccounts, t, oauthLog, resetAddModalState]);
+  }, [fetchAccounts, config, t, oauthLog, resetAddModalState]);
 
   const handleOauthCompleteError = useCallback(
     (e: unknown) => {

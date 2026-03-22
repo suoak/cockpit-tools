@@ -2,7 +2,7 @@ import { Settings, Rocket, GaugeCircle, LayoutGrid, SlidersHorizontal } from 'lu
 import { useTranslation } from 'react-i18next';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Page } from '../../types/navigation';
-import { PlatformId, PLATFORM_PAGE_MAP } from '../../types/platform';
+import { isMenuVisiblePlatform, PlatformId, PLATFORM_PAGE_MAP } from '../../types/platform';
 import {
   resolveGroupChildIcon,
   resolveGroupChildName,
@@ -45,6 +45,7 @@ interface SideNavEntry {
 const PAGE_PLATFORM_MAP: Partial<Record<Page, PlatformId>> = {
   overview: 'antigravity',
   codex: 'codex',
+  zed: 'zed',
   'github-copilot': 'github-copilot',
   windsurf: 'windsurf',
   kiro: 'kiro',
@@ -117,6 +118,9 @@ export function SideNav({
       .map((entryId) => {
         const platformId = parsePlatformEntryId(entryId);
         if (platformId) {
+          if (!isMenuVisiblePlatform(platformId)) {
+            return null;
+          }
           return {
             id: entryId,
             label: getPlatformLabel(platformId, t),
@@ -136,7 +140,16 @@ export function SideNav({
           return null;
         }
 
-        const targetPlatformId = resolveEntryDefaultPlatformId(entryId, platformGroups);
+        const visiblePlatformIds = group.platformIds.filter(isMenuVisiblePlatform);
+        if (visiblePlatformIds.length === 0) {
+          return null;
+        }
+
+        const resolvedTargetPlatformId = resolveEntryDefaultPlatformId(entryId, platformGroups);
+        const targetPlatformId =
+          resolvedTargetPlatformId && visiblePlatformIds.includes(resolvedTargetPlatformId)
+            ? resolvedTargetPlatformId
+            : visiblePlatformIds[0];
         if (!targetPlatformId) {
           return null;
         }
@@ -146,7 +159,7 @@ export function SideNav({
           label: group.name,
           hidden: hiddenSet.has(entryId),
           targetPlatformId,
-          platformIds: [...group.platformIds],
+          platformIds: visiblePlatformIds,
           group,
         };
       })

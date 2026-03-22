@@ -572,7 +572,11 @@ fn ensure_expires_at_from_expires_in(token: &mut Value) {
             value
                 .as_i64()
                 .or_else(|| value.as_u64().map(|n| n as i64))
-                .or_else(|| value.as_str().and_then(|raw| raw.trim().parse::<i64>().ok()))
+                .or_else(|| {
+                    value
+                        .as_str()
+                        .and_then(|raw| raw.trim().parse::<i64>().ok())
+                })
         })
         .unwrap_or(0);
     if expires_in_seconds <= 0 {
@@ -666,7 +670,12 @@ fn should_prefer_idc_refresh(auth_token: &Value, account: &KiroAccount) -> bool 
     .unwrap_or(false);
 
     let login_provider_is_idc = normalize_ascii_lower(account.login_provider.as_deref())
-        .map(|value| matches!(value.as_str(), "enterprise" | "builderid" | "internal" | "awsidc"))
+        .map(|value| {
+            matches!(
+                value.as_str(),
+                "enterprise" | "builderid" | "internal" | "awsidc"
+            )
+        })
         .unwrap_or(false);
 
     let has_idc_material = resolve_idc_region(auth_token, account).is_some()
@@ -2091,7 +2100,8 @@ pub async fn refresh_payload_for_account(
                         "[Kiro Refresh] AWS IAM Identity Center OIDC 刷新失败: {}",
                         err
                     ));
-                    refresh_error_messages.push(format!("AWS IAM Identity Center OIDC 刷新失败: {}", err));
+                    refresh_error_messages
+                        .push(format!("AWS IAM Identity Center OIDC 刷新失败: {}", err));
                 }
             }
         }

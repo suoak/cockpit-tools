@@ -27,6 +27,7 @@ import { useCodebuddyCnAccountStore } from './stores/useCodebuddyCnAccountStore'
 import { useQoderAccountStore } from './stores/useQoderAccountStore';
 import { useTraeAccountStore } from './stores/useTraeAccountStore';
 import { useWorkbuddyAccountStore } from './stores/useWorkbuddyAccountStore';
+import { useZedAccountStore } from './stores/useZedAccountStore';
 import type { UpdateCheckResult } from './components/UpdateNotification';
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
 import { parseUpdaterReleaseNotes } from './utils/updaterReleaseNotes';
@@ -80,6 +81,9 @@ const TraeAccountsPage = lazy(() =>
 );
 const WorkbuddyAccountsPage = lazy(() =>
   import('./pages/WorkbuddyAccountsPage').then((module) => ({ default: module.WorkbuddyAccountsPage })),
+);
+const ZedAccountsPage = lazy(() =>
+  import('./pages/ZedAccountsPage').then((module) => ({ default: module.ZedAccountsPage })),
 );
 const FingerprintsPage = lazy(() =>
   import('./pages/FingerprintsPage').then((module) => ({ default: module.FingerprintsPage })),
@@ -139,6 +143,7 @@ interface GeneralConfig extends GeneralConfigTheme {
   codebuddy_cn_app_path: string;
   qoder_app_path: string;
   trae_app_path: string;
+  zed_app_path: string;
 }
 
 type AppPathMissingDetail = {
@@ -152,7 +157,8 @@ type AppPathMissingDetail = {
     | 'codebuddy'
     | 'codebuddy_cn'
     | 'qoder'
-    | 'trae';
+    | 'trae'
+    | 'zed';
   retry?:
     | { kind: 'default' }
     | { kind: 'instance'; instanceId?: string }
@@ -208,7 +214,8 @@ type QuotaAlertPlatform =
   | 'codebuddy_cn'
   | 'qoder'
   | 'trae'
-  | 'workbuddy';
+  | 'workbuddy'
+  | 'zed';
 type UpdateCheckSource = 'auto' | 'manual';
 type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
 
@@ -262,6 +269,8 @@ function normalizeQuotaAlertPlatform(platform: string | undefined): QuotaAlertPl
       return 'qoder';
     case 'trae':
       return 'trae';
+    case 'zed':
+      return 'zed';
     default:
       return 'antigravity';
   }
@@ -292,6 +301,8 @@ function getQuotaAlertPlatformLabel(
       return t('nav.qoder', 'Qoder');
     case 'trae':
       return t('nav.trae', 'Trae');
+    case 'zed':
+      return t('nav.zed', 'Zed');
     default:
       return t('nav.overview', 'Antigravity');
   }
@@ -321,6 +332,8 @@ function getQuotaAlertTargetPage(platform: QuotaAlertPlatform): Page {
       return 'trae';
     case 'workbuddy':
       return 'workbuddy';
+    case 'zed':
+      return 'zed';
     default:
       return 'overview';
   }
@@ -350,6 +363,8 @@ function getQuotaAlertQuickSettingsType(platform: QuotaAlertPlatform): QuickSett
       return 'trae';
     case 'workbuddy':
       return 'workbuddy';
+    case 'zed':
+      return 'zed';
     default:
       return 'antigravity';
   }
@@ -1561,6 +1576,9 @@ function App() {
                     } else if (platform === 'workbuddy') {
                       await useWorkbuddyAccountStore.getState().switchAccount(targetAccountId);
                       setPage('workbuddy');
+                    } else if (platform === 'zed') {
+                      await useZedAccountStore.getState().switchAccount(targetAccountId);
+                      setPage('zed');
                     } else {
                       await useAccountStore.getState().switchAccount(targetAccountId);
                       setPage('overview');
@@ -1820,6 +1838,10 @@ function App() {
         command: 'refresh_all_trae_tokens',
         errorMessage: 'Failed to refresh Trae:',
       },
+      {
+        command: 'refresh_all_zed_tokens',
+        errorMessage: 'Failed to refresh Zed:',
+      },
     ] as const;
 
     listen('tray:refresh_quota', async () => {
@@ -1863,7 +1885,8 @@ function App() {
         detail.app !== 'codebuddy' &&
         detail.app !== 'codebuddy_cn' &&
         detail.app !== 'qoder' &&
-        detail.app !== 'trae'
+        detail.app !== 'trae' &&
+        detail.app !== 'zed'
       ) {
         return;
       }
@@ -1921,6 +1944,8 @@ function App() {
                 ? config.qoder_app_path
               : appPathMissing.app === 'trae'
                 ? config.trae_app_path
+              : appPathMissing.app === 'zed'
+                ? config.zed_app_path
               : config.antigravity_app_path;
         if (active) {
           setAppPathDraft(currentPath || '');
@@ -1961,7 +1986,10 @@ function App() {
       const app = appPathMissing.app;
       const retry = appPathMissing.retry;
       await invoke('set_app_path', { app, path });
-      if (retry?.kind === 'switchAccount' && retry.accountId) {
+      if (retry?.kind === 'switchAccount' && retry.accountId && app === 'zed') {
+        await useZedAccountStore.getState().switchAccount(retry.accountId);
+        setPage('zed');
+      } else if (retry?.kind === 'switchAccount' && retry.accountId) {
         await invoke('switch_account', { accountId: retry.accountId });
         await Promise.allSettled([
           useAccountStore.getState().fetchAccounts(),
@@ -1986,6 +2014,8 @@ function App() {
           await invoke('qoder_start_instance', { instanceId: retry.instanceId });
         } else if (app === 'trae') {
           await invoke('trae_start_instance', { instanceId: retry.instanceId });
+        } else if (app === 'zed') {
+          await invoke('zed_start_default_session');
         } else {
           await invoke('start_instance', { instanceId: retry.instanceId });
         }
@@ -2008,6 +2038,8 @@ function App() {
           await invoke('qoder_start_instance', { instanceId: '__default__' });
         } else if (app === 'trae') {
           await invoke('trae_start_instance', { instanceId: '__default__' });
+        } else if (app === 'zed') {
+          await invoke('zed_start_default_session');
         } else {
           await invoke('start_instance', { instanceId: '__default__' });
         }
@@ -2071,6 +2103,7 @@ function App() {
             case 'qoder':
             case 'trae':
             case 'workbuddy':
+            case 'zed':
             case 'manual':
             case 'settings':
               setPage(target as Page);
@@ -2448,6 +2481,7 @@ function App() {
           {page === 'qoder' && <QoderAccountsPage />}
           {page === 'trae' && <TraeAccountsPage />}
           {page === 'workbuddy' && <WorkbuddyAccountsPage />}
+          {page === 'zed' && <ZedAccountsPage />}
           {page === 'instances' && <InstancesPage onNavigate={setPage} />}
           {page === 'fingerprints' && <FingerprintsPage onNavigate={setPage} />}
           {page === 'wakeup' && <WakeupTasksPage onNavigate={setPage} />}

@@ -104,7 +104,9 @@ fn build_openai_payload(account: &CodexAccount) -> Result<serde_json::Value, Str
     Ok(payload)
 }
 
-fn build_github_copilot_payload(account: &GitHubCopilotAccount) -> Result<serde_json::Value, String> {
+fn build_github_copilot_payload(
+    account: &GitHubCopilotAccount,
+) -> Result<serde_json::Value, String> {
     let token = account.github_access_token.trim().to_string();
     if token.is_empty() {
         return Err("GitHub Copilot access_token 缺失，无法同步到 OpenCode".to_string());

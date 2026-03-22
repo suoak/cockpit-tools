@@ -170,6 +170,7 @@
     "fingerprints": "设备指纹",
     "settings": "设置",
     "codex": "Codex",
+    "zed": "Zed 平台",
     "codebuddy": "CodeBuddy",
     "githubCopilot": "GitHub Copilot",
     "windsurf": "Windsurf",
@@ -521,6 +522,13 @@
       "autoUpdateOff": "关闭（手动更新）",
       "autoUpdateOn": "开启（静默更新）",
       "qoderPathReset": "重置默认",
+      "zedAutoRefresh": "Zed 自动刷新配额",
+      "zedAutoRefreshDesc": "后台自动更新频率",
+      "zedAppPath": "Zed 启动路径",
+      "zedAppPathDesc": "留空则使用默认路径",
+      "zedAppPathPlaceholder": "默认路径",
+      "zedPathSelect": "选择",
+      "zedPathReset": "重置默认",
       "traeAutoRefresh": "Trae 自动刷新配额",
       "traeAutoRefreshDesc": "后台自动更新频率",
       "traeAppPath": "Trae 启动路径",
@@ -1391,6 +1399,9 @@
       "localClient": "从本机 CodeBuddy 导入"
     },
     "search": "搜索 CodeBuddy 账号...",
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    },
     "quotaQuery": {
       "failedRefreshCompact": "配额查询失败",
       "sectionTitle": "配额查询",
@@ -1601,6 +1612,10 @@
     "qoder": {
       "title": "Qoder 设置",
       "appPath": "Qoder 路径"
+    },
+    "zed": {
+      "title": "Zed 设置",
+      "appPath": "Zed 路径"
     },
     "trae": {
       "title": "Trae 设置",
@@ -2213,6 +2228,73 @@
       "localDesc": "从本机 Qoder 客户端读取当前登录状态（包含用户信息、套餐与 Credits 使用情况）。"
     }
   },
+  "zed": {
+    "addModal": {
+      "title": "添加 Zed 账号"
+    },
+    "empty": {
+      "description": "点击“添加账号”开始管理你的 Zed 账号，也可以通过 JSON 或本机当前登录状态导入。"
+    },
+    "import": {
+      "jsonDesc": "导入由本工具导出的 Zed JSON 文件。",
+      "localDesc": "支持从本机 Zed 当前登录状态或导出的 JSON 文件导入账号数据。"
+    },
+    "flowNotice": {
+      "title": "Zed 账号接入说明（点击展开/收起）",
+      "desc": "支持官方 OAuth 登录、JSON 导入、本机当前登录状态导入，以及按 Zed 客户端真实落盘规则应用账号并重启官方客户端。页面仅展示桌面端可直接读取的状态字段，不再额外维护菜单栏状态。",
+      "reason": "权限范围：浏览器打开 Zed 官方同源登录；读取本机当前 Zed 登录凭据用于导入；应用账号时按官方客户端相同位点写回系统凭据，并可按需启动或重启 Zed。",
+      "storage": "数据范围：本地仅保存导入或授权得到的账号记录、标签和导出内容；不会上传本机 Keychain/凭据原文，不会扫描浏览器网页登录会话，也不会修改无关系统凭据。"
+    },
+    "page": {
+      "subtitle": "支持官方同源登录、订阅与配额查询、真实覆盖登录信息并重启 Zed。",
+      "current": "当前",
+      "tokenSpend": "Token 消耗",
+      "editPredictions": "编辑预测",
+      "spendLimit": "消费上限",
+      "billingPeriodEnd": "账期结束",
+      "searchPlaceholder": "搜索 GitHub 登录名、套餐或标签",
+      "empty": "暂无 Zed 账号",
+      "unknownStatus": "未知状态",
+      "overdueField": "是否欠费",
+      "overdueYes": "是",
+      "overdueNo": "否"
+    },
+    "runtime": {
+      "title": "当前 Zed 会话",
+      "currentAccount": "当前生效账号：{{account}}",
+      "noCurrentAccount": "当前没有生效的 Zed 账号",
+      "running": "运行中",
+      "stopped": "未运行",
+      "pathMissing": "未配置启动路径",
+      "lastPid": "最近 PID",
+      "lastStartedAt": "最近启动时间",
+      "loadFailed": "加载 Zed 运行时状态失败"
+    },
+    "oauth": {
+      "pendingTitle": "待完成的 Zed 登录",
+      "pendingDesc": "浏览器授权完成后，回到这里完成账号入库。",
+      "openBrowser": "打开浏览器",
+      "complete": "完成登录",
+      "startFailed": "启动 Zed 登录失败",
+      "completeSuccess": "Zed 登录完成：{{account}}",
+      "importOnlySuccess": "授权成功，账号已导入；如需让官方 Zed 使用该账号，请点击“应用并重启”。"
+    },
+    "actions": {
+      "addAccount": "登录 Zed",
+      "importSuccess": "导入 Zed 账号成功",
+      "switchSuccess": "Zed 账号已切换并重启",
+      "deleteConfirm": "确认删除 {{count}} 个 Zed 账号吗？",
+      "startApp": "启动 Zed",
+      "stopApp": "停止 Zed",
+      "restartApp": "重启 Zed",
+      "focusApp": "聚焦 Zed",
+      "logout": "退出当前账号",
+      "managePlan": "管理订阅",
+      "applyAndRestart": "应用并重启",
+      "reapply": "重新应用",
+      "exportTitle": "导出 Zed 账号 JSON"
+    }
+  },
   "trae": {
     "title": "Trae 账号管理",
     "empty": {
@@ -2243,6 +2325,7 @@
       "packageConsuming": "用量包：消耗中",
       "packageAvailable": "用量包：可用",
       "packageEmpty": "用量包：--",
+      "payAsYouGoLabel": "超额自动扣费",
       "payAsYouGoConsuming": "超额自动扣费：消耗中",
       "payAsYouGoEnabled": "超额自动扣费：已开启",
       "payAsYouGoEmpty": "超额自动扣费：--"
@@ -2340,6 +2423,9 @@
       "localClient": "从本机 WorkBuddy 导入"
     },
     "search": "搜索 WorkBuddy 账号...",
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    },
     "quotaQuery": {
       "failedRefreshCompact": "配额查询失败",
       "sectionTitle": "配额查询",

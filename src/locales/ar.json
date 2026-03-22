@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "منصة Zed"
   },
   "platformLayout": {
     "title": "تخطيط المنصات",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "عند التعطيل، يتم تبديل Codex فقط ويحتفظ OpenClaw بحالة تسجيل الدخول الحالية",
       "ghcpOpencodeAuthOverwrite": "استبدال تسجيل دخول OpenCode عند تبديل GitHub Copilot",
       "ghcpOpencodeRestart": "إعادة تشغيل OpenCode عند تبديل GitHub Copilot",
-      "ghcpLaunchOnSwitch": "تشغيل تطبيق GitHub Copilot App تلقائيًا عند تبديل GitHub Copilot"
+      "ghcpLaunchOnSwitch": "تشغيل تطبيق GitHub Copilot App تلقائيًا عند تبديل GitHub Copilot",
+      "zedAutoRefresh": "تحديث حصة Zed تلقائيًا",
+      "zedAutoRefreshDesc": "تكرار التحديث في الخلفية",
+      "zedAppPath": "مسار تشغيل Zed",
+      "zedAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
+      "zedAppPathPlaceholder": "المسار الافتراضي",
+      "zedPathSelect": "اختر",
+      "zedPathReset": "إعادة التعيين إلى الافتراضي"
     },
     "network": {
       "apiTitle": "واجهة برمجة تطبيقات قمرة القيادة المضادة للجاذبية",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "إعدادات WorkBuddy",
       "appPath": "مسار WorkBuddy"
+    },
+    "zed": {
+      "title": "إعدادات Zed",
+      "appPath": "مسار Zed"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "يرجى إكمال تسجيل الدخول والتفويض في هذه الصفحة."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "حزمة الاستخدام: --",
       "payAsYouGoConsuming": "الاستخدام حسب الطلب: قيد الاستهلاك",
       "payAsYouGoEnabled": "الاستخدام حسب الطلب: مفعل",
-      "payAsYouGoEmpty": "الاستخدام حسب الطلب: --"
+      "payAsYouGoEmpty": "الاستخدام حسب الطلب: --",
+      "payAsYouGoLabel": "الاستخدام حسب الطلب"
     },
     "flowNotice": {
       "title": "دليل حساب Trae (انقر للتوسيع أو الطي)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "تعدد مثيلات WorkBuddy مدعوم فقط على macOS وWindows وLinux."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "إضافة حساب Zed"
+    },
+    "empty": {
+      "description": "انقر على \"إضافة حساب\" لبدء إدارة حسابات Zed الخاصة بك، أو استيرادها من JSON أو من حالة تسجيل الدخول المحلية الحالية."
+    },
+    "import": {
+      "jsonDesc": "استورد ملف Zed JSON الذي صدّره هذا التطبيق.",
+      "localDesc": "استورد بيانات الحساب من حالة تسجيل دخول Zed المحلية الحالية أو من ملف JSON مُصدَّر."
+    },
+    "flowNotice": {
+      "title": "إرشادات ربط حساب Zed (انقر للتوسيع/الطي)",
+      "desc": "يدعم تسجيل الدخول الرسمي عبر OAuth، واستيراد JSON، واستيراد حالة تسجيل الدخول المحلية الحالية، وتطبيق الحساب المحفوظ مرة أخرى على عميل Zed الرسمي وفق قواعد التخزين الفعلية للعميل. تعرض هذه الصفحة فقط حقول الحالة التي يستطيع عميل سطح المكتب قراءتها مباشرة، ولم تعد تحافظ على حالة إضافية لشريط القائمة.",
+      "reason": "نطاق الصلاحيات: فتح تسجيل الدخول الرسمي المتطابق المصدر لـ Zed في المتصفح؛ قراءة بيانات اعتماد Zed المحلية الحالية للاستيراد؛ إعادة الكتابة إلى نفس موضع بيانات اعتماد النظام عند تطبيق الحساب؛ ويمكنها تشغيل Zed أو إعادة تشغيله عند الحاجة.",
+      "storage": "نطاق البيانات: يُحفَظ محليًا فقط ما تم استيراده أو تفويضه من سجلات الحسابات والعلامات ومحتوى التصدير. لا يتم رفع محتوى Keychain أو بيانات الاعتماد المحلية، ولا يتم فحص جلسات الويب في المتصفح، ولا تُعدَّل بيانات اعتماد نظام غير مرتبطة."
+    },
+    "page": {
+      "subtitle": "يدعم تسجيل الدخول الرسمي من نفس المصدر، والاستعلام عن الاشتراك والاستخدام، واستبدال بيانات تسجيل الدخول فعليًا ثم إعادة تشغيل Zed.",
+      "current": "الحالي",
+      "tokenSpend": "استهلاك Token",
+      "editPredictions": "توقعات التحرير",
+      "spendLimit": "حد الإنفاق",
+      "billingPeriodEnd": "نهاية دورة الفوترة",
+      "searchPlaceholder": "ابحث باسم GitHub أو الخطة أو العلامات",
+      "empty": "لا توجد حسابات Zed",
+      "unknownStatus": "حالة غير معروفة",
+      "overdueField": "هل توجد متأخرات",
+      "overdueYes": "نعم",
+      "overdueNo": "لا"
+    },
+    "runtime": {
+      "title": "جلسة Zed الحالية",
+      "currentAccount": "الحساب النشط حاليًا: {{account}}",
+      "noCurrentAccount": "لا يوجد حساب Zed نشط حاليًا",
+      "running": "قيد التشغيل",
+      "stopped": "متوقف",
+      "pathMissing": "مسار التشغيل غير مضبوط",
+      "lastPid": "آخر PID",
+      "lastStartedAt": "آخر وقت تشغيل",
+      "loadFailed": "فشل تحميل حالة تشغيل Zed"
+    },
+    "oauth": {
+      "pendingTitle": "تسجيل دخول Zed قيد الإكمال",
+      "pendingDesc": "أكمل التفويض في المتصفح ثم عد إلى هنا لإتمام استيراد الحساب.",
+      "openBrowser": "فتح المتصفح",
+      "complete": "إكمال تسجيل الدخول",
+      "startFailed": "فشل بدء تسجيل دخول Zed",
+      "completeSuccess": "اكتمل تسجيل دخول Zed: {{account}}",
+      "importOnlySuccess": "تمت المصادقة بنجاح. تم استيراد الحساب. لجعل Zed الرسمي يستخدم هذا الحساب، انقر على \"تطبيق وإعادة التشغيل\"."
+    },
+    "actions": {
+      "addAccount": "تسجيل الدخول إلى Zed",
+      "importSuccess": "تم استيراد حسابات Zed بنجاح",
+      "switchSuccess": "تم تبديل حساب Zed وإعادة تشغيله",
+      "deleteConfirm": "هل تريد حذف {{count}} من حسابات Zed؟",
+      "startApp": "تشغيل Zed",
+      "stopApp": "إيقاف Zed",
+      "restartApp": "إعادة تشغيل Zed",
+      "focusApp": "إبراز Zed",
+      "logout": "تسجيل خروج الحساب الحالي",
+      "managePlan": "إدارة الخطة",
+      "applyAndRestart": "تطبيق وإعادة التشغيل",
+      "reapply": "إعادة التطبيق",
+      "exportTitle": "تصدير JSON لحسابات Zed"
     }
   }
 }

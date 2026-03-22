@@ -1,7 +1,9 @@
 use tauri::{AppHandle, Emitter};
 
 use crate::models::github_copilot::{GitHubCopilotAccount, GitHubCopilotOAuthStartResponse};
-use crate::modules::{config, github_copilot_account, github_copilot_oauth, logger, opencode_auth, process};
+use crate::modules::{
+    config, github_copilot_account, github_copilot_oauth, logger, opencode_auth, process,
+};
 
 async fn refresh_github_copilot_account_after_login(
     account: GitHubCopilotAccount,

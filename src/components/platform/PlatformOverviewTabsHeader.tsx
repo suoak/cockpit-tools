@@ -9,6 +9,7 @@ import { GeminiIcon } from '../icons/GeminiIcon';
 import { CodebuddyIcon } from '../icons/CodebuddyIcon';
 import { QoderIcon } from '../icons/QoderIcon';
 import { WorkbuddyIcon } from '../icons/WorkbuddyIcon';
+import { ZedIcon } from '../icons/ZedIcon';
 import { ManualHelpIconButton } from '../ManualHelpIconButton';
 import { PlatformId } from '../../types/platform';
 import {
@@ -22,6 +23,7 @@ import { PlatformGroupSwitcher } from './PlatformGroupSwitcher';
 export type PlatformOverviewTab = 'overview' | 'instances';
 export type PlatformOverviewHeaderId =
   | 'codex'
+  | 'zed'
   | 'github-copilot'
   | 'windsurf'
   | 'kiro'
@@ -37,6 +39,7 @@ interface PlatformOverviewTabsHeaderProps {
   platform: PlatformOverviewHeaderId;
   active: PlatformOverviewTab;
   onTabChange?: (tab: PlatformOverviewTab) => void;
+  tabs?: PlatformOverviewTab[];
 }
 
 interface PlatformOverviewConfig {
@@ -54,6 +57,10 @@ const CONFIGS: Record<PlatformOverviewHeaderId, PlatformOverviewConfig> = {
   codex: {
     platformLabel: 'Codex',
     overviewIcon: <CodexIcon className="tab-icon" />,
+  },
+  zed: {
+    platformLabel: 'Zed',
+    overviewIcon: <ZedIcon className="tab-icon" />,
   },
   'github-copilot': {
     platformLabel: 'GitHub Copilot',
@@ -101,6 +108,7 @@ export function PlatformOverviewTabsHeader({
   platform,
   active,
   onTabChange,
+  tabs,
 }: PlatformOverviewTabsHeaderProps) {
   const { t } = useTranslation();
   const { platformGroups } = usePlatformLayoutStore();
@@ -133,20 +141,21 @@ export function PlatformOverviewTabsHeader({
     [switchablePlatforms, currentGroup, t],
   );
   const headerTitle = `${config.platformLabel} ${t('settings.general.accountManagement', '账号管理')}`;
-  const tabs: TabSpec[] = [
-    {
+  const tabOrder: PlatformOverviewTab[] =
+    tabs && tabs.length > 0 ? tabs : ['overview', 'instances'];
+  const tabLabels: Record<PlatformOverviewTab, TabSpec> = {
+    overview: {
       key: 'overview',
-      // Reuse Antigravity tab translations across platform account pages.
       label: t('overview.title', '账号总览'),
       icon: config.overviewIcon,
     },
-    {
+    instances: {
       key: 'instances',
-      // Reuse Antigravity tab translations across platform account pages.
       label: t('instances.title', '多开实例'),
       icon: <Layers className="tab-icon" />,
     },
-  ];
+  };
+  const tabSpecs: TabSpec[] = tabOrder.map((tab) => tabLabels[tab]);
 
   const subtitle =
     active === 'instances'
@@ -172,7 +181,7 @@ export function PlatformOverviewTabsHeader({
           />
         </div>
         <div className="page-tabs filter-tabs">
-          {tabs.map((tab) => (
+          {tabSpecs.map((tab) => (
             <button
               key={tab.key}
               className={`filter-tab${active === tab.key ? ' active' : ''}`}

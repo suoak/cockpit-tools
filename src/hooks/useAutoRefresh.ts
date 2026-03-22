@@ -11,6 +11,7 @@ import { useCodebuddyAccountStore } from '../stores/useCodebuddyAccountStore';
 import { useCodebuddyCnAccountStore } from '../stores/useCodebuddyCnAccountStore';
 import { useQoderAccountStore } from '../stores/useQoderAccountStore';
 import { useTraeAccountStore } from '../stores/useTraeAccountStore';
+import { useZedAccountStore } from '../stores/useZedAccountStore';
 
 interface GeneralConfig {
   language: string;
@@ -26,6 +27,7 @@ interface GeneralConfig {
   codebuddy_cn_auto_refresh_minutes: number;
   qoder_auto_refresh_minutes: number;
   trae_auto_refresh_minutes: number;
+  zed_auto_refresh_minutes: number;
   auto_switch_enabled: boolean;
   codex_auto_switch_enabled?: boolean;
   codex_quota_alert_enabled?: boolean;
@@ -41,6 +43,7 @@ interface GeneralConfig {
   codebuddy_cn_app_path?: string;
   qoder_app_path?: string;
   trae_app_path?: string;
+  zed_app_path?: string;
   opencode_sync_on_switch?: boolean;
   opencode_auth_overwrite_on_switch?: boolean;
   codex_launch_on_switch?: boolean;
@@ -70,6 +73,7 @@ export function useAutoRefresh() {
   const refreshAllCodebuddyCnTokens = useCodebuddyCnAccountStore((state) => state.refreshAllTokens);
   const refreshAllQoderTokens = useQoderAccountStore((state) => state.refreshAllTokens);
   const refreshAllTraeTokens = useTraeAccountStore((state) => state.refreshAllTokens);
+  const refreshAllZedTokens = useZedAccountStore((state) => state.refreshAllTokens);
 
   const agIntervalRef = useRef<number | null>(null);
   const autoSwitchIntervalRef = useRef<number | null>(null);
@@ -84,6 +88,7 @@ export function useAutoRefresh() {
   const codebuddyCnIntervalRef = useRef<number | null>(null);
   const qoderIntervalRef = useRef<number | null>(null);
   const traeIntervalRef = useRef<number | null>(null);
+  const zedIntervalRef = useRef<number | null>(null);
 
   const agRefreshingRef = useRef(false);
   const codexRefreshingRef = useRef(false);
@@ -97,6 +102,7 @@ export function useAutoRefresh() {
   const codebuddyCnRefreshingRef = useRef(false);
   const qoderRefreshingRef = useRef(false);
   const traeRefreshingRef = useRef(false);
+  const zedRefreshingRef = useRef(false);
   const autoSwitchRefreshingRef = useRef(false);
 
   const setupRunningRef = useRef(false);
@@ -155,6 +161,10 @@ export function useAutoRefresh() {
     if (traeIntervalRef.current) {
       window.clearInterval(traeIntervalRef.current);
       traeIntervalRef.current = null;
+    }
+    if (zedIntervalRef.current) {
+      window.clearInterval(zedIntervalRef.current);
+      zedIntervalRef.current = null;
     }
   }, []);
 
@@ -228,6 +238,7 @@ export function useAutoRefresh() {
                     codebuddyCnAutoRefreshMinutes: config.codebuddy_cn_auto_refresh_minutes,
                     qoderAutoRefreshMinutes: config.qoder_auto_refresh_minutes,
                     traeAutoRefreshMinutes: config.trae_auto_refresh_minutes,
+                    zedAutoRefreshMinutes: config.zed_auto_refresh_minutes,
                     closeBehavior: config.close_behavior || 'ask',
                     opencodeAppPath: config.opencode_app_path ?? '',
                     antigravityAppPath: config.antigravity_app_path ?? '',
@@ -240,6 +251,7 @@ export function useAutoRefresh() {
                     codebuddyCnAppPath: config.codebuddy_cn_app_path ?? '',
                     qoderAppPath: config.qoder_app_path ?? '',
                     traeAppPath: config.trae_app_path ?? '',
+                    zedAppPath: config.zed_app_path ?? '',
                     opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? true,
                     opencodeAuthOverwriteOnSwitch:
                       config.opencode_auth_overwrite_on_switch ?? true,
@@ -552,6 +564,29 @@ export function useAutoRefresh() {
             console.log('[AutoRefresh] Trae 已禁用');
           }
 
+          if (config.zed_auto_refresh_minutes > 0) {
+            console.log(`[AutoRefresh] Zed 已启用: 每 ${config.zed_auto_refresh_minutes} 分钟`);
+            const zedMs = config.zed_auto_refresh_minutes * 60 * 1000;
+
+            zedIntervalRef.current = window.setInterval(async () => {
+              if (zedRefreshingRef.current) {
+                return;
+              }
+              zedRefreshingRef.current = true;
+
+              try {
+                console.log('[AutoRefresh] 触发 Zed 配额刷新...');
+                await refreshAllZedTokens();
+              } catch (e) {
+                console.error('[AutoRefresh] Zed 刷新失败:', e);
+              } finally {
+                zedRefreshingRef.current = false;
+              }
+            }, zedMs);
+          } else {
+            console.log('[AutoRefresh] Zed 已禁用');
+          }
+
           // 自动切号开启时，额外每 60 秒刷新当前账号（不影响原有配额自动刷新规则）
           if (config.auto_switch_enabled) {
             console.log('[AutoRefresh] 自动切号已启用: 每 60 秒刷新当前账号');
@@ -593,6 +628,7 @@ export function useAutoRefresh() {
               : null,
             config.qoder_auto_refresh_minutes > 0 ? `qoder=${config.qoder_auto_refresh_minutes}` : null,
             config.trae_auto_refresh_minutes > 0 ? `trae=${config.trae_auto_refresh_minutes}` : null,
+            config.zed_auto_refresh_minutes > 0 ? `zed=${config.zed_auto_refresh_minutes}` : null,
             config.auto_switch_enabled ? 'auto_switch=60s' : null,
           ].filter(Boolean).join(', ');
           console.log(
@@ -627,6 +663,7 @@ export function useAutoRefresh() {
     refreshAllCodebuddyCnTokens,
     refreshAllQoderTokens,
     refreshAllTraeTokens,
+    refreshAllZedTokens,
     refreshAllQuotas,
     refreshAllWindsurfTokens,
     syncCurrentFromClient,

@@ -12,6 +12,7 @@ import { CodebuddyIcon } from '../components/icons/CodebuddyIcon';
 import { QoderIcon } from '../components/icons/QoderIcon';
 import { TraeIcon } from '../components/icons/TraeIcon';
 import { WorkbuddyIcon } from '../components/icons/WorkbuddyIcon';
+import { ZedIcon } from '../components/icons/ZedIcon';
 
 export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string {
   switch (platformId) {
@@ -19,6 +20,8 @@ export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string 
       return 'Antigravity';
     case 'codex':
       return 'Codex';
+    case 'zed':
+      return 'Zed';
     case 'github-copilot':
       return 'GitHub Copilot';
     case 'windsurf':
@@ -50,6 +53,8 @@ export function renderPlatformIcon(platformId: PlatformId, size = 20): ReactNode
       return <RobotIcon style={{ width: size, height: size }} />;
     case 'codex':
       return <CodexIcon size={size} />;
+    case 'zed':
+      return <ZedIcon size={size} />;
     case 'github-copilot':
       return <Github size={size} />;
     case 'windsurf':

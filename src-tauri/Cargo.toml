@@ -1,6 +1,6 @@
 [package]
 name = "cockpit-tools"
-version = "0.17.6"
+version = "0.18.0"
 description = "SC-Cockpit Tools"
 authors = ["suoak"]
 license = "CC-BY-NC-SA-4.0"
@@ -41,6 +41,8 @@ rcgen = "0.13"
 thiserror = "2"
 anyhow = "1.0"
 sha2 = "0.10"
+rsa = "0.9"
+serde_urlencoded = "0.7"
 url = "2.5"
 regex = "1"
 rand = "0.8"

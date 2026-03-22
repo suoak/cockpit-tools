@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Plataforma Zed"
   },
   "platformLayout": {
     "title": "Layout de plataformas",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Quando desligado, apenas o Codex é alternado e o OpenClaw mantém seu estado de login atual",
       "ghcpOpencodeAuthOverwrite": "Substituir o login do OpenCode ao trocar o GitHub Copilot",
       "ghcpOpencodeRestart": "Reiniciar o OpenCode ao trocar o GitHub Copilot",
-      "ghcpLaunchOnSwitch": "Iniciar GitHub Copilot App ao trocar GitHub Copilot"
+      "ghcpLaunchOnSwitch": "Iniciar GitHub Copilot App ao trocar GitHub Copilot",
+      "zedAutoRefresh": "Atualização automática da cota do Zed",
+      "zedAutoRefreshDesc": "Frequência de atualização em segundo plano",
+      "zedAppPath": "Caminho de inicialização do Zed",
+      "zedAppPathDesc": "Deixe em branco para usar o caminho padrão",
+      "zedAppPathPlaceholder": "Caminho padrão",
+      "zedPathSelect": "Selecionar",
+      "zedPathReset": "Redefinir padrão"
     },
     "network": {
       "apiTitle": "API de cockpit antigravidade",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "Configuracoes do WorkBuddy",
       "appPath": "Caminho do WorkBuddy"
+    },
+    "zed": {
+      "title": "Configurações do Zed",
+      "appPath": "Caminho do Zed"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Conclua o login e a autorização nesta página."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Pacote de uso: --",
       "payAsYouGoConsuming": "Uso sob demanda: consumindo",
       "payAsYouGoEnabled": "Uso sob demanda: ativado",
-      "payAsYouGoEmpty": "Uso sob demanda: --"
+      "payAsYouGoEmpty": "Uso sob demanda: --",
+      "payAsYouGoLabel": "Uso sob demanda"
     },
     "flowNotice": {
       "title": "Guia de contas Trae (clique para expandir/recolher)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "A multiinstância WorkBuddy é compatível apenas com macOS, Windows e Linux."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Adicionar conta Zed"
+    },
+    "empty": {
+      "description": "Clique em “Adicionar conta” para começar a gerenciar suas contas Zed ou importe-as de um JSON ou do estado atual de login local."
+    },
+    "import": {
+      "jsonDesc": "Importe um arquivo JSON do Zed exportado por esta ferramenta.",
+      "localDesc": "Importe os dados da conta a partir do estado atual de login local do Zed ou de um arquivo JSON exportado."
+    },
+    "flowNotice": {
+      "title": "Notas de integração da conta Zed (clique para expandir/recolher)",
+      "desc": "Suporta login oficial via OAuth, importação de JSON, importação do estado atual de login local e aplicação de uma conta salva no cliente oficial do Zed seguindo as regras reais de persistência do cliente. Esta página mostra apenas campos de status que o cliente desktop consegue ler diretamente e não mantém mais um estado extra da barra de menus.",
+      "reason": "Permissões: abre o login oficial same-origin do Zed no navegador; lê as credenciais locais atuais do Zed para importar; grava novamente no mesmo slot de credenciais do sistema ao aplicar uma conta; e pode iniciar ou reiniciar o Zed quando necessário.",
+      "storage": "Escopo de dados: apenas registros de conta importados ou autorizados, tags e conteúdo exportado são salvos localmente. O conteúdo do Keychain ou das credenciais locais não é enviado, as sessões web do navegador não são examinadas e credenciais de sistema não relacionadas não são modificadas."
+    },
+    "page": {
+      "subtitle": "Suporta login oficial same-origin, consulta de assinatura e uso, sobrescrita real das credenciais e reinício do Zed.",
+      "current": "Atual",
+      "tokenSpend": "Consumo de tokens",
+      "editPredictions": "Previsões de edição",
+      "spendLimit": "Limite de gasto",
+      "billingPeriodEnd": "Fim do período de cobrança",
+      "searchPlaceholder": "Buscar login do GitHub, plano ou tags",
+      "empty": "Nenhuma conta Zed",
+      "unknownStatus": "Status desconhecido",
+      "overdueField": "Faturas vencidas",
+      "overdueYes": "Sim",
+      "overdueNo": "Não"
+    },
+    "runtime": {
+      "title": "Sessão atual do Zed",
+      "currentAccount": "Conta ativa no momento: {{account}}",
+      "noCurrentAccount": "Nenhuma conta Zed ativa",
+      "running": "Em execução",
+      "stopped": "Parado",
+      "pathMissing": "Caminho de inicialização não configurado",
+      "lastPid": "Último PID",
+      "lastStartedAt": "Última inicialização",
+      "loadFailed": "Falha ao carregar o estado de execução do Zed"
+    },
+    "oauth": {
+      "pendingTitle": "Login do Zed pendente",
+      "pendingDesc": "Conclua a autorização no navegador e volte aqui para finalizar a importação da conta.",
+      "openBrowser": "Abrir navegador",
+      "complete": "Concluir login",
+      "startFailed": "Falha ao iniciar o login do Zed",
+      "completeSuccess": "Login do Zed concluído: {{account}}",
+      "importOnlySuccess": "A autorização foi concluída com sucesso. A conta foi importada. Para fazer o Zed oficial usar esta conta, clique em \"Aplicar e reiniciar\"."
+    },
+    "actions": {
+      "addAccount": "Entrar no Zed",
+      "importSuccess": "Contas do Zed importadas com sucesso",
+      "switchSuccess": "Conta do Zed alternada e aplicativo reiniciado",
+      "deleteConfirm": "Excluir {{count}} conta(s) do Zed?",
+      "startApp": "Iniciar Zed",
+      "stopApp": "Parar Zed",
+      "restartApp": "Reiniciar Zed",
+      "focusApp": "Focar no Zed",
+      "logout": "Sair da conta atual",
+      "managePlan": "Gerenciar plano",
+      "applyAndRestart": "Aplicar e reiniciar",
+      "reapply": "Aplicar novamente",
+      "exportTitle": "Exportar contas do Zed em JSON"
     }
   }
 }

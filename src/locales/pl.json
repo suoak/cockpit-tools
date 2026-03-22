@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Platforma Zed"
   },
   "platformLayout": {
     "title": "Układ platform",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Gdy wyłączone, przełączany jest tylko Codex, a OpenClaw zachowuje bieżący stan logowania",
       "ghcpOpencodeAuthOverwrite": "Nadpisuj logowanie OpenCode podczas przełączania GitHub Copilot",
       "ghcpOpencodeRestart": "Uruchom ponownie OpenCode przy przełączaniu GitHub Copilot",
-      "ghcpLaunchOnSwitch": "Automatycznie uruchamiaj GitHub Copilot App podczas przełączania GitHub Copilot"
+      "ghcpLaunchOnSwitch": "Automatycznie uruchamiaj GitHub Copilot App podczas przełączania GitHub Copilot",
+      "zedAutoRefresh": "Automatyczne odświeżanie limitu Zed",
+      "zedAutoRefreshDesc": "Częstotliwość aktualizacji w tle",
+      "zedAppPath": "Ścieżka uruchamiania Zed",
+      "zedAppPathDesc": "Pozostaw puste, aby użyć ścieżki domyślnej",
+      "zedAppPathPlaceholder": "Domyślna ścieżka",
+      "zedPathSelect": "Wybierz",
+      "zedPathReset": "Przywróć domyślne"
     },
     "network": {
       "apiTitle": "API kokpitu antygrawitacyjnego",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "Ustawienia WorkBuddy",
       "appPath": "Ścieżka WorkBuddy"
+    },
+    "zed": {
+      "title": "Ustawienia Zed",
+      "appPath": "Ścieżka Zed"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Na tej stronie dokończ logowanie i autoryzację."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Pakiet uzycia: --",
       "payAsYouGoConsuming": "Rozliczanie za uzycie: w trakcie zuzycia",
       "payAsYouGoEnabled": "Rozliczanie za uzycie: wlaczone",
-      "payAsYouGoEmpty": "Rozliczanie za uzycie: --"
+      "payAsYouGoEmpty": "Rozliczanie za uzycie: --",
+      "payAsYouGoLabel": "Uzycie na zadanie"
     },
     "flowNotice": {
       "title": "Przewodnik po kontach Trae (kliknij, aby rozwinac/zwinac)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "Wiele instancji WorkBuddy jest obsługiwane tylko na macOS, Windows i Linux."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Dodaj konto Zed"
+    },
+    "empty": {
+      "description": "Kliknij „Dodaj konto”, aby zacząć zarządzać kontami Zed, albo zaimportuj je z pliku JSON lub z bieżącego lokalnego stanu logowania."
+    },
+    "import": {
+      "jsonDesc": "Zaimportuj plik JSON Zed wyeksportowany przez to narzędzie.",
+      "localDesc": "Zaimportuj dane konta z bieżącego lokalnego stanu logowania Zed lub z wyeksportowanego pliku JSON."
+    },
+    "flowNotice": {
+      "title": "Informacje o integracji konta Zed (kliknij, aby rozwinąć/zwinąć)",
+      "desc": "Obsługuje oficjalne logowanie OAuth, import JSON, import bieżącego lokalnego stanu logowania oraz zastosowanie zapisanego konta do oficjalnego klienta Zed zgodnie z jego rzeczywistymi regułami zapisu. Ta strona pokazuje tylko pola stanu, które klient desktopowy może odczytać bezpośrednio, i nie utrzymuje już dodatkowego stanu paska menu.",
+      "reason": "Zakres uprawnień: otwiera oficjalne logowanie same-origin Zed w przeglądarce; odczytuje bieżące lokalne dane logowania Zed do importu; podczas stosowania konta zapisuje je z powrotem do tego samego systemowego slotu poświadczeń; i w razie potrzeby może uruchomić lub ponownie uruchomić Zed.",
+      "storage": "Zakres danych: lokalnie zapisywane są tylko zaimportowane lub autoryzowane rekordy kont, tagi i wyeksportowana zawartość. Zawartość lokalnego Keychainu ani poświadczeń nie jest wysyłana, sesje webowe przeglądarki nie są skanowane, a niezwiązane poświadczenia systemowe nie są modyfikowane."
+    },
+    "page": {
+      "subtitle": "Obsługuje oficjalne logowanie same-origin, pobieranie subskrypcji i użycia, rzeczywiste nadpisywanie danych logowania oraz restart Zed.",
+      "current": "Bieżące",
+      "tokenSpend": "Zużycie tokenów",
+      "editPredictions": "Przewidywania edycji",
+      "spendLimit": "Limit wydatków",
+      "billingPeriodEnd": "Koniec okresu rozliczeniowego",
+      "searchPlaceholder": "Szukaj loginu GitHub, planu lub tagów",
+      "empty": "Brak kont Zed",
+      "unknownStatus": "Nieznany stan",
+      "overdueField": "Zaległe faktury",
+      "overdueYes": "Tak",
+      "overdueNo": "Nie"
+    },
+    "runtime": {
+      "title": "Bieżąca sesja Zed",
+      "currentAccount": "Aktualnie aktywne konto: {{account}}",
+      "noCurrentAccount": "Brak aktywnego konta Zed",
+      "running": "Uruchomione",
+      "stopped": "Zatrzymane",
+      "pathMissing": "Ścieżka uruchamiania nie jest skonfigurowana",
+      "lastPid": "Ostatni PID",
+      "lastStartedAt": "Ostatnio uruchomiono",
+      "loadFailed": "Nie udało się załadować stanu uruchomienia Zed"
+    },
+    "oauth": {
+      "pendingTitle": "Oczekujące logowanie do Zed",
+      "pendingDesc": "Dokończ autoryzację w przeglądarce, a potem wróć tutaj, aby zakończyć import konta.",
+      "openBrowser": "Otwórz przeglądarkę",
+      "complete": "Zakończ logowanie",
+      "startFailed": "Nie udało się rozpocząć logowania do Zed",
+      "completeSuccess": "Logowanie do Zed zakończone: {{account}}",
+      "importOnlySuccess": "Autoryzacja zakończyła się powodzeniem. Konto zostało zaimportowane. Aby oficjalny Zed używał tego konta, kliknij „Zastosuj i uruchom ponownie”."
+    },
+    "actions": {
+      "addAccount": "Zaloguj do Zed",
+      "importSuccess": "Pomyślnie zaimportowano konta Zed",
+      "switchSuccess": "Przełączono konto Zed i uruchomiono ponownie",
+      "deleteConfirm": "Usunąć {{count}} kont Zed?",
+      "startApp": "Uruchom Zed",
+      "stopApp": "Zatrzymaj Zed",
+      "restartApp": "Uruchom ponownie Zed",
+      "focusApp": "Ustaw fokus na Zed",
+      "logout": "Wyloguj bieżące konto",
+      "managePlan": "Zarządzaj planem",
+      "applyAndRestart": "Zastosuj i uruchom ponownie",
+      "reapply": "Zastosuj ponownie",
+      "exportTitle": "Eksportuj konta Zed do JSON"
     }
   }
 }

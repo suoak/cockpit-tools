@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Zed-Plattform"
   },
   "platformLayout": {
     "title": "Plattformlayout",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Wenn deaktiviert, wird nur Codex gewechselt und OpenClaw behält den aktuellen Anmeldestatus",
       "ghcpOpencodeAuthOverwrite": "OpenCode-Anmeldung beim Wechsel von GitHub Copilot überschreiben",
       "ghcpOpencodeRestart": "OpenCode beim GitHub Copilot-Wechsel neu starten",
-      "ghcpLaunchOnSwitch": "GitHub Copilot App beim Wechseln von GitHub Copilot automatisch starten"
+      "ghcpLaunchOnSwitch": "GitHub Copilot App beim Wechseln von GitHub Copilot automatisch starten",
+      "zedAutoRefresh": "Zed-Kontingent automatisch aktualisieren",
+      "zedAutoRefreshDesc": "Aktualisierungsintervall im Hintergrund",
+      "zedAppPath": "Zed-Startpfad",
+      "zedAppPathDesc": "Leer lassen, um den Standardpfad zu verwenden",
+      "zedAppPathPlaceholder": "Standardpfad",
+      "zedPathSelect": "Auswählen",
+      "zedPathReset": "Auf Standard zurücksetzen"
     },
     "network": {
       "apiTitle": "Antigravity-Cockpit-API",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "WorkBuddy-Einstellungen",
       "appPath": "WorkBuddy-Pfad"
+    },
+    "zed": {
+      "title": "Zed-Einstellungen",
+      "appPath": "Zed-Pfad"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Bitte schließen Sie die Anmeldung und Autorisierung auf dieser Seite ab."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Nutzungspaket: --",
       "payAsYouGoConsuming": "Nutzung nach Verbrauch: wird verbraucht",
       "payAsYouGoEnabled": "Nutzung nach Verbrauch: aktiviert",
-      "payAsYouGoEmpty": "Nutzung nach Verbrauch: --"
+      "payAsYouGoEmpty": "Nutzung nach Verbrauch: --",
+      "payAsYouGoLabel": "Nutzungsabrechnung"
     },
     "flowNotice": {
       "title": "Trae-Kontoleitfaden (zum Auf- und Zuklappen klicken)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "WorkBuddy-Mehrinstanzen werden nur unter macOS, Windows und Linux unterstützt."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Zed-Konto hinzufügen"
+    },
+    "empty": {
+      "description": "Klicken Sie auf „Konto hinzufügen“, um Ihre Zed-Konten zu verwalten, oder importieren Sie sie aus JSON bzw. aus dem aktuellen lokalen Anmeldestatus."
+    },
+    "import": {
+      "jsonDesc": "Importieren Sie eine von diesem Tool exportierte Zed-JSON-Datei.",
+      "localDesc": "Importieren Sie Kontodaten aus dem aktuellen lokalen Zed-Anmeldestatus oder aus einer exportierten JSON-Datei."
+    },
+    "flowNotice": {
+      "title": "Hinweise zur Zed-Kontointegration (zum Auf- und Zuklappen klicken)",
+      "desc": "Unterstützt offizielles OAuth-Login, JSON-Import, Import des aktuellen lokalen Anmeldestatus sowie das Anwenden eines gespeicherten Kontos auf den offiziellen Zed-Client nach dessen echten Persistenzregeln. Diese Seite zeigt nur Statusfelder an, die der Desktop-Client direkt lesen kann, und pflegt keinen zusätzlichen Menüleistenstatus mehr.",
+      "reason": "Berechtigungsumfang: öffnet das offizielle Same-Origin-Login von Zed im Browser; liest die aktuellen lokalen Zed-Zugangsdaten für den Import; schreibt beim Anwenden eines Kontos in denselben System-Zugangsdaten-Slot zurück; und kann Zed bei Bedarf starten oder neu starten.",
+      "storage": "Datenumfang: lokal werden nur importierte oder autorisierte Kontodatensätze, Tags und Exportinhalte gespeichert. Inhalte aus Keychain oder Zugangsdaten werden nicht hochgeladen, Browser-Websitzungen werden nicht gescannt und nicht verwandte System-Zugangsdaten werden nicht verändert."
+    },
+    "page": {
+      "subtitle": "Unterstützt offizielles Same-Origin-Login, Abfrage von Abo und Nutzung, echtes Überschreiben der Login-Daten und Neustart von Zed.",
+      "current": "Aktuell",
+      "tokenSpend": "Token-Verbrauch",
+      "editPredictions": "Bearbeitungsvorhersagen",
+      "spendLimit": "Ausgabenlimit",
+      "billingPeriodEnd": "Ende des Abrechnungszeitraums",
+      "searchPlaceholder": "GitHub-Login, Tarif oder Tags suchen",
+      "empty": "Noch keine Zed-Konten",
+      "unknownStatus": "Unbekannter Status",
+      "overdueField": "Überfällig",
+      "overdueYes": "Ja",
+      "overdueNo": "Nein"
+    },
+    "runtime": {
+      "title": "Aktuelle Zed-Sitzung",
+      "currentAccount": "Aktiv genutztes Konto: {{account}}",
+      "noCurrentAccount": "Kein aktives Zed-Konto",
+      "running": "Läuft",
+      "stopped": "Gestoppt",
+      "pathMissing": "Startpfad nicht konfiguriert",
+      "lastPid": "Letzte PID",
+      "lastStartedAt": "Zuletzt gestartet",
+      "loadFailed": "Zed-Laufzeitstatus konnte nicht geladen werden"
+    },
+    "oauth": {
+      "pendingTitle": "Ausstehender Zed-Login",
+      "pendingDesc": "Schließen Sie die Autorisierung im Browser ab und kehren Sie dann hierher zurück, um den Kontoimport zu beenden.",
+      "openBrowser": "Browser öffnen",
+      "complete": "Login abschließen",
+      "startFailed": "Zed-Login konnte nicht gestartet werden",
+      "completeSuccess": "Zed-Login abgeschlossen: {{account}}",
+      "importOnlySuccess": "Die Autorisierung war erfolgreich. Das Konto wurde importiert. Damit das offizielle Zed dieses Konto verwendet, klicken Sie auf „Anwenden und neu starten“."
+    },
+    "actions": {
+      "addAccount": "Bei Zed anmelden",
+      "importSuccess": "Zed-Konten erfolgreich importiert",
+      "switchSuccess": "Zed-Konto gewechselt und neu gestartet",
+      "deleteConfirm": "{{count}} Zed-Konten löschen?",
+      "startApp": "Zed starten",
+      "stopApp": "Zed beenden",
+      "restartApp": "Zed neu starten",
+      "focusApp": "Zed fokussieren",
+      "logout": "Aktuelles Konto abmelden",
+      "managePlan": "Tarif verwalten",
+      "applyAndRestart": "Anwenden und neu starten",
+      "reapply": "Erneut anwenden",
+      "exportTitle": "Zed-Konten als JSON exportieren"
     }
   }
 }

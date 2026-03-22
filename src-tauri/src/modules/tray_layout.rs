@@ -10,6 +10,7 @@ const TRAY_LAYOUT_FILE: &str = "tray_layout.json";
 
 pub const PLATFORM_ANTIGRAVITY: &str = "antigravity";
 pub const PLATFORM_CODEX: &str = "codex";
+pub const PLATFORM_ZED: &str = "zed";
 pub const PLATFORM_GITHUB_COPILOT: &str = "github-copilot";
 pub const PLATFORM_WINDSURF: &str = "windsurf";
 pub const PLATFORM_KIRO: &str = "kiro";
@@ -21,9 +22,10 @@ pub const PLATFORM_QODER: &str = "qoder";
 pub const PLATFORM_TRAE: &str = "trae";
 pub const PLATFORM_WORKBUDDY: &str = "workbuddy";
 
-pub const SUPPORTED_PLATFORM_IDS: [&str; 12] = [
+pub const SUPPORTED_PLATFORM_IDS: [&str; 13] = [
     PLATFORM_ANTIGRAVITY,
     PLATFORM_CODEX,
+    PLATFORM_ZED,
     PLATFORM_GITHUB_COPILOT,
     PLATFORM_WINDSURF,
     PLATFORM_KIRO,
@@ -156,6 +158,7 @@ fn normalize_tray_platforms(ids: &[String], raw_order_has_new: &[&str]) -> Vec<S
         && contains_platform(&sanitized, PLATFORM_WINDSURF);
 
     for &new_platform in &[
+        PLATFORM_ZED,
         PLATFORM_KIRO,
         PLATFORM_CURSOR,
         PLATFORM_GEMINI,

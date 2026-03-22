@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Zed Platformu"
   },
   "platformLayout": {
     "title": "Platform Düzeni",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Kapalıyken yalnızca Codex açılır ve OpenClaw mevcut oturum açma durumunu korur",
       "ghcpOpencodeAuthOverwrite": "GitHub Copilot değiştirirken OpenCode oturum açma bilgilerinin üzerine yazın",
       "ghcpOpencodeRestart": "GitHub Copilot değiştirildiğinde OpenCode'u yeniden başlat",
-      "ghcpLaunchOnSwitch": "GitHub Copilot değiştirirken GitHub Copilot App'i otomatik başlat"
+      "ghcpLaunchOnSwitch": "GitHub Copilot değiştirirken GitHub Copilot App'i otomatik başlat",
+      "zedAutoRefresh": "Zed kotasını otomatik yenile",
+      "zedAutoRefreshDesc": "Arka plan güncelleme sıklığı",
+      "zedAppPath": "Zed başlatma yolu",
+      "zedAppPathDesc": "Varsayılan yolu kullanmak için boş bırakın",
+      "zedAppPathPlaceholder": "Varsayılan yol",
+      "zedPathSelect": "Seç",
+      "zedPathReset": "Varsayılana sıfırla"
     },
     "network": {
       "apiTitle": "Yerçekimine Karşı Kokpit API'si",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "WorkBuddy Ayarları",
       "appPath": "WorkBuddy Yolu"
+    },
+    "zed": {
+      "title": "Zed Ayarları",
+      "appPath": "Zed Yolu"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Lütfen bu sayfada giriş ve yetkilendirmeyi tamamlayın."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Kullanim paketi: --",
       "payAsYouGoConsuming": "Kullandikca odeme: tuketiliyor",
       "payAsYouGoEnabled": "Kullandikca odeme: etkin",
-      "payAsYouGoEmpty": "Kullandikca odeme: --"
+      "payAsYouGoEmpty": "Kullandikca odeme: --",
+      "payAsYouGoLabel": "Istege bagli kullanim"
     },
     "flowNotice": {
       "title": "Trae hesap kilavuzu (genisletmek/daraltmak icin tiklayin)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "WorkBuddy çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Zed hesabı ekle"
+    },
+    "empty": {
+      "description": "Zed hesaplarınızı yönetmeye başlamak için “Hesap ekle”ye tıklayın veya bunları JSON'dan ya da mevcut yerel oturum durumundan içe aktarın."
+    },
+    "import": {
+      "jsonDesc": "Bu araç tarafından dışa aktarılan bir Zed JSON dosyasını içe aktarın.",
+      "localDesc": "Hesap verilerini mevcut yerel Zed oturum durumundan veya dışa aktarılmış bir JSON dosyasından içe aktarın."
+    },
+    "flowNotice": {
+      "title": "Zed hesap entegrasyonu notları (genişletmek/daraltmak için tıklayın)",
+      "desc": "Resmî OAuth oturum açmayı, JSON içe aktarmayı, mevcut yerel oturum durumunu içe aktarmayı ve kaydedilmiş bir hesabı istemcinin gerçek kalıcılık kurallarına göre resmî Zed istemcisine uygulamayı destekler. Bu sayfa yalnızca masaüstü istemcisinin doğrudan okuyabildiği durum alanlarını gösterir ve artık ek bir menü çubuğu durumu tutmaz.",
+      "reason": "Yetki kapsamı: tarayıcıda Zed'in resmî same-origin girişini açar; içe aktarma için mevcut yerel Zed kimlik bilgilerini okur; bir hesabı uygularken aynı sistem kimlik bilgisi yuvasına geri yazar; ve gerektiğinde Zed'i başlatabilir veya yeniden başlatabilir.",
+      "storage": "Veri kapsamı: yalnızca içe aktarılan veya yetkilendirilmiş hesap kayıtları, etiketler ve dışa aktarılan içerik yerel olarak saklanır. Yerel Keychain ya da kimlik bilgisi içerikleri yüklenmez, tarayıcı web oturumları taranmaz ve ilgisiz sistem kimlik bilgileri değiştirilmez."
+    },
+    "page": {
+      "subtitle": "Resmî same-origin oturum açmayı, abonelik ve kullanım sorgularını, giriş bilgilerinin gerçekten üzerine yazılmasını ve Zed yeniden başlatmayı destekler.",
+      "current": "Geçerli",
+      "tokenSpend": "Token harcaması",
+      "editPredictions": "Düzenleme tahminleri",
+      "spendLimit": "Harcama limiti",
+      "billingPeriodEnd": "Fatura dönemi sonu",
+      "searchPlaceholder": "GitHub girişi, plan veya etiket ara",
+      "empty": "Henüz Zed hesabı yok",
+      "unknownStatus": "Bilinmeyen durum",
+      "overdueField": "Gecikmiş faturalar",
+      "overdueYes": "Evet",
+      "overdueNo": "Hayır"
+    },
+    "runtime": {
+      "title": "Geçerli Zed oturumu",
+      "currentAccount": "Şu anda etkin hesap: {{account}}",
+      "noCurrentAccount": "Etkin Zed hesabı yok",
+      "running": "Çalışıyor",
+      "stopped": "Durduruldu",
+      "pathMissing": "Başlatma yolu yapılandırılmadı",
+      "lastPid": "Son PID",
+      "lastStartedAt": "Son başlatılma",
+      "loadFailed": "Zed çalışma durumu yüklenemedi"
+    },
+    "oauth": {
+      "pendingTitle": "Bekleyen Zed oturumu",
+      "pendingDesc": "Tarayıcıdaki yetkilendirmeyi tamamlayın, ardından hesabı içe aktarmayı bitirmek için buraya dönün.",
+      "openBrowser": "Tarayıcıyı aç",
+      "complete": "Girişi tamamla",
+      "startFailed": "Zed oturumu başlatılamadı",
+      "completeSuccess": "Zed oturumu tamamlandı: {{account}}",
+      "importOnlySuccess": "Yetkilendirme başarıyla tamamlandı. Hesap içe aktarıldı. Resmi Zed'in bu hesabı kullanması için \"Uygula ve Yeniden Başlat\" seçeneğine tıklayın."
+    },
+    "actions": {
+      "addAccount": "Zed’e giriş yap",
+      "importSuccess": "Zed hesapları başarıyla içe aktarıldı",
+      "switchSuccess": "Zed hesabı değiştirildi ve yeniden başlatıldı",
+      "deleteConfirm": "{{count}} Zed hesabı silinsin mi?",
+      "startApp": "Zed’i başlat",
+      "stopApp": "Zed’i durdur",
+      "restartApp": "Zed’i yeniden başlat",
+      "focusApp": "Zed’e odaklan",
+      "logout": "Geçerli hesaptan çıkış yap",
+      "managePlan": "Planı yönet",
+      "applyAndRestart": "Uygula ve yeniden başlat",
+      "reapply": "Yeniden uygula",
+      "exportTitle": "Zed hesaplarını JSON olarak dışa aktar"
     }
   }
 }

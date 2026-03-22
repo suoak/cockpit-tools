@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Zed 平台"
   },
   "platformLayout": {
     "title": "平台佈局",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "關閉時，僅切換 Codex，OpenClaw 保持目前登入狀態",
       "ghcpOpencodeAuthOverwrite": "切換 GitHub Copilot 時覆蓋 OpenCode 登入",
       "ghcpOpencodeRestart": "切換 GitHub Copilot 時自動重新啟動 OpenCode",
-      "ghcpLaunchOnSwitch": "切換 GitHub Copilot 時自動啟動 GitHub Copilot App"
+      "ghcpLaunchOnSwitch": "切換 GitHub Copilot 時自動啟動 GitHub Copilot App",
+      "zedAutoRefresh": "Zed 自動重新整理配額",
+      "zedAutoRefreshDesc": "背景自動更新頻率",
+      "zedAppPath": "Zed 啟動路徑",
+      "zedAppPathDesc": "留空則使用預設路徑",
+      "zedAppPathPlaceholder": "預設路徑",
+      "zedPathSelect": "選擇",
+      "zedPathReset": "重設預設值"
     },
     "network": {
       "apiTitle": "反重力駕駛艙 API",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "WorkBuddy 設定",
       "appPath": "WorkBuddy 路徑"
+    },
+    "zed": {
+      "title": "Zed 設定",
+      "appPath": "Zed 路徑"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "請在此頁面完成登入與授權。"
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "用量包：--",
       "payAsYouGoConsuming": "超額自動扣費：消耗中",
       "payAsYouGoEnabled": "超額自動扣費：已開啟",
-      "payAsYouGoEmpty": "超額自動扣費：--"
+      "payAsYouGoEmpty": "超額自動扣費：--",
+      "payAsYouGoLabel": "超額自動扣費"
     },
     "flowNotice": {
       "title": "Trae 帳號接入說明（點擊展開/收起）",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "WorkBuddy 多執行個體僅在 macOS、Windows 和 Linux 上支援。"
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "新增 Zed 帳號"
+    },
+    "empty": {
+      "description": "點擊「新增帳號」開始管理你的 Zed 帳號，也可以透過 JSON 或本機目前登入狀態匯入。"
+    },
+    "import": {
+      "jsonDesc": "匯入由本工具匯出的 Zed JSON 檔案。",
+      "localDesc": "支援從本機目前的 Zed 登入狀態或匯出的 JSON 檔案匯入帳號資料。"
+    },
+    "flowNotice": {
+      "title": "Zed 帳號接入說明（點擊展開/收起）",
+      "desc": "支援官方 OAuth 登入、JSON 匯入、本機目前登入狀態匯入，以及依照 Zed 用戶端真實落盤規則套用帳號並重新啟動官方用戶端。頁面僅顯示桌面端可直接讀取的狀態欄位，不再額外維護選單列狀態。",
+      "reason": "權限範圍：在瀏覽器開啟 Zed 官方同源登入；讀取本機目前的 Zed 登入憑據用於匯入；套用帳號時依官方用戶端相同憑據位點回寫系統憑據，並可依需求啟動或重新啟動 Zed。",
+      "storage": "資料範圍：本機僅保存匯入或授權取得的帳號記錄、標籤與匯出內容；不會上傳本機 Keychain/憑據原文，不會掃描瀏覽器網頁登入工作階段，也不會修改無關的系統憑據。"
+    },
+    "page": {
+      "subtitle": "支援官方同源登入、訂閱與用量查詢、真實覆寫登入資訊並重新啟動 Zed。",
+      "current": "目前",
+      "tokenSpend": "Token 消耗",
+      "editPredictions": "編輯預測",
+      "spendLimit": "消費上限",
+      "billingPeriodEnd": "帳期結束",
+      "searchPlaceholder": "搜尋 GitHub 登入名、方案或標籤",
+      "empty": "目前沒有 Zed 帳號",
+      "unknownStatus": "未知狀態",
+      "overdueField": "是否欠費",
+      "overdueYes": "是",
+      "overdueNo": "否"
+    },
+    "runtime": {
+      "title": "目前的 Zed 工作階段",
+      "currentAccount": "目前生效帳號：{{account}}",
+      "noCurrentAccount": "目前沒有生效的 Zed 帳號",
+      "running": "執行中",
+      "stopped": "未執行",
+      "pathMissing": "尚未設定啟動路徑",
+      "lastPid": "最近 PID",
+      "lastStartedAt": "最近啟動時間",
+      "loadFailed": "載入 Zed 執行狀態失敗"
+    },
+    "oauth": {
+      "pendingTitle": "待完成的 Zed 登入",
+      "pendingDesc": "請先在瀏覽器完成授權，再回到這裡完成帳號匯入。",
+      "openBrowser": "開啟瀏覽器",
+      "complete": "完成登入",
+      "startFailed": "啟動 Zed 登入失敗",
+      "completeSuccess": "Zed 登入完成：{{account}}",
+      "importOnlySuccess": "授權成功，帳號已匯入；如需讓官方 Zed 使用此帳號，請點擊「套用並重新啟動」。"
+    },
+    "actions": {
+      "addAccount": "登入 Zed",
+      "importSuccess": "成功匯入 Zed 帳號",
+      "switchSuccess": "Zed 帳號已切換並重新啟動",
+      "deleteConfirm": "確認刪除 {{count}} 個 Zed 帳號嗎？",
+      "startApp": "啟動 Zed",
+      "stopApp": "停止 Zed",
+      "restartApp": "重新啟動 Zed",
+      "focusApp": "聚焦 Zed",
+      "logout": "登出目前帳號",
+      "managePlan": "管理方案",
+      "applyAndRestart": "套用並重新啟動",
+      "reapply": "重新套用",
+      "exportTitle": "匯出 Zed 帳號 JSON"
     }
   }
 }

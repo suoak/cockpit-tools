@@ -20,7 +20,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { ALL_PLATFORM_IDS, PlatformId } from '../types/platform';
+import { isMenuVisiblePlatform, MENU_VISIBLE_PLATFORM_IDS, PlatformId } from '../types/platform';
 import {
   getGroupChildConfig,
   parseGroupEntryId,
@@ -267,7 +267,7 @@ function IconSelector({
 
           <div className="platform-layout-icon-select-divider" />
 
-          {ALL_PLATFORM_IDS.map((platformId) => (
+          {MENU_VISIBLE_PLATFORM_IDS.map((platformId) => (
             <button
               type="button"
               className={`platform-layout-icon-select-item ${
@@ -399,6 +399,9 @@ export function PlatformLayoutModal({
     for (const entryId of orderedEntryIds) {
       const platformId = parsePlatformEntryId(entryId);
       if (platformId) {
+        if (!isMenuVisiblePlatform(platformId)) {
+          continue;
+        }
         result.push({
           id: entryId,
           type: 'platform',
@@ -424,14 +427,21 @@ export function PlatformLayoutModal({
         continue;
       }
 
+      const visiblePlatformIds = resolveEntryPlatformIds(entryId, platformGroups).filter(isMenuVisiblePlatform);
+      if (visiblePlatformIds.length === 0) {
+        continue;
+      }
+
       result.push({
         id: entryId,
         type: 'group',
         label: group.name,
         hidden: hiddenSet.has(entryId),
         group,
-        defaultPlatformId,
-        platformIds: resolveEntryPlatformIds(entryId, platformGroups),
+        defaultPlatformId: visiblePlatformIds.includes(defaultPlatformId)
+          ? defaultPlatformId
+          : visiblePlatformIds[0],
+        platformIds: visiblePlatformIds,
       });
     }
     return result;
@@ -447,7 +457,7 @@ export function PlatformLayoutModal({
   const availableAddChildByGroup = useMemo(() => {
     const map = new Map<string, PlatformId[]>();
     for (const group of platformGroups) {
-      const list = ALL_PLATFORM_IDS.filter((platformId) => !group.platformIds.includes(platformId));
+      const list = MENU_VISIBLE_PLATFORM_IDS.filter((platformId) => !group.platformIds.includes(platformId));
       map.set(group.id, list);
     }
     return map;
@@ -718,7 +728,7 @@ export function PlatformLayoutModal({
   };
 
   const handleBulkTray = (enabled: boolean) => {
-    ALL_PLATFORM_IDS.forEach((platformId) => setTrayPlatform(platformId, enabled));
+    MENU_VISIBLE_PLATFORM_IDS.forEach((platformId) => setTrayPlatform(platformId, enabled));
   };
 
   const sidebarVisibleEntries = useMemo(
@@ -729,10 +739,10 @@ export function PlatformLayoutModal({
   const sidebarBulkEnabled = sidebarBulkTargetCount > 0
     && sidebarVisibleEntries.filter((entry) => sidebarSet.has(entry.id)).length >= sidebarBulkTargetCount;
   const dashboardBulkEnabled = entries.length > 0 && entries.every((entry) => !entry.hidden);
-  const trayBulkEnabled = ALL_PLATFORM_IDS.every((platformId) => traySet.has(platformId));
+  const trayBulkEnabled = MENU_VISIBLE_PLATFORM_IDS.every((platformId) => traySet.has(platformId));
 
   const openCreateGroupEditor = () => {
-    const firstPlatform = ALL_PLATFORM_IDS[0] ?? 'codebuddy';
+    const firstPlatform = MENU_VISIBLE_PLATFORM_IDS[0] ?? 'codebuddy';
 
     setEditingGroupId(null);
     setGroupDraftName('');
@@ -1446,7 +1456,7 @@ export function PlatformLayoutModal({
                 <div className="platform-layout-group-field full-width">
                   <span>{t('platformLayout.groupChildren', '子级平台')}</span>
                   <div className="platform-layout-group-children-picker">
-                    {ALL_PLATFORM_IDS.map((platformId) => {
+                    {MENU_VISIBLE_PLATFORM_IDS.map((platformId) => {
                       const checked = groupDraftPlatformIds.includes(platformId);
                       return (
                         <label

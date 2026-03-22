@@ -5,6 +5,7 @@ import { ALL_PLATFORM_IDS, PlatformId } from '../types/platform';
 const PLATFORM_LAYOUT_STORAGE_KEY = 'agtools.platform_layout.v1';
 const LEGACY_TRAY_CORE_IDS: PlatformId[] = ['antigravity', 'codex', 'github-copilot', 'windsurf'];
 const TRAY_MIGRATED_PLATFORM_IDS: PlatformId[] = [
+  'zed',
   'kiro',
   'cursor',
   'gemini',
@@ -324,6 +325,9 @@ function normalizeGroupName(raw: unknown, fallbackPlatform: PlatformId): string 
   }
   if (fallbackPlatform === 'github-copilot') {
     return 'GitHub Copilot';
+  }
+  if (fallbackPlatform === 'zed') {
+    return 'Zed';
   }
   if (fallbackPlatform === 'workbuddy') {
     return 'WorkBuddy';

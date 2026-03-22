@@ -79,6 +79,9 @@ pub struct UserConfig {
     /// Codex 自动刷新间隔（分钟），-1 表示禁用
     #[serde(default = "default_codex_auto_refresh")]
     pub codex_auto_refresh_minutes: i32,
+    /// Zed 自动刷新间隔（分钟），-1 表示禁用
+    #[serde(default = "default_zed_auto_refresh")]
+    pub zed_auto_refresh_minutes: i32,
     /// GitHub Copilot 自动刷新间隔（分钟），-1 表示禁用
     #[serde(default = "default_ghcp_auto_refresh")]
     pub ghcp_auto_refresh_minutes: i32,
@@ -124,6 +127,9 @@ pub struct UserConfig {
     /// Codex 启动路径（为空则使用默认路径）
     #[serde(default = "default_codex_app_path")]
     pub codex_app_path: String,
+    /// Zed 启动路径（为空则使用默认路径）
+    #[serde(default = "default_zed_app_path")]
+    pub zed_app_path: String,
     /// VS Code 启动路径（为空则使用默认路径）
     #[serde(default = "default_vscode_app_path")]
     pub vscode_app_path: String,
@@ -199,6 +205,12 @@ pub struct UserConfig {
     /// Codex 配额预警阈值（百分比）
     #[serde(default = "default_codex_quota_alert_threshold")]
     pub codex_quota_alert_threshold: i32,
+    /// 是否启用 Zed 配额预警通知
+    #[serde(default = "default_zed_quota_alert_enabled")]
+    pub zed_quota_alert_enabled: bool,
+    /// Zed 配额预警阈值（百分比）
+    #[serde(default = "default_zed_quota_alert_threshold")]
+    pub zed_quota_alert_threshold: i32,
     /// Codex primary_window 配额预警阈值（百分比）
     #[serde(default = "default_codex_quota_alert_primary_threshold")]
     pub codex_quota_alert_primary_threshold: i32,
@@ -340,6 +352,9 @@ fn default_auto_refresh() -> i32 {
 fn default_codex_auto_refresh() -> i32 {
     10
 } // 默认 10 分钟
+fn default_zed_auto_refresh() -> i32 {
+    10
+}
 fn default_ghcp_auto_refresh() -> i32 {
     10
 } // 默认 10 分钟
@@ -383,6 +398,9 @@ fn default_antigravity_app_path() -> String {
     String::new()
 }
 fn default_codex_app_path() -> String {
+    String::new()
+}
+fn default_zed_app_path() -> String {
     String::new()
 }
 fn default_vscode_app_path() -> String {
@@ -458,6 +476,12 @@ fn default_codex_quota_alert_enabled() -> bool {
     false
 }
 fn default_codex_quota_alert_threshold() -> i32 {
+    20
+}
+fn default_zed_quota_alert_enabled() -> bool {
+    false
+}
+fn default_zed_quota_alert_threshold() -> i32 {
     20
 }
 fn default_codex_quota_alert_primary_threshold() -> i32 {
@@ -543,6 +567,7 @@ impl Default for UserConfig {
             ui_scale: default_ui_scale(),
             auto_refresh_minutes: default_auto_refresh(),
             codex_auto_refresh_minutes: default_codex_auto_refresh(),
+            zed_auto_refresh_minutes: default_zed_auto_refresh(),
             ghcp_auto_refresh_minutes: default_ghcp_auto_refresh(),
             windsurf_auto_refresh_minutes: default_windsurf_auto_refresh(),
             kiro_auto_refresh_minutes: default_kiro_auto_refresh(),
@@ -558,6 +583,7 @@ impl Default for UserConfig {
             opencode_app_path: default_opencode_app_path(),
             antigravity_app_path: default_antigravity_app_path(),
             codex_app_path: default_codex_app_path(),
+            zed_app_path: default_zed_app_path(),
             vscode_app_path: default_vscode_app_path(),
             windsurf_app_path: default_windsurf_app_path(),
             kiro_app_path: default_kiro_app_path(),
@@ -584,6 +610,8 @@ impl Default for UserConfig {
             quota_alert_threshold: default_quota_alert_threshold(),
             codex_quota_alert_enabled: default_codex_quota_alert_enabled(),
             codex_quota_alert_threshold: default_codex_quota_alert_threshold(),
+            zed_quota_alert_enabled: default_zed_quota_alert_enabled(),
+            zed_quota_alert_threshold: default_zed_quota_alert_threshold(),
             codex_quota_alert_primary_threshold: default_codex_quota_alert_primary_threshold(),
             codex_quota_alert_secondary_threshold: default_codex_quota_alert_secondary_threshold(),
             ghcp_quota_alert_enabled: default_ghcp_quota_alert_enabled(),
@@ -822,6 +850,18 @@ pub fn load_user_config() -> Result<UserConfig, String> {
         if !obj.contains_key("codex_quota_alert_threshold") {
             obj.insert(
                 "codex_quota_alert_threshold".to_string(),
+                json!(legacy_threshold),
+            );
+        }
+        if !obj.contains_key("zed_quota_alert_enabled") {
+            obj.insert(
+                "zed_quota_alert_enabled".to_string(),
+                json!(legacy_enabled),
+            );
+        }
+        if !obj.contains_key("zed_quota_alert_threshold") {
+            obj.insert(
+                "zed_quota_alert_threshold".to_string(),
                 json!(legacy_threshold),
             );
         }

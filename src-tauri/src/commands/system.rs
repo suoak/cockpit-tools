@@ -53,6 +53,8 @@ pub struct GeneralConfig {
     pub auto_refresh_minutes: i32,
     /// Codex 自动刷新间隔（分钟），-1 表示禁用
     pub codex_auto_refresh_minutes: i32,
+    /// Zed 自动刷新间隔（分钟），-1 表示禁用
+    pub zed_auto_refresh_minutes: i32,
     /// GitHub Copilot 自动刷新间隔（分钟），-1 表示禁用
     pub ghcp_auto_refresh_minutes: i32,
     /// Windsurf 自动刷新间隔（分钟），-1 表示禁用
@@ -83,6 +85,8 @@ pub struct GeneralConfig {
     pub antigravity_app_path: String,
     /// Codex 启动路径（为空则使用默认路径）
     pub codex_app_path: String,
+    /// Zed 启动路径（为空则使用默认路径）
+    pub zed_app_path: String,
     /// VS Code 启动路径（为空则使用默认路径）
     pub vscode_app_path: String,
     /// Windsurf 启动路径（为空则使用默认路径）
@@ -99,6 +103,8 @@ pub struct GeneralConfig {
     pub qoder_app_path: String,
     /// Trae 启动路径（为空则使用默认路径）
     pub trae_app_path: String,
+    /// WorkBuddy 启动路径（为空则使用默认路径）
+    pub workbuddy_app_path: String,
     /// 切换 Codex 时是否自动重启 OpenCode
     pub opencode_sync_on_switch: bool,
     /// 切换 Codex 时是否覆盖 OpenCode 登录信息
@@ -131,6 +137,10 @@ pub struct GeneralConfig {
     pub codex_quota_alert_enabled: bool,
     /// Codex 配额预警阈值（百分比）
     pub codex_quota_alert_threshold: i32,
+    /// 是否启用 Zed 配额预警通知
+    pub zed_quota_alert_enabled: bool,
+    /// Zed 配额预警阈值（百分比）
+    pub zed_quota_alert_threshold: i32,
     /// Codex primary_window 配额预警阈值（百分比）
     pub codex_quota_alert_primary_threshold: i32,
     /// Codex secondary_window 配额预警阈值（百分比）
@@ -171,6 +181,10 @@ pub struct GeneralConfig {
     pub trae_quota_alert_enabled: bool,
     /// Trae 配额预警阈值（百分比）
     pub trae_quota_alert_threshold: i32,
+    /// 是否启用 WorkBuddy 配额预警通知
+    pub workbuddy_quota_alert_enabled: bool,
+    /// WorkBuddy 配额预警阈值（百分比）
+    pub workbuddy_quota_alert_threshold: i32,
 }
 
 const DEFAULT_UI_SCALE: f64 = 1.0;
@@ -313,6 +327,7 @@ pub fn save_network_config(
         ui_scale: current.ui_scale,
         auto_refresh_minutes: current.auto_refresh_minutes,
         codex_auto_refresh_minutes: current.codex_auto_refresh_minutes,
+        zed_auto_refresh_minutes: current.zed_auto_refresh_minutes,
         ghcp_auto_refresh_minutes: current.ghcp_auto_refresh_minutes,
         windsurf_auto_refresh_minutes: current.windsurf_auto_refresh_minutes,
         kiro_auto_refresh_minutes: current.kiro_auto_refresh_minutes,
@@ -328,6 +343,7 @@ pub fn save_network_config(
         opencode_app_path: current.opencode_app_path,
         antigravity_app_path: current.antigravity_app_path,
         codex_app_path: current.codex_app_path,
+        zed_app_path: current.zed_app_path,
         vscode_app_path: current.vscode_app_path,
         windsurf_app_path: current.windsurf_app_path,
         kiro_app_path: current.kiro_app_path,
@@ -353,6 +369,8 @@ pub fn save_network_config(
         quota_alert_threshold: current.quota_alert_threshold,
         codex_quota_alert_enabled: current.codex_quota_alert_enabled,
         codex_quota_alert_threshold: current.codex_quota_alert_threshold,
+        zed_quota_alert_enabled: current.zed_quota_alert_enabled,
+        zed_quota_alert_threshold: current.zed_quota_alert_threshold,
         codex_quota_alert_primary_threshold: current.codex_quota_alert_primary_threshold,
         codex_quota_alert_secondary_threshold: current.codex_quota_alert_secondary_threshold,
         ghcp_quota_alert_enabled: current.ghcp_quota_alert_enabled,
@@ -404,6 +422,7 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         ui_scale: user_config.ui_scale,
         auto_refresh_minutes: user_config.auto_refresh_minutes,
         codex_auto_refresh_minutes: user_config.codex_auto_refresh_minutes,
+        zed_auto_refresh_minutes: user_config.zed_auto_refresh_minutes,
         ghcp_auto_refresh_minutes: user_config.ghcp_auto_refresh_minutes,
         windsurf_auto_refresh_minutes: user_config.windsurf_auto_refresh_minutes,
         kiro_auto_refresh_minutes: user_config.kiro_auto_refresh_minutes,
@@ -419,6 +438,7 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         opencode_app_path: user_config.opencode_app_path,
         antigravity_app_path: user_config.antigravity_app_path,
         codex_app_path: user_config.codex_app_path,
+        zed_app_path: user_config.zed_app_path,
         vscode_app_path: user_config.vscode_app_path,
         windsurf_app_path: user_config.windsurf_app_path,
         kiro_app_path: user_config.kiro_app_path,
@@ -427,6 +447,7 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         codebuddy_cn_app_path: user_config.codebuddy_cn_app_path,
         qoder_app_path: user_config.qoder_app_path,
         trae_app_path: user_config.trae_app_path,
+        workbuddy_app_path: user_config.workbuddy_app_path,
         opencode_sync_on_switch: user_config.opencode_sync_on_switch,
         opencode_auth_overwrite_on_switch: user_config.opencode_auth_overwrite_on_switch,
         ghcp_opencode_sync_on_switch: user_config.ghcp_opencode_sync_on_switch,
@@ -443,6 +464,8 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         quota_alert_threshold: user_config.quota_alert_threshold,
         codex_quota_alert_enabled: user_config.codex_quota_alert_enabled,
         codex_quota_alert_threshold: user_config.codex_quota_alert_threshold,
+        zed_quota_alert_enabled: user_config.zed_quota_alert_enabled,
+        zed_quota_alert_threshold: user_config.zed_quota_alert_threshold,
         codex_quota_alert_primary_threshold: user_config.codex_quota_alert_primary_threshold,
         codex_quota_alert_secondary_threshold: user_config.codex_quota_alert_secondary_threshold,
         ghcp_quota_alert_enabled: user_config.ghcp_quota_alert_enabled,
@@ -463,13 +486,16 @@ pub fn get_general_config() -> Result<GeneralConfig, String> {
         qoder_quota_alert_threshold: user_config.qoder_quota_alert_threshold,
         trae_quota_alert_enabled: user_config.trae_quota_alert_enabled,
         trae_quota_alert_threshold: user_config.trae_quota_alert_threshold,
+        workbuddy_quota_alert_enabled: user_config.workbuddy_quota_alert_enabled,
+        workbuddy_quota_alert_threshold: user_config.workbuddy_quota_alert_threshold,
     };
 
     modules::logger::log_info(&format!(
-        "[StartupPerf][SystemCommand] get_general_config completed in {}ms: auto_refresh={}, codex={}, ghcp={}, windsurf={}, kiro={}, cursor={}, gemini={}, codebuddy={}, codebuddy_cn={}, qoder={}, trae={}, auto_switch={}",
+        "[StartupPerf][SystemCommand] get_general_config completed in {}ms: auto_refresh={}, codex={}, zed={}, ghcp={}, windsurf={}, kiro={}, cursor={}, gemini={}, codebuddy={}, codebuddy_cn={}, qoder={}, trae={}, auto_switch={}",
         started.elapsed().as_millis(),
         result.auto_refresh_minutes,
         result.codex_auto_refresh_minutes,
+        result.zed_auto_refresh_minutes,
         result.ghcp_auto_refresh_minutes,
         result.windsurf_auto_refresh_minutes,
         result.kiro_auto_refresh_minutes,
@@ -494,6 +520,7 @@ pub fn save_general_config(
     ui_scale: Option<f64>,
     auto_refresh_minutes: i32,
     codex_auto_refresh_minutes: i32,
+    zed_auto_refresh_minutes: Option<i32>,
     ghcp_auto_refresh_minutes: Option<i32>,
     windsurf_auto_refresh_minutes: Option<i32>,
     kiro_auto_refresh_minutes: Option<i32>,
@@ -509,6 +536,7 @@ pub fn save_general_config(
     opencode_app_path: String,
     antigravity_app_path: String,
     codex_app_path: String,
+    zed_app_path: Option<String>,
     vscode_app_path: String,
     windsurf_app_path: Option<String>,
     kiro_app_path: Option<String>,
@@ -534,6 +562,8 @@ pub fn save_general_config(
     quota_alert_threshold: Option<i32>,
     codex_quota_alert_enabled: Option<bool>,
     codex_quota_alert_threshold: Option<i32>,
+    zed_quota_alert_enabled: Option<bool>,
+    zed_quota_alert_threshold: Option<i32>,
     codex_quota_alert_primary_threshold: Option<i32>,
     codex_quota_alert_secondary_threshold: Option<i32>,
     ghcp_quota_alert_enabled: Option<bool>,
@@ -559,6 +589,9 @@ pub fn save_general_config(
     let normalized_opencode_path = opencode_app_path.trim().to_string();
     let normalized_antigravity_path = antigravity_app_path.trim().to_string();
     let normalized_codex_path = codex_app_path.trim().to_string();
+    let normalized_zed_path = zed_app_path
+        .map(|value| value.trim().to_string())
+        .unwrap_or_else(|| current.zed_app_path.clone());
     let normalized_vscode_path = vscode_app_path.trim().to_string();
     let normalized_ui_scale = sanitize_ui_scale(ui_scale.unwrap_or(current.ui_scale));
     let normalized_windsurf_path = windsurf_app_path
@@ -637,6 +670,8 @@ pub fn save_general_config(
         ui_scale: normalized_ui_scale,
         auto_refresh_minutes,
         codex_auto_refresh_minutes,
+        zed_auto_refresh_minutes: zed_auto_refresh_minutes
+            .unwrap_or(current.zed_auto_refresh_minutes),
         ghcp_auto_refresh_minutes: ghcp_auto_refresh_minutes
             .unwrap_or(current.ghcp_auto_refresh_minutes),
         windsurf_auto_refresh_minutes: windsurf_auto_refresh_minutes
@@ -661,6 +696,7 @@ pub fn save_general_config(
         opencode_app_path: normalized_opencode_path,
         antigravity_app_path: normalized_antigravity_path,
         codex_app_path: normalized_codex_path,
+        zed_app_path: normalized_zed_path,
         vscode_app_path: normalized_vscode_path,
         windsurf_app_path: normalized_windsurf_path,
         kiro_app_path: normalized_kiro_path,
@@ -691,6 +727,10 @@ pub fn save_general_config(
         codex_quota_alert_enabled: codex_quota_alert_enabled
             .unwrap_or(current.codex_quota_alert_enabled),
         codex_quota_alert_threshold: next_codex_quota_alert_threshold,
+        zed_quota_alert_enabled: zed_quota_alert_enabled
+            .unwrap_or(current.zed_quota_alert_enabled),
+        zed_quota_alert_threshold: zed_quota_alert_threshold
+            .unwrap_or(current.zed_quota_alert_threshold),
         codex_quota_alert_primary_threshold: codex_quota_alert_primary_threshold
             .unwrap_or(next_codex_quota_alert_threshold),
         codex_quota_alert_secondary_threshold: codex_quota_alert_secondary_threshold
@@ -788,6 +828,7 @@ pub fn set_app_path(app: String, path: String) -> Result<(), String> {
     match app.as_str() {
         "antigravity" => current.antigravity_app_path = normalized_path,
         "codex" => current.codex_app_path = normalized_path,
+        "zed" => current.zed_app_path = normalized_path,
         "vscode" => current.vscode_app_path = normalized_path,
         "windsurf" => current.windsurf_app_path = normalized_path,
         "kiro" => current.kiro_app_path = normalized_path,
@@ -796,6 +837,7 @@ pub fn set_app_path(app: String, path: String) -> Result<(), String> {
         "codebuddy_cn" => current.codebuddy_cn_app_path = normalized_path,
         "qoder" => current.qoder_app_path = normalized_path,
         "trae" => current.trae_app_path = normalized_path,
+        "workbuddy" => current.workbuddy_app_path = normalized_path,
         "opencode" => current.opencode_app_path = normalized_path,
         _ => return Err("未知应用类型".to_string()),
     }
@@ -812,11 +854,10 @@ pub fn detect_app_path(app: String, force: Option<bool>) -> Result<Option<String
             force,
         )),
         "cursor" => Ok(modules::cursor_instance::detect_and_save_cursor_launch_path(force)),
-        "antigravity" | "codex" | "vscode" | "codebuddy" | "codebuddy_cn" | "qoder" | "trae"
-        | "opencode" | "workbuddy" => Ok(modules::process::detect_and_save_app_path(
-            app.as_str(),
-            force,
-        )),
+        "antigravity" | "codex" | "zed" | "vscode" | "codebuddy" | "codebuddy_cn" | "qoder"
+        | "trae" | "opencode" | "workbuddy" => {
+            Ok(modules::process::detect_and_save_app_path(app.as_str(), force))
+        }
         _ => Err("未知应用类型".to_string()),
     }
 }

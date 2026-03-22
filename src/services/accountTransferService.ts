@@ -11,6 +11,7 @@ import * as codebuddyCnService from './codebuddyCnService';
 import * as qoderService from './qoderService';
 import * as traeService from './traeService';
 import * as workbuddyService from './workbuddyService';
+import * as zedService from './zedService';
 
 type AccountWithId = { id: string };
 
@@ -30,6 +31,11 @@ const PLATFORM_ADAPTERS: Record<PlatformId, TransferAdapter> = {
     listAccounts: codexService.listCodexAccounts,
     exportAccounts: codexService.exportCodexAccounts,
     importFromJson: codexService.importCodexFromJson,
+  },
+  zed: {
+    listAccounts: zedService.listZedAccounts,
+    exportAccounts: zedService.exportZedAccounts,
+    importFromJson: zedService.importZedFromJson,
   },
   'github-copilot': {
     listAccounts: githubCopilotService.listGitHubCopilotAccounts,

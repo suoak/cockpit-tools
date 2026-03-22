@@ -332,7 +332,10 @@ pub fn clear_all_pids() -> Result<(), String> {
     Ok(())
 }
 
-pub fn replace_bind_account_references(old_account_id: &str, new_account_id: &str) -> Result<(), String> {
+pub fn replace_bind_account_references(
+    old_account_id: &str,
+    new_account_id: &str,
+) -> Result<(), String> {
     let old_id = old_account_id.trim();
     let new_id = new_account_id.trim();
     if old_id.is_empty() || new_id.is_empty() || old_id == new_id {

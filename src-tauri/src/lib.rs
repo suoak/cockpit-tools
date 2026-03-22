@@ -130,6 +130,7 @@ pub fn run() {
                     modules::kiro_oauth::restore_pending_oauth_listener();
                     modules::trae_oauth::restore_pending_oauth_listener();
                     modules::gemini_oauth::restore_pending_oauth_state();
+                    modules::zed_oauth::restore_pending_oauth_listener();
                 });
             }
 
@@ -465,6 +466,28 @@ pub fn run() {
             commands::qoder::inject_qoder_account,
             commands::qoder::update_qoder_account_tags,
             commands::qoder::get_qoder_accounts_index_path,
+            // Zed Commands
+            commands::zed::list_zed_accounts,
+            commands::zed::delete_zed_account,
+            commands::zed::delete_zed_accounts,
+            commands::zed::import_zed_from_json,
+            commands::zed::import_zed_from_local,
+            commands::zed::export_zed_accounts,
+            commands::zed::refresh_zed_token,
+            commands::zed::refresh_all_zed_tokens,
+            commands::zed::update_zed_account_tags,
+            commands::zed::zed_oauth_login_start,
+            commands::zed::zed_oauth_login_peek,
+            commands::zed::zed_oauth_login_complete,
+            commands::zed::zed_oauth_login_cancel,
+            commands::zed::zed_oauth_submit_callback_url,
+            commands::zed::inject_zed_account,
+            commands::zed::zed_logout_current_account,
+            commands::zed::zed_get_runtime_status,
+            commands::zed::zed_start_default_session,
+            commands::zed::zed_stop_default_session,
+            commands::zed::zed_restart_default_session,
+            commands::zed::zed_focus_default_session,
             // Qoder Instance Commands
             commands::qoder_instance::qoder_get_instance_defaults,
             commands::qoder_instance::qoder_list_instances,

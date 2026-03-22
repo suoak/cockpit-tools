@@ -7,6 +7,30 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.18.0] - 2026-03-22
+
+### Added
+- **Zed account management is now supported end-to-end with official native-app OAuth, JSON import, local current-session import, and real credential apply-back into the official client**: added a dedicated Zed account page, local account storage/indexing, current-session runtime controls, and account apply/restart behavior aligned with the official desktop credential slot.
+- **Zed is now integrated into dashboard summaries, global account transfer bundles, and platform settings**: dashboard cards, transfer export/import, launch-path configuration, auto-refresh cadence, and quota-alert settings now include Zed.
+
+### Changed
+- **Zed quota display now follows the desktop client's actual account API instead of browser billing pages**: the page now focuses on `Edit Predictions` and overdue-invoice status from `/client/users/me`, supports importing the currently signed-in local account, and logs the raw refresh payload for diagnostics.
+- **Zed platform presentation has been tightened for the current rollout**: the app now uses the official Zed application icon, the add-account modal is aligned with the shared `OAuth / Token / Import` structure, and the side-menu entry is hidden while menu maintenance remains paused.
+
+---
+## [0.17.8] - 2026-03-21
+
+### Fixed
+- **Codex API Key accounts now write the official `openai_base_url` key into `~/.codex/config.toml` when a custom base URL is configured**: account switching and local injection no longer persist the incorrect `base_url` key, so Codex can read the configured upstream API endpoint correctly.
+
+---
+## [0.17.7] - 2026-03-21
+
+### Changed
+- **Windsurf usage summaries in both dashboard and tray now stay aligned with the official quota vs. credits billing model**: quota-billed accounts now show daily quota usage, weekly quota usage, and extra usage balance, while credits-billed accounts keep the credits-left breakdown without being misclassified by enum-style billing strategy values.
+- **Dashboard account cards now render platform-specific quota structures more faithfully across multiple providers**: Kiro, Gemini, CodeBuddy, CodeBuddy CN, Qoder, Trae, and WorkBuddy cards now show the correct remaining/used summaries, reset or expiry timing, and related status details through the shared account presentation layer.
+
+---
 ## [0.17.6] - 2026-03-20
 
 ### Changed

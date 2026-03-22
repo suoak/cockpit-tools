@@ -27,6 +27,7 @@ interface GeneralConfig {
   qoder_auto_refresh_minutes: number;
   trae_auto_refresh_minutes: number;
   workbuddy_auto_refresh_minutes: number;
+  zed_auto_refresh_minutes: number;
   close_behavior: string;
   minimize_behavior?: 'dock_and_tray' | 'tray_only';
   hide_dock_icon?: boolean;
@@ -42,6 +43,7 @@ interface GeneralConfig {
   qoder_app_path: string;
   trae_app_path: string;
   workbuddy_app_path: string;
+  zed_app_path: string;
   opencode_sync_on_switch: boolean;
   opencode_auth_overwrite_on_switch: boolean;
   ghcp_opencode_sync_on_switch: boolean;
@@ -80,6 +82,8 @@ interface GeneralConfig {
   trae_quota_alert_threshold: number;
   workbuddy_quota_alert_enabled: boolean;
   workbuddy_quota_alert_threshold: number;
+  zed_quota_alert_enabled: boolean;
+  zed_quota_alert_threshold: number;
 }
 
 export type QuickSettingsType =
@@ -94,7 +98,8 @@ export type QuickSettingsType =
   | 'codebuddy_cn'
   | 'qoder'
   | 'trae'
-  | 'workbuddy';
+  | 'workbuddy'
+  | 'zed';
 
 type QuotaAlertEnabledKey =
   | 'quota_alert_enabled'
@@ -108,7 +113,8 @@ type QuotaAlertEnabledKey =
   | 'codebuddy_cn_quota_alert_enabled'
   | 'qoder_quota_alert_enabled'
   | 'trae_quota_alert_enabled'
-  | 'workbuddy_quota_alert_enabled';
+  | 'workbuddy_quota_alert_enabled'
+  | 'zed_quota_alert_enabled';
 type QuotaAlertThresholdKey =
   | 'quota_alert_threshold'
   | 'codex_quota_alert_threshold'
@@ -121,7 +127,8 @@ type QuotaAlertThresholdKey =
   | 'codebuddy_cn_quota_alert_threshold'
   | 'qoder_quota_alert_threshold'
   | 'trae_quota_alert_threshold'
-  | 'workbuddy_quota_alert_threshold';
+  | 'workbuddy_quota_alert_threshold'
+  | 'zed_quota_alert_threshold';
 type CodexWindowThresholdKey =
   | 'codex_auto_switch_primary_threshold'
   | 'codex_auto_switch_secondary_threshold'
@@ -233,6 +240,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'qoder': return 'qoder_auto_refresh_minutes';
       case 'trae': return 'trae_auto_refresh_minutes';
       case 'workbuddy': return 'workbuddy_auto_refresh_minutes';
+      case 'zed': return 'zed_auto_refresh_minutes';
       default: return 'auto_refresh_minutes';
     }
   };
@@ -259,6 +267,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           codebuddyCnAutoRefreshMinutes: merged.codebuddy_cn_auto_refresh_minutes,
           qoderAutoRefreshMinutes: merged.qoder_auto_refresh_minutes,
           traeAutoRefreshMinutes: merged.trae_auto_refresh_minutes,
+          zedAutoRefreshMinutes: merged.zed_auto_refresh_minutes,
           closeBehavior: merged.close_behavior,
           minimizeBehavior: merged.minimize_behavior,
           hideDockIcon: merged.hide_dock_icon,
@@ -274,6 +283,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           qoderAppPath: merged.qoder_app_path,
           traeAppPath: merged.trae_app_path,
           workbuddyAppPath: merged.workbuddy_app_path,
+          zedAppPath: merged.zed_app_path,
           opencodeSyncOnSwitch: merged.opencode_sync_on_switch,
           opencodeAuthOverwriteOnSwitch: merged.opencode_auth_overwrite_on_switch,
           ghcpOpencodeSyncOnSwitch: merged.ghcp_opencode_sync_on_switch,
@@ -310,6 +320,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           qoderQuotaAlertThreshold: merged.qoder_quota_alert_threshold,
           traeQuotaAlertEnabled: merged.trae_quota_alert_enabled,
           traeQuotaAlertThreshold: merged.trae_quota_alert_threshold,
+          zedQuotaAlertEnabled: merged.zed_quota_alert_enabled,
+          zedQuotaAlertThreshold: merged.zed_quota_alert_threshold,
         });
         window.dispatchEvent(new Event('config-updated'));
       } catch (err) {
@@ -337,7 +349,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       | 'codebuddy_cn'
       | 'qoder'
       | 'trae'
-      | 'workbuddy',
+      | 'workbuddy'
+      | 'zed',
   ) => {
     try {
       const selected = await open({ multiple: false, directory: false });
@@ -365,6 +378,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                       ? 'trae_app_path'
                     : target === 'workbuddy'
                       ? 'workbuddy_app_path'
+                    : target === 'zed'
+                      ? 'zed_app_path'
                       : 'kiro_app_path';
 
       saveConfig({ [key]: path });
@@ -389,7 +404,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       | 'codebuddy_cn'
       | 'qoder'
       | 'trae'
-      | 'workbuddy',
+      | 'workbuddy'
+      | 'zed',
   ) => {
     if (pathDetecting) return;
     setPathDetecting(true);
@@ -417,6 +433,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                       ? 'trae_app_path'
                     : target === 'workbuddy'
                       ? 'workbuddy_app_path'
+                    : target === 'zed'
+                      ? 'zed_app_path'
                       : 'kiro_app_path';
       saveConfig({ [key]: path });
     } catch (err) {
@@ -457,6 +475,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           return 'Trae';
         case 'workbuddy':
           return 'Workbuddy';
+        case 'zed':
+          return 'Zed';
       }
     })();
     return `${platformLabel} ${t('nav.settings', '设置')}`;
@@ -490,6 +510,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'trae_quota_alert_enabled';
       case 'workbuddy':
         return 'workbuddy_quota_alert_enabled';
+      case 'zed':
+        return 'zed_quota_alert_enabled';
       default:
         return 'quota_alert_enabled';
     }
@@ -519,6 +541,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'trae_quota_alert_threshold';
       case 'workbuddy':
         return 'workbuddy_quota_alert_threshold';
+      case 'zed':
+        return 'zed_quota_alert_threshold';
       default:
         return 'quota_alert_threshold';
     }
@@ -549,6 +573,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'trae':
         return t('quickSettings.refreshInterval', '配额自动刷新');
       case 'workbuddy':
+        return t('quickSettings.refreshInterval', '配额自动刷新');
+      case 'zed':
         return t('quickSettings.refreshInterval', '配额自动刷新');
     }
   };
@@ -582,6 +608,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return config.trae_app_path;
       case 'workbuddy':
         return config.workbuddy_app_path;
+      case 'zed':
+        return config.zed_app_path;
       default:
         return '';
     }
@@ -613,6 +641,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.trae.appPath', 'Trae 路径');
       case 'workbuddy':
         return t('quickSettings.workbuddy.appPath', 'Workbuddy 路径');
+      case 'zed':
+        return t('quickSettings.zed.appPath', 'Zed 路径');
     }
   };
 
@@ -627,7 +657,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     | 'codebuddy_cn'
     | 'qoder'
     | 'trae'
-    | 'workbuddy' => {
+    | 'workbuddy'
+    | 'zed' => {
     switch (type) {
       case 'antigravity':
         return 'antigravity';
@@ -653,6 +684,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'trae';
       case 'workbuddy':
         return 'workbuddy';
+      case 'zed':
+        return 'zed';
     }
   };
 
@@ -1076,6 +1109,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                                       ? 'qoder_app_path'
                                     : type === 'trae'
                                       ? 'trae_app_path'
+                                    : type === 'zed'
+                                      ? 'zed_app_path'
                                   : 'kiro_app_path';
                       saveConfig({ [key]: e.target.value });
                     }}

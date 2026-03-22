@@ -67,6 +67,9 @@ pub mod windsurf_oauth;
 pub mod workbuddy_account;
 pub mod workbuddy_instance;
 pub mod workbuddy_oauth;
+pub mod zed_account;
+pub mod zed_instance;
+pub mod zed_oauth;
 
 // 重新导出常用函数
 pub use account::*;

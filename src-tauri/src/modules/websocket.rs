@@ -779,6 +779,7 @@ fn handle_set_language(language: &str, source: Option<&str>) -> Result<String, S
         codebuddy_cn_auto_refresh_minutes: current.codebuddy_cn_auto_refresh_minutes,
         qoder_auto_refresh_minutes: current.qoder_auto_refresh_minutes,
         trae_auto_refresh_minutes: current.trae_auto_refresh_minutes,
+        zed_auto_refresh_minutes: current.zed_auto_refresh_minutes,
         close_behavior: current.close_behavior,
         minimize_behavior: current.minimize_behavior,
         hide_dock_icon: current.hide_dock_icon,
@@ -794,6 +795,7 @@ fn handle_set_language(language: &str, source: Option<&str>) -> Result<String, S
         qoder_app_path: current.qoder_app_path,
         trae_app_path: current.trae_app_path,
         workbuddy_app_path: current.workbuddy_app_path,
+        zed_app_path: current.zed_app_path,
         opencode_sync_on_switch: current.opencode_sync_on_switch,
         opencode_auth_overwrite_on_switch: current.opencode_auth_overwrite_on_switch,
         ghcp_opencode_sync_on_switch: current.ghcp_opencode_sync_on_switch,
@@ -832,6 +834,8 @@ fn handle_set_language(language: &str, source: Option<&str>) -> Result<String, S
         trae_quota_alert_threshold: current.trae_quota_alert_threshold,
         workbuddy_quota_alert_enabled: current.workbuddy_quota_alert_enabled,
         workbuddy_quota_alert_threshold: current.workbuddy_quota_alert_threshold,
+        zed_quota_alert_enabled: current.zed_quota_alert_enabled,
+        zed_quota_alert_threshold: current.zed_quota_alert_threshold,
     };
 
     config::save_user_config(&new_config)?;

@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Nền tảng Zed"
   },
   "platformLayout": {
     "title": "Bố cục nền tảng",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Khi tắt, chỉ Codex được chuyển đổi và OpenClaw giữ trạng thái đăng nhập hiện tại",
       "ghcpOpencodeAuthOverwrite": "Ghi đè đăng nhập OpenCode khi chuyển đổi GitHub Copilot",
       "ghcpOpencodeRestart": "Khởi động lại OpenCode khi chuyển GitHub Copilot",
-      "ghcpLaunchOnSwitch": "Tự động khởi chạy GitHub Copilot App khi chuyển GitHub Copilot"
+      "ghcpLaunchOnSwitch": "Tự động khởi chạy GitHub Copilot App khi chuyển GitHub Copilot",
+      "zedAutoRefresh": "Tự động làm mới hạn mức Zed",
+      "zedAutoRefreshDesc": "Tần suất cập nhật nền",
+      "zedAppPath": "Đường dẫn khởi chạy Zed",
+      "zedAppPathDesc": "Để trống để dùng đường dẫn mặc định",
+      "zedAppPathPlaceholder": "Đường dẫn mặc định",
+      "zedPathSelect": "Chọn",
+      "zedPathReset": "Đặt lại mặc định"
     },
     "network": {
       "apiTitle": "API Antigravity Cockpit",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "Cài đặt WorkBuddy",
       "appPath": "Đường dẫn WorkBuddy"
+    },
+    "zed": {
+      "title": "Cài đặt Zed",
+      "appPath": "Đường dẫn Zed"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Vui lòng hoàn tất đăng nhập và ủy quyền trên trang này."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Goi muc dung: --",
       "payAsYouGoConsuming": "Thanh toan theo muc dung: dang tieu thu",
       "payAsYouGoEnabled": "Thanh toan theo muc dung: da bat",
-      "payAsYouGoEmpty": "Thanh toan theo muc dung: --"
+      "payAsYouGoEmpty": "Thanh toan theo muc dung: --",
+      "payAsYouGoLabel": "Su dung theo nhu cau"
     },
     "flowNotice": {
       "title": "Huong dan tai khoan Trae (nhan de mo rong/thu gon)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "Phiên bản đa phiên bản WorkBuddy chỉ được hỗ trợ trên macOS, Windows và Linux."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Thêm tài khoản Zed"
+    },
+    "empty": {
+      "description": "Nhấp vào “Thêm tài khoản” để bắt đầu quản lý các tài khoản Zed của bạn, hoặc nhập chúng từ JSON hay từ trạng thái đăng nhập cục bộ hiện tại."
+    },
+    "import": {
+      "jsonDesc": "Nhập tệp JSON Zed được xuất bởi công cụ này.",
+      "localDesc": "Nhập dữ liệu tài khoản từ trạng thái đăng nhập Zed cục bộ hiện tại hoặc từ tệp JSON đã xuất."
+    },
+    "flowNotice": {
+      "title": "Ghi chú tích hợp tài khoản Zed (nhấp để mở rộng/thu gọn)",
+      "desc": "Hỗ trợ đăng nhập OAuth chính thức, nhập JSON, nhập trạng thái đăng nhập cục bộ hiện tại và áp dụng một tài khoản đã lưu trở lại ứng dụng Zed chính thức theo đúng quy tắc lưu trữ thực tế của ứng dụng. Trang này chỉ hiển thị các trường trạng thái mà ứng dụng desktop có thể đọc trực tiếp và không còn duy trì thêm trạng thái thanh menu.",
+      "reason": "Phạm vi quyền: mở đăng nhập same-origin chính thức của Zed trong trình duyệt; đọc thông tin xác thực Zed cục bộ hiện tại để nhập; ghi lại vào đúng vị trí thông tin xác thực hệ thống khi áp dụng tài khoản; và có thể khởi động hoặc khởi động lại Zed khi cần.",
+      "storage": "Phạm vi dữ liệu: chỉ lưu cục bộ các bản ghi tài khoản được nhập hoặc cấp quyền, thẻ và nội dung xuất ra. Nội dung Keychain hoặc thông tin xác thực cục bộ không bị tải lên, các phiên web của trình duyệt không bị quét và các thông tin xác thực hệ thống không liên quan không bị sửa đổi."
+    },
+    "page": {
+      "subtitle": "Hỗ trợ đăng nhập same-origin chính thức, truy vấn gói và mức sử dụng, ghi đè thông tin đăng nhập thật và khởi động lại Zed.",
+      "current": "Hiện tại",
+      "tokenSpend": "Mức tiêu thụ token",
+      "editPredictions": "Dự đoán chỉnh sửa",
+      "spendLimit": "Giới hạn chi tiêu",
+      "billingPeriodEnd": "Kết thúc kỳ thanh toán",
+      "searchPlaceholder": "Tìm login GitHub, gói hoặc thẻ",
+      "empty": "Chưa có tài khoản Zed",
+      "unknownStatus": "Trạng thái không xác định",
+      "overdueField": "Hóa đơn quá hạn",
+      "overdueYes": "Có",
+      "overdueNo": "Không"
+    },
+    "runtime": {
+      "title": "Phiên Zed hiện tại",
+      "currentAccount": "Tài khoản đang có hiệu lực: {{account}}",
+      "noCurrentAccount": "Không có tài khoản Zed đang hoạt động",
+      "running": "Đang chạy",
+      "stopped": "Đã dừng",
+      "pathMissing": "Chưa cấu hình đường dẫn khởi chạy",
+      "lastPid": "PID gần nhất",
+      "lastStartedAt": "Lần khởi chạy gần nhất",
+      "loadFailed": "Không thể tải trạng thái chạy của Zed"
+    },
+    "oauth": {
+      "pendingTitle": "Đăng nhập Zed đang chờ",
+      "pendingDesc": "Hoàn tất xác thực trên trình duyệt rồi quay lại đây để hoàn tất nhập tài khoản.",
+      "openBrowser": "Mở trình duyệt",
+      "complete": "Hoàn tất đăng nhập",
+      "startFailed": "Không thể bắt đầu đăng nhập Zed",
+      "completeSuccess": "Đã hoàn tất đăng nhập Zed: {{account}}",
+      "importOnlySuccess": "Ủy quyền đã hoàn tất thành công. Tài khoản đã được nhập. Để Zed chính thức sử dụng tài khoản này, hãy nhấn \"Áp dụng và khởi động lại\"."
+    },
+    "actions": {
+      "addAccount": "Đăng nhập vào Zed",
+      "importSuccess": "Đã nhập tài khoản Zed thành công",
+      "switchSuccess": "Đã chuyển tài khoản Zed và khởi động lại",
+      "deleteConfirm": "Xóa {{count}} tài khoản Zed?",
+      "startApp": "Khởi động Zed",
+      "stopApp": "Dừng Zed",
+      "restartApp": "Khởi động lại Zed",
+      "focusApp": "Tập trung Zed",
+      "logout": "Đăng xuất tài khoản hiện tại",
+      "managePlan": "Quản lý gói",
+      "applyAndRestart": "Áp dụng và khởi động lại",
+      "reapply": "Áp dụng lại",
+      "exportTitle": "Xuất JSON tài khoản Zed"
     }
   }
 }

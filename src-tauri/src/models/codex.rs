@@ -96,7 +96,12 @@ pub struct CodexAuthFile {
     #[serde(rename = "OPENAI_API_KEY")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub openai_api_key: Option<serde_json::Value>, // 可以是 null 或字符串
-    #[serde(default, alias = "api_base_url", alias = "apiBaseUrl", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "api_base_url",
+        alias = "apiBaseUrl",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub base_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tokens: Option<CodexAuthTokens>,

@@ -62,10 +62,12 @@ interface GeneralConfig {
   qoder_app_path: string;
   trae_app_path: string;
   workbuddy_app_path: string;
+  zed_app_path: string;
   codebuddy_auto_refresh_minutes: number;
   codebuddy_cn_auto_refresh_minutes: number;
   qoder_auto_refresh_minutes: number;
   trae_auto_refresh_minutes: number;
+  zed_auto_refresh_minutes: number;
   codebuddy_quota_alert_enabled: boolean;
   codebuddy_quota_alert_threshold: number;
   codebuddy_cn_quota_alert_enabled: boolean;
@@ -74,6 +76,8 @@ interface GeneralConfig {
   qoder_quota_alert_threshold: number;
   trae_quota_alert_enabled: boolean;
   trae_quota_alert_threshold: number;
+  zed_quota_alert_enabled: boolean;
+  zed_quota_alert_threshold: number;
   opencode_sync_on_switch: boolean;
   opencode_auth_overwrite_on_switch: boolean;
   openclaw_auth_overwrite_on_switch: boolean;
@@ -107,7 +111,8 @@ type AppPathTarget =
   | 'codebuddy'
   | 'qoder'
   | 'trae'
-  | 'workbuddy';
+  | 'workbuddy'
+  | 'zed';
 const REFRESH_PRESET_VALUES = ['-1', '2', '5', '10', '15'];
 const THRESHOLD_PRESET_VALUES = ['0', '20', '40', '60'];
 const UI_SCALE_OPTIONS = ['0.9', '1', '1.1', '1.25', '1.5'] as const;
@@ -124,6 +129,7 @@ const FALLBACK_PLATFORM_SETTINGS_ORDER: Record<PlatformId, number> = {
   qoder: 9,
   trae: 10,
   workbuddy: 11,
+  zed: 12,
 };
 type UpdateCheckSource = 'auto' | 'manual';
 type UpdateCheckFinishedDetail = {
@@ -201,10 +207,12 @@ export function SettingsPage() {
   const [qoderAppPath, setQoderAppPath] = useState('');
   const [traeAppPath, setTraeAppPath] = useState('');
   const [workbuddyAppPath, setWorkbuddyAppPath] = useState('');
+  const [zedAppPath, setZedAppPath] = useState('');
   const [codebuddyAutoRefresh, setCodebuddyAutoRefresh] = useState('10');
   const [codebuddyCnAutoRefresh, setCodebuddyCnAutoRefresh] = useState('10');
   const [qoderAutoRefresh, setQoderAutoRefresh] = useState('10');
   const [traeAutoRefresh, setTraeAutoRefresh] = useState('10');
+  const [zedAutoRefresh, setZedAutoRefresh] = useState('10');
   const [codebuddyQuotaAlertEnabled, setCodebuddyQuotaAlertEnabled] = useState(false);
   const [codebuddyQuotaAlertThreshold, setCodebuddyQuotaAlertThreshold] = useState('20');
   const [codebuddyCnQuotaAlertEnabled, setCodebuddyCnQuotaAlertEnabled] = useState(false);
@@ -213,12 +221,16 @@ export function SettingsPage() {
   const [qoderQuotaAlertThreshold, setQoderQuotaAlertThreshold] = useState('20');
   const [traeQuotaAlertEnabled, setTraeQuotaAlertEnabled] = useState(false);
   const [traeQuotaAlertThreshold, setTraeQuotaAlertThreshold] = useState('20');
+  const [zedQuotaAlertEnabled, setZedQuotaAlertEnabled] = useState(false);
+  const [zedQuotaAlertThreshold, setZedQuotaAlertThreshold] = useState('20');
   const [codebuddyAutoRefreshCustomMode, setCodebuddyAutoRefreshCustomMode] = useState(false);
   const [codebuddyQuotaAlertThresholdCustomMode, setCodebuddyQuotaAlertThresholdCustomMode] = useState(false);
   const [qoderAutoRefreshCustomMode, setQoderAutoRefreshCustomMode] = useState(false);
   const [qoderQuotaAlertThresholdCustomMode, setQoderQuotaAlertThresholdCustomMode] = useState(false);
   const [traeAutoRefreshCustomMode, setTraeAutoRefreshCustomMode] = useState(false);
   const [traeQuotaAlertThresholdCustomMode, setTraeQuotaAlertThresholdCustomMode] = useState(false);
+  const [zedAutoRefreshCustomMode, setZedAutoRefreshCustomMode] = useState(false);
+  const [zedQuotaAlertThresholdCustomMode, setZedQuotaAlertThresholdCustomMode] = useState(false);
   const [appPathResetDetectingTargets, setAppPathResetDetectingTargets] = useState<Set<AppPathTarget>>(new Set());
   const [opencodeSyncOnSwitch, setOpencodeSyncOnSwitch] = useState(true);
   const [opencodeAuthOverwriteOnSwitch, setOpencodeAuthOverwriteOnSwitch] = useState(true);
@@ -397,6 +409,7 @@ export function SettingsPage() {
       !codebuddyAutoRefresh.trim() ||
       !qoderAutoRefresh.trim() ||
       !traeAutoRefresh.trim() ||
+      !zedAutoRefresh.trim() ||
       !cursorAutoRefresh.trim() ||
       !geminiAutoRefresh.trim()
     ) {
@@ -412,6 +425,7 @@ export function SettingsPage() {
     const codebuddyCnAutoRefreshNum = parseInt(codebuddyCnAutoRefresh, 10) || -1;
     const qoderAutoRefreshNum = parseInt(qoderAutoRefresh, 10) || -1;
     const traeAutoRefreshNum = parseInt(traeAutoRefresh, 10) || -1;
+    const zedAutoRefreshNum = parseInt(zedAutoRefresh, 10) || -1;
     const cursorAutoRefreshNum = parseInt(cursorAutoRefresh, 10) || -1;
     const geminiAutoRefreshNum = parseInt(geminiAutoRefresh, 10) || -1;
     const parsedUiScale = Number.parseFloat(uiScale);
@@ -428,6 +442,7 @@ export function SettingsPage() {
     const parsedCodebuddyCnQuotaAlertThreshold = Number.parseInt(codebuddyCnQuotaAlertThreshold, 10);
     const parsedQoderQuotaAlertThreshold = Number.parseInt(qoderQuotaAlertThreshold, 10);
     const parsedTraeQuotaAlertThreshold = Number.parseInt(traeQuotaAlertThreshold, 10);
+    const parsedZedQuotaAlertThreshold = Number.parseInt(zedQuotaAlertThreshold, 10);
     const parsedCursorQuotaAlertThreshold = Number.parseInt(cursorQuotaAlertThreshold, 10);
     const parsedGeminiQuotaAlertThreshold = Number.parseInt(geminiQuotaAlertThreshold, 10);
 
@@ -451,6 +466,7 @@ export function SettingsPage() {
           codebuddyCnAutoRefreshMinutes: codebuddyCnAutoRefreshNum,
           qoderAutoRefreshMinutes: qoderAutoRefreshNum,
           traeAutoRefreshMinutes: traeAutoRefreshNum,
+          zedAutoRefreshMinutes: zedAutoRefreshNum,
           cursorAutoRefreshMinutes: cursorAutoRefreshNum,
           geminiAutoRefreshMinutes: geminiAutoRefreshNum,
           closeBehavior,
@@ -468,6 +484,7 @@ export function SettingsPage() {
           qoderAppPath,
           traeAppPath,
           workbuddyAppPath,
+          zedAppPath,
           opencodeSyncOnSwitch,
           opencodeAuthOverwriteOnSwitch,
           openclawAuthOverwriteOnSwitch,
@@ -508,6 +525,10 @@ export function SettingsPage() {
           traeQuotaAlertThreshold: Number.isNaN(parsedTraeQuotaAlertThreshold)
             ? 20
             : parsedTraeQuotaAlertThreshold,
+          zedQuotaAlertEnabled,
+          zedQuotaAlertThreshold: Number.isNaN(parsedZedQuotaAlertThreshold)
+            ? 20
+            : parsedZedQuotaAlertThreshold,
           cursorQuotaAlertEnabled,
           cursorQuotaAlertThreshold: Number.isNaN(parsedCursorQuotaAlertThreshold)
             ? 20
@@ -536,6 +557,7 @@ export function SettingsPage() {
     windsurfAutoRefresh,
     kiroAutoRefresh,
     traeAutoRefresh,
+    zedAutoRefresh,
     qoderAutoRefresh,
     cursorAutoRefresh,
     geminiAutoRefresh,
@@ -557,6 +579,7 @@ export function SettingsPage() {
     qoderAppPath,
     traeAppPath,
     workbuddyAppPath,
+    zedAppPath,
     opencodeSyncOnSwitch,
     opencodeAuthOverwriteOnSwitch,
     openclawAuthOverwriteOnSwitch,
@@ -583,6 +606,8 @@ export function SettingsPage() {
     qoderQuotaAlertThreshold,
     traeQuotaAlertEnabled,
     traeQuotaAlertThreshold,
+    zedQuotaAlertEnabled,
+    zedQuotaAlertThreshold,
     cursorQuotaAlertEnabled,
     cursorQuotaAlertThreshold,
     geminiQuotaAlertEnabled,
@@ -768,10 +793,12 @@ export function SettingsPage() {
       setQoderAppPath(config.qoder_app_path || '');
       setTraeAppPath(config.trae_app_path || '');
       setWorkbuddyAppPath(config.workbuddy_app_path || '');
+      setZedAppPath(config.zed_app_path || '');
       setCodebuddyAutoRefresh(String(config.codebuddy_auto_refresh_minutes ?? 10));
       setCodebuddyCnAutoRefresh(String(config.codebuddy_cn_auto_refresh_minutes ?? 10));
       setQoderAutoRefresh(String(config.qoder_auto_refresh_minutes ?? 10));
       setTraeAutoRefresh(String(config.trae_auto_refresh_minutes ?? 10));
+      setZedAutoRefresh(String(config.zed_auto_refresh_minutes ?? 10));
       setCodebuddyQuotaAlertEnabled(config.codebuddy_quota_alert_enabled ?? false);
       setCodebuddyQuotaAlertThreshold(String(config.codebuddy_quota_alert_threshold ?? 20));
       setCodebuddyCnQuotaAlertEnabled(config.codebuddy_cn_quota_alert_enabled ?? false);
@@ -780,6 +807,8 @@ export function SettingsPage() {
       setQoderQuotaAlertThreshold(String(config.qoder_quota_alert_threshold ?? 20));
       setTraeQuotaAlertEnabled(config.trae_quota_alert_enabled ?? false);
       setTraeQuotaAlertThreshold(String(config.trae_quota_alert_threshold ?? 20));
+      setZedQuotaAlertEnabled(config.zed_quota_alert_enabled ?? false);
+      setZedQuotaAlertThreshold(String(config.zed_quota_alert_threshold ?? 20));
       setOpencodeSyncOnSwitch(config.opencode_sync_on_switch ?? true);
       setOpencodeAuthOverwriteOnSwitch(config.opencode_auth_overwrite_on_switch ?? true);
       setOpenclawAuthOverwriteOnSwitch(config.openclaw_auth_overwrite_on_switch ?? false);
@@ -808,6 +837,7 @@ export function SettingsPage() {
       setCodebuddyAutoRefreshCustomMode(false);
       setQoderAutoRefreshCustomMode(false);
       setTraeAutoRefreshCustomMode(false);
+      setZedAutoRefreshCustomMode(false);
       setCursorAutoRefreshCustomMode(false);
       setGeminiAutoRefreshCustomMode(false);
       setAutoSwitchThresholdCustomMode(false);
@@ -819,6 +849,7 @@ export function SettingsPage() {
       setCodebuddyQuotaAlertThresholdCustomMode(false);
       setQoderQuotaAlertThresholdCustomMode(false);
       setTraeQuotaAlertThresholdCustomMode(false);
+      setZedQuotaAlertThresholdCustomMode(false);
       setCursorQuotaAlertThresholdCustomMode(false);
       setGeminiQuotaAlertThresholdCustomMode(false);
       // 同步语言
@@ -919,6 +950,8 @@ export function SettingsPage() {
       setQoderAppPath(path);
     } else if (target === 'trae') {
       setTraeAppPath(path);
+    } else if (target === 'zed') {
+      setZedAppPath(path);
     } else {
       setOpencodeAppPath(path);
     }
@@ -948,6 +981,9 @@ export function SettingsPage() {
     }
     if (target === 'workbuddy') {
       return t('settings.general.workbuddyPathReset', '重置默认');
+    }
+    if (target === 'zed') {
+      return t('settings.general.zedPathReset', '重置默认');
     }
     if (target === 'opencode') {
       return t('settings.general.opencodePathReset', '重置默认');
@@ -1012,6 +1048,7 @@ export function SettingsPage() {
   const codebuddyAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(codebuddyAutoRefresh);
   const qoderAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(qoderAutoRefresh);
   const traeAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(traeAutoRefresh);
+  const zedAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(zedAutoRefresh);
   const cursorAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(cursorAutoRefresh);
   const geminiAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(geminiAutoRefresh);
   const autoSwitchThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(autoSwitchThreshold);
@@ -1023,6 +1060,7 @@ export function SettingsPage() {
   const codebuddyQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(codebuddyQuotaAlertThreshold);
   const qoderQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(qoderQuotaAlertThreshold);
   const traeQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(traeQuotaAlertThreshold);
+  const zedQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(zedQuotaAlertThreshold);
   const cursorQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(cursorQuotaAlertThreshold);
   const geminiQuotaAlertThresholdIsPreset = THRESHOLD_PRESET_VALUES.includes(geminiQuotaAlertThreshold);
 
@@ -2994,6 +3032,190 @@ export function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div style={{ order: platformSettingsOrder.zed }}>
+                <div className="group-title">{t('quickSettings.zed.title', 'Zed 设置')}</div>
+                <div className="settings-group">
+                  <div className="settings-row">
+                    <div className="row-label">
+                      <div className="row-title">{t('settings.general.zedAutoRefresh', 'Zed 自动刷新配额')}</div>
+                      <div className="row-desc">{t('settings.general.zedAutoRefreshDesc', '后台自动更新频率')}</div>
+                    </div>
+                    <div className="row-control">
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {zedAutoRefreshCustomMode ? (
+                          <div className="settings-inline-input" style={{ minWidth: '120px', width: 'auto' }}>
+                            <input
+                              type="number"
+                              min={1}
+                              max={999}
+                              className="settings-select settings-select--input-mode settings-select--with-unit"
+                              value={zedAutoRefresh}
+                              placeholder={t('quickSettings.inputMinutes', '输入分钟数')}
+                              onChange={(e) => setZedAutoRefresh(sanitizeNumberInput(e.target.value))}
+                              onBlur={() => {
+                                const normalized = normalizeNumberInput(zedAutoRefresh, 1, 999);
+                                setZedAutoRefresh(normalized);
+                                setZedAutoRefreshCustomMode(false);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const normalized = normalizeNumberInput(zedAutoRefresh, 1, 999);
+                                  setZedAutoRefresh(normalized);
+                                  setZedAutoRefreshCustomMode(false);
+                                }
+                              }}
+                            />
+                            <span className="settings-input-unit">{t('settings.general.minutes')}</span>
+                          </div>
+                        ) : (
+                          <select
+                            className="settings-select"
+                            style={{ minWidth: '120px', width: 'auto' }}
+                            value={zedAutoRefresh}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') {
+                                setZedAutoRefreshCustomMode(true);
+                                setZedAutoRefresh(zedAutoRefresh !== '-1' ? zedAutoRefresh : '1');
+                                return;
+                              }
+                              setZedAutoRefreshCustomMode(false);
+                              setZedAutoRefresh(val);
+                            }}
+                          >
+                            {!zedAutoRefreshIsPreset && (
+                              <option value={zedAutoRefresh}>
+                                {zedAutoRefresh} {t('settings.general.minutes')}
+                              </option>
+                            )}
+                            <option value="-1">{t('settings.general.autoRefreshDisabled')}</option>
+                            <option value="2">2 {t('settings.general.minutes')}</option>
+                            <option value="5">5 {t('settings.general.minutes')}</option>
+                            <option value="10">10 {t('settings.general.minutes')}</option>
+                            <option value="15">15 {t('settings.general.minutes')}</option>
+                            <option value="custom">{t('settings.general.autoRefreshCustom')}</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="row-label">
+                      <div className="row-title">{t('settings.general.zedAppPath', 'Zed 启动路径')}</div>
+                      <div className="row-desc">{t('settings.general.zedAppPathDesc', '留空则使用默认路径')}</div>
+                    </div>
+                    <div className="row-control row-control--grow">
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                        <input
+                          type="text"
+                          className="settings-input settings-input--path"
+                          value={zedAppPath}
+                          placeholder={t('settings.general.zedAppPathPlaceholder', '默认路径')}
+                          onChange={(e) => setZedAppPath(e.target.value)}
+                        />
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handlePickAppPath('zed')}
+                          disabled={isAppPathResetDetecting('zed')}
+                        >
+                          {t('settings.general.zedPathSelect', '选择')}
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleResetAppPath('zed')}
+                          disabled={isAppPathResetDetecting('zed')}
+                        >
+                          <RefreshCw size={16} className={isAppPathResetDetecting('zed') ? 'spin' : undefined} />
+                          {isAppPathResetDetecting('zed')
+                            ? t('common.loading', '加载中...')
+                            : getResetLabelByTarget('zed')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="row-label">
+                      <div className="row-title">{t('quickSettings.quotaAlert.enable', '超额预警')}</div>
+                      <div className="row-desc">{t('quickSettings.quotaAlert.hint', '当当前账号任意模型配额低于阈值时，发送原生通知并在页面提示快捷切号。')}</div>
+                    </div>
+                    <div className="row-control">
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={zedQuotaAlertEnabled}
+                          onChange={(e) => setZedQuotaAlertEnabled(e.target.checked)}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  {zedQuotaAlertEnabled && (
+                    <div className="settings-row" style={{ animation: 'fadeUp 0.3s ease both' }}>
+                      <div className="row-label">
+                        <div className="row-title">{t('quickSettings.quotaAlert.threshold', '预警阈值')}</div>
+                        <div className="row-desc">{t('quickSettings.quotaAlert.thresholdDesc', '任意模型配额低于此百分比时触发预警')}</div>
+                      </div>
+                      <div className="row-control">
+                        {zedQuotaAlertThresholdCustomMode ? (
+                          <div className="settings-inline-input">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="settings-select settings-select--input-mode settings-select--with-unit"
+                              value={zedQuotaAlertThreshold}
+                              placeholder={t('quickSettings.inputPercent', '输入百分比')}
+                              onChange={(e) => setZedQuotaAlertThreshold(sanitizeNumberInput(e.target.value))}
+                              onBlur={() => {
+                                const normalized = normalizeNumberInput(zedQuotaAlertThreshold, 0, 100);
+                                setZedQuotaAlertThreshold(normalized);
+                                setZedQuotaAlertThresholdCustomMode(false);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const normalized = normalizeNumberInput(zedQuotaAlertThreshold, 0, 100);
+                                  setZedQuotaAlertThreshold(normalized);
+                                  setZedQuotaAlertThresholdCustomMode(false);
+                                }
+                              }}
+                            />
+                            <span className="settings-input-unit">%</span>
+                          </div>
+                        ) : (
+                          <select
+                            className="settings-select"
+                            value={zedQuotaAlertThreshold}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') {
+                                setZedQuotaAlertThresholdCustomMode(true);
+                                setZedQuotaAlertThreshold(zedQuotaAlertThreshold || '20');
+                                return;
+                              }
+                              setZedQuotaAlertThresholdCustomMode(false);
+                              setZedQuotaAlertThreshold(val);
+                            }}
+                          >
+                            {!zedQuotaAlertThresholdIsPreset && (
+                              <option value={zedQuotaAlertThreshold}>{zedQuotaAlertThreshold}%</option>
+                            )}
+                            <option value="0">0%</option>
+                            <option value="20">20%</option>
+                            <option value="40">40%</option>
+                            <option value="60">60%</option>
+                            <option value="custom">{t('settings.general.autoRefreshCustom')}</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

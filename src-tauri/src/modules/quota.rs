@@ -482,7 +482,10 @@ pub async fn fetch_project_id_with_context(
             .post(format!("{}/{}", base_url, LOAD_CODE_ASSIST_PATH))
             .bearer_auth(access_token)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .header(reqwest::header::USER_AGENT, "antigravity/1.20.5 windows/amd64 google-api-nodejs-client/10.3.0")
+            .header(
+                reqwest::header::USER_AGENT,
+                "antigravity/1.20.5 windows/amd64 google-api-nodejs-client/10.3.0",
+            )
             .header("x-goog-api-client", "gl-node/22.21.1")
             .header(reqwest::header::ACCEPT, "*/*")
             .header(reqwest::header::ACCEPT_ENCODING, "gzip, deflate, br")
@@ -501,120 +504,133 @@ pub async fn fetch_project_id_with_context(
                     match text_result {
                         Ok(text) => {
                             match serde_json::from_str::<LoadProjectResponse>(&text) {
-                            Ok(data) => {
-                                let paid_tier_id =
-                                    data.paid_tier.as_ref().and_then(|tier| tier.id.clone());
-                                let current_tier_id =
-                                    data.current_tier.as_ref().and_then(|tier| tier.id.clone());
-                                subscription_tier =
-                                    paid_tier_id.clone().or(current_tier_id.clone());
+                                Ok(data) => {
+                                    let paid_tier_id =
+                                        data.paid_tier.as_ref().and_then(|tier| tier.id.clone());
+                                    let current_tier_id =
+                                        data.current_tier.as_ref().and_then(|tier| tier.id.clone());
+                                    subscription_tier =
+                                        paid_tier_id.clone().or(current_tier_id.clone());
 
-                                // 提取积分数据
-                                if let Some(ref paid_tier) = data.paid_tier {
-                                    credits = extract_credits_from_tier(paid_tier);
-                                    if !credits.is_empty() {
-                                        crate::modules::logger::log_info(&format!(
-                                            "💰 [{}] 积分数据: {} 条 ({})",
-                                            email,
-                                            credits.len(),
-                                            credits.iter().map(|c| format!("{}={}", c.credit_type, c.credit_amount.as_deref().unwrap_or("-"))).collect::<Vec<_>>().join(", ")
-                                        ));
+                                    // 提取积分数据
+                                    if let Some(ref paid_tier) = data.paid_tier {
+                                        credits = extract_credits_from_tier(paid_tier);
+                                        if !credits.is_empty() {
+                                            crate::modules::logger::log_info(&format!(
+                                                "💰 [{}] 积分数据: {} 条 ({})",
+                                                email,
+                                                credits.len(),
+                                                credits
+                                                    .iter()
+                                                    .map(|c| format!(
+                                                        "{}={}",
+                                                        c.credit_type,
+                                                        c.credit_amount.as_deref().unwrap_or("-")
+                                                    ))
+                                                    .collect::<Vec<_>>()
+                                                    .join(", ")
+                                            ));
+                                        }
                                     }
-                                }
 
-                                if subscription_tier.is_some() {
-                                    log_subscription_tier_result(
-                                        email,
-                                        subscription_tier.as_ref(),
-                                        "loadCodeAssist 正常返回",
-                                    );
-                                } else {
-                                    let allowed_tier_preview = data
-                                        .allowed_tiers
-                                        .as_ref()
-                                        .map(|tiers| {
-                                            tiers
-                                                .iter()
-                                                .filter_map(|tier| tier.id.as_deref())
-                                                .collect::<Vec<_>>()
-                                                .join(",")
-                                        })
-                                        .unwrap_or_else(|| "-".to_string());
-                                    let reason = format!(
+                                    if subscription_tier.is_some() {
+                                        log_subscription_tier_result(
+                                            email,
+                                            subscription_tier.as_ref(),
+                                            "loadCodeAssist 正常返回",
+                                        );
+                                    } else {
+                                        let allowed_tier_preview = data
+                                            .allowed_tiers
+                                            .as_ref()
+                                            .map(|tiers| {
+                                                tiers
+                                                    .iter()
+                                                    .filter_map(|tier| tier.id.as_deref())
+                                                    .collect::<Vec<_>>()
+                                                    .join(",")
+                                            })
+                                            .unwrap_or_else(|| "-".to_string());
+                                        let reason = format!(
                                         "loadCodeAssist 成功但无 tier: paidTier={:?}, currentTier={:?}, allowedTiers=[{}], hasProject={}",
                                         paid_tier_id,
                                         current_tier_id,
                                         allowed_tier_preview,
                                         data.project.is_some()
                                     );
-                                    log_subscription_tier_result(
-                                        email,
-                                        subscription_tier.as_ref(),
-                                        &reason,
-                                    );
-                                }
+                                        log_subscription_tier_result(
+                                            email,
+                                            subscription_tier.as_ref(),
+                                            &reason,
+                                        );
+                                    }
 
-                                let response_project_id =
-                                    data.project.as_ref().and_then(extract_project_id);
-                                if let Some(project_id) = response_project_id.clone() {
-                                    return (Some(project_id), subscription_tier, credits);
-                                }
+                                    let response_project_id =
+                                        data.project.as_ref().and_then(extract_project_id);
+                                    if let Some(project_id) = response_project_id.clone() {
+                                        return (Some(project_id), subscription_tier, credits);
+                                    }
 
-                                if let Some(tiers) = data.allowed_tiers {
-                                    allowed_tiers = tiers;
-                                }
+                                    if let Some(tiers) = data.allowed_tiers {
+                                        allowed_tiers = tiers;
+                                    }
 
-                                let onboard_tier = pick_onboard_tier(&allowed_tiers)
-                                    .or_else(|| subscription_tier.clone());
-                                if let Some(tier_id) = onboard_tier {
-                                    let onboard_project_hint = preferred_project_id
-                                        .as_deref()
-                                        .or(response_project_id.as_deref());
-                                    match try_onboard_user(
-                                        &client,
-                                        &base_url,
-                                        access_token,
-                                        &tier_id,
-                                        onboard_project_hint,
-                                    )
-                                    .await
-                                    {
-                                        Ok(project_id) => {
-                                            if let Some(project_id) = project_id {
-                                                return (Some(project_id), subscription_tier, credits);
+                                    let onboard_tier = pick_onboard_tier(&allowed_tiers)
+                                        .or_else(|| subscription_tier.clone());
+                                    if let Some(tier_id) = onboard_tier {
+                                        let onboard_project_hint = preferred_project_id
+                                            .as_deref()
+                                            .or(response_project_id.as_deref());
+                                        match try_onboard_user(
+                                            &client,
+                                            &base_url,
+                                            access_token,
+                                            &tier_id,
+                                            onboard_project_hint,
+                                        )
+                                        .await
+                                        {
+                                            Ok(project_id) => {
+                                                if let Some(project_id) = project_id {
+                                                    return (
+                                                        Some(project_id),
+                                                        subscription_tier,
+                                                        credits,
+                                                    );
+                                                }
+                                            }
+                                            Err(err) => {
+                                                crate::modules::logger::log_warn(&format!(
+                                                    "⚠️ [{}] onboardUser 失败: {}",
+                                                    email, err
+                                                ));
                                             }
                                         }
-                                        Err(err) => {
-                                            crate::modules::logger::log_warn(&format!(
-                                                "⚠️ [{}] onboardUser 失败: {}",
-                                                email, err
-                                            ));
-                                        }
                                     }
-                                }
 
-                                return (None, subscription_tier, credits);
-                            }
-                            Err(err) => {
-                                last_error = Some(format!("loadCodeAssist 解析失败: {}", err));
-                                let header_info = format!(
+                                    return (None, subscription_tier, credits);
+                                }
+                                Err(err) => {
+                                    last_error = Some(format!("loadCodeAssist 解析失败: {}", err));
+                                    let header_info = format!(
                                     "status={}, content-type={}, content-encoding={}, content-length={}",
                                     status,
                                     header_value(&headers, reqwest::header::CONTENT_TYPE),
                                     header_value(&headers, reqwest::header::CONTENT_ENCODING),
                                     header_value(&headers, reqwest::header::CONTENT_LENGTH)
                                 );
-                                crate::modules::logger::log_error(&format!(
-                                    "❌ [{}] loadCodeAssist 解析失败: {}, {}",
-                                    email, err, header_info
-                                ));
-                                crate::modules::logger::log_error(&format!(
-                                    "❌ [{}] loadCodeAssist 原始响应: {}",
-                                    email,
-                                    truncate_log_text(&text, 2000)
-                                ));
+                                    crate::modules::logger::log_error(&format!(
+                                        "❌ [{}] loadCodeAssist 解析失败: {}, {}",
+                                        email, err, header_info
+                                    ));
+                                    crate::modules::logger::log_error(&format!(
+                                        "❌ [{}] loadCodeAssist 原始响应: {}",
+                                        email,
+                                        truncate_log_text(&text, 2000)
+                                    ));
+                                }
                             }
-                        }},
+                        }
                         Err(err) => {
                             last_error = Some(format!("loadCodeAssist 读取失败: {}", err));
                             let header_info = format!(
@@ -766,8 +782,11 @@ pub async fn fetch_quota_with_context(
                 if let Ok(quota_response) =
                     serde_json::from_value::<QuotaResponse>(record.payload.clone())
                 {
-                    let quota_data =
-                        build_quota_data_from_response(quota_response, subscription_tier.clone(), credits.clone());
+                    let quota_data = build_quota_data_from_response(
+                        quota_response,
+                        subscription_tier.clone(),
+                        credits.clone(),
+                    );
                     return Ok(QuotaFetchResult {
                         quota: quota_data,
                         error: None,
@@ -854,8 +873,11 @@ pub async fn fetch_quota_with_context(
 
                 let quota_response: QuotaResponse = serde_json::from_value(payload_value)
                     .map_err(|e| AppError::Unknown(format!("API 响应解析失败: {}", e)))?;
-                let quota_data =
-                    build_quota_data_from_response(quota_response, subscription_tier.clone(), credits.clone());
+                let quota_data = build_quota_data_from_response(
+                    quota_response,
+                    subscription_tier.clone(),
+                    credits.clone(),
+                );
 
                 return Ok(QuotaFetchResult {
                     quota: quota_data,

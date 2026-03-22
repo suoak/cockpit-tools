@@ -21,7 +21,7 @@ const API_KEY_LOGIN_PLAN_TYPE: &str = "API_KEY";
 const API_KEY_EMAIL_PREFIX: &str = "api-key";
 const API_KEY_AUTH_MODE: &str = "apikey";
 const CODEX_CONFIG_FILE_NAME: &str = "config.toml";
-const CODEX_CONFIG_BASE_URL_KEY: &str = "base_url";
+const CODEX_CONFIG_BASE_URL_KEY: &str = "openai_base_url";
 #[cfg(target_os = "macos")]
 const CODEX_KEYCHAIN_SERVICE: &str = "Codex Auth";
 
@@ -347,7 +347,10 @@ fn read_api_base_url_from_config_toml(base_dir: &Path) -> Option<String> {
     )
 }
 
-fn write_api_base_url_to_config_toml(base_dir: &Path, api_base_url: Option<&str>) -> Result<(), String> {
+fn write_api_base_url_to_config_toml(
+    base_dir: &Path,
+    api_base_url: Option<&str>,
+) -> Result<(), String> {
     let config_path = get_config_toml_path(base_dir);
     let normalized = normalize_api_base_url(api_base_url);
 
@@ -946,8 +949,8 @@ pub fn get_current_account() -> Option<CodexAccount> {
     let auth_file: CodexAuthFile = serde_json::from_str(&content).ok()?;
     let is_apikey_mode = is_auth_mode_apikey(auth_file.auth_mode.as_deref());
     let api_key = extract_api_key_from_auth_file(&auth_file);
-    let api_base_url =
-        extract_api_base_url_from_auth_file(&auth_file).or_else(|| read_api_base_url_from_config_toml(&get_codex_home()));
+    let api_base_url = extract_api_base_url_from_auth_file(&auth_file)
+        .or_else(|| read_api_base_url_from_config_toml(&get_codex_home()));
 
     if is_apikey_mode || (auth_file.tokens.is_none() && api_key.is_some()) {
         let api_key = api_key?;
@@ -1065,8 +1068,8 @@ fn write_codex_keychain_to_dir(base_dir: &Path, account: &CodexAccount) -> Resul
     }
 
     let payload = build_auth_file_value(account)?;
-    let secret =
-        serde_json::to_string(&payload).map_err(|e| format!("序列化 Codex keychain 数据失败: {}", e))?;
+    let secret = serde_json::to_string(&payload)
+        .map_err(|e| format!("序列化 Codex keychain 数据失败: {}", e))?;
     let keychain_account = build_codex_keychain_account(base_dir);
 
     let output = std::process::Command::new("security")
@@ -1287,7 +1290,10 @@ pub fn import_from_json(json_content: &str) -> Result<Vec<CodexAccount>, String>
         let fallback_api_base_url = extract_api_base_url_from_auth_file(&auth_file);
         if is_auth_mode_apikey(auth_file.auth_mode.as_deref()) {
             let api_key = fallback_api_key.ok_or("auth.json 缺少 OPENAI_API_KEY")?;
-            return Ok(vec![upsert_api_key_account(api_key, fallback_api_base_url)?]);
+            return Ok(vec![upsert_api_key_account(
+                api_key,
+                fallback_api_base_url,
+            )?]);
         }
 
         if let Some(tokens) = auth_file.tokens {
@@ -1302,7 +1308,10 @@ pub fn import_from_json(json_content: &str) -> Result<Vec<CodexAccount>, String>
         }
 
         if let Some(api_key) = fallback_api_key {
-            return Ok(vec![upsert_api_key_account(api_key, fallback_api_base_url)?]);
+            return Ok(vec![upsert_api_key_account(
+                api_key,
+                fallback_api_base_url,
+            )?]);
         }
     }
 
@@ -1474,7 +1483,11 @@ fn extract_codex_tokens_from_value(
 
 #[cfg(test)]
 mod tests {
-    use super::extract_codex_tokens_from_value;
+    use super::{
+        extract_codex_tokens_from_value, read_api_base_url_from_config_toml,
+        write_api_base_url_to_config_toml,
+    };
+    use std::fs;
 
     #[test]
     fn extract_tokens_from_flat_codex_json() {
@@ -1514,6 +1527,32 @@ mod tests {
         assert_eq!(tokens.access_token, "access.jwt.token");
         assert_eq!(tokens.refresh_token.as_deref(), Some("rt_456"));
         assert_eq!(account_id_hint.as_deref(), Some("acc_2"));
+    }
+
+    #[test]
+    fn config_toml_uses_openai_base_url_key() {
+        let base_dir =
+            std::env::temp_dir().join(format!("codex-config-key-test-{}", std::process::id()));
+        if base_dir.exists() {
+            fs::remove_dir_all(&base_dir).expect("cleanup old temp dir");
+        }
+
+        fs::create_dir_all(&base_dir).expect("create temp dir");
+        write_api_base_url_to_config_toml(&base_dir, Some("https://api.example.com/"))
+            .expect("write config");
+
+        let config_path = base_dir.join("config.toml");
+        let content = fs::read_to_string(&config_path).expect("read config");
+        assert!(content.contains("openai_base_url = \"https://api.example.com\""));
+        assert!(!content
+            .lines()
+            .any(|line| line.trim_start().starts_with("base_url =")));
+        assert_eq!(
+            read_api_base_url_from_config_toml(&base_dir).as_deref(),
+            Some("https://api.example.com")
+        );
+
+        fs::remove_dir_all(&base_dir).expect("cleanup temp dir");
     }
 }
 

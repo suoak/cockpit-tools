@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Platforma Zed"
   },
   "platformLayout": {
     "title": "Rozložení platforem",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "Pokud je vypnuto, přepne se pouze Codex a OpenClaw zůstane v aktuálním přihlášení",
       "ghcpOpencodeAuthOverwrite": "Při přepnutí GitHub Copilot přepsat přihlášení OpenCode",
       "ghcpOpencodeRestart": "Restartovat OpenCode při přepnutí GitHub Copilot",
-      "ghcpLaunchOnSwitch": "Při přepnutí GitHub Copilot automaticky spustit GitHub Copilot App"
+      "ghcpLaunchOnSwitch": "Při přepnutí GitHub Copilot automaticky spustit GitHub Copilot App",
+      "zedAutoRefresh": "Automatické obnovení kvóty Zed",
+      "zedAutoRefreshDesc": "Frekvence aktualizace na pozadí",
+      "zedAppPath": "Spouštěcí cesta Zed",
+      "zedAppPathDesc": "Ponechte prázdné pro výchozí cestu",
+      "zedAppPathPlaceholder": "Výchozí cesta",
+      "zedPathSelect": "Vybrat",
+      "zedPathReset": "Obnovit výchozí"
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "Nastavení WorkBuddy",
       "appPath": "Cesta WorkBuddy"
+    },
+    "zed": {
+      "title": "Nastavení Zed",
+      "appPath": "Cesta k Zed"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "Na této stránce dokončete přihlášení a autorizaci."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "Balicek pouziti: --",
       "payAsYouGoConsuming": "Prubezne uctovani: cerpa se",
       "payAsYouGoEnabled": "Prubezne uctovani: zapnuto",
-      "payAsYouGoEmpty": "Prubezne uctovani: --"
+      "payAsYouGoEmpty": "Prubezne uctovani: --",
+      "payAsYouGoLabel": "Pouziti na vyzadani"
     },
     "flowNotice": {
       "title": "Prirucka k uctu Trae (kliknutim rozbalit/sbalit)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "Více instancí WorkBuddy je podporováno pouze na macOS, Windows a Linuxu."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Přidat účet Zed"
+    },
+    "empty": {
+      "description": "Kliknutím na „Přidat účet“ začnete spravovat své účty Zed, nebo je importujte z JSONu či z aktuálního místního přihlášení."
+    },
+    "import": {
+      "jsonDesc": "Importujte soubor Zed JSON exportovaný tímto nástrojem.",
+      "localDesc": "Importujte data účtu z aktuálního místního přihlášení Zed nebo z exportovaného souboru JSON."
+    },
+    "flowNotice": {
+      "title": "Poznámky k integraci účtu Zed (kliknutím rozbalit/sbalit)",
+      "desc": "Podporuje oficiální OAuth přihlášení, import JSON, import aktuálního místního přihlášení a zapsání uloženého účtu zpět do oficiálního klienta Zed podle skutečných pravidel jeho ukládání. Tato stránka zobrazuje jen stavová pole, která desktopový klient umí číst přímo, a už neudržuje žádný dodatečný stav menu.",
+      "reason": "Rozsah oprávnění: otevře oficiální same-origin přihlášení Zed v prohlížeči; čte aktuální místní přihlašovací údaje Zed pro import; při použití účtu zapisuje zpět do stejného systémového úložiště přihlašovacích údajů; a podle potřeby může Zed spustit nebo restartovat.",
+      "storage": "Rozsah dat: lokálně se ukládají jen importované nebo autorizované záznamy účtů, štítky a exportovaný obsah. Obsah místního Keychainu nebo přihlašovacích údajů se neodesílá, webové relace prohlížeče se neskenují a nesouvisející systémové přihlašovací údaje se nemění."
+    },
+    "page": {
+      "subtitle": "Podporuje oficiální same-origin přihlášení, dotazy na předplatné a využití, skutečné přepsání přihlašovacích údajů a restart Zed.",
+      "current": "Aktuální",
+      "tokenSpend": "Spotřeba tokenů",
+      "editPredictions": "Predikce úprav",
+      "spendLimit": "Limit útraty",
+      "billingPeriodEnd": "Konec fakturačního období",
+      "searchPlaceholder": "Hledat GitHub login, tarif nebo štítky",
+      "empty": "Zatím žádné účty Zed",
+      "unknownStatus": "Neznámý stav",
+      "overdueField": "Po splatnosti",
+      "overdueYes": "Ano",
+      "overdueNo": "Ne"
+    },
+    "runtime": {
+      "title": "Aktuální relace Zed",
+      "currentAccount": "Aktivní účet: {{account}}",
+      "noCurrentAccount": "Žádný aktivní účet Zed",
+      "running": "Spuštěno",
+      "stopped": "Zastaveno",
+      "pathMissing": "Cesta ke spuštění není nastavena",
+      "lastPid": "Poslední PID",
+      "lastStartedAt": "Naposledy spuštěno",
+      "loadFailed": "Nepodařilo se načíst stav běhu Zed"
+    },
+    "oauth": {
+      "pendingTitle": "Čekající přihlášení do Zed",
+      "pendingDesc": "Dokončete autorizaci v prohlížeči a pak se sem vraťte pro dokončení importu účtu.",
+      "openBrowser": "Otevřít prohlížeč",
+      "complete": "Dokončit přihlášení",
+      "startFailed": "Nepodařilo se spustit přihlášení do Zed",
+      "completeSuccess": "Přihlášení do Zed dokončeno: {{account}}",
+      "importOnlySuccess": "Autorizace byla úspěšná. Účet byl importován. Chcete-li, aby jej oficiální Zed používal, klikněte na „Použít a restartovat“."
+    },
+    "actions": {
+      "addAccount": "Přihlásit se do Zed",
+      "importSuccess": "Účty Zed byly úspěšně importovány",
+      "switchSuccess": "Účet Zed přepnut a aplikace restartována",
+      "deleteConfirm": "Odstranit {{count}} účtů Zed?",
+      "startApp": "Spustit Zed",
+      "stopApp": "Zastavit Zed",
+      "restartApp": "Restartovat Zed",
+      "focusApp": "Zaměřit Zed",
+      "logout": "Odhlásit aktuální účet",
+      "managePlan": "Spravovat tarif",
+      "applyAndRestart": "Použít a restartovat",
+      "reapply": "Použít znovu",
+      "exportTitle": "Exportovat JSON účtů Zed"
     }
   }
 }

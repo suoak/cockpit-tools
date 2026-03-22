@@ -185,7 +185,8 @@
     "codebuddy": "CodeBuddy",
     "qoder": "Qoder",
     "trae": "Trae",
-    "codebuddyCn": "CodeBuddy CN"
+    "codebuddyCn": "CodeBuddy CN",
+    "zed": "Zed 플랫폼"
   },
   "platformLayout": {
     "title": "플랫폼 레이아웃",
@@ -537,7 +538,14 @@
       "openclawAuthOverwriteDesc": "끄면 Codex만 전환되고 OpenClaw는 현재 로그인 상태를 유지합니다",
       "ghcpOpencodeAuthOverwrite": "GitHub Copilot 전환 시 OpenCode 로그인 덮어쓰기",
       "ghcpOpencodeRestart": "GitHub Copilot 전환 시 OpenCode 재시작",
-      "ghcpLaunchOnSwitch": "GitHub Copilot 전환 시 GitHub Copilot App 자동 실행"
+      "ghcpLaunchOnSwitch": "GitHub Copilot 전환 시 GitHub Copilot App 자동 실행",
+      "zedAutoRefresh": "Zed 할당량 자동 새로고침",
+      "zedAutoRefreshDesc": "백그라운드 업데이트 주기",
+      "zedAppPath": "Zed 실행 경로",
+      "zedAppPathDesc": "기본 경로를 사용하려면 비워 두세요",
+      "zedAppPathPlaceholder": "기본 경로",
+      "zedPathSelect": "선택",
+      "zedPathReset": "기본값으로 재설정"
     },
     "network": {
       "apiTitle": "반중력 조종석 API",
@@ -1516,6 +1524,10 @@
     "workbuddy": {
       "title": "WorkBuddy 설정",
       "appPath": "WorkBuddy 경로"
+    },
+    "zed": {
+      "title": "Zed 설정",
+      "appPath": "Zed 경로"
     }
   },
   "quotaAlert": {
@@ -2174,6 +2186,9 @@
       "status": {
         "loginConfirm": "이 페이지에서 로그인 및 권한 부여를 완료하세요."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
     }
   },
   "qoder": {
@@ -2245,7 +2260,8 @@
       "packageEmpty": "사용 패키지: --",
       "payAsYouGoConsuming": "종량제 사용: 사용 중",
       "payAsYouGoEnabled": "종량제 사용: 활성화됨",
-      "payAsYouGoEmpty": "종량제 사용: --"
+      "payAsYouGoEmpty": "종량제 사용: --",
+      "payAsYouGoLabel": "종량제 사용"
     },
     "flowNotice": {
       "title": "Trae 계정 안내 (클릭하여 펼치기/접기)",
@@ -2376,6 +2392,76 @@
       "unsupported": {
         "descPlatform": "WorkBuddy 다중 인스턴스는 macOS, Windows, Linux에서만 지원됩니다."
       }
+    },
+    "quota": {
+      "usedOfTotal": "{{used}} / {{total}}"
+    }
+  },
+  "zed": {
+    "addModal": {
+      "title": "Zed 계정 추가"
+    },
+    "empty": {
+      "description": "\"계정 추가\"를 클릭해 Zed 계정 관리를 시작하거나 JSON 또는 현재 로컬 로그인 상태에서 가져올 수 있습니다."
+    },
+    "import": {
+      "jsonDesc": "이 도구에서 내보낸 Zed JSON 파일을 가져옵니다.",
+      "localDesc": "현재 로컬 Zed 로그인 상태 또는 내보낸 JSON 파일에서 계정 데이터를 가져옵니다."
+    },
+    "flowNotice": {
+      "title": "Zed 계정 연동 안내 (클릭하여 펼치기/접기)",
+      "desc": "공식 OAuth 로그인, JSON 가져오기, 현재 로컬 로그인 상태 가져오기, 그리고 Zed 클라이언트의 실제 저장 규칙에 따라 저장된 계정을 공식 Zed 클라이언트에 적용하는 기능을 지원합니다. 이 페이지는 데스크톱 클라이언트가 직접 읽을 수 있는 상태 필드만 표시하며 메뉴 막대의 추가 상태는 더 이상 유지하지 않습니다.",
+      "reason": "권한 범위: 브라우저에서 Zed 공식 same-origin 로그인을 엽니다. 가져오기를 위해 현재 로컬 Zed 자격 증명을 읽고, 계정을 적용할 때는 동일한 시스템 자격 증명 슬롯에 다시 씁니다. 필요하면 Zed를 시작하거나 재시작할 수도 있습니다.",
+      "storage": "데이터 범위: 로컬에는 가져오거나 인증으로 얻은 계정 기록, 태그, 내보낸 내용만 저장합니다. 로컬 Keychain 또는 자격 증명 원문은 업로드하지 않고, 브라우저 웹 세션도 스캔하지 않으며, 관련 없는 시스템 자격 증명도 수정하지 않습니다."
+    },
+    "page": {
+      "subtitle": "공식 same-origin 로그인, 구독 및 사용량 조회, 실제 로그인 정보 덮어쓰기, Zed 재시작을 지원합니다.",
+      "current": "현재",
+      "tokenSpend": "Token 사용량",
+      "editPredictions": "편집 예측",
+      "spendLimit": "지출 한도",
+      "billingPeriodEnd": "청구 기간 종료",
+      "searchPlaceholder": "GitHub 로그인, 요금제 또는 태그 검색",
+      "empty": "Zed 계정이 없습니다",
+      "unknownStatus": "알 수 없는 상태",
+      "overdueField": "연체 여부",
+      "overdueYes": "예",
+      "overdueNo": "아니요"
+    },
+    "runtime": {
+      "title": "현재 Zed 세션",
+      "currentAccount": "현재 적용된 계정: {{account}}",
+      "noCurrentAccount": "활성 Zed 계정이 없습니다",
+      "running": "실행 중",
+      "stopped": "중지됨",
+      "pathMissing": "실행 경로가 설정되지 않았습니다",
+      "lastPid": "마지막 PID",
+      "lastStartedAt": "마지막 시작 시각",
+      "loadFailed": "Zed 런타임 상태를 불러오지 못했습니다"
+    },
+    "oauth": {
+      "pendingTitle": "대기 중인 Zed 로그인",
+      "pendingDesc": "브라우저 인증을 완료한 뒤 여기로 돌아와 계정 가져오기를 마무리하세요.",
+      "openBrowser": "브라우저 열기",
+      "complete": "로그인 완료",
+      "startFailed": "Zed 로그인 시작에 실패했습니다",
+      "completeSuccess": "Zed 로그인 완료: {{account}}",
+      "importOnlySuccess": "인증이 완료되었습니다. 계정은 가져오기까지 완료되었습니다. 공식 Zed에서 이 계정을 사용하려면 \"적용 후 재시작\"을 클릭하세요."
+    },
+    "actions": {
+      "addAccount": "Zed 로그인",
+      "importSuccess": "Zed 계정을 성공적으로 가져왔습니다",
+      "switchSuccess": "Zed 계정을 전환하고 재시작했습니다",
+      "deleteConfirm": "Zed 계정 {{count}}개를 삭제할까요?",
+      "startApp": "Zed 시작",
+      "stopApp": "Zed 중지",
+      "restartApp": "Zed 재시작",
+      "focusApp": "Zed 포커스",
+      "logout": "현재 계정 로그아웃",
+      "managePlan": "플랜 관리",
+      "applyAndRestart": "적용 후 재시작",
+      "reapply": "다시 적용",
+      "exportTitle": "Zed 계정 JSON 내보내기"
     }
   }
 }
