@@ -360,11 +360,6 @@ npm run tauri build
 
 ---
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=suoak/cockpit-tools&type=Date)](https://star-history.com/#suoak/cockpit-tools&Date)
-
----
 
 ## Sponsor
 
