@@ -1,28 +1,28 @@
 cask "cockpit-tools" do
-  version "0.18.1"
-  sha256 "19abbe68ffe10ab728461623a17ab47045cae5444f9bc4513eea2ea6657ff35b"
+  version "0.18.3"
+  sha256 "ba3d0ae0c1e61dbc56b5ec563b7b39a147bee1eae7257793b7411e7dd1a8ae72"
 
-  url "https://github.com/suoak/cockpit-tools/releases/download/v#{version}/SC-Cockpit.Tools_#{version}_universal.dmg",
-      verified: "github.com/suoak/cockpit-tools/"
-  name "SC-Cockpit Tools"
+  url "https://github.com/jlcodes99/cockpit-tools/releases/download/v#{version}/Cockpit.Tools_#{version}_universal.dmg",
+      verified: "github.com/jlcodes99/cockpit-tools/"
+  name "Cockpit Tools"
   desc "Account manager for AI IDEs (Antigravity and Codex)"
-  homepage "https://github.com/suoak/cockpit-tools"
+  homepage "https://github.com/jlcodes99/cockpit-tools"
 
   auto_updates true
 
   postflight do
     system_command "/usr/bin/xattr",
-                   args: ["-cr", "#{appdir}/SC-Cockpit Tools.app"],
+                   args: ["-cr", "#{appdir}/Cockpit Tools.app"],
                    sudo: true
   end
 
-  app "SC-Cockpit Tools.app"
+  app "Cockpit Tools.app"
 
   zap trash: [
-    "~/Library/Application Support/com.suoak.cockpit-tools",
-    "~/Library/Caches/com.suoak.cockpit-tools",
-    "~/Library/Preferences/com.suoak.cockpit-tools.plist",
-    "~/Library/Saved Application State/com.suoak.cockpit-tools.savedState",
+    "~/Library/Application Support/com.jlcodes.cockpit-tools",
+    "~/Library/Caches/com.jlcodes.cockpit-tools",
+    "~/Library/Preferences/com.jlcodes.cockpit-tools.plist",
+    "~/Library/Saved Application State/com.jlcodes.cockpit-tools.savedState",
   ]
 
   caveats <<~EOS
