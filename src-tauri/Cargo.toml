@@ -1,8 +1,8 @@
 [package]
 name = "cockpit-tools"
-version = "0.19.1"
+version = "0.19.2"
 description = "SC-Cockpit Tools"
-authors = ["jlcodes"]
+authors = ["suoak"]
 license = "CC-BY-NC-SA-4.0"
 edition = "2021"
 
