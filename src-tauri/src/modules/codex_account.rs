@@ -5,6 +5,8 @@ use crate::models::codex::{
 use crate::modules::{codex_oauth, logger};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
+#[cfg(target_os = "macos")]
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -301,7 +303,7 @@ async fn fetch_remote_account_profile(
     Ok(parse_account_profile_from_check_response(&payload, account))
 }
 
-/// 获取 Codex 数据目录（优先读取 CODEX_HOME 环境变量）
+/// 获取 Codex 数据目录
 pub fn get_codex_home() -> PathBuf {
     if let Some(from_env) = resolve_codex_home_from_env() {
         return from_env;
@@ -970,6 +972,7 @@ pub fn upsert_api_key_account(
         acc.account_structure = None;
         acc.quota = None;
         acc.quota_error = None;
+        acc.usage_updated_at = None;
         if acc.email.trim().is_empty() {
             acc.email = build_api_key_email(&api_key);
         }
@@ -1271,7 +1274,6 @@ fn build_auth_file_value(account: &CodexAccount) -> Result<serde_json::Value, St
 
 #[cfg(target_os = "macos")]
 fn build_codex_keychain_account(base_dir: &Path) -> String {
-    use sha2::{Digest, Sha256};
     let resolved_home = fs::canonicalize(base_dir).unwrap_or_else(|_| base_dir.to_path_buf());
     let mut hasher = Sha256::new();
     hasher.update(resolved_home.to_string_lossy().as_bytes());
@@ -1454,10 +1456,7 @@ pub fn switch_account(account_id: &str) -> Result<CodexAccount, String> {
 pub fn import_from_local() -> Result<CodexAccount, String> {
     let auth_path = get_auth_json_path();
     if !auth_path.exists() {
-        return Err(format!(
-            "未找到本地 auth.json 文件: {}",
-            auth_path.to_string_lossy()
-        ));
+        return Err("未找到 ~/.codex/auth.json 文件".to_string());
     }
 
     let content =
@@ -2272,7 +2271,7 @@ fn clear_quota_alert_cooldown(account_id: &str, primary_threshold: i32, secondar
     }
 }
 
-fn resolve_current_account_id(accounts: &[CodexAccount]) -> Option<String> {
+pub(crate) fn resolve_current_account_id(accounts: &[CodexAccount]) -> Option<String> {
     if let Some(account) = get_current_account() {
         return Some(account.id);
     }

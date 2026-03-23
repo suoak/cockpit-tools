@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
 use std::process::Command;
 use std::sync::Mutex;
 
@@ -1131,7 +1132,7 @@ fn compute_remaining_percent_f64(
     Some(percent.clamp(0, 100))
 }
 
-fn extract_quota_metrics(account: &ZedAccount) -> Vec<(String, i32)> {
+pub(crate) fn extract_quota_metrics(account: &ZedAccount) -> Vec<(String, i32)> {
     let mut metrics = Vec::new();
 
     if let Some(percent) = compute_remaining_percent_i64(
