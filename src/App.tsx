@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
+import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
@@ -28,9 +29,9 @@ import { useQoderAccountStore } from './stores/useQoderAccountStore';
 import { useTraeAccountStore } from './stores/useTraeAccountStore';
 import { useWorkbuddyAccountStore } from './stores/useWorkbuddyAccountStore';
 import { useZedAccountStore } from './stores/useZedAccountStore';
-import type { UpdateCheckResult } from './components/UpdateNotification';
+import type { UpdateCheckResult, UpdateInfo } from './components/UpdateNotification';
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
-import { parseUpdaterReleaseNotes } from './utils/updaterReleaseNotes';
+import { parseUpdaterReleaseNotes, resolveUpdaterDownloadUrl } from './utils/updaterReleaseNotes';
 import { FloatingCardWindow } from './pages/FloatingCardWindow';
 import {
   createUpdaterCanceledError,
@@ -376,7 +377,6 @@ function MainApp() {
   const [page, setPage] = useState<Page>('dashboard');
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateNotificationKey, setUpdateNotificationKey] = useState(0);
-  const [updateCheckSource, setUpdateCheckSource] = useState<UpdateCheckSource>('auto');
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showLogViewer, setShowLogViewer] = useState(false);
   const [showPlatformLayoutModal, setShowPlatformLayoutModal] = useState(false);
@@ -396,6 +396,8 @@ function MainApp() {
   } | null>(null);
   const [updateRuntimeInfo, setUpdateRuntimeInfo] = useState<UpdateRuntimeInfo | null>(null);
   const [updateRuntimeInfoLoaded, setUpdateRuntimeInfoLoaded] = useState(false);
+  const [updateNotificationInfo, setUpdateNotificationInfo] = useState<UpdateInfo | null>(null);
+  const [updateNotificationChecking, setUpdateNotificationChecking] = useState(false);
   const [silentUpdateVersion, setSilentUpdateVersion] = useState<string | null>(null);
   const [updateAction, setUpdateAction] = useState<UpdateAction>({
     state: 'hidden',
@@ -411,6 +413,7 @@ function MainApp() {
   const updateCancelRequestedRef = useRef(false);
   const updateDownloadTaskIdRef = useRef(0);
   const updateDownloadOwnerRef = useRef<'none' | 'shared' | 'silent'>('none');
+  const updateCheckRequestIdRef = useRef(0);
   const { showModal, closeModal } = useGlobalModal();
   const trayRefreshInFlightRef = useRef(false);
   const openBreakout = useCallback(() => {
@@ -450,7 +453,6 @@ function MainApp() {
   useAutoRefresh();
 
   const openUpdateNotification = useCallback((source: UpdateCheckSource) => {
-    setUpdateCheckSource(source);
     if (source === 'manual') {
       window.dispatchEvent(new CustomEvent('update-check-started', { detail: { source } }));
     }
@@ -458,8 +460,73 @@ function MainApp() {
     setShowUpdateNotification(true);
   }, []);
 
+  const closeUpdateNotification = useCallback(() => {
+    setShowUpdateNotification(false);
+    if (updateAction.state === 'hidden') {
+      setUpdateNotificationInfo(null);
+      setUpdateRetryStatus('');
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+    }
+  }, [updateAction.state]);
+
   const writeUpdateLog = useCallback((level: 'info' | 'warn' | 'error', message: string) => {
     void invoke('update_log', { level, message }).catch(() => {});
+  }, []);
+
+  const prepareUpdateNotificationInfo = useCallback(async (update: UpdaterUpdate): Promise<UpdateInfo> => {
+    const { releaseNotes, releaseNotesZh } = parseUpdaterReleaseNotes(update.body);
+    const currentVersion = update.currentVersion || (await getVersion());
+    return {
+      current_version: currentVersion,
+      latest_version: update.version,
+      download_url: resolveUpdaterDownloadUrl(update.version, update.rawJson),
+      release_notes: releaseNotes,
+      release_notes_zh: releaseNotesZh,
+    };
+  }, []);
+
+  const handleUpdateCheckResult = useCallback((result: UpdateCheckResult) => {
+    const latestVersion = result.latestVersion;
+    if (result.status === 'has_update' && latestVersion) {
+      setUpdateAction((prev) => {
+        if (prev.state === 'downloading' && prev.version === latestVersion) {
+          return prev;
+        }
+        if (prev.state === 'installing' && prev.version === latestVersion) {
+          return prev;
+        }
+        if (prev.state === 'ready' && prev.version === latestVersion) {
+          return prev;
+        }
+        return {
+          state: 'available',
+          version: latestVersion,
+          progress: 0,
+          requiresInstall: true,
+        };
+      });
+      setUpdateRetryStatus('');
+    } else if (result.status === 'up_to_date') {
+      setUpdateAction((prev) => {
+        if (prev.state === 'ready' || prev.state === 'downloading' || prev.state === 'installing') {
+          return prev;
+        }
+        return {
+          state: 'hidden',
+          version: null,
+          progress: 0,
+          requiresInstall: true,
+        };
+      });
+      setUpdateRetryStatus('');
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+    }
+
+    if (result.source === 'manual') {
+      window.dispatchEvent(new CustomEvent('update-check-finished', { detail: result }));
+    }
   }, []);
 
   useEffect(() => {
@@ -517,6 +584,107 @@ function MainApp() {
     }
     await handle.close().catch(() => {});
   }, []);
+
+  const runModalUpdateCheck = useCallback(async (source: UpdateCheckSource) => {
+    const requestId = Date.now();
+    updateCheckRequestIdRef.current = requestId;
+    setUpdateNotificationInfo(null);
+    setUpdateNotificationChecking(true);
+    setUpdateRetryStatus('');
+    setUpdateDownloadError('');
+    setUpdateErrorDetails('');
+    openUpdateNotification(source);
+
+    try {
+      const update = await retryWithBackoff(
+        async () => runUpdaterCheck(),
+        {
+          delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
+          shouldRetry: isRetryableUpdaterError,
+          onRetry: ({ retryIndex, totalRetries, delayMs, error }) => {
+            if (updateCheckRequestIdRef.current !== requestId) {
+              return;
+            }
+            const compactError = sanitizeUpdaterErrorMessage(error);
+            setUpdateRetryStatus(
+              t('update_notification.checkRetrying', {
+                attempt: retryIndex,
+                total: totalRetries,
+              }),
+            );
+            writeUpdateLog(
+              'warn',
+              `交互式更新检查失败，准备重试(${retryIndex}/${totalRetries})，delay=${delayMs}ms，error=${compactError}`,
+            );
+          },
+        },
+      );
+
+      if (updateCheckRequestIdRef.current !== requestId) {
+        await closeUpdaterHandle(update);
+        return;
+      }
+
+      setUpdateRetryStatus('');
+      if (update) {
+        const info = await prepareUpdateNotificationInfo(update);
+        if (updateCheckRequestIdRef.current !== requestId) {
+          await closeUpdaterHandle(update);
+          return;
+        }
+        setUpdateNotificationInfo(info);
+        handleUpdateCheckResult({
+          source,
+          status: 'has_update',
+          currentVersion: info.current_version,
+          latestVersion: info.latest_version,
+        });
+        await closeUpdaterHandle(update);
+        return;
+      }
+
+      const currentVersion = await getVersion();
+      if (updateCheckRequestIdRef.current !== requestId) {
+        return;
+      }
+      setShowUpdateNotification(false);
+      setUpdateNotificationInfo(null);
+      handleUpdateCheckResult({
+        source,
+        status: 'up_to_date',
+        currentVersion,
+        latestVersion: currentVersion,
+      });
+    } catch (error) {
+      if (updateCheckRequestIdRef.current !== requestId) {
+        return;
+      }
+      console.error('[App] Interactive update check failed:', error);
+      writeUpdateLog(
+        'warn',
+        `交互式更新检查失败，关闭弹窗: error=${sanitizeUpdaterErrorMessage(error)}`,
+      );
+      setShowUpdateNotification(false);
+      setUpdateNotificationInfo(null);
+      handleUpdateCheckResult({
+        source,
+        status: 'failed',
+        error: String(error),
+      });
+    } finally {
+      if (updateCheckRequestIdRef.current === requestId) {
+        setUpdateNotificationChecking(false);
+      }
+    }
+  }, [
+    closeUpdaterHandle,
+    handleUpdateCheckResult,
+    openUpdateNotification,
+    prepareUpdateNotificationInfo,
+    runUpdaterCheck,
+    t,
+    writeUpdateLog,
+  ]);
 
   const handleApplyPendingUpdate = useCallback(async () => {
     const targetVersion = updateAction.version || silentUpdateVersion || '';
@@ -1067,12 +1235,22 @@ function MainApp() {
       return;
     }
 
-    const checkUpdates = async () => {
+    const UPDATE_POLL_INTERVAL_MS = 60 * 60 * 1000;
+    let updateCheckInFlight = false;
+    let intervalId: number | undefined;
+
+    const checkUpdates = async (trigger: 'startup' | 'hourly') => {
+      if (updateCheckInFlight) {
+        writeUpdateLog('info', `${trigger === 'startup' ? '启动' : '每小时轮询'}更新检查跳过：上一次尚未结束`);
+        return;
+      }
+      updateCheckInFlight = true;
+      const triggerLabel = trigger === 'startup' ? '启动' : '每小时轮询';
       const updateFlowStartedAt = performance.now();
       try {
-        console.log('[App] Startup update check triggered; interval gating is ignored.');
-        console.log('[StartupPerf][UpdateCheck] startup update check started');
-        writeUpdateLog('info', '启动触发自动更新检查流程（忽略检查周期）');
+        console.log(`[App] ${triggerLabel} update check triggered.`);
+        console.log(`[StartupPerf][UpdateCheck] ${triggerLabel} update check started`);
+        writeUpdateLog('info', `${triggerLabel}触发自动更新检查流程`);
 
         const settingsInvokeStartedAt = performance.now();
         const settings = await invoke<{
@@ -1084,25 +1262,19 @@ function MainApp() {
         console.log(
           `[StartupPerf][UpdateCheck] get_update_settings completed in ${settingsInvokeElapsed.toFixed(2)}ms`,
         );
-        const autoCheck = settings?.auto_check ?? true;
-        const checkIntervalHours = Number(settings?.check_interval_hours ?? 0);
         const autoInstall = settings?.auto_install ?? false;
         writeUpdateLog(
           'info',
-          `读取更新设置: auto_check=${autoCheck}, check_interval_hours=${checkIntervalHours}, auto_install=${autoInstall}`,
+          `读取更新设置: auto_install=${autoInstall}；启动始终执行更新检查`,
         );
 
-        if (!autoCheck) {
-          writeUpdateLog('info', '自动检查已关闭，跳过本次启动检查');
-          return;
-        }
-
-        writeUpdateLog('info', '启动检查不受检查周期限制，立即执行更新检查');
+        writeUpdateLog('info', '启动检查立即执行');
 
         if (autoInstall && !isLinuxManagedUpdate) {
           // Silent update: check and download in background, install on restart
           console.log('[App] Auto-install enabled, attempting silent update...');
           writeUpdateLog('info', '后台自动更新已开启，尝试静默检查并下载');
+          let preparedUpdateInfo: UpdateInfo | null = null;
           try {
             const silentCheckStartedAt = performance.now();
             const update = await retryWithBackoff(
@@ -1127,6 +1299,14 @@ function MainApp() {
               `[StartupPerf][UpdateCheck] silent runUpdaterCheck completed in ${(performance.now() - silentCheckStartedAt).toFixed(2)}ms; hasUpdate=${Boolean(update)}`,
             );
             if (update) {
+              preparedUpdateInfo = await prepareUpdateNotificationInfo(update);
+              setUpdateNotificationInfo(preparedUpdateInfo);
+              handleUpdateCheckResult({
+                source: 'auto',
+                status: 'has_update',
+                currentVersion: preparedUpdateInfo.current_version,
+                latestVersion: preparedUpdateInfo.latest_version,
+              });
               console.log('[App] Update found, downloading silently with retry...');
               writeUpdateLog('info', `检测到新版本，开始静默下载: version=${update.version}`);
               updateDownloadOwnerRef.current = 'silent';
@@ -1144,11 +1324,10 @@ function MainApp() {
                   requiresInstall: true,
                 };
               });
-              const { releaseNotes, releaseNotesZh } = parseUpdaterReleaseNotes(update.body);
               await invoke('save_pending_update_notes', {
                 version: update.version,
-                releaseNotes,
-                releaseNotesZh,
+                releaseNotes: preparedUpdateInfo.release_notes,
+                releaseNotesZh: preparedUpdateInfo.release_notes_zh,
               }).catch((error) => {
                 console.error('[App] Failed to cache silent update notes:', error);
                 writeUpdateLog(
@@ -1272,6 +1451,7 @@ function MainApp() {
                 progress: 100,
                 requiresInstall: true,
               });
+              openUpdateNotification('auto');
             } else {
               console.log('[App] No update available.');
               writeUpdateLog('info', '更新检查完成：当前已是最新版本');
@@ -1292,14 +1472,22 @@ function MainApp() {
               });
             }
           } catch (err) {
-            console.error('[App] Silent update failed, falling back to manual:', err);
+            console.error('[App] Silent update failed:', err);
             updateDownloadOwnerRef.current = 'none';
             writeUpdateLog(
               'error',
-              `静默更新失败，回退到手动更新弹窗: error=${sanitizeUpdaterErrorMessage(err)}`,
+              `静默更新失败，展示更新弹窗: error=${sanitizeUpdaterErrorMessage(err)}`,
             );
-            // Fallback to manual update notification
-            openUpdateNotification('auto');
+            if (preparedUpdateInfo) {
+              setUpdateNotificationInfo(preparedUpdateInfo);
+              setUpdateAction({
+                state: 'available',
+                version: preparedUpdateInfo.latest_version,
+                progress: 0,
+                requiresInstall: true,
+              });
+              openUpdateNotification('auto');
+            }
           }
         } else {
           // Auto-check only opens the dialog after a real update is found.
@@ -1335,6 +1523,14 @@ function MainApp() {
             );
 
             if (update) {
+              const info = await prepareUpdateNotificationInfo(update);
+              setUpdateNotificationInfo(info);
+              handleUpdateCheckResult({
+                source: 'auto',
+                status: 'has_update',
+                currentVersion: info.current_version,
+                latestVersion: info.latest_version,
+              });
               writeUpdateLog('info', `检测到新版本，展示手动更新弹窗: version=${update.version}`);
               await closeUpdaterHandle(update);
               openUpdateNotification('auto');
@@ -1372,26 +1568,38 @@ function MainApp() {
         writeUpdateLog('info', '已更新 last_check_time，结束本次更新检查流程');
         console.log('[App] Update check cycle completed.');
         console.log(
-          `[StartupPerf][UpdateCheck] startup update check completed in ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms`,
+          `[StartupPerf][UpdateCheck] ${triggerLabel} update check completed in ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms`,
         );
       } catch (error) {
         console.error('Failed to check update settings:', error);
         console.error(
-          `[StartupPerf][UpdateCheck] startup update check failed after ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms:`,
+          `[StartupPerf][UpdateCheck] ${triggerLabel} update check failed after ${(performance.now() - updateFlowStartedAt).toFixed(2)}ms:`,
           error,
         );
         writeUpdateLog('error', `更新检查流程异常中断: error=${sanitizeUpdaterErrorMessage(error)}`);
+      } finally {
+        updateCheckInFlight = false;
       }
     };
 
     const timer = setTimeout(() => {
-      void checkUpdates();
+      void checkUpdates('startup');
+      intervalId = window.setInterval(() => {
+        void checkUpdates('hourly');
+      }, UPDATE_POLL_INTERVAL_MS);
     }, 8000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
   }, [
     closeUpdaterHandle,
+    handleUpdateCheckResult,
     isLinuxManagedUpdate,
     openUpdateNotification,
+    prepareUpdateNotificationInfo,
     runUpdaterCheck,
     updateRuntimeInfo?.linux_install_kind,
     updateRuntimeInfoLoaded,
@@ -1664,56 +1872,13 @@ function MainApp() {
     const handleUpdateRequest = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: UpdateCheckSource }>).detail;
       const source: UpdateCheckSource = detail?.source === 'manual' ? 'manual' : 'auto';
-      openUpdateNotification(source);
+      void runModalUpdateCheck(source);
     };
     window.addEventListener('update-check-requested', handleUpdateRequest as EventListener);
     return () => {
       window.removeEventListener('update-check-requested', handleUpdateRequest as EventListener);
     };
-  }, [openUpdateNotification]);
-
-  const handleUpdateCheckResult = useCallback((result: UpdateCheckResult) => {
-    const latestVersion = result.latestVersion;
-    if (result.status === 'has_update' && latestVersion) {
-      setUpdateAction((prev) => {
-        if (prev.state === 'downloading' && prev.version === latestVersion) {
-          return prev;
-        }
-        if (prev.state === 'installing' && prev.version === latestVersion) {
-          return prev;
-        }
-        if (prev.state === 'ready' && prev.version === latestVersion) {
-          return prev;
-        }
-        return {
-          state: 'available',
-          version: latestVersion,
-          progress: 0,
-          requiresInstall: true,
-        };
-      });
-      setUpdateRetryStatus('');
-    } else if (result.status === 'up_to_date') {
-      setUpdateAction((prev) => {
-        if (prev.state === 'ready' || prev.state === 'downloading' || prev.state === 'installing') {
-          return prev;
-        }
-        return {
-          state: 'hidden',
-          version: null,
-          progress: 0,
-          requiresInstall: true,
-        };
-      });
-      setUpdateRetryStatus('');
-      setUpdateDownloadError('');
-      setUpdateErrorDetails('');
-    }
-
-    if (result.source === 'manual') {
-      window.dispatchEvent(new CustomEvent('update-check-finished', { detail: result }));
-    }
-  }, []);
+  }, [runModalUpdateCheck]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -2207,16 +2372,14 @@ function MainApp() {
 
   return (
     <div className="app-container">
-      {/* 更新通知：活跃状态时保持挂载（CSS 隐藏），避免重新打开时再次网络请求 */}
+      {/* 更新通知：活跃状态时保持挂载，关闭后继续保留当前更新状态 */}
       {(showUpdateNotification || updateAction.state !== 'hidden') && (
         <div style={showUpdateNotification ? undefined : { display: 'none' }}>
         <Suspense fallback={null}>
           <UpdateNotification
             key={updateNotificationKey}
-            source={updateCheckSource}
-            updaterTarget={getUpdaterCheckTarget() ?? null}
-            updaterCheckReady={updateRuntimeInfoLoaded}
-            preparedUpdateVersion={updateAction.state === 'ready' ? updateAction.version : null}
+            updateInfo={updateNotificationInfo}
+            checking={updateNotificationChecking}
             onRestartUpdate={handleApplyPendingUpdate}
             actionState={updateAction.state}
             actionVersion={updateAction.version}
@@ -2226,53 +2389,7 @@ function MainApp() {
             actionErrorDetails={updateErrorDetails}
             onPrimaryAction={handleQuickUpdateActionClick}
             onCancelUpdate={cancelUpdateDownload}
-            onResult={handleUpdateCheckResult}
-            onStateChange={({ phase, version }) => {
-              if (phase === 'ready') {
-                const keepRequiresInstall =
-                  updateAction.state === 'ready' &&
-                  updateAction.version === version &&
-                  updateAction.requiresInstall;
-
-                if (!keepRequiresInstall && pendingSilentUpdateRef.current) {
-                  void pendingSilentUpdateRef.current.close().catch(() => {});
-                  pendingSilentUpdateRef.current = null;
-                }
-                setUpdateRetryStatus('');
-                setUpdateDownloadError('');
-                setUpdateErrorDetails('');
-                setUpdateAction({
-                  state: 'ready',
-                  version,
-                  progress: 100,
-                  requiresInstall: keepRequiresInstall,
-                });
-                return;
-              }
-              setUpdateAction((prev) => {
-                if (prev.state === 'downloading' && prev.version === version) {
-                  return prev;
-                }
-                if (prev.state === 'installing' && prev.version === version) {
-                  return prev;
-                }
-                if (prev.state === 'ready' && prev.version === version) {
-                  return prev;
-                }
-                return {
-                  state: 'available',
-                  version,
-                  progress: 0,
-                  requiresInstall: true,
-                };
-              });
-              if (updateAction.state !== 'downloading' || updateAction.version !== version) {
-                setUpdateRetryStatus('');
-                setUpdateDownloadError('');
-                setUpdateErrorDetails('');
-              }
-            }}
-            onClose={() => setShowUpdateNotification(false)}
+            onClose={closeUpdateNotification}
           />
         </Suspense>
         </div>

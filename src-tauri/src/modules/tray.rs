@@ -1410,22 +1410,36 @@ fn strip_codebuddy_status_prefix(raw: &str) -> String {
 fn resolve_codebuddy_current_account(
     accounts: &[crate::models::codebuddy::CodebuddyAccount],
 ) -> Option<crate::models::codebuddy::CodebuddyAccount> {
-    crate::modules::codebuddy_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::codebuddy_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn resolve_codebuddy_cn_current_account(
     accounts: &[crate::models::codebuddy::CodebuddyAccount],
 ) -> Option<crate::models::codebuddy::CodebuddyAccount> {
-    crate::modules::codebuddy_cn_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::codebuddy_cn_account::resolve_current_account_id(accounts).and_then(
+        |account_id| {
+            accounts
+                .iter()
+                .find(|account| account.id == account_id)
+                .cloned()
+        },
+    )
 }
 
 fn resolve_workbuddy_current_account(
     accounts: &[crate::models::workbuddy::WorkbuddyAccount],
 ) -> Option<crate::models::workbuddy::WorkbuddyAccount> {
-    crate::modules::workbuddy_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::workbuddy_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn json_as_f64(value: &serde_json::Value) -> Option<f64> {
@@ -2162,29 +2176,45 @@ fn resolve_github_copilot_current_account(
 fn resolve_windsurf_current_account(
     accounts: &[crate::models::windsurf::WindsurfAccount],
 ) -> Option<crate::models::windsurf::WindsurfAccount> {
-    crate::modules::windsurf_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::windsurf_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn resolve_kiro_current_account(
     accounts: &[crate::models::kiro::KiroAccount],
 ) -> Option<crate::models::kiro::KiroAccount> {
-    crate::modules::kiro_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::kiro_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn resolve_cursor_current_account(
     accounts: &[crate::models::cursor::CursorAccount],
 ) -> Option<crate::models::cursor::CursorAccount> {
-    crate::modules::cursor_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::cursor_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn resolve_trae_current_account(
     accounts: &[crate::models::trae::TraeAccount],
 ) -> Option<crate::models::trae::TraeAccount> {
-    crate::modules::trae_account::resolve_current_account_id(accounts)
-        .and_then(|account_id| accounts.iter().find(|account| account.id == account_id).cloned())
+    crate::modules::trae_account::resolve_current_account_id(accounts).and_then(|account_id| {
+        accounts
+            .iter()
+            .find(|account| account.id == account_id)
+            .cloned()
+    })
 }
 
 fn first_non_empty<'a>(values: &[Option<&'a str>]) -> Option<&'a str> {

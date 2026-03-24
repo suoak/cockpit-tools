@@ -1336,6 +1336,34 @@ fn write_codex_keychain_to_dir(_base_dir: &Path, _account: &CodexAccount) -> Res
     Ok(())
 }
 
+fn write_string_atomic(path: &Path, content: &str) -> Result<(), String> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let parent = path.parent().ok_or("无法定位目标目录")?;
+    fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
+
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temp_path = parent.join(format!(
+        ".{}.tmp.{}.{}",
+        path.file_name()
+            .and_then(|item| item.to_str())
+            .unwrap_or("auth"),
+        std::process::id(),
+        unique
+    ));
+
+    fs::write(&temp_path, content).map_err(|e| format!("写入临时文件失败: {}", e))?;
+    if let Err(err) = fs::rename(&temp_path, path) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!("替换文件失败: {}", err));
+    }
+
+    Ok(())
+}
+
 pub fn write_auth_file_to_dir(base_dir: &Path, account: &CodexAccount) -> Result<(), String> {
     let auth_path = base_dir.join("auth.json");
     logger::log_info(&format!(
@@ -1346,20 +1374,10 @@ pub fn write_auth_file_to_dir(base_dir: &Path, account: &CodexAccount) -> Result
         auth_path.display()
     ));
 
-    if let Some(parent) = auth_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| {
-            format!(
-                "创建 auth.json 目录失败: path={}, error={}",
-                parent.display(),
-                e
-            )
-        })?;
-    }
-
     let auth_file = build_auth_file_value(account)?;
     let content =
         serde_json::to_string_pretty(&auth_file).map_err(|e| format!("序列化失败: {}", e))?;
-    fs::write(&auth_path, content).map_err(|e| {
+    write_string_atomic(&auth_path, &content).map_err(|e| {
         format!(
             "写入 auth.json 失败: path={}, error={}",
             auth_path.display(),

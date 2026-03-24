@@ -54,6 +54,8 @@ fn apply_macos_activation_policy(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logger::init_logger();
+    // 启动时先加载一次配置，确保进程级代理环境与用户设置同步。
+    let _ = modules::config::get_user_config();
 
     #[cfg(target_os = "linux")]
     {
@@ -133,6 +135,8 @@ pub fn run() {
                     modules::zed_oauth::restore_pending_oauth_listener();
                 });
             }
+
+            modules::codex_wakeup_scheduler::ensure_started(app.handle().clone());
 
             #[cfg(target_os = "macos")]
             apply_macos_activation_policy(&app.handle());
@@ -330,6 +334,13 @@ pub fn run() {
             commands::codex::is_codex_oauth_port_in_use,
             commands::codex::close_codex_oauth_port,
             commands::codex::update_codex_account_tags,
+            commands::codex::codex_wakeup_get_cli_status,
+            commands::codex::codex_wakeup_get_state,
+            commands::codex::codex_wakeup_save_state,
+            commands::codex::codex_wakeup_load_history,
+            commands::codex::codex_wakeup_clear_history,
+            commands::codex::codex_wakeup_test,
+            commands::codex::codex_wakeup_run_task,
             // GitHub Copilot Commands
             commands::github_copilot::list_github_copilot_accounts,
             commands::github_copilot::delete_github_copilot_account,

@@ -1,20 +1,10 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { X, Download, Sparkles, RefreshCw, Check, XCircle } from 'lucide-react';
-import { getVersion } from '@tauri-apps/api/app';
 import { useTranslation } from 'react-i18next';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import {
-  parseUpdaterReleaseNotes,
-  resolveUpdaterDownloadUrl,
-} from '../utils/updaterReleaseNotes';
-import {
-  isRetryableUpdaterError,
-  retryWithBackoff,
-  UPDATE_CHECK_RETRY_DELAYS_MS,
-} from '../utils/updaterRetry';
 import './UpdateNotification.css';
 
-interface UpdateInfo {
+export interface UpdateInfo {
   latest_version: string;
   current_version: string;
   download_url: string;
@@ -34,19 +24,10 @@ export interface UpdateCheckResult {
   error?: string;
 }
 
-export interface UpdateNotificationStateChange {
-  phase: 'available' | 'ready';
-  version: string;
-}
-
 interface UpdateNotificationProps {
+  updateInfo?: UpdateInfo | null;
+  checking?: boolean;
   onClose: () => void;
-  source?: UpdateCheckSource;
-  updaterTarget?: string | null;
-  updaterCheckReady?: boolean;
-  onResult?: (result: UpdateCheckResult) => void;
-  onStateChange?: (state: UpdateNotificationStateChange) => void;
-  preparedUpdateVersion?: string | null;
   onRestartUpdate?: () => Promise<void>;
   actionState?: UpdateActionState;
   actionVersion?: string | null;
@@ -59,13 +40,9 @@ interface UpdateNotificationProps {
 }
 
 export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
+  updateInfo = null,
+  checking = false,
   onClose,
-  source = 'auto',
-  updaterTarget = null,
-  updaterCheckReady = true,
-  onResult,
-  onStateChange,
-  preparedUpdateVersion,
   onRestartUpdate,
   actionState = 'hidden',
   actionVersion = null,
@@ -77,122 +54,8 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   onCancelUpdate,
 }) => {
   const { t, i18n } = useTranslation();
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [retryStatus, setRetryStatus] = useState('');
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-
-  useEffect(() => {
-    if (!updaterCheckReady) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const checkForUpdates = async () => {
-      setIsChecking(true);
-      try {
-        const { check } = await import('@tauri-apps/plugin-updater');
-        const target = typeof updaterTarget === 'string' ? updaterTarget.trim() : '';
-        const update = await retryWithBackoff(
-          async () => (target ? check({ target }) : check()),
-          {
-            delaysMs: UPDATE_CHECK_RETRY_DELAYS_MS,
-            shouldRetry: isRetryableUpdaterError,
-            onRetry: ({ retryIndex, totalRetries }) => {
-              if (cancelled) {
-                return;
-              }
-              setRetryStatus(
-                t('update_notification.checkRetrying', {
-                  attempt: retryIndex,
-                  total: totalRetries,
-                }),
-              );
-            },
-          },
-        );
-        if (cancelled) {
-          return;
-        }
-        setRetryStatus('');
-        if (update) {
-          const preparedOrReadyVersion =
-            preparedUpdateVersion || (actionState === 'ready' ? actionVersion : null);
-
-          if (preparedOrReadyVersion === update.version) {
-            onStateChange?.({
-              phase: 'ready',
-              version: update.version,
-            });
-          } else {
-            onStateChange?.({
-              phase: 'available',
-              version: update.version,
-            });
-          }
-
-          const { releaseNotes, releaseNotesZh } = parseUpdaterReleaseNotes(update.body);
-          const currentVersion = update.currentVersion || (await getVersion());
-          if (cancelled) {
-            return;
-          }
-          onResult?.({
-            source,
-            status: 'has_update',
-            currentVersion,
-            latestVersion: update.version,
-          });
-          setUpdateInfo({
-            current_version: currentVersion,
-            latest_version: update.version,
-            download_url: resolveUpdaterDownloadUrl(update.version, update.rawJson),
-            release_notes: releaseNotes,
-            release_notes_zh: releaseNotesZh,
-          });
-        } else {
-          const currentVersion = await getVersion();
-          if (cancelled) {
-            return;
-          }
-          onResult?.({
-            source,
-            status: 'up_to_date',
-            currentVersion,
-            latestVersion: currentVersion,
-          });
-          onClose();
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        console.error('Failed to check for updates:', error);
-        setRetryStatus('');
-        onResult?.({
-          source,
-          status: 'failed',
-          error: String(error),
-        });
-        onClose();
-      } finally {
-        if (!cancelled) {
-          setIsChecking(false);
-        }
-      }
-    };
-
-    void checkForUpdates();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    source,
-    updaterCheckReady,
-    updaterTarget,
-  ]);
 
   const handleTriggerUpdate = useCallback(async () => {
     if (!onPrimaryAction) {
@@ -284,9 +147,9 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   const isInstalling = actionState === 'installing';
   const isDownloaded = Boolean(updateInfo) && actionState === 'ready' && versionMatched;
   const clampedProgress = Math.max(0, Math.min(100, Math.round(actionProgress)));
-  const mergedRetryStatus = actionRetryStatus || retryStatus;
+  const mergedRetryStatus = actionRetryStatus;
   const isError =
-    Boolean(actionError) && !isChecking && !isDownloading && !isInstalling && !isDownloaded;
+    Boolean(actionError) && !checking && !isDownloading && !isInstalling && !isDownloaded;
   const modalTitle = updateInfo
     ? t('update_notification.title')
     : t('settings.about.checkUpdate');
@@ -299,7 +162,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   };
 
   if (!updateInfo) {
-    const waitingMessage = updaterCheckReady
+    const waitingMessage = checking
       ? mergedRetryStatus || t('settings.about.checking')
       : t('common.loading');
 

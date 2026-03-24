@@ -393,45 +393,6 @@ fn cmd_output(args: &[&str]) -> std::io::Result<std::process::Output> {
 }
 
 #[cfg(target_os = "windows")]
-fn powershell_output_file(script: &str) -> std::io::Result<std::process::Output> {
-    use std::os::windows::process::CommandExt;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let mut path = std::env::temp_dir();
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    path.push(format!("cockpit_ps_{}_{}.ps1", std::process::id(), unique));
-
-    let file_script = format!(
-        "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; {}\n",
-        script
-    );
-    std::fs::write(&path, file_script)?;
-
-    let mut command = Command::new("powershell");
-    command.creation_flags(CREATE_NO_WINDOW).args([
-        "-WindowStyle",
-        "Hidden",
-        "-NonInteractive",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        &path.to_string_lossy(),
-    ]);
-    let preview = format_command_preview(&command);
-    log_command_trace_exec(&preview);
-    let start = Instant::now();
-    let output = command.output();
-    log_command_trace_result(&preview, &output, start.elapsed());
-
-    let _ = std::fs::remove_file(&path);
-    output
-}
-
-#[cfg(target_os = "windows")]
 fn powershell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
@@ -902,40 +863,7 @@ exit 0
             stdout.chars().take(400).collect::<String>(),
             stderr.chars().take(400).collect::<String>()
         ));
-        if strict_process_detect_enabled() {
-            crate::modules::logger::log_warn(&format!(
-                "[Path Detect] {} strict mode enabled, skip -File fallback",
-                app_label
-            ));
-            return None;
-        }
-        let retry = match powershell_output_file(&script) {
-            Ok(value) => value,
-            Err(err) => {
-                crate::modules::logger::log_warn(&format!(
-                    "[Path Detect] {} PowerShell -File detect failed: {}",
-                    app_label, err
-                ));
-                return None;
-            }
-        };
-        if !retry.status.success() {
-            let retry_stderr = String::from_utf8_lossy(&retry.stderr);
-            let retry_stdout = String::from_utf8_lossy(&retry.stdout);
-            crate::modules::logger::log_warn(&format!(
-                "[Path Detect] {} PowerShell command failed(-File): status={}, stdout_head={}, stderr_head={}",
-                app_label,
-                retry.status,
-                retry_stdout.chars().take(400).collect::<String>(),
-                retry_stderr.chars().take(400).collect::<String>()
-            ));
-            return None;
-        }
-        crate::modules::logger::log_info(&format!(
-            "[Path Detect] {} PowerShell -File fallback succeeded after -Command failure",
-            app_label
-        ));
-        return parse_windows_exec_candidates(app_label, exe_names, display_keywords, retry);
+        return None;
     }
 
     parse_windows_exec_candidates(app_label, exe_names, display_keywords, output)
@@ -2438,10 +2366,7 @@ if ($pkg -and -not [string]::IsNullOrWhiteSpace($pkg.InstallLocation)) {
   Write-Output ([string]$pkg.InstallLocation.Trim())
 }"#;
 
-    let output = match powershell_output(&["-Command", script]) {
-        Ok(value) => value,
-        Err(_) => powershell_output_file(script).ok()?,
-    };
+    let output = powershell_output(&["-Command", script]).ok()?;
     if !output.status.success() {
         return None;
     }
@@ -2474,10 +2399,7 @@ if ($entry -and -not [string]::IsNullOrWhiteSpace($entry.AppID)) {
   Write-Output ([string]$entry.AppID.Trim())
 }"#;
 
-    let output = match powershell_output(&["-Command", script]) {
-        Ok(value) => value,
-        Err(_) => powershell_output_file(script).ok()?,
-    };
+    let output = powershell_output(&["-Command", script]).ok()?;
     if !output.status.success() {
         return None;
     }
@@ -2501,10 +2423,7 @@ if ($pkg -and -not [string]::IsNullOrWhiteSpace($pkg.PackageFamilyName)) {
   Write-Output ([string]($pkg.PackageFamilyName.Trim() + '!App'))
 }"#;
 
-    let output = match powershell_output(&["-Command", script]) {
-        Ok(value) => value,
-        Err(_) => powershell_output_file(script).ok()?,
-    };
+    let output = powershell_output(&["-Command", script]).ok()?;
     if !output.status.success() {
         return None;
     }
@@ -2552,12 +2471,8 @@ $target='shell:AppsFolder\' + $appId
 Start-Process -FilePath $target -ErrorAction Stop | Out-Null"#
     );
 
-    let output = match powershell_output(&["-Command", &script]) {
-        Ok(value) => value,
-        Err(_) => {
-            powershell_output_file(&script).map_err(|e| format!("系统入口启动调用失败: {}", e))?
-        }
-    };
+    let output = powershell_output(&["-Command", &script])
+        .map_err(|e| format!("系统入口启动调用失败: {}", e))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stderr_head = stderr.trim().chars().take(400).collect::<String>();

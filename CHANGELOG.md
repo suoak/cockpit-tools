@@ -7,6 +7,48 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.3] - 2026-03-24
+
+### Fixed
+- **Desktop update prompts now stay on a single app-controlled check flow instead of being re-checked inside the popup**: startup and manual checks now reuse the same updater result, detected updates are no longer lost because the dialog performs a second `check()`, silent downloads reopen the same dialog in the ready-to-restart state, and the app performs one startup check followed by hourly polling while it remains open.
+
+### Changed
+- **Codex wakeup now keeps a managed per-account `CODEX_HOME` instead of creating a temporary profile for every run**: each account now reuses a stable local wakeup home, `auth.json` is rewritten atomically before execution, and wakeup runs no longer create and delete a fresh temporary profile directory on every trigger.
+- **Windows process probing now uses a single inline PowerShell path without temporary script fallback**: Windows detection and launch helpers no longer write transient `.ps1` files or invoke `ExecutionPolicy Bypass` as a fallback when inline PowerShell execution fails.
+
+---
+## [0.20.2] - 2026-03-23
+
+### Fixed
+- **Bundled macOS Codex wakeup builds now detect Homebrew-installed Codex CLI and its Node runtime without depending on the terminal PATH**: the desktop app now augments packaged GUI detection with standard macOS CLI install directories, resolves the `codex` launcher and required `node` interpreter through the same runtime search path, and prevents released `.app` builds from falsely reporting that Codex CLI is not installed when it is available under `/opt/homebrew` or `/usr/local`.
+- **Windows Codex wakeup CLI checks no longer flash a black console window during runtime probing**: Codex CLI version probing and wakeup command launches now apply the hidden-window process flags consistently, so packaged desktop builds no longer briefly open a console window when checking CLI availability or running a wakeup command.
+
+### Changed
+- **Codex wakeup CLI probing now writes targeted desktop logs for packaged-app diagnosis**: CLI rechecks, version probing, runtime resolution, and wakeup execution now emit `[CodexWakeup][CLI]` log lines with the resolved search directories, launcher path, Node path, and process failure output so packaged-app environment issues can be diagnosed directly from `app.log`.
+
+---
+## [0.20.1] - 2026-03-23
+
+### Added
+- **Codex wakeup tasks now include an always-available execution details view**: each task card adds a dedicated details icon that opens the same execution-results dialog used by manual tests, so users can inspect queued accounts before a run starts and keep watching the same panel when a scheduled run begins.
+
+### Fixed
+- **Codex wakeup task cards now guard manual runs and count trigger history by task run instead of per-account records**: clicking the manual-run action now requires confirmation before immediately waking accounts, and the history badge reflects grouped task/test executions instead of inflated per-account totals.
+- **Release asset publishing now keeps updater bundles in a single GitHub release before merged metadata is rebuilt**: the release workflow now creates one draft release up front and uploads matrix artifacts by `releaseId`, preventing split draft releases from breaking merged `latest.json` and `SHA256SUMS.txt` generation across macOS, Windows, and Linux.
+
+---
+## [0.20.0] - 2026-03-23
+
+### Added
+- **Codex now includes a dedicated Wakeup Tasks workspace for OAuth accounts**: the Codex page adds a `Wakeup Tasks` tab where users can create daily/weekly/interval jobs, check Codex CLI availability and install hints, run manual wakeup tests, preview upcoming runs, and review per-account execution history with live progress.
+
+### Changed
+- **Codex wakeup execution is now backed by persisted desktop scheduling instead of page-local state only**: task definitions and run history are saved locally, the desktop app starts a background scheduler on launch, manual task runs refresh Codex account data after completion, and Windows wakeup runs launch the Codex CLI without showing a console window.
+
+### Fixed
+- **Modal failure feedback is now kept inside the active dialog across account, wakeup, verification, fingerprint, and instance flows**: delete/save/bind errors now keep the modal open, render in a dedicated in-modal error area, auto-scroll to the failing section, and clear stale errors before the next submit or when the modal closes.
+
+---
 ## [0.19.2] - 2026-03-23
 
 ### Fixed

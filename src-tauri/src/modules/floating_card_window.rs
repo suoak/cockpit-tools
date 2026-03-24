@@ -72,7 +72,9 @@ fn emit_floating_card_context_changed<R: Runtime>(
         .map_err(|err| err.to_string())
 }
 
-pub fn get_floating_card_context(window_label: &str) -> Result<Option<FloatingCardInstanceContext>, String> {
+pub fn get_floating_card_context(
+    window_label: &str,
+) -> Result<Option<FloatingCardInstanceContext>, String> {
     if !is_instance_floating_card_window_label(window_label) {
         return Ok(None);
     }
@@ -143,7 +145,8 @@ fn ensure_floating_card_window_with_label<R: Runtime>(
 pub fn ensure_floating_card_window<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<WebviewWindow<R>, String> {
-    ensure_floating_card_window_with_label(app, FLOATING_CARD_WINDOW_LABEL).map(|(window, _)| window)
+    ensure_floating_card_window_with_label(app, FLOATING_CARD_WINDOW_LABEL)
+        .map(|(window, _)| window)
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -157,8 +160,8 @@ fn apply_native_floating_card_window_shape<R: Runtime>(
 fn apply_native_floating_card_window_shape<R: Runtime>(
     window: &WebviewWindow<R>,
 ) -> Result<(), String> {
-    use std::sync::mpsc;
     use objc2_foundation::NSThread;
+    use std::sync::mpsc;
 
     let ns_window = window.ns_window().map_err(|err| err.to_string())? as usize;
 
@@ -321,13 +324,12 @@ fn apply_floating_card_position<R: Runtime>(
     app: &AppHandle<R>,
     window: &WebviewWindow<R>,
 ) -> Result<(), String> {
-    let target_position = if let Some(saved_position) =
-        resolve_visible_floating_card_position(app, window)?
-    {
-        saved_position
-    } else {
-        calculate_default_top_right_position(app, window)?
-    };
+    let target_position =
+        if let Some(saved_position) = resolve_visible_floating_card_position(app, window)? {
+            saved_position
+        } else {
+            calculate_default_top_right_position(app, window)?
+        };
 
     window
         .set_position(target_position)
