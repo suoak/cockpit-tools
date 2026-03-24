@@ -69,7 +69,7 @@
       "../src/assets/icons/windsurf.svg": "native-menu-icons/windsurf.svg",
       "../src/assets/icons/workbuddy.png": "native-menu-icons/workbuddy.png",
       "../src/assets/icons/zed.png": "native-menu-icons/zed.png"
-    }
+    },
     "windows": {
       "wix": {
         "language": ["en-US", "zh-CN"],
