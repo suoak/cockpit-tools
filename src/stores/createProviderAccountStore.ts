@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { PlatformId } from '../types/platform';
+import { emitAccountsChanged, emitCurrentAccountChanged } from '../utils/accountSyncEvents';
 
 type ProviderUsage = {
   inlineSuggestionsUsedPercent: number | null;
@@ -40,6 +42,7 @@ type ProviderMapper<TAccount> = {
 };
 
 type ProviderStoreOptions = {
+  platformId: PlatformId;
   currentAccountIdKey?: string;
   resolveCurrentAccountId?: () => Promise<string | null>;
   persistCurrentAccountId?: boolean;
@@ -67,7 +70,7 @@ export function createProviderAccountStore<TAccount extends ProviderAccountAugme
   cacheKey: string,
   service: ProviderService<TAccount>,
   mapper: ProviderMapper<TAccount>,
-  options?: ProviderStoreOptions,
+  options: ProviderStoreOptions,
 ) {
   const currentAccountIdKey = options?.currentAccountIdKey ?? null;
   const hasCurrentAccountResolver = typeof options?.resolveCurrentAccountId === 'function';
@@ -181,6 +184,12 @@ export function createProviderAccountStore<TAccount extends ProviderAccountAugme
     fetchCurrentAccountId: async () => {
       const accounts = get().accounts;
 
+      if (accounts.length === 0) {
+        set({ currentAccountId: null });
+        persistCurrentAccountId(null);
+        return null;
+      }
+
       if (!options?.resolveCurrentAccountId) {
         const currentAccountId = normalizeCurrentAccountId(get().currentAccountId, accounts);
         set({ currentAccountId });
@@ -224,18 +233,36 @@ export function createProviderAccountStore<TAccount extends ProviderAccountAugme
 
     deleteAccounts: async (accountIds: string[]) => {
       if (accountIds.length === 0) return;
+      const previousCurrentAccountId = get().currentAccountId;
       if (accountIds.length === 1) {
         await service.deleteAccount(accountIds[0]);
       } else {
         await service.deleteAccounts(accountIds);
       }
       await get().fetchAccounts();
+      await emitAccountsChanged({
+        platformId: options.platformId,
+        reason: 'delete',
+      });
+      const nextCurrentAccountId = get().currentAccountId;
+      if (previousCurrentAccountId !== nextCurrentAccountId) {
+        await emitCurrentAccountChanged({
+          platformId: options.platformId,
+          accountId: nextCurrentAccountId,
+          reason: 'delete',
+        });
+      }
     },
 
     switchAccount: async (accountId: string) => {
       await service.injectAccount(accountId);
       get().setCurrentAccountId(accountId);
       await get().fetchAccounts();
+      await emitCurrentAccountChanged({
+        platformId: options.platformId,
+        accountId: get().currentAccountId ?? accountId,
+        reason: 'switch',
+      });
     },
 
     refreshToken: async (accountId: string) => {
@@ -251,6 +278,10 @@ export function createProviderAccountStore<TAccount extends ProviderAccountAugme
     importFromJson: async (jsonContent: string) => {
       const accounts = await service.importFromJson(jsonContent);
       await get().fetchAccounts();
+      await emitAccountsChanged({
+        platformId: options.platformId,
+        reason: 'import',
+      });
       return accounts;
     },
 

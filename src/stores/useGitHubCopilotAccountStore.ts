@@ -29,6 +29,7 @@ export const useGitHubCopilotAccountStore = createProviderAccountStore<GitHubCop
     getUsage: getGitHubCopilotUsage,
   },
   {
+    platformId: 'github-copilot',
     currentAccountIdKey: GHCP_CURRENT_ACCOUNT_ID_KEY,
   },
 );

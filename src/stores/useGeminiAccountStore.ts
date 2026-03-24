@@ -36,6 +36,7 @@ export const useGeminiAccountStore = createProviderAccountStore<GeminiAccount>(
     },
   },
   {
+    platformId: 'gemini',
     currentAccountIdKey: GEMINI_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('gemini'),
   },

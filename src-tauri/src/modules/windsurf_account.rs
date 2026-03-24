@@ -684,10 +684,24 @@ fn status_has_credit_fields(status: Option<&Value>) -> bool {
     check_obj(value.get("planStatus").and_then(Value::as_object))
 }
 
+fn status_has_plan_snapshot(status: Option<&Value>) -> bool {
+    let Some(value) = status else {
+        return false;
+    };
+
+    value.as_object().is_some()
+        || value.get("planStatus").and_then(Value::as_object).is_some()
+        || value
+            .get("userStatus")
+            .and_then(|user_status| user_status.get("planStatus"))
+            .and_then(Value::as_object)
+            .is_some()
+}
+
 fn has_quota_data(payload: &WindsurfOAuthCompletePayload) -> bool {
     status_has_credit_fields(payload.copilot_limited_user_quotas.as_ref())
-        || status_has_credit_fields(payload.windsurf_plan_status.as_ref())
-        || status_has_credit_fields(payload.windsurf_user_status.as_ref())
+        || status_has_plan_snapshot(payload.windsurf_plan_status.as_ref())
+        || status_has_plan_snapshot(payload.windsurf_user_status.as_ref())
 }
 
 fn merge_refresh_payload_with_existing(

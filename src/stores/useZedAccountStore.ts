@@ -30,6 +30,7 @@ export const useZedAccountStore = createProviderAccountStore<ZedAccount>(
     getUsage: getZedUsage,
   },
   {
+    platformId: 'zed',
     currentAccountIdKey: ZED_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('zed'),
   },

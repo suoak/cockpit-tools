@@ -30,6 +30,7 @@ export const useQoderAccountStore = createProviderAccountStore<QoderAccount>(
     getUsage: getQoderUsage,
   },
   {
+    platformId: 'qoder',
     currentAccountIdKey: QODER_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('qoder'),
   },

@@ -30,6 +30,7 @@ export const useCursorAccountStore = createProviderAccountStore<CursorAccount>(
     getUsage: getCursorUsage,
   },
   {
+    platformId: 'cursor',
     currentAccountIdKey: CURSOR_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('cursor'),
   },

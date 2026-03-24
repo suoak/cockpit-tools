@@ -1139,7 +1139,8 @@
 
 .quota-value.high { color: var(--success); text-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
 .quota-value.medium { color: var(--warning); text-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
-.quota-value.low { color: var(--danger); text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+.quota-value.low { color: var(--warning-strong); text-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
+.quota-value.critical { color: var(--danger); text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
 
 .quota-progress-track {
   height: 4px;
@@ -1157,7 +1158,8 @@
 
 .quota-progress-bar.high { background: var(--success); box-shadow: 0 0 8px var(--success); }
 .quota-progress-bar.medium { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
-.quota-progress-bar.low { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.quota-progress-bar.low { background: var(--warning-strong); box-shadow: 0 0 8px var(--warning-strong); }
+.quota-progress-bar.critical { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
 
 .quota-footer {
   display: flex;

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Account, RefreshStats } from '../types/account';
 import * as accountService from '../services/accountService';
+import { emitAccountsChanged, emitCurrentAccountChanged } from '../utils/accountSyncEvents';
 
 const ACCOUNTS_CACHE_KEY = 'agtools.accounts.cache';
 const CURRENT_ACCOUNT_CACHE_KEY = 'agtools.accounts.current';
@@ -139,22 +140,59 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     addAccount: async (email: string, refreshToken: string) => {
         const account = await accountService.addAccount(email, refreshToken);
         await get().fetchAccounts();
+        await emitAccountsChanged({
+            platformId: 'antigravity',
+            reason: 'import',
+        });
         return account;
     },
 
     deleteAccount: async (accountId: string) => {
+        const previousCurrentAccountId = get().currentAccount?.id ?? null;
         await accountService.deleteAccount(accountId);
         await get().fetchAccounts();
+        await get().fetchCurrentAccount();
+        await emitAccountsChanged({
+            platformId: 'antigravity',
+            reason: 'delete',
+        });
+        const nextCurrentAccountId = get().currentAccount?.id ?? null;
+        if (previousCurrentAccountId !== nextCurrentAccountId) {
+            await emitCurrentAccountChanged({
+                platformId: 'antigravity',
+                accountId: nextCurrentAccountId,
+                reason: 'delete',
+            });
+        }
     },
 
     deleteAccounts: async (accountIds: string[]) => {
+        const previousCurrentAccountId = get().currentAccount?.id ?? null;
         await accountService.deleteAccounts(accountIds);
         await get().fetchAccounts();
+        await get().fetchCurrentAccount();
+        await emitAccountsChanged({
+            platformId: 'antigravity',
+            reason: 'delete',
+        });
+        const nextCurrentAccountId = get().currentAccount?.id ?? null;
+        if (previousCurrentAccountId !== nextCurrentAccountId) {
+            await emitCurrentAccountChanged({
+                platformId: 'antigravity',
+                accountId: nextCurrentAccountId,
+                reason: 'delete',
+            });
+        }
     },
 
     setCurrentAccount: async (accountId: string) => {
         await accountService.setCurrentAccount(accountId);
         await get().fetchCurrentAccount();
+        await emitCurrentAccountChanged({
+            platformId: 'antigravity',
+            accountId: get().currentAccount?.id ?? accountId,
+            reason: 'switch',
+        });
     },
 
     refreshQuota: async (accountId: string) => {
@@ -206,6 +244,10 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     startOAuthLogin: async () => {
         const account = await accountService.startOAuthLogin();
         await get().fetchAccounts();
+        await emitAccountsChanged({
+            platformId: 'antigravity',
+            reason: 'oauth',
+        });
         return account;
     },
 
@@ -218,16 +260,30 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         const account = await accountService.switchAccount(accountId);
         set({ currentAccount: account });
         await get().fetchAccounts();
+        await emitCurrentAccountChanged({
+            platformId: 'antigravity',
+            accountId: account.id,
+            reason: 'switch',
+        });
         return account;
     },
 
     syncCurrentFromClient: async () => {
+        const previousCurrentAccountId = get().currentAccount?.id ?? null;
         const result = await accountService.syncCurrentFromClient();
         if (result) {
             try {
                 const account = await accountService.getCurrentAccount();
                 set({ currentAccount: account });
                 persistCurrentAccountCache(account);
+                const nextCurrentAccountId = account?.id ?? null;
+                if (previousCurrentAccountId !== nextCurrentAccountId) {
+                    await emitCurrentAccountChanged({
+                        platformId: 'antigravity',
+                        accountId: nextCurrentAccountId,
+                        reason: 'sync',
+                    });
+                }
             } catch (e) {
                 console.error('Failed to refresh current account after client sync:', e);
             }

@@ -35,6 +35,7 @@ import {
   getWindsurfOfficialUsageMode,
   getWindsurfPlanDisplayName,
   getWindsurfPlanLabel,
+  getWindsurfQuotaClass,
   getWindsurfQuotaUsageSummary,
   formatWindsurfResetTime,
 } from '../types/windsurf';
@@ -73,6 +74,25 @@ const WINDSURF_PLAN_FILTERS: WindsurfPlanBadge[] = [
   'BUSINESS',
   'ENTERPRISE',
 ];
+
+type WindsurfOfficialUsagePanelItem = {
+  key: string;
+  label: string;
+  value: string;
+  detail: string;
+  title: string;
+  progressPercent?: number | null;
+  quotaClass?: string;
+  showProgress?: boolean;
+};
+
+type WindsurfOfficialUsagePanel = {
+  mode: ReturnType<typeof getWindsurfOfficialUsageMode>;
+  headline: string;
+  note: string;
+  items: WindsurfOfficialUsagePanelItem[];
+  title: string;
+};
 
 export function WindsurfAccountsPage() {
   const [activeTab, setActiveTab] = useState<WindsurfTab>('overview');
@@ -338,7 +358,7 @@ export function WindsurfAccountsPage() {
   const buildQuotaDisplayItems = useCallback(
     (account: WindsurfAccount) => {
       const summary = resolveQuotaSummary(account);
-      const items: Array<{ key: string; label: string; value: string; detail: string; title: string }> = [];
+      const items: WindsurfOfficialUsagePanelItem[] = [];
 
       if (summary.dailyUsedPercent != null) {
         const label = t('windsurf.usageSummary.dailyQuota', 'Daily quota usage');
@@ -355,6 +375,9 @@ export function WindsurfAccountsPage() {
           value,
           detail,
           title: detail ? `${label}: ${value} · ${detail}` : `${label}: ${value}`,
+          progressPercent: summary.dailyUsedPercent,
+          quotaClass: getWindsurfQuotaClass(summary.dailyUsedPercent),
+          showProgress: true,
         });
       }
 
@@ -373,6 +396,9 @@ export function WindsurfAccountsPage() {
           value,
           detail,
           title: detail ? `${label}: ${value} · ${detail}` : `${label}: ${value}`,
+          progressPercent: summary.weeklyUsedPercent,
+          quotaClass: getWindsurfQuotaClass(summary.weeklyUsedPercent),
+          showProgress: true,
         });
       }
 
@@ -384,6 +410,7 @@ export function WindsurfAccountsPage() {
         value,
         detail: '',
         title: `${label}: ${value}`,
+        showProgress: false,
       });
 
       return items;
@@ -414,6 +441,7 @@ export function WindsurfAccountsPage() {
           value: promptValue,
           detail: '',
           title: `${promptLabel}: ${promptValue}`,
+          showProgress: false,
         },
         {
           key: 'addOnCredits',
@@ -421,6 +449,7 @@ export function WindsurfAccountsPage() {
           value: addOnValue,
           detail: '',
           title: `${addOnLabel}: ${addOnValue}`,
+          showProgress: false,
         },
       ];
     },
@@ -428,7 +457,7 @@ export function WindsurfAccountsPage() {
   );
 
   const buildOfficialUsagePanel = useCallback(
-    (account: WindsurfAccount) => {
+    (account: WindsurfAccount): WindsurfOfficialUsagePanel => {
       const mode = resolveUsageMode(account);
       if (mode === 'quota') {
         const items = buildQuotaDisplayItems(account);
@@ -545,7 +574,7 @@ export function WindsurfAccountsPage() {
   // ─── Render helpers ──────────────────────────────────────────────────
 
   const renderUsagePanel = (
-    panel: ReturnType<typeof buildOfficialUsagePanel>,
+    panel: WindsurfOfficialUsagePanel,
     options?: { compact?: boolean },
   ) => (
     <div className={`windsurf-official-usage ${options?.compact ? 'compact' : ''}`} title={panel.title}>
@@ -553,11 +582,23 @@ export function WindsurfAccountsPage() {
       {panel.note ? <div className="windsurf-official-usage-note">{panel.note}</div> : null}
       <div className="windsurf-official-usage-list">
         {panel.items.map((item) => (
-          <div key={item.key} className="windsurf-official-usage-item" title={item.title}>
+          <div
+            key={item.key}
+            className={`windsurf-official-usage-item ${item.showProgress ? 'with-progress' : ''}`}
+            title={item.title}
+          >
             <div className="windsurf-official-usage-main">
               <span className="windsurf-official-usage-label">{item.label}</span>
-              <span className="windsurf-official-usage-value">{item.value}</span>
+              <span className={`windsurf-official-usage-value quota-value ${item.quotaClass ?? ''}`}>{item.value}</span>
             </div>
+            {item.showProgress ? (
+              <div className="windsurf-official-usage-progress quota-progress-track">
+                <div
+                  className={`quota-progress-bar ${item.quotaClass ?? 'high'}`}
+                  style={{ width: `${Math.max(0, Math.min(100, item.progressPercent ?? 0))}%` }}
+                />
+              </div>
+            ) : null}
             {item.detail ? <div className="windsurf-official-usage-detail">{item.detail}</div> : null}
           </div>
         ))}

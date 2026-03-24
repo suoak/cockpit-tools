@@ -898,82 +898,68 @@ fn append_windsurf_plan_status_candidate_rows(
     reset_fallback: &str,
     status: &str,
 ) -> usize {
-    let billing_strategy =
-        pick_first_string(plan_status, &[&["billingStrategy"], &["billing_strategy"]])
-            .unwrap_or_default()
-            .to_ascii_lowercase();
-    let is_quota_strategy = billing_strategy.contains("quota");
+    if resolve_windsurf_billing_strategy(plan_status).as_deref() == Some("quota") {
+        let daily_used_percent = pick_first_number(
+            plan_status,
+            &[
+                &["dailyQuotaRemainingPercent"],
+                &["daily_quota_remaining_percent"],
+            ],
+        )
+        .map(|value| clamp_percent(100.0 - value))
+        .or(Some(100.0));
+        let weekly_used_percent = pick_first_number(
+            plan_status,
+            &[
+                &["weeklyQuotaRemainingPercent"],
+                &["weekly_quota_remaining_percent"],
+            ],
+        )
+        .map(|value| clamp_percent(100.0 - value))
+        .or(Some(100.0));
+        let daily_reset = pick_first_reset_value(
+            plan_status,
+            &[&["dailyQuotaResetAtUnix"], &["daily_quota_reset_at_unix"]],
+            reset_fallback,
+        );
+        let weekly_reset = pick_first_reset_value(
+            plan_status,
+            &[&["weeklyQuotaResetAtUnix"], &["weekly_quota_reset_at_unix"]],
+            reset_fallback,
+        );
+        let overage_balance_micros = pick_first_number(
+            plan_status,
+            &[&["overageBalanceMicros"], &["overage_balance_micros"]],
+        );
 
-    let daily_used_percent = pick_first_number(
-        plan_status,
-        &[
-            &["dailyQuotaRemainingPercent"],
-            &["daily_quota_remaining_percent"],
-        ],
-    );
-    let weekly_used_percent = pick_first_number(
-        plan_status,
-        &[
-            &["weeklyQuotaRemainingPercent"],
-            &["weekly_quota_remaining_percent"],
-        ],
-    );
-    let daily_reset = pick_first_reset_value(
-        plan_status,
-        &[&["dailyQuotaResetAtUnix"], &["daily_quota_reset_at_unix"]],
-        reset_fallback,
-    );
-    let weekly_reset = pick_first_reset_value(
-        plan_status,
-        &[&["weeklyQuotaResetAtUnix"], &["weekly_quota_reset_at_unix"]],
-        reset_fallback,
-    );
-    let overage_balance_micros = pick_first_number(
-        plan_status,
-        &[&["overageBalanceMicros"], &["overage_balance_micros"]],
-    );
-
-    let mut quota_count = 0usize;
-    quota_count += push_windsurf_quota_percent_row(
-        rows,
-        account,
-        "Daily quota usage",
-        daily_used_percent,
-        &daily_reset,
-        status,
-        if daily_used_percent.is_none() && (daily_reset != "-" || is_quota_strategy) {
-            Some("Daily usage missing, fallback to exhausted")
-        } else {
-            None
-        },
-    );
-    quota_count += push_windsurf_quota_percent_row(
-        rows,
-        account,
-        "Weekly quota usage",
-        weekly_used_percent,
-        &weekly_reset,
-        status,
-        if weekly_used_percent.is_none() && (weekly_reset != "-" || is_quota_strategy) {
-            Some("Weekly usage missing, fallback to exhausted")
-        } else {
-            None
-        },
-    );
-    if let Some(balance_micros) = overage_balance_micros {
+        let mut quota_count = 0usize;
+        quota_count += push_windsurf_quota_percent_row(
+            rows,
+            account,
+            "Daily quota usage",
+            daily_used_percent,
+            &daily_reset,
+            status,
+        );
+        quota_count += push_windsurf_quota_percent_row(
+            rows,
+            account,
+            "Weekly quota usage",
+            weekly_used_percent,
+            &weekly_reset,
+            status,
+        );
         rows.push(make_row(
             "Windsurf",
             account,
             "Extra usage balance",
             "-",
-            &format_micros_usd(balance_micros),
+            &format_micros_usd(overage_balance_micros.unwrap_or(0.0)),
             reset_fallback,
             status,
             "",
         ));
         quota_count += 1;
-    }
-    if quota_count > 0 {
         return quota_count;
     }
 
@@ -1046,6 +1032,34 @@ fn append_windsurf_plan_status_candidate_rows(
     count
 }
 
+fn resolve_windsurf_billing_strategy(plan_status: &Value) -> Option<String> {
+    let raw = pick_first_string(
+        plan_status,
+        &[
+            &["billingStrategy"],
+            &["billing_strategy"],
+            &["planInfo", "billingStrategy"],
+            &["planInfo", "billing_strategy"],
+        ],
+    )?;
+    let normalized = raw.trim().to_ascii_lowercase();
+    let canonical = normalized
+        .trim_start_matches("billing_strategy_")
+        .trim_start_matches("billing-strategy-")
+        .trim_start_matches("billingstrategy")
+        .trim_matches('_')
+        .trim_matches('-')
+        .to_string();
+
+    if canonical == "quota" {
+        return Some("quota".to_string());
+    }
+    if canonical.contains("credit") {
+        return Some("credits".to_string());
+    }
+    Some(canonical)
+}
+
 fn push_windsurf_quota_percent_row(
     rows: &mut Vec<ReportRow>,
     account: &str,
@@ -1053,14 +1067,11 @@ fn push_windsurf_quota_percent_row(
     used_percent: Option<f64>,
     reset: &str,
     status: &str,
-    missing_fallback_note: Option<&str>,
 ) -> usize {
     let (used, remaining, note) = if let Some(used_raw) = used_percent {
         let used = clamp_percent(used_raw);
         let remaining = clamp_percent(100.0 - used);
         (used, remaining, "")
-    } else if missing_fallback_note.is_some() && reset != "-" {
-        (100.0, 0.0, missing_fallback_note.unwrap_or(""))
     } else {
         return 0;
     };

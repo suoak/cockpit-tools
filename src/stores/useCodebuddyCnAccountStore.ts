@@ -30,6 +30,7 @@ export const useCodebuddyCnAccountStore = createProviderAccountStore<CodebuddyAc
     getUsage: getCodebuddyUsage,
   },
   {
+    platformId: 'codebuddy_cn',
     currentAccountIdKey: CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('codebuddy_cn'),
   },

@@ -30,6 +30,7 @@ export const useKiroAccountStore = createProviderAccountStore<KiroAccount>(
     getUsage: getKiroUsage,
   },
   {
+    platformId: 'kiro',
     currentAccountIdKey: KIRO_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('kiro'),
   },

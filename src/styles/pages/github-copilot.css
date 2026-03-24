@@ -1014,6 +1014,10 @@
   gap: 3px;
 }
 
+.ghcp-accounts-page .windsurf-official-usage-item.with-progress {
+  gap: 6px;
+}
+
 .ghcp-accounts-page .windsurf-official-usage-main {
   display: flex;
   align-items: baseline;
@@ -1032,6 +1036,11 @@
   font-weight: 700;
   font-family: var(--font-mono);
   text-align: right;
+}
+
+.ghcp-accounts-page .windsurf-official-usage-progress {
+  height: 6px;
+  border-radius: 999px;
 }
 
 .ghcp-accounts-page .windsurf-official-usage-detail {

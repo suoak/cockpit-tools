@@ -27,6 +27,11 @@ import {
 import { useModalErrorState } from '../components/ModalErrorMessage';
 import { useExportJsonModal } from './useExportJsonModal';
 import { parseFileCorruptedError } from '../components/FileCorruptedModal';
+import {
+  emitAccountsChanged,
+  emitCurrentAccountChanged,
+  normalizeProviderPagePlatformId,
+} from '../utils/accountSyncEvents';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -332,6 +337,10 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       .filter(Boolean);
     return normalized.length > 0 ? normalized : ['oauth'];
   }, [oauthTabKeysConfig]);
+  const platformId = useMemo(
+    () => normalizeProviderPagePlatformId(platformKey),
+    [platformKey],
+  );
 
   const {
     accounts,
@@ -656,6 +665,13 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       try {
         await injectFn(accountId);
         setCurrentAccountId(accountId);
+        if (platformId) {
+          await emitCurrentAccountChanged({
+            platformId,
+            accountId,
+            reason: 'switch',
+          });
+        }
         setMessage({ text: t('messages.switched', { email: maskAccountText(displayEmail) }) });
         if (config.onInjectSuccess) {
           try {
@@ -678,7 +694,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       }
       setInjecting(null);
     };
-  }, [dataService.injectToVSCode, accounts, config, t, maskAccountText, platformKey]);
+  }, [accounts, config, dataService.injectToVSCode, maskAccountText, platformId, platformKey, t]);
 
   // ─── Export ───────────────────────────────────────────────────────────
   const handleExportError = useCallback(
@@ -808,6 +824,12 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
         const content = await file.text();
         const imported = await dataService.importFromJson(content);
         await fetchAccounts();
+        if (platformId) {
+          await emitAccountsChanged({
+            platformId,
+            reason: 'import',
+          });
+        }
 
         setAddStatus('success');
         setAddMessage(
@@ -833,7 +855,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
 
       setImporting(false);
     },
-    [dataService, fetchAccounts, resetAddModalState, t],
+    [dataService, fetchAccounts, platformId, resetAddModalState, t],
   );
 
   const handleImportFromLocal = useMemo(() => {
@@ -849,6 +871,12 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
         // 部分平台本机导入后本地索引存在极短暂写入延迟，补一次短延时刷新保障列表及时更新。
         await new Promise((resolve) => setTimeout(resolve, 180));
         await fetchAccounts();
+        if (platformId) {
+          await emitAccountsChanged({
+            platformId,
+            reason: 'import',
+          });
+        }
         setAddStatus('success');
         setAddMessage(
           t('common.shared.token.importSuccessMsg', {
@@ -872,7 +900,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       }
       setImporting(false);
     };
-  }, [dataService.importFromLocal, fetchAccounts, resetAddModalState, t]);
+  }, [dataService.importFromLocal, fetchAccounts, platformId, resetAddModalState, t]);
 
   const handleTokenImport = useCallback(async () => {
     const trimmed = tokenInput.trim();
@@ -899,6 +927,12 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
         importedCount = imported.length;
       }
       await fetchAccounts();
+      if (platformId) {
+        await emitAccountsChanged({
+          platformId,
+          reason: 'import',
+        });
+      }
       setAddStatus('success');
       setAddMessage(
         t('common.shared.token.importSuccessMsg', {
@@ -921,7 +955,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       );
     }
     setImporting(false);
-  }, [tokenInput, dataService, fetchAccounts, resetAddModalState, t]);
+  }, [dataService, fetchAccounts, platformId, resetAddModalState, t, tokenInput]);
 
   // ─── OAuth (Device Flow) ──────────────────────────────────────────────
   const [oauthUrl, setOauthUrl] = useState<string | null>(null);
@@ -973,6 +1007,12 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       loginId: oauthLoginIdRef.current,
     });
     await fetchAccounts();
+    if (platformId) {
+      await emitAccountsChanged({
+        platformId,
+        reason: 'oauth',
+      });
+    }
     setAddStatus('success');
     setAddMessage(
       config.resolveOauthSuccessMessage?.() ?? t('common.shared.oauth.success', '授权成功'),
@@ -997,7 +1037,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       setShowAddModal(false);
       resetAddModalState();
     }, 1200);
-  }, [fetchAccounts, config, t, oauthLog, resetAddModalState]);
+  }, [fetchAccounts, config, oauthLog, platformId, resetAddModalState, t]);
 
   const handleOauthCompleteError = useCallback(
     (e: unknown) => {

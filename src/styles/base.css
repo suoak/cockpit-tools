@@ -19,6 +19,7 @@
   /* Status Colors */
   --success: #22c55e;
   --warning: #f59e0b;
+  --warning-strong: #f97316;
   --danger: #ef4444;
 
   /* Background Colors */
@@ -72,6 +73,7 @@
   /* Status Colors */
   --success: #22c55e;
   --warning: #f59e0b;
+  --warning-strong: #f97316;
   --danger: #ef4444;
 
   /* Background Colors - dark palette */

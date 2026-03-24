@@ -461,7 +461,10 @@ body.floating-card-overlay-root,
   color: #f7c465;
 }
 
-.floating-card-quota-value--low,
+.floating-card-quota-value--low {
+  color: #ff9b52;
+}
+
 .floating-card-quota-value--critical {
   color: #ff7373;
 }
@@ -488,7 +491,10 @@ body.floating-card-overlay-root,
   background: linear-gradient(90deg, #f0a120 0%, #ffcb65 100%);
 }
 
-.floating-card-progress-bar--low,
+.floating-card-progress-bar--low {
+  background: linear-gradient(90deg, #f97316 0%, #ffb067 100%);
+}
+
 .floating-card-progress-bar--critical {
   background: linear-gradient(90deg, #ff5f67 0%, #ff9696 100%);
 }

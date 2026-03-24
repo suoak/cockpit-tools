@@ -30,6 +30,7 @@ export const useWorkbuddyAccountStore = createProviderAccountStore<WorkbuddyAcco
     getUsage: getWorkbuddyUsage,
   },
   {
+    platformId: 'workbuddy',
     currentAccountIdKey: WORKBUDDY_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('workbuddy'),
   },

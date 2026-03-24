@@ -7,6 +7,7 @@ import {
   isCodexTeamLikePlan,
 } from '../types/codex';
 import * as codexService from '../services/codexService';
+import { emitAccountsChanged, emitCurrentAccountChanged } from '../utils/accountSyncEvents';
 
 const CODEX_ACCOUNTS_CACHE_KEY = 'agtools.codex.accounts.cache';
 const CODEX_CURRENT_ACCOUNT_CACHE_KEY = 'agtools.codex.accounts.current';
@@ -117,19 +118,50 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
     const account = await codexService.switchCodexAccount(accountId);
     set({ currentAccount: account });
     await get().fetchAccounts();
+    await emitCurrentAccountChanged({
+      platformId: 'codex',
+      accountId: account.id,
+      reason: 'switch',
+    });
     return account;
   },
   
   deleteAccount: async (accountId: string) => {
+    const previousCurrentAccountId = get().currentAccount?.id ?? null;
     await codexService.deleteCodexAccount(accountId);
     await get().fetchAccounts();
     await get().fetchCurrentAccount();
+    await emitAccountsChanged({
+      platformId: 'codex',
+      reason: 'delete',
+    });
+    const nextCurrentAccountId = get().currentAccount?.id ?? null;
+    if (previousCurrentAccountId !== nextCurrentAccountId) {
+      await emitCurrentAccountChanged({
+        platformId: 'codex',
+        accountId: nextCurrentAccountId,
+        reason: 'delete',
+      });
+    }
   },
   
   deleteAccounts: async (accountIds: string[]) => {
+    const previousCurrentAccountId = get().currentAccount?.id ?? null;
     await codexService.deleteCodexAccounts(accountIds);
     await get().fetchAccounts();
     await get().fetchCurrentAccount();
+    await emitAccountsChanged({
+      platformId: 'codex',
+      reason: 'delete',
+    });
+    const nextCurrentAccountId = get().currentAccount?.id ?? null;
+    if (previousCurrentAccountId !== nextCurrentAccountId) {
+      await emitCurrentAccountChanged({
+        platformId: 'codex',
+        accountId: nextCurrentAccountId,
+        reason: 'delete',
+      });
+    }
   },
   
   refreshQuota: async (accountId: string) => {
@@ -191,12 +223,20 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
   importFromLocal: async () => {
     const account = await codexService.importCodexFromLocal();
     await get().fetchAccounts();
+    await emitAccountsChanged({
+      platformId: 'codex',
+      reason: 'import',
+    });
     return account;
   },
   
   importFromJson: async (jsonContent: string) => {
     const accounts = await codexService.importCodexFromJson(jsonContent);
     await get().fetchAccounts();
+    await emitAccountsChanged({
+      platformId: 'codex',
+      reason: 'import',
+    });
     return accounts;
   },
 

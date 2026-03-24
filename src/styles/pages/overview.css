@@ -160,7 +160,8 @@
 
 .mini-progress-bar.high { background: var(--success); }
 .mini-progress-bar.medium { background: var(--warning); }
-.mini-progress-bar.low { background: var(--danger); }
+.mini-progress-bar.low { background: var(--warning-strong); }
+.mini-progress-bar.critical { background: var(--danger); }
 
 .empty-quota {
   display: flex;
@@ -183,4 +184,3 @@
 .full-width {
   width: 100%;
 }
-

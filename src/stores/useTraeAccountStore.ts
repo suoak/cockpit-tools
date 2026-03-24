@@ -37,6 +37,7 @@ export const useTraeAccountStore = createProviderAccountStore<TraeAccount>(
     },
   },
   {
+    platformId: 'trae',
     currentAccountIdKey: TRAE_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('trae'),
   },

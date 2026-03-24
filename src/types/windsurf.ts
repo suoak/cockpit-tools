@@ -372,9 +372,6 @@ export type WindsurfQuotaUsageSummary = {
   dailyResetAt: number | null;
   weeklyResetAt: number | null;
   overageBalanceMicros: number | null;
-  autoRechargeEnabled: boolean | null;
-  hasQuotaUsage: boolean;
-  hasAutoRecharge: boolean;
 };
 
 /** 兼容 Codex 风格的 quota 结构（用于复用 UI 组件/样式） */
@@ -447,29 +444,6 @@ type WindsurfProtoSummary = {
   weeklyQuotaResetAt: number | null;
   topUpEnabled: boolean | null;
 };
-
-function getBoolean(value: unknown): boolean | null {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') {
-    if (value === 1) return true;
-    if (value === 0) return false;
-    return null;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1') return true;
-    if (normalized === 'false' || normalized === '0') return false;
-  }
-  return null;
-}
-
-function getBooleanFromPaths(root: unknown, paths: string[][]): boolean | null {
-  for (const path of paths) {
-    const value = getBoolean(getPathValue(root, path));
-    if (value != null) return value;
-  }
-  return null;
-}
 
 function decodeBase64ToBytes(value: string): Uint8Array | null {
   if (!value) return null;
@@ -896,6 +870,11 @@ function clampPercent(value: number): number {
   return Math.round(value);
 }
 
+function calcUsedPercentFromRemainingPercent(remainingPercent: number | null): number | null {
+  if (remainingPercent == null) return null;
+  return clampPercent(100 - remainingPercent);
+}
+
 function calcUsedPercent(total: number | null, remaining: number | null): number | null {
   if (total == null || remaining == null) return null;
   if (total <= 0) return null;
@@ -1175,101 +1154,57 @@ export function getWindsurfBillingStrategy(account: WindsurfAccount): string | n
 
 export function getWindsurfOfficialUsageMode(account: WindsurfAccount): WindsurfOfficialUsageMode {
   const billingStrategy = getWindsurfBillingStrategy(account)?.trim().toLowerCase();
-  if (billingStrategy === 'quota') {
-    return 'quota';
-  }
-  if (billingStrategy) {
-    return 'credits';
-  }
-
-  const quotaSummary = getWindsurfQuotaUsageSummary(account);
-  if (quotaSummary.hasQuotaUsage || quotaSummary.hasAutoRecharge) {
-    return 'quota';
-  }
-
-  return 'credits';
+  return billingStrategy === 'quota' ? 'quota' : 'credits';
 }
 
 export function getWindsurfQuotaUsageSummary(account: WindsurfAccount): WindsurfQuotaUsageSummary {
   const planStatus = resolveWindsurfPlanStatus(account);
-  const protoSummary = parseWindsurfProtoSummary(account);
-  const billingStrategy = getWindsurfBillingStrategy(account)?.trim().toLowerCase() ?? '';
-  const topUpStatus = firstRecord([
-    getPathValue(planStatus, ['topUpStatus']),
-    getPathValue(planStatus, ['top_up_status']),
-    getPathValue(account.windsurf_user_status, ['userStatus', 'planStatus', 'topUpStatus']),
-    getPathValue(account.windsurf_user_status, ['userStatus', 'planStatus', 'top_up_status']),
-    getPathValue(account.copilot_quota_snapshots, ['windsurfPlanStatus', 'topUpStatus']),
-    getPathValue(account.copilot_quota_snapshots, ['windsurfPlanStatus', 'top_up_status']),
-  ]);
+  const isQuotaBilling = getWindsurfBillingStrategy(account)?.trim().toLowerCase() === 'quota';
 
-  // Windsurf Plan Info returns the quota usage percentage directly, despite the
-  // legacy "RemainingPercent" field name used in JSON/proto snapshots.
+  // 官方 planStatus 的 RemainingPercent 表示“剩余百分比”，
+  // 页面展示需要转换成“已用百分比”。
+  // Windsurf 官方 protobuf 解码后这两个字段默认值为 0，所以 quota 模式下
+  // 缺失字段也会表现为“剩余 0 / 已用 100”。
   const dailyUsedPercent =
     (() => {
-      const value = getNumberFromPaths(planStatus, [
+      const remainingPercent = getNumberFromPaths(planStatus, [
         ['dailyQuotaRemainingPercent'],
         ['daily_quota_remaining_percent'],
       ]);
-      return value == null ? null : clampPercent(value);
+      return calcUsedPercentFromRemainingPercent(remainingPercent);
     })() ??
-    protoSummary?.dailyQuotaUsedPercent ??
-    null;
+    (isQuotaBilling ? 100 : null);
 
   const weeklyUsedPercent =
     (() => {
-      const value = getNumberFromPaths(planStatus, [
+      const remainingPercent = getNumberFromPaths(planStatus, [
         ['weeklyQuotaRemainingPercent'],
         ['weekly_quota_remaining_percent'],
       ]);
-      return value == null ? null : clampPercent(value);
+      return calcUsedPercentFromRemainingPercent(remainingPercent);
     })() ??
-    protoSummary?.weeklyQuotaUsedPercent ??
-    null;
+    (isQuotaBilling ? 100 : null);
 
   const overageBalanceMicros =
     getNumberFromPaths(planStatus, [['overageBalanceMicros'], ['overage_balance_micros']]) ??
-    protoSummary?.overageBalanceMicros ??
     null;
 
   const dailyResetAt =
     parseTimestampSeconds(getPathValue(planStatus, ['dailyQuotaResetAtUnix'])) ??
     parseTimestampSeconds(getPathValue(planStatus, ['daily_quota_reset_at_unix'])) ??
-    protoSummary?.dailyQuotaResetAt ??
     null;
 
   const weeklyResetAt =
     parseTimestampSeconds(getPathValue(planStatus, ['weeklyQuotaResetAtUnix'])) ??
     parseTimestampSeconds(getPathValue(planStatus, ['weekly_quota_reset_at_unix'])) ??
-    protoSummary?.weeklyQuotaResetAt ??
     null;
-
-  const autoRechargeEnabled =
-    getBooleanFromPaths(topUpStatus, [['topUpEnabled'], ['top_up_enabled']]) ??
-    protoSummary?.topUpEnabled ??
-    null;
-
-  const dailyUsedPercentFinal =
-    dailyUsedPercent == null && billingStrategy === 'quota' && dailyResetAt != null
-      ? 100
-      : dailyUsedPercent;
-  const weeklyUsedPercentFinal =
-    weeklyUsedPercent == null && billingStrategy === 'quota' && weeklyResetAt != null
-      ? 100
-      : weeklyUsedPercent;
 
   return {
-    dailyUsedPercent: dailyUsedPercentFinal,
-    weeklyUsedPercent: weeklyUsedPercentFinal,
+    dailyUsedPercent,
+    weeklyUsedPercent,
     dailyResetAt,
     weeklyResetAt,
     overageBalanceMicros,
-    autoRechargeEnabled,
-    hasQuotaUsage:
-      dailyUsedPercentFinal != null ||
-      weeklyUsedPercentFinal != null ||
-      overageBalanceMicros != null,
-    hasAutoRecharge: autoRechargeEnabled != null || !!topUpStatus,
   };
 }
 

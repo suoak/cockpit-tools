@@ -30,6 +30,7 @@ import {
   setCurrentFloatingCardWindowAlwaysOnTop,
   setFloatingCardAlwaysOnTop,
   setFloatingCardConfirmOnClose,
+  showInstanceFloatingCardWindow,
   showMainWindowAndNavigate,
   type FloatingCardInstanceContext,
 } from '../services/floatingCardService';
@@ -47,7 +48,21 @@ import { useTraeAccountStore } from '../stores/useTraeAccountStore';
 import { useWindsurfAccountStore } from '../stores/useWindsurfAccountStore';
 import { useWorkbuddyAccountStore } from '../stores/useWorkbuddyAccountStore';
 import { useZedAccountStore } from '../stores/useZedAccountStore';
+import { useCodebuddyCnInstanceStore } from '../stores/useCodebuddyCnInstanceStore';
+import { useCodebuddyInstanceStore } from '../stores/useCodebuddyInstanceStore';
+import { useCodexInstanceStore } from '../stores/useCodexInstanceStore';
+import { useCursorInstanceStore } from '../stores/useCursorInstanceStore';
+import { useGeminiInstanceStore } from '../stores/useGeminiInstanceStore';
+import { useGitHubCopilotInstanceStore } from '../stores/useGitHubCopilotInstanceStore';
+import type { InstanceStoreState } from '../stores/createInstanceStore';
+import { useInstanceStore } from '../stores/useInstanceStore';
+import { useKiroInstanceStore } from '../stores/useKiroInstanceStore';
+import { useQoderInstanceStore } from '../stores/useQoderInstanceStore';
+import { useTraeInstanceStore } from '../stores/useTraeInstanceStore';
+import { useWindsurfInstanceStore } from '../stores/useWindsurfInstanceStore';
+import { useWorkbuddyInstanceStore } from '../stores/useWorkbuddyInstanceStore';
 import { ALL_PLATFORM_IDS, PLATFORM_PAGE_MAP, PlatformId } from '../types/platform';
+import type { InstanceProfile } from '../types/instance';
 import { isPrivacyModeEnabledByDefault, maskSensitiveValue } from '../utils/privacy';
 import { getPlatformLabel, renderPlatformIcon } from '../utils/platformMeta';
 import {
@@ -67,12 +82,18 @@ import {
   resolveCurrentOrMostRecentAccount,
 } from '../utils/floatingCardSelectors';
 import { changeLanguage, normalizeLanguage } from '../i18n';
+import {
+  ACCOUNTS_CHANGED_EVENT,
+  CURRENT_ACCOUNT_CHANGED_EVENT,
+  type AccountSyncEventPayload,
+} from '../utils/accountSyncEvents';
 import './FloatingCardWindow.css';
 
 const windowInstance = getCurrentWindow();
 const FLOATING_CARD_WINDOW_LABEL = 'floating-card';
 const INSTANCE_FLOATING_CARD_WINDOW_LABEL_PREFIX = 'instance-floating-card-';
 const FLOATING_CARD_PLATFORM_STORAGE_KEY = 'agtools.floating_card.platform';
+const DEFAULT_INSTANCE_ID = '__default__';
 const FLOATING_CARD_BASE_HEIGHT = 290;
 const FLOATING_CARD_MAX_HEIGHT = 520;
 const FLOATING_CARD_NO_DRAG_SELECTOR =
@@ -101,6 +122,11 @@ type FloatingCardAccount =
   | ReturnType<typeof useWorkbuddyAccountStore.getState>['accounts'][number]
   | ReturnType<typeof useZedAccountStore.getState>['accounts'][number];
 
+type FloatingCardInstanceStoreApi = Pick<
+  InstanceStoreState,
+  'refreshInstances' | 'updateInstance' | 'startInstance'
+>;
+
 function loadInitialPlatform(): PlatformId {
   try {
     const saved = localStorage.getItem(FLOATING_CARD_PLATFORM_STORAGE_KEY);
@@ -126,6 +152,41 @@ function resolveAppliedTheme(theme: string): 'light' | 'dark' {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return theme === 'dark' ? 'dark' : 'light';
+}
+
+function resolveInstanceStoreApi(platformId: PlatformId): FloatingCardInstanceStoreApi | null {
+  switch (platformId) {
+    case 'antigravity':
+      return useInstanceStore.getState();
+    case 'codex':
+      return useCodexInstanceStore.getState();
+    case 'github-copilot':
+      return useGitHubCopilotInstanceStore.getState();
+    case 'windsurf':
+      return useWindsurfInstanceStore.getState();
+    case 'kiro':
+      return useKiroInstanceStore.getState();
+    case 'cursor':
+      return useCursorInstanceStore.getState();
+    case 'gemini':
+      return useGeminiInstanceStore.getState();
+    case 'codebuddy':
+      return useCodebuddyInstanceStore.getState();
+    case 'codebuddy_cn':
+      return useCodebuddyCnInstanceStore.getState();
+    case 'qoder':
+      return useQoderInstanceStore.getState();
+    case 'trae':
+      return useTraeInstanceStore.getState();
+    case 'workbuddy':
+      return useWorkbuddyInstanceStore.getState();
+    case 'zed':
+      return null;
+  }
+}
+
+function findInstanceById(instances: InstanceProfile[], instanceId: string): InstanceProfile | null {
+  return instances.find((instance) => instance.id === instanceId) ?? null;
 }
 
 export function FloatingCardWindow() {
@@ -366,6 +427,63 @@ export function FloatingCardWindow() {
   useEffect(() => {
     void fetchPlatformData(selectedPlatform);
   }, [fetchPlatformData, selectedPlatform]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenAccountsChanged: (() => void) | null = null;
+    let unlistenCurrentAccountChanged: (() => void) | null = null;
+
+    const bindAccountSyncListeners = async () => {
+      unlistenAccountsChanged = await listen<AccountSyncEventPayload>(
+        ACCOUNTS_CHANGED_EVENT,
+        async (event) => {
+          const payload = event.payload;
+          if (
+            !payload ||
+            payload.platformId !== selectedPlatform ||
+            payload.sourceWindowLabel === currentWindowLabel
+          ) {
+            return;
+          }
+          await fetchPlatformData(payload.platformId);
+        },
+      );
+
+      unlistenCurrentAccountChanged = await listen<AccountSyncEventPayload>(
+        CURRENT_ACCOUNT_CHANGED_EVENT,
+        async (event) => {
+          const payload = event.payload;
+          if (
+            !payload ||
+            payload.platformId !== selectedPlatform ||
+            payload.sourceWindowLabel === currentWindowLabel ||
+            instanceContext
+          ) {
+            return;
+          }
+          await fetchPlatformData(payload.platformId);
+          if (disposed) return;
+          setViewedAccountIds((prev) => ({
+            ...prev,
+            [payload.platformId]: payload.accountId ?? null,
+          }));
+        },
+      );
+    };
+
+    void bindAccountSyncListeners();
+
+    return () => {
+      disposed = true;
+      unlistenAccountsChanged?.();
+      unlistenCurrentAccountChanged?.();
+    };
+  }, [
+    currentWindowLabel,
+    fetchPlatformData,
+    instanceContext,
+    selectedPlatform,
+  ]);
 
   useEffect(() => {
     const rootElement = document.getElementById('root');
@@ -722,7 +840,6 @@ export function FloatingCardWindow() {
   const viewedAccountId = viewedAccountIds[selectedPlatform] ?? null;
   const viewedAccount = useMemo(() => {
     if (accounts.length === 0) return null;
-    if (instanceContext && !currentAccount) return null;
     if (viewedAccountId) {
       const target = accounts.find((account) => account.id === viewedAccountId);
       if (target) return target;
@@ -824,9 +941,8 @@ export function FloatingCardWindow() {
   }, []);
 
   const handleMoveAccount = useCallback((direction: -1 | 1) => {
-    if (accountIndex < 0) return;
-    const nextIndex = accountIndex + direction;
-    if (nextIndex < 0 || nextIndex >= accounts.length) return;
+    if (accountIndex < 0 || accounts.length <= 1) return;
+    const nextIndex = (accountIndex + direction + accounts.length) % accounts.length;
     selectAccount(selectedPlatform, accounts[nextIndex].id);
   }, [accountIndex, accounts, selectAccount, selectedPlatform]);
 
@@ -919,52 +1035,76 @@ export function FloatingCardWindow() {
   }, [refreshDisplayedAccount, viewedAccount]);
 
   const handleSwitch = useCallback(async () => {
-    if (!viewedAccount || switchingAccountId || isCurrentViewed || instanceContext) return;
+    if (!viewedAccount || switchingAccountId || isCurrentViewed) return;
     setSwitchingAccountId(viewedAccount.id);
     setErrorText(null);
     try {
-      switch (selectedPlatform) {
-        case 'antigravity':
-          await useAccountStore.getState().switchAccount(viewedAccount.id);
-          await useAccountStore.getState().fetchCurrentAccount();
-          break;
-        case 'codex':
-          await useCodexAccountStore.getState().switchAccount(viewedAccount.id);
-          await useCodexAccountStore.getState().fetchCurrentAccount();
-          break;
-        case 'github-copilot':
-          await useGitHubCopilotAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'windsurf':
-          await useWindsurfAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'kiro':
-          await useKiroAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'cursor':
-          await useCursorAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'gemini':
-          await useGeminiAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'codebuddy':
-          await useCodebuddyAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'codebuddy_cn':
-          await useCodebuddyCnAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'qoder':
-          await useQoderAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'trae':
-          await useTraeAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'workbuddy':
-          await useWorkbuddyAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
-        case 'zed':
-          await useZedAccountStore.getState().switchAccount(viewedAccount.id);
-          break;
+      if (instanceContext) {
+        const instanceStore = resolveInstanceStoreApi(selectedPlatform);
+        if (!instanceStore) {
+          throw new Error(t('common.shared.instances.unsupported.title', '暂不支持当前系统'));
+        }
+        const instances = await instanceStore.refreshInstances();
+        const targetInstance = findInstanceById(instances, instanceContext.instanceId);
+        const wasRunning = targetInstance?.running === true;
+        await instanceStore.updateInstance({
+          instanceId: instanceContext.instanceId,
+          bindAccountId: viewedAccount.id,
+          followLocalAccount: instanceContext.instanceId === DEFAULT_INSTANCE_ID ? false : undefined,
+        });
+        if (wasRunning) {
+          await instanceStore.startInstance(instanceContext.instanceId);
+        }
+        const nextContext = {
+          ...instanceContext,
+          boundAccountId: viewedAccount.id,
+        };
+        setInstanceContext(nextContext);
+        await showInstanceFloatingCardWindow(nextContext);
+      } else {
+        switch (selectedPlatform) {
+          case 'antigravity':
+            await useAccountStore.getState().switchAccount(viewedAccount.id);
+            await useAccountStore.getState().fetchCurrentAccount();
+            break;
+          case 'codex':
+            await useCodexAccountStore.getState().switchAccount(viewedAccount.id);
+            await useCodexAccountStore.getState().fetchCurrentAccount();
+            break;
+          case 'github-copilot':
+            await useGitHubCopilotAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'windsurf':
+            await useWindsurfAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'kiro':
+            await useKiroAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'cursor':
+            await useCursorAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'gemini':
+            await useGeminiAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'codebuddy':
+            await useCodebuddyAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'codebuddy_cn':
+            await useCodebuddyCnAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'qoder':
+            await useQoderAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'trae':
+            await useTraeAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'workbuddy':
+            await useWorkbuddyAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+          case 'zed':
+            await useZedAccountStore.getState().switchAccount(viewedAccount.id);
+            break;
+        }
       }
       selectAccount(selectedPlatform, viewedAccount.id);
     } catch (error) {
@@ -1182,7 +1322,7 @@ export function FloatingCardWindow() {
                 className="floating-card-nav-button"
                 type="button"
                 onClick={() => handleMoveAccount(-1)}
-                disabled={accountIndex <= 0}
+                disabled={accountIndex < 0 || accounts.length <= 1}
                 aria-label={t('floatingCard.actions.previousAccount', '上一个账号')}
               >
                 <ChevronLeft size={15} />
@@ -1200,7 +1340,7 @@ export function FloatingCardWindow() {
                 className="floating-card-nav-button"
                 type="button"
                 onClick={() => handleMoveAccount(1)}
-                disabled={accountIndex < 0 || accountIndex >= accounts.length - 1}
+                disabled={accountIndex < 0 || accounts.length <= 1}
                 aria-label={t('floatingCard.actions.nextAccount', '下一个账号')}
               >
                 <ChevronRight size={15} />
@@ -1326,7 +1466,7 @@ export function FloatingCardWindow() {
                 {t('floatingCard.actions.backToCurrent', '回到当前账号')}
               </button>
             ) : null}
-            {!platformLocked && !isCurrentViewed && viewedAccount ? (
+            {!isCurrentViewed && viewedAccount ? (
               <button
                 className="floating-card-button floating-card-button--primary"
                 type="button"

@@ -7,6 +7,17 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.7] - 2026-03-24
+
+### Changed
+- **Floating account cards now stay synchronized with account imports, deletions, OAuth completions, and current-account switches across windows**: provider pages and account stores now emit shared account-sync events, so floating cards refresh immediately after account management actions instead of waiting for manual reloads or window refocus, while instance-bound floating cards keep their bound account view.
+- **Windsurf official quota panels on the account page now render daily and weekly progress bars with separate low and critical warning colors**: quota items that come from Windsurf's official plan snapshot now use the shared quota-progress styling instead of showing percentage text only, making the remaining-risk state easier to scan at a glance.
+
+### Fixed
+- **Current-account detection now follows real local state more tightly after sync, deletion, switching, and empty-list transitions**: provider stores clear stale current-account ids when no accounts remain, current-account changes are propagated immediately after sync/delete/switch flows, and instance-bound floating cards no longer blank out just because the platform cannot resolve a separate current account at that moment.
+- **Windsurf quota-billed accounts now keep quota mode and convert official remaining-percent fields into used-percent displays consistently across the account page, tray, macOS native menu, and diagnostic report**: quota views now treat `dailyQuotaRemainingPercent` / `weeklyQuotaRemainingPercent` as remaining quota and fall back to exhausted usage when quota billing omits those fields, so quota-backed accounts no longer slip into credit-mode presentation or invert their usage percentage.
+
+---
 ## [0.20.6] - 2026-03-24
 
 ### Changed

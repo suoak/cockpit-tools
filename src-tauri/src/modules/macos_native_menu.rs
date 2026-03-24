@@ -1578,25 +1578,17 @@ mod imp {
     fn resolve_windsurf_usage_mode(
         account: &crate::models::windsurf::WindsurfAccount,
     ) -> WindsurfUsageMode {
-        if resolve_windsurf_billing_strategy(account).as_deref() == Some("quota") {
-            return WindsurfUsageMode::Quota;
+        match resolve_windsurf_billing_strategy(account).as_deref() {
+            Some("quota") => WindsurfUsageMode::Quota,
+            _ => WindsurfUsageMode::Credits,
         }
-
-        let summary = resolve_windsurf_quota_usage_summary(account);
-        if summary.daily_used_percent.is_some()
-            || summary.weekly_used_percent.is_some()
-            || summary.overage_balance_micros.is_some()
-        {
-            return WindsurfUsageMode::Quota;
-        }
-
-        WindsurfUsageMode::Credits
     }
 
     fn resolve_windsurf_quota_usage_summary(
         account: &crate::models::windsurf::WindsurfAccount,
     ) -> WindsurfQuotaUsageSummary {
         let plan_status_roots = windsurf_plan_status_roots(account);
+        let is_quota_billing = resolve_windsurf_billing_strategy(account).as_deref() == Some("quota");
         let daily_used = first_number_from_roots(
             &plan_status_roots,
             &[
@@ -1613,8 +1605,12 @@ mod imp {
         );
 
         WindsurfQuotaUsageSummary {
-            daily_used_percent: daily_used.map(clamp_percent),
-            weekly_used_percent: weekly_used.map(clamp_percent),
+            daily_used_percent: daily_used
+                .map(|value| clamp_percent(100.0 - value))
+                .or(if is_quota_billing { Some(100) } else { None }),
+            weekly_used_percent: weekly_used
+                .map(|value| clamp_percent(100.0 - value))
+                .or(if is_quota_billing { Some(100) } else { None }),
             daily_reset_ts: first_timestamp_from_roots(
                 &plan_status_roots,
                 &[&["dailyQuotaResetAtUnix"], &["daily_quota_reset_at_unix"]],

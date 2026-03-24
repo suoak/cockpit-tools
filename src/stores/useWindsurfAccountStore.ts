@@ -30,6 +30,7 @@ export const useWindsurfAccountStore = createProviderAccountStore<WindsurfAccoun
     getUsage: getWindsurfUsage,
   },
   {
+    platformId: 'windsurf',
     currentAccountIdKey: WINDSURF_CURRENT_ACCOUNT_ID_KEY,
     resolveCurrentAccountId: () => getProviderCurrentAccountId('windsurf'),
   },

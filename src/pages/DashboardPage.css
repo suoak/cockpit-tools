@@ -622,7 +622,7 @@
 
 .mini-progress-bar.high { background: var(--success); }
 .mini-progress-bar.medium { background: var(--warning); }
-.mini-progress-bar.low { background: var(--danger); }
+.mini-progress-bar.low { background: var(--warning-strong); }
 .mini-progress-bar.critical { background: var(--danger); }
 
 .model-pct {
@@ -637,7 +637,7 @@
 }
 .model-pct.high { color: var(--success); }
 .model-pct.medium { color: var(--warning); }
-.model-pct.low { color: var(--danger); }
+.model-pct.low { color: var(--warning-strong); }
 .model-pct.critical { color: var(--danger); }
 
 /* Stacked Quota Style (compact) shared by Antigravity and Codex */
@@ -683,7 +683,7 @@
 }
 .mini-left-text.high { color: var(--success); }
 .mini-left-text.medium { color: var(--warning); }
-.mini-left-text.low { color: var(--danger); }
+.mini-left-text.low { color: var(--warning-strong); }
 .mini-left-text.critical { color: var(--danger); }
 .mini-reset-time-inline {
   color: var(--text-secondary);

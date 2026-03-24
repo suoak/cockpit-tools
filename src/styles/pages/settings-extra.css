@@ -164,13 +164,18 @@
 }
 
 .quota-mini-bar.low {
+  background: var(--warning-strong, #f97316);
+}
+
+.quota-mini-bar.critical {
   background: var(--error, #ef4444);
 }
 
 /* 补充字体颜色，以防万一 */
 .model-pct.high { color: var(--success, #10b981); }
 .model-pct.medium { color: var(--warning, #f59e0b); }
-.model-pct.low { color: var(--error, #ef4444); }
+.model-pct.low { color: var(--warning-strong, #f97316); }
+.model-pct.critical { color: var(--error, #ef4444); }
 
 /* Quota Progress Bar Colors (Table View) */
 .quota-progress-bar.high {
@@ -182,6 +187,9 @@
 }
 
 .quota-progress-bar.low {
-  background: var(--error, #ef4444);
+  background: var(--warning-strong, #f97316);
 }
 
+.quota-progress-bar.critical {
+  background: var(--error, #ef4444);
+}

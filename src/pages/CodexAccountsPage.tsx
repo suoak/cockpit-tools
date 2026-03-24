@@ -60,6 +60,7 @@ import {
   CODEX_CODE_REVIEW_QUOTA_VISIBILITY_CHANGED_EVENT,
   isCodexCodeReviewQuotaVisibleByDefault,
 } from '../utils/codexPreferences';
+import { emitAccountsChanged } from '../utils/accountSyncEvents';
 
 const CODEX_TOKEN_SINGLE_EXAMPLE = `{
   "tokens": {
@@ -304,6 +305,10 @@ export function CodexAccountsPage() {
     oauthLog('授权完成并保存成功', { loginId: oauthLoginIdRef.current });
     await fetchAccounts();
     await fetchCurrentAccount();
+    await emitAccountsChanged({
+      platformId: 'codex',
+      reason: 'oauth',
+    });
     setAddStatus('success');
     setAddMessage(t('common.shared.oauth.success', '授权成功'));
     oauthActiveRef.current = false;
@@ -589,6 +594,10 @@ export function CodexAccountsPage() {
       await fetchAccounts();
       await new Promise((resolve) => setTimeout(resolve, 180));
       await fetchAccounts();
+      await emitAccountsChanged({
+        platformId: 'codex',
+        reason: 'import',
+      });
       try { await refreshQuota(account.id); await fetchAccounts(); } catch { }
       page.setAddStatus('success');
       page.setAddMessage(t('codex.import.successMsg', '导入成功: {{email}}').replace('{{email}}', maskAccountText(account.email)));
@@ -625,6 +634,12 @@ export function CodexAccountsPage() {
       const result = await codexService.importCodexFromFiles(paths);
       const { imported, failed } = result;
       await fetchAccounts();
+      if (imported.length > 0) {
+        await emitAccountsChanged({
+          platformId: 'codex',
+          reason: 'import',
+        });
+      }
       if (imported.length === 0 && failed.length === 0) {
         page.setAddStatus('error');
         page.setAddMessage(t('modals.import.noAccountsFound'));
@@ -683,6 +698,10 @@ export function CodexAccountsPage() {
       );
       await fetchAccounts();
       await fetchCurrentAccount();
+      await emitAccountsChanged({
+        platformId: 'codex',
+        reason: 'import',
+      });
       page.setAddStatus('success');
       page.setAddMessage(
         t('codex.import.successMsg', '导入成功: {{email}}').replace(
@@ -714,6 +733,12 @@ export function CodexAccountsPage() {
     try {
       const imported = await codexService.importCodexFromJson(trimmed);
       await fetchAccounts();
+      if (imported.length > 0) {
+        await emitAccountsChanged({
+          platformId: 'codex',
+          reason: 'import',
+        });
+      }
       for (const acc of imported) { await refreshQuota(acc.id).catch(() => { }); }
       await fetchAccounts();
       page.setAddStatus('success');
