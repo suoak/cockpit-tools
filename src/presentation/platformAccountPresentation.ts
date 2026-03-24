@@ -645,14 +645,8 @@ export function buildWindsurfAccountPresentation(
       : t('common.shared.credits.planEndsUnknown', '配额周期时间未知');
 
   if (usageMode === 'quota') {
-    const dailyUsedPercent =
-      quotaSummary.dailyRemainingPercent == null
-        ? null
-        : clampPercent(100 - quotaSummary.dailyRemainingPercent);
-    const weeklyUsedPercent =
-      quotaSummary.weeklyRemainingPercent == null
-        ? null
-        : clampPercent(100 - quotaSummary.weeklyRemainingPercent);
+    const dailyUsedPercent = quotaSummary.dailyUsedPercent == null ? null : clampPercent(quotaSummary.dailyUsedPercent);
+    const weeklyUsedPercent = quotaSummary.weeklyUsedPercent == null ? null : clampPercent(quotaSummary.weeklyUsedPercent);
 
     quotaItems.push({
       key: 'daily_quota',

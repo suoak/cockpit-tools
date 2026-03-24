@@ -367,8 +367,8 @@ export type WindsurfCreditsSummary = {
 export type WindsurfOfficialUsageMode = 'credits' | 'quota';
 
 export type WindsurfQuotaUsageSummary = {
-  dailyRemainingPercent: number | null;
-  weeklyRemainingPercent: number | null;
+  dailyUsedPercent: number | null;
+  weeklyUsedPercent: number | null;
   dailyResetAt: number | null;
   weeklyResetAt: number | null;
   overageBalanceMicros: number | null;
@@ -440,8 +440,8 @@ type WindsurfProtoSummary = {
   addOnCreditsLeft: number | null;
   addOnCreditsUsed: number | null;
   addOnCreditsTotal: number | null;
-  dailyQuotaRemainingPercent: number | null;
-  weeklyQuotaRemainingPercent: number | null;
+  dailyQuotaUsedPercent: number | null;
+  weeklyQuotaUsedPercent: number | null;
   overageBalanceMicros: number | null;
   dailyQuotaResetAt: number | null;
   weeklyQuotaResetAt: number | null;
@@ -636,8 +636,8 @@ function parseWindsurfProtoSummary(account: WindsurfAccount): WindsurfProtoSumma
   let addOnCreditsLeft: number | null = null;
   let addOnCreditsUsed: number | null = null;
   let addOnCreditsTotal: number | null = null;
-  let dailyQuotaRemainingPercent: number | null = null;
-  let weeklyQuotaRemainingPercent: number | null = null;
+  let dailyQuotaUsedPercent: number | null = null;
+  let weeklyQuotaUsedPercent: number | null = null;
   let overageBalanceMicros: number | null = null;
   let dailyQuotaResetAt: number | null = null;
   let weeklyQuotaResetAt: number | null = null;
@@ -717,14 +717,14 @@ function parseWindsurfProtoSummary(account: WindsurfAccount): WindsurfProtoSumma
       if (fieldNo === 14 && wireType === 0) {
         const valueInfo = readProtoVarint(planStatusBytes, tagInfo.nextOffset);
         if (!valueInfo) break;
-        dailyQuotaRemainingPercent = clampPercent(valueInfo.value);
+        dailyQuotaUsedPercent = clampPercent(valueInfo.value);
         planStatusOffset = valueInfo.nextOffset;
         continue;
       }
       if (fieldNo === 15 && wireType === 0) {
         const valueInfo = readProtoVarint(planStatusBytes, tagInfo.nextOffset);
         if (!valueInfo) break;
-        weeklyQuotaRemainingPercent = clampPercent(valueInfo.value);
+        weeklyQuotaUsedPercent = clampPercent(valueInfo.value);
         planStatusOffset = valueInfo.nextOffset;
         continue;
       }
@@ -854,8 +854,8 @@ function parseWindsurfProtoSummary(account: WindsurfAccount): WindsurfProtoSumma
     addOnCreditsLeft,
     addOnCreditsUsed,
     addOnCreditsTotal,
-    dailyQuotaRemainingPercent,
-    weeklyQuotaRemainingPercent,
+    dailyQuotaUsedPercent,
+    weeklyQuotaUsedPercent,
     overageBalanceMicros,
     dailyQuotaResetAt,
     weeklyQuotaResetAt,
@@ -1203,7 +1203,9 @@ export function getWindsurfQuotaUsageSummary(account: WindsurfAccount): Windsurf
     getPathValue(account.copilot_quota_snapshots, ['windsurfPlanStatus', 'top_up_status']),
   ]);
 
-  const dailyRemainingPercent =
+  // Windsurf Plan Info returns the quota usage percentage directly, despite the
+  // legacy "RemainingPercent" field name used in JSON/proto snapshots.
+  const dailyUsedPercent =
     (() => {
       const value = getNumberFromPaths(planStatus, [
         ['dailyQuotaRemainingPercent'],
@@ -1211,10 +1213,10 @@ export function getWindsurfQuotaUsageSummary(account: WindsurfAccount): Windsurf
       ]);
       return value == null ? null : clampPercent(value);
     })() ??
-    protoSummary?.dailyQuotaRemainingPercent ??
+    protoSummary?.dailyQuotaUsedPercent ??
     null;
 
-  const weeklyRemainingPercent =
+  const weeklyUsedPercent =
     (() => {
       const value = getNumberFromPaths(planStatus, [
         ['weeklyQuotaRemainingPercent'],
@@ -1222,7 +1224,7 @@ export function getWindsurfQuotaUsageSummary(account: WindsurfAccount): Windsurf
       ]);
       return value == null ? null : clampPercent(value);
     })() ??
-    protoSummary?.weeklyQuotaRemainingPercent ??
+    protoSummary?.weeklyQuotaUsedPercent ??
     null;
 
   const overageBalanceMicros =
@@ -1247,25 +1249,25 @@ export function getWindsurfQuotaUsageSummary(account: WindsurfAccount): Windsurf
     protoSummary?.topUpEnabled ??
     null;
 
-  const dailyRemainingPercentFinal =
-    dailyRemainingPercent == null && billingStrategy === 'quota' && dailyResetAt != null
-      ? 0
-      : dailyRemainingPercent;
-  const weeklyRemainingPercentFinal =
-    weeklyRemainingPercent == null && billingStrategy === 'quota' && weeklyResetAt != null
-      ? 0
-      : weeklyRemainingPercent;
+  const dailyUsedPercentFinal =
+    dailyUsedPercent == null && billingStrategy === 'quota' && dailyResetAt != null
+      ? 100
+      : dailyUsedPercent;
+  const weeklyUsedPercentFinal =
+    weeklyUsedPercent == null && billingStrategy === 'quota' && weeklyResetAt != null
+      ? 100
+      : weeklyUsedPercent;
 
   return {
-    dailyRemainingPercent: dailyRemainingPercentFinal,
-    weeklyRemainingPercent: weeklyRemainingPercentFinal,
+    dailyUsedPercent: dailyUsedPercentFinal,
+    weeklyUsedPercent: weeklyUsedPercentFinal,
     dailyResetAt,
     weeklyResetAt,
     overageBalanceMicros,
     autoRechargeEnabled,
     hasQuotaUsage:
-      dailyRemainingPercentFinal != null ||
-      weeklyRemainingPercentFinal != null ||
+      dailyUsedPercentFinal != null ||
+      weeklyUsedPercentFinal != null ||
       overageBalanceMicros != null,
     hasAutoRecharge: autoRechargeEnabled != null || !!topUpStatus,
   };

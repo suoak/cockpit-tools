@@ -904,14 +904,14 @@ fn append_windsurf_plan_status_candidate_rows(
             .to_ascii_lowercase();
     let is_quota_strategy = billing_strategy.contains("quota");
 
-    let daily_remaining_percent = pick_first_number(
+    let daily_used_percent = pick_first_number(
         plan_status,
         &[
             &["dailyQuotaRemainingPercent"],
             &["daily_quota_remaining_percent"],
         ],
     );
-    let weekly_remaining_percent = pick_first_number(
+    let weekly_used_percent = pick_first_number(
         plan_status,
         &[
             &["weeklyQuotaRemainingPercent"],
@@ -938,11 +938,11 @@ fn append_windsurf_plan_status_candidate_rows(
         rows,
         account,
         "Daily quota usage",
-        daily_remaining_percent,
+        daily_used_percent,
         &daily_reset,
         status,
-        if daily_remaining_percent.is_none() && (daily_reset != "-" || is_quota_strategy) {
-            Some("Daily remaining missing, fallback to exhausted")
+        if daily_used_percent.is_none() && (daily_reset != "-" || is_quota_strategy) {
+            Some("Daily usage missing, fallback to exhausted")
         } else {
             None
         },
@@ -951,11 +951,11 @@ fn append_windsurf_plan_status_candidate_rows(
         rows,
         account,
         "Weekly quota usage",
-        weekly_remaining_percent,
+        weekly_used_percent,
         &weekly_reset,
         status,
-        if weekly_remaining_percent.is_none() && (weekly_reset != "-" || is_quota_strategy) {
-            Some("Weekly remaining missing, fallback to exhausted")
+        if weekly_used_percent.is_none() && (weekly_reset != "-" || is_quota_strategy) {
+            Some("Weekly usage missing, fallback to exhausted")
         } else {
             None
         },
@@ -1050,14 +1050,14 @@ fn push_windsurf_quota_percent_row(
     rows: &mut Vec<ReportRow>,
     account: &str,
     metric: &str,
-    remaining_percent: Option<f64>,
+    used_percent: Option<f64>,
     reset: &str,
     status: &str,
     missing_fallback_note: Option<&str>,
 ) -> usize {
-    let (used, remaining, note) = if let Some(remaining_raw) = remaining_percent {
-        let remaining = clamp_percent(remaining_raw);
-        let used = clamp_percent(100.0 - remaining);
+    let (used, remaining, note) = if let Some(used_raw) = used_percent {
+        let used = clamp_percent(used_raw);
+        let remaining = clamp_percent(100.0 - used);
         (used, remaining, "")
     } else if missing_fallback_note.is_some() && reset != "-" {
         (100.0, 0.0, missing_fallback_note.unwrap_or(""))

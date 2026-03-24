@@ -320,7 +320,7 @@ export function WindsurfAccountsPage() {
       if (typeof value !== 'number' || !Number.isFinite(value)) {
         return t('common.none', '暂无');
       }
-      return `${Math.max(0, Math.min(100, 100 - value))}%`;
+      return `${Math.max(0, Math.min(100, value))}%`;
     },
     [t],
   );
@@ -340,9 +340,9 @@ export function WindsurfAccountsPage() {
       const summary = resolveQuotaSummary(account);
       const items: Array<{ key: string; label: string; value: string; detail: string; title: string }> = [];
 
-      if (summary.dailyRemainingPercent != null) {
+      if (summary.dailyUsedPercent != null) {
         const label = t('windsurf.usageSummary.dailyQuota', 'Daily quota usage');
-        const value = formatQuotaUsagePercent(summary.dailyRemainingPercent);
+        const value = formatQuotaUsagePercent(summary.dailyUsedPercent);
         const detail = summary.dailyResetAt
           ? t('common.shared.quota.resetAt', {
               time: formatWindsurfResetTime(summary.dailyResetAt, t),
@@ -358,9 +358,9 @@ export function WindsurfAccountsPage() {
         });
       }
 
-      if (summary.weeklyRemainingPercent != null) {
+      if (summary.weeklyUsedPercent != null) {
         const label = t('windsurf.usageSummary.weeklyQuota', 'Weekly quota usage');
-        const value = formatQuotaUsagePercent(summary.weeklyRemainingPercent);
+        const value = formatQuotaUsagePercent(summary.weeklyUsedPercent);
         const detail = summary.weeklyResetAt
           ? t('common.shared.quota.resetAt', {
               time: formatWindsurfResetTime(summary.weeklyResetAt, t),

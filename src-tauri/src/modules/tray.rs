@@ -1,10 +1,12 @@
 //! 系统托盘模块
 //! 管理系统托盘图标和菜单
 
+#[cfg(not(target_os = "macos"))]
 use std::collections::{HashMap, HashSet};
 
+#[cfg(not(target_os = "macos"))]
+use tauri::menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{
-    menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, Runtime,
 };
@@ -16,6 +18,7 @@ use crate::modules::logger;
 pub const TRAY_ID: &str = "main-tray";
 
 /// 单层最多直出的平台数量（超出进入“更多平台”子菜单）
+#[cfg(not(target_os = "macos"))]
 const TRAY_PLATFORM_MAX_VISIBLE: usize = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -138,12 +141,14 @@ pub mod menu_ids {
 }
 
 /// 账号显示信息
+#[cfg(not(target_os = "macos"))]
 struct AccountDisplayInfo {
     account: String,
     quota_lines: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
+#[cfg(not(target_os = "macos"))]
 enum TrayMenuEntry {
     Platform(PlatformId),
     Group {
@@ -154,12 +159,14 @@ enum TrayMenuEntry {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg(not(target_os = "macos"))]
 struct CopilotMetric {
     used_percent: Option<i32>,
     included: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg(not(target_os = "macos"))]
 struct CopilotUsage {
     inline: CopilotMetric,
     chat: CopilotMetric,
@@ -261,6 +268,7 @@ pub fn create_tray_skeleton<R: Runtime>(
 }
 
 /// 构建托盘菜单
+#[cfg(not(target_os = "macos"))]
 fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tauri::Error> {
     let config = crate::modules::config::get_user_config();
     let lang = &config.language;
@@ -367,6 +375,7 @@ fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tau
     Ok(menu)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_tray_entry_submenu<R: Runtime>(
     app: &tauri::AppHandle<R>,
     entry: &TrayMenuEntry,
@@ -382,6 +391,7 @@ fn build_tray_entry_submenu<R: Runtime>(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_platform_group_submenu<R: Runtime>(
     app: &tauri::AppHandle<R>,
     group_id: &str,
@@ -418,6 +428,7 @@ fn build_platform_group_submenu<R: Runtime>(
     )
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_tray_entries() -> Vec<TrayMenuEntry> {
     let layout = crate::modules::tray_layout::load_tray_layout();
     let visible = sanitize_platform_list(&layout.tray_platform_ids);
@@ -490,6 +501,7 @@ fn resolve_tray_entries() -> Vec<TrayMenuEntry> {
     entries
 }
 
+#[cfg(not(target_os = "macos"))]
 fn sanitize_platform_list(ids: &[String]) -> Vec<PlatformId> {
     let mut result = Vec::new();
     let mut seen = HashSet::new();
@@ -506,6 +518,7 @@ fn sanitize_platform_list(ids: &[String]) -> Vec<PlatformId> {
     result
 }
 
+#[cfg(not(target_os = "macos"))]
 fn normalize_platform_order(ids: &[String]) -> Vec<PlatformId> {
     let mut result = sanitize_platform_list(ids);
     let mut seen: HashSet<PlatformId> = result.iter().copied().collect();
@@ -519,11 +532,13 @@ fn normalize_platform_order(ids: &[String]) -> Vec<PlatformId> {
     result
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_platform_entry_id(raw: &str) -> Option<PlatformId> {
     let value = raw.strip_prefix("platform:")?;
     PlatformId::from_str(value.trim())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_group_entry_id(raw: &str) -> Option<String> {
     let value = raw.strip_prefix("group:")?.trim();
     if value.is_empty() {
@@ -532,6 +547,7 @@ fn parse_group_entry_id(raw: &str) -> Option<String> {
     Some(value.to_string())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_platform_submenu<R: Runtime>(
     app: &tauri::AppHandle<R>,
     platform: PlatformId,
@@ -546,6 +562,7 @@ fn build_platform_submenu<R: Runtime>(
     )
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_platform_details_submenu<R: Runtime>(
     app: &tauri::AppHandle<R>,
     submenu_id: &str,
@@ -582,6 +599,7 @@ fn build_platform_details_submenu<R: Runtime>(
     Submenu::with_id_and_items(app, submenu_id, title, true, &refs)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn get_account_display_info(platform: PlatformId, lang: &str) -> AccountDisplayInfo {
     match platform {
         PlatformId::Antigravity => build_antigravity_display_info(lang),
@@ -600,6 +618,7 @@ fn get_account_display_info(platform: PlatformId, lang: &str) -> AccountDisplayI
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_antigravity_display_info(lang: &str) -> AccountDisplayInfo {
     match crate::modules::account::get_current_account() {
         Ok(Some(account)) => {
@@ -625,6 +644,7 @@ fn build_antigravity_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn normalize_antigravity_model_for_match(value: &str) -> String {
     let normalized = value.trim().to_lowercase();
     if normalized.is_empty() {
@@ -661,6 +681,7 @@ fn normalize_antigravity_model_for_match(value: &str) -> String {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn antigravity_model_matches(model_name: &str, target: &str) -> bool {
     let left = normalize_antigravity_model_for_match(model_name);
     let right = normalize_antigravity_model_for_match(target);
@@ -670,12 +691,14 @@ fn antigravity_model_matches(model_name: &str, target: &str) -> bool {
     left == right || left.starts_with(&(right.clone() + "-")) || right.starts_with(&(left + "-"))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_model_reset_ts(reset_time: &str) -> Option<i64> {
     chrono::DateTime::parse_from_rfc3339(reset_time)
         .ok()
         .map(|value| value.timestamp())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_antigravity_group_quota_lines(
     lang: &str,
     models: &[crate::models::quota::ModelQuota],
@@ -732,6 +755,7 @@ fn build_antigravity_group_quota_lines(
     lines
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_codex_window_label(window_minutes: Option<i64>, fallback: &str) -> String {
     const HOUR_MINUTES: i64 = 60;
     const DAY_MINUTES: i64 = 24 * HOUR_MINUTES;
@@ -763,6 +787,7 @@ fn format_codex_window_label(window_minutes: Option<i64>, fallback: &str) -> Str
     format!("{}m", minutes)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_codex_display_info(lang: &str) -> AccountDisplayInfo {
     if let Some(account) = crate::modules::codex_account::get_current_account() {
         let mut quota_lines = if let Some(quota) = &account.quota {
@@ -818,6 +843,7 @@ fn build_codex_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_github_copilot_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::github_copilot_account::list_accounts();
     let Some(account) = resolve_github_copilot_current_account(&accounts) else {
@@ -846,11 +872,13 @@ fn build_github_copilot_display_info(lang: &str) -> AccountDisplayInfo {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg(not(target_os = "macos"))]
 enum WindsurfUsageMode {
     Credits,
     Quota,
 }
 
+#[cfg(not(target_os = "macos"))]
 struct WindsurfQuotaUsageSummary {
     daily_used_percent: Option<i32>,
     weekly_used_percent: Option<i32>,
@@ -859,6 +887,7 @@ struct WindsurfQuotaUsageSummary {
     overage_balance_micros: Option<f64>,
 }
 
+#[cfg(not(target_os = "macos"))]
 struct WindsurfCreditsSummary {
     credits_left: Option<f64>,
     prompt_left: Option<f64>,
@@ -867,6 +896,7 @@ struct WindsurfCreditsSummary {
     plan_end_ts: Option<i64>,
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_windsurf_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::windsurf_account::list_accounts();
     let Some(account) = resolve_windsurf_current_account(&accounts) else {
@@ -894,6 +924,7 @@ fn build_windsurf_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_kiro_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::kiro_account::list_accounts();
     let Some(account) = resolve_kiro_current_account(&accounts) else {
@@ -945,6 +976,7 @@ fn build_kiro_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_cursor_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::cursor_account::list_accounts();
     let Some(account) = resolve_cursor_current_account(&accounts) else {
@@ -1003,6 +1035,7 @@ fn build_cursor_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_gemini_remaining_percent(value: Option<&serde_json::Value>) -> Option<i32> {
     let raw = value?;
     if let Some(v) = raw.as_f64() {
@@ -1021,12 +1054,14 @@ fn parse_gemini_remaining_percent(value: Option<&serde_json::Value>) -> Option<i
 }
 
 #[derive(Debug, Clone)]
+#[cfg(not(target_os = "macos"))]
 struct GeminiBucketRemaining {
     model_id: String,
     remaining_percent: i32,
     reset_at: Option<i64>,
 }
 
+#[cfg(not(target_os = "macos"))]
 fn collect_gemini_bucket_remaining(
     account: &crate::models::gemini::GeminiAccount,
 ) -> Vec<GeminiBucketRemaining> {
@@ -1061,6 +1096,7 @@ fn collect_gemini_bucket_remaining(
     values
 }
 
+#[cfg(not(target_os = "macos"))]
 fn pick_lowest_gemini_bucket<'a, F>(
     buckets: &'a [GeminiBucketRemaining],
     matcher: F,
@@ -1088,6 +1124,7 @@ where
     Some(best)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn normalize_gemini_plan_label(raw_plan: &str) -> &'static str {
     let lower = raw_plan.trim().to_lowercase();
     if lower.is_empty() {
@@ -1108,12 +1145,14 @@ fn normalize_gemini_plan_label(raw_plan: &str) -> &'static str {
     "UNKNOWN"
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_gemini_current_account(
     accounts: &[crate::models::gemini::GeminiAccount],
 ) -> Option<crate::models::gemini::GeminiAccount> {
     crate::modules::gemini_account::resolve_current_account(accounts)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_gemini_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::gemini_account::list_accounts();
     let Some(account) = resolve_gemini_current_account(&accounts) else {
@@ -1170,21 +1209,25 @@ fn build_gemini_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_codebuddy_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::codebuddy_account::list_accounts();
     build_codebuddy_family_display_info(lang, resolve_codebuddy_current_account(&accounts))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_codebuddy_cn_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::codebuddy_cn_account::list_accounts();
     build_codebuddy_family_display_info(lang, resolve_codebuddy_cn_current_account(&accounts))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_workbuddy_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::workbuddy_account::list_accounts();
     build_workbuddy_family_display_info(lang, resolve_workbuddy_current_account(&accounts))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_zed_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::zed_account::list_accounts();
     let current_id = crate::modules::zed_account::resolve_current_account_id();
@@ -1251,12 +1294,14 @@ fn build_zed_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_zed_edit_predictions_used(value: Option<i64>) -> String {
     value
         .map(|used| format_quota_number((used.max(0)) as f64))
         .unwrap_or_else(|| "0".to_string())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_zed_plan_label(plan_raw: &str) -> String {
     let normalized = plan_raw.trim().trim_start_matches("zed_").trim();
     if normalized.is_empty() {
@@ -1266,6 +1311,7 @@ fn format_zed_plan_label(plan_raw: &str) -> String {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_zed_edit_predictions_total(limit_raw: Option<&str>) -> String {
     let Some(limit_raw) = limit_raw.map(str::trim).filter(|value| !value.is_empty()) else {
         return "0".to_string();
@@ -1281,6 +1327,7 @@ fn format_zed_edit_predictions_total(limit_raw: Option<&str>) -> String {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_codebuddy_family_display_info(
     lang: &str,
     account: Option<crate::models::codebuddy::CodebuddyAccount>,
@@ -1306,6 +1353,7 @@ fn build_codebuddy_family_display_info(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_workbuddy_family_display_info(
     lang: &str,
     account: Option<crate::models::workbuddy::WorkbuddyAccount>,
@@ -1331,6 +1379,7 @@ fn build_workbuddy_family_display_info(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_codebuddy_usage_status_line(
     lang: &str,
     account: &crate::models::codebuddy::CodebuddyAccount,
@@ -1343,6 +1392,7 @@ fn build_codebuddy_usage_status_line(
     )
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_workbuddy_usage_status_line(
     lang: &str,
     account: &crate::models::workbuddy::WorkbuddyAccount,
@@ -1355,6 +1405,7 @@ fn build_workbuddy_usage_status_line(
     )
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_usage_status_line(
     lang: &str,
     dosage_notify_code: Option<&str>,
@@ -1381,10 +1432,12 @@ fn build_usage_status_line(
     format!("{}: {}", label, strip_codebuddy_status_prefix(raw))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn is_chinese_lang(lang: &str) -> bool {
     lang.to_ascii_lowercase().starts_with("zh")
 }
 
+#[cfg(not(target_os = "macos"))]
 fn strip_codebuddy_status_prefix(raw: &str) -> String {
     let trimmed = raw.trim();
     for prefix in [
@@ -1407,6 +1460,7 @@ fn strip_codebuddy_status_prefix(raw: &str) -> String {
     trimmed.to_string()
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_codebuddy_current_account(
     accounts: &[crate::models::codebuddy::CodebuddyAccount],
 ) -> Option<crate::models::codebuddy::CodebuddyAccount> {
@@ -1418,6 +1472,7 @@ fn resolve_codebuddy_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_codebuddy_cn_current_account(
     accounts: &[crate::models::codebuddy::CodebuddyAccount],
 ) -> Option<crate::models::codebuddy::CodebuddyAccount> {
@@ -1431,6 +1486,7 @@ fn resolve_codebuddy_cn_current_account(
     )
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_workbuddy_current_account(
     accounts: &[crate::models::workbuddy::WorkbuddyAccount],
 ) -> Option<crate::models::workbuddy::WorkbuddyAccount> {
@@ -1442,6 +1498,7 @@ fn resolve_workbuddy_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_as_f64(value: &serde_json::Value) -> Option<f64> {
     if let Some(v) = value.as_f64() {
         if v.is_finite() {
@@ -1458,6 +1515,7 @@ fn json_as_f64(value: &serde_json::Value) -> Option<f64> {
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_qoder_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::qoder_account::list_accounts();
     let account = crate::modules::qoder_account::resolve_current_account_id(&accounts)
@@ -1597,12 +1655,14 @@ fn build_qoder_display_info(lang: &str) -> AccountDisplayInfo {
 }
 
 /// Qoder quota bucket parsed from nested JSON
+#[cfg(not(target_os = "macos"))]
 struct QoderQuotaBucket {
     used: Option<f64>,
     total: Option<f64>,
     percentage: Option<f64>,
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_qoder_quota_bucket(
     sources: &[Option<serde_json::Value>],
     fallback: Option<(&Option<f64>, &Option<f64>, &Option<f64>)>,
@@ -1653,6 +1713,7 @@ fn parse_qoder_quota_bucket(
 }
 
 /// Format a Qoder quota line like "套餐内 Credits [Free]: 0% 0 / 0"
+#[cfg(not(target_os = "macos"))]
 fn format_qoder_quota_line(
     _lang: &str,
     label: &str,
@@ -1683,6 +1744,7 @@ fn format_qoder_quota_line(
 }
 
 /// Helpers for navigating nested JSON
+#[cfg(not(target_os = "macos"))]
 fn json_nested(root: &Option<serde_json::Value>, path: &[&str]) -> Option<String> {
     let mut current = root.as_ref()?;
     for key in path {
@@ -1691,6 +1753,7 @@ fn json_nested(root: &Option<serde_json::Value>, path: &[&str]) -> Option<String
     current.as_str().map(|s| s.to_string())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_nested_obj(root: &Option<serde_json::Value>, path: &[&str]) -> Option<serde_json::Value> {
     let mut current = root.as_ref()?;
     for key in path {
@@ -1703,6 +1766,7 @@ fn json_nested_obj(root: &Option<serde_json::Value>, path: &[&str]) -> Option<se
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_nested_f64(root: &Option<serde_json::Value>, path: &[&str]) -> Option<f64> {
     let mut current = root.as_ref()?;
     for key in path {
@@ -1711,16 +1775,19 @@ fn json_nested_f64(root: &Option<serde_json::Value>, path: &[&str]) -> Option<f6
     json_as_f64(current)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_first_string(values: &[Option<String>]) -> Option<String> {
     values
         .iter()
         .find_map(|v| v.as_ref().filter(|s| !s.trim().is_empty()).cloned())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_first_f64(values: &[Option<f64>]) -> Option<f64> {
     values.iter().find_map(|v| *v)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_trae_display_info(lang: &str) -> AccountDisplayInfo {
     let accounts = crate::modules::trae_account::list_accounts();
     let Some(account) = resolve_trae_current_account(&accounts) else {
@@ -1822,6 +1889,7 @@ fn build_trae_display_info(lang: &str) -> AccountDisplayInfo {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 struct TraeUsageSummary {
     identity_str: Option<String>,
     spent_usd: f64,
@@ -1829,6 +1897,7 @@ struct TraeUsageSummary {
     reset_at: Option<i64>,
 }
 
+#[cfg(not(target_os = "macos"))]
 fn extract_trae_usage(account: &crate::models::trae::TraeAccount) -> Option<TraeUsageSummary> {
     let usage_root = account.trae_usage_raw.as_ref()?.as_object()?;
 
@@ -1853,7 +1922,6 @@ fn extract_trae_usage(account: &crate::models::trae::TraeAccount) -> Option<Trae
     // const PRODUCT_PACKAGE: i64 = 2;
     const PRODUCT_PROMO_CODE: i64 = 3;
     const PRODUCT_PRO_PLUS: i64 = 4;
-    // const PRODUCT_5_UNUSED: i64 = 5;
     const PRODUCT_ULTRA: i64 = 6;
     // const PRODUCT_PAY_GO: i64 = 7;
     const PRODUCT_LITE: i64 = 8;
@@ -1943,6 +2011,7 @@ fn extract_trae_usage(account: &crate::models::trae::TraeAccount) -> Option<Trae
 }
 
 #[derive(Debug, Clone, Default)]
+#[cfg(not(target_os = "macos"))]
 struct CursorTrayUsage {
     total_used_percent: Option<i32>,
     auto_used_percent: Option<i32>,
@@ -1951,6 +2020,7 @@ struct CursorTrayUsage {
     on_demand_text: Option<String>,
 }
 
+#[cfg(not(target_os = "macos"))]
 fn clamp_cursor_percent(value: f64) -> i32 {
     if !value.is_finite() {
         return 0;
@@ -1964,6 +2034,7 @@ fn clamp_cursor_percent(value: f64) -> i32 {
     value.round() as i32
 }
 
+#[cfg(not(target_os = "macos"))]
 fn pick_cursor_number(value: Option<&serde_json::Value>, keys: &[&str]) -> Option<f64> {
     let obj = value?.as_object()?;
     for key in keys {
@@ -1987,6 +2058,7 @@ fn pick_cursor_number(value: Option<&serde_json::Value>, keys: &[&str]) -> Optio
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn pick_cursor_bool(value: Option<&serde_json::Value>, keys: &[&str]) -> Option<bool> {
     let obj = value?.as_object()?;
     for key in keys {
@@ -2009,10 +2081,12 @@ fn pick_cursor_bool(value: Option<&serde_json::Value>, keys: &[&str]) -> Option<
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_cursor_dollars(cents: f64) -> String {
     format!("${:.2}", (cents / 100.0).max(0.0))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn read_cursor_tray_usage(account: &crate::models::cursor::CursorAccount) -> CursorTrayUsage {
     let Some(raw) = account.cursor_usage_raw.as_ref() else {
         return CursorTrayUsage::default();
@@ -2153,6 +2227,7 @@ fn read_cursor_tray_usage(account: &crate::models::cursor::CursorAccount) -> Cur
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_github_copilot_current_account(
     accounts: &[crate::models::github_copilot::GitHubCopilotAccount],
 ) -> Option<crate::models::github_copilot::GitHubCopilotAccount> {
@@ -2173,6 +2248,7 @@ fn resolve_github_copilot_current_account(
         .cloned()
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_current_account(
     accounts: &[crate::models::windsurf::WindsurfAccount],
 ) -> Option<crate::models::windsurf::WindsurfAccount> {
@@ -2184,6 +2260,7 @@ fn resolve_windsurf_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_kiro_current_account(
     accounts: &[crate::models::kiro::KiroAccount],
 ) -> Option<crate::models::kiro::KiroAccount> {
@@ -2195,6 +2272,7 @@ fn resolve_kiro_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_cursor_current_account(
     accounts: &[crate::models::cursor::CursorAccount],
 ) -> Option<crate::models::cursor::CursorAccount> {
@@ -2206,6 +2284,7 @@ fn resolve_cursor_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_trae_current_account(
     accounts: &[crate::models::trae::TraeAccount],
 ) -> Option<crate::models::trae::TraeAccount> {
@@ -2217,6 +2296,7 @@ fn resolve_trae_current_account(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 fn first_non_empty<'a>(values: &[Option<&'a str>]) -> Option<&'a str> {
     values
         .iter()
@@ -2225,6 +2305,7 @@ fn first_non_empty<'a>(values: &[Option<&'a str>]) -> Option<&'a str> {
         .find(|value| !value.is_empty())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn calc_remaining_percent(total: Option<f64>, used: Option<f64>) -> Option<i32> {
     let total = total?;
     if !total.is_finite() || total <= 0.0 {
@@ -2240,6 +2321,7 @@ fn calc_remaining_percent(total: Option<f64>, used: Option<f64>) -> Option<i32> 
     Some(clamp_percent((remaining / total) * 100.0))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn display_login_email(email: Option<&str>, login: &str) -> String {
     email
         .map(|value| value.trim())
@@ -2248,10 +2330,12 @@ fn display_login_email(email: Option<&str>, login: &str) -> String {
         .to_string()
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_percent_text(percentage: i32) -> String {
     format!("{}%", percentage.clamp(0, 100))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_quota_line(
     lang: &str,
     label: &str,
@@ -2275,6 +2359,7 @@ fn format_quota_line(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_copilot_metric_value(lang: &str, metric: CopilotMetric) -> Option<String> {
     if metric.included {
         return Some(get_text("included", lang));
@@ -2284,6 +2369,7 @@ fn format_copilot_metric_value(lang: &str, metric: CopilotMetric) -> Option<Stri
         .map(|percentage| format!("{}%", percentage))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_copilot_quota_lines(lang: &str, usage: CopilotUsage) -> Vec<String> {
     let mut lines = Vec::new();
     let reset_text = format_reset_time_from_ts(lang, usage.reset_ts);
@@ -2320,6 +2406,7 @@ fn build_copilot_quota_lines(lang: &str, usage: CopilotUsage) -> Vec<String> {
     lines
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_windsurf_quota_usage_lines(lang: &str, summary: WindsurfQuotaUsageSummary) -> Vec<String> {
     let mut lines = Vec::new();
     let daily_reset_text = format_reset_time_from_ts(lang, summary.daily_reset_ts);
@@ -2355,6 +2442,7 @@ fn build_windsurf_quota_usage_lines(lang: &str, summary: WindsurfQuotaUsageSumma
     lines
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_windsurf_credit_usage_lines(lang: &str, summary: WindsurfCreditsSummary) -> Vec<String> {
     let mut lines = Vec::new();
     let reset_text = format_reset_time_from_ts(lang, summary.plan_end_ts);
@@ -2399,6 +2487,7 @@ fn build_windsurf_credit_usage_lines(lang: &str, summary: WindsurfCreditsSummary
     lines
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_quota_number(value: f64) -> String {
     let normalized = if value.is_finite() {
         value.max(0.0)
@@ -2412,6 +2501,7 @@ fn format_quota_number(value: f64) -> String {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_micros_usd(value: f64) -> String {
     let normalized = if value.is_finite() {
         value.max(0.0)
@@ -2421,6 +2511,7 @@ fn format_micros_usd(value: f64) -> String {
     format!("${:.2}", normalized / 1_000_000.0)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn compute_copilot_usage(
     token: &str,
     plan: Option<&str>,
@@ -2495,6 +2586,7 @@ fn compute_copilot_usage(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn get_quota_snapshot<'a>(
     quota_snapshots: Option<&'a serde_json::Value>,
     key: &str,
@@ -2512,6 +2604,7 @@ fn get_quota_snapshot<'a>(
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn entitlement_from_snapshot(
     snapshot: Option<&serde_json::Map<String, serde_json::Value>>,
 ) -> Option<f64> {
@@ -2521,6 +2614,7 @@ fn entitlement_from_snapshot(
         .filter(|value| *value > 0.0)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn remaining_from_snapshot(
     snapshot: Option<&serde_json::Map<String, serde_json::Value>>,
 ) -> Option<f64> {
@@ -2543,6 +2637,7 @@ fn remaining_from_snapshot(
     Some((entitlement * (percent_remaining / 100.0)).max(0.0))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn is_included_snapshot(snapshot: Option<&serde_json::Map<String, serde_json::Value>>) -> bool {
     if snapshot
         .and_then(|data| data.get("unlimited"))
@@ -2559,6 +2654,7 @@ fn is_included_snapshot(snapshot: Option<&serde_json::Map<String, serde_json::Va
         .unwrap_or(false)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn used_percent_from_snapshot(
     snapshot: Option<&serde_json::Map<String, serde_json::Value>>,
 ) -> Option<i32> {
@@ -2588,6 +2684,7 @@ fn used_percent_from_snapshot(
     Some(clamp_percent((100 - percent_remaining) as f64))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_usage_mode(
     account: &crate::models::windsurf::WindsurfAccount,
 ) -> WindsurfUsageMode {
@@ -2606,6 +2703,7 @@ fn resolve_windsurf_usage_mode(
     WindsurfUsageMode::Credits
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_billing_strategy(
     account: &crate::models::windsurf::WindsurfAccount,
 ) -> Option<String> {
@@ -2640,18 +2738,19 @@ fn resolve_windsurf_billing_strategy(
     Some(canonical)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_quota_usage_summary(
     account: &crate::models::windsurf::WindsurfAccount,
 ) -> WindsurfQuotaUsageSummary {
     let plan_status_roots = windsurf_plan_status_roots(account);
-    let daily_remaining = first_number_from_roots(
+    let daily_used = first_number_from_roots(
         &plan_status_roots,
         &[
             &["dailyQuotaRemainingPercent"],
             &["daily_quota_remaining_percent"],
         ],
     );
-    let weekly_remaining = first_number_from_roots(
+    let weekly_used = first_number_from_roots(
         &plan_status_roots,
         &[
             &["weeklyQuotaRemainingPercent"],
@@ -2660,8 +2759,8 @@ fn resolve_windsurf_quota_usage_summary(
     );
 
     WindsurfQuotaUsageSummary {
-        daily_used_percent: daily_remaining.map(|value| clamp_percent(100.0 - value)),
-        weekly_used_percent: weekly_remaining.map(|value| clamp_percent(100.0 - value)),
+        daily_used_percent: daily_used.map(clamp_percent),
+        weekly_used_percent: weekly_used.map(clamp_percent),
         daily_reset_ts: first_timestamp_from_roots(
             &plan_status_roots,
             &[&["dailyQuotaResetAtUnix"], &["daily_quota_reset_at_unix"]],
@@ -2677,6 +2776,7 @@ fn resolve_windsurf_quota_usage_summary(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_credits_summary(
     account: &crate::models::windsurf::WindsurfAccount,
 ) -> WindsurfCreditsSummary {
@@ -2766,6 +2866,7 @@ fn resolve_windsurf_credits_summary(
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn windsurf_plan_status_roots<'a>(
     account: &'a crate::models::windsurf::WindsurfAccount,
 ) -> Vec<Option<&'a serde_json::Value>> {
@@ -2787,6 +2888,7 @@ fn windsurf_plan_status_roots<'a>(
     ]
 }
 
+#[cfg(not(target_os = "macos"))]
 fn windsurf_plan_info_roots<'a>(
     account: &'a crate::models::windsurf::WindsurfAccount,
 ) -> Vec<Option<&'a serde_json::Value>> {
@@ -2801,6 +2903,7 @@ fn windsurf_plan_info_roots<'a>(
     ]
 }
 
+#[cfg(not(target_os = "macos"))]
 fn first_string_from_roots<'a>(
     roots: &[Option<&'a serde_json::Value>],
     paths: &[&[&str]],
@@ -2818,6 +2921,7 @@ fn first_string_from_roots<'a>(
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn first_number_from_roots(roots: &[Option<&serde_json::Value>], paths: &[&[&str]]) -> Option<f64> {
     for root in roots.iter().flatten() {
         for path in paths {
@@ -2829,6 +2933,7 @@ fn first_number_from_roots(roots: &[Option<&serde_json::Value>], paths: &[&[&str
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn first_timestamp_from_roots(
     roots: &[Option<&serde_json::Value>],
     paths: &[&[&str]],
@@ -2843,6 +2948,7 @@ fn first_timestamp_from_roots(
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn sum_option_f64(left: Option<f64>, right: Option<f64>) -> Option<f64> {
     match (left, right) {
         (Some(a), Some(b)) => Some(a + b),
@@ -2852,6 +2958,7 @@ fn sum_option_f64(left: Option<f64>, right: Option<f64>) -> Option<f64> {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_windsurf_plan_end_ts(account: &crate::models::windsurf::WindsurfAccount) -> Option<i64> {
     let mut candidates: Vec<Option<&serde_json::Value>> = Vec::new();
     let user_status = account.windsurf_user_status.as_ref();
@@ -2895,6 +3002,7 @@ fn resolve_windsurf_plan_end_ts(account: &crate::models::windsurf::WindsurfAccou
     None
 }
 
+#[cfg(not(target_os = "macos"))]
 fn json_path<'a>(
     root: Option<&'a serde_json::Value>,
     path: &[&str],
@@ -2906,6 +3014,7 @@ fn json_path<'a>(
     Some(current)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_timestamp_like(value: &serde_json::Value) -> Option<i64> {
     match value {
         serde_json::Value::Number(num) => parse_timestamp_number(num.as_f64()?),
@@ -2937,6 +3046,7 @@ fn parse_timestamp_like(value: &serde_json::Value) -> Option<i64> {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_timestamp_number(raw: f64) -> Option<i64> {
     if !raw.is_finite() || raw <= 0.0 {
         return None;
@@ -2947,6 +3057,7 @@ fn parse_timestamp_number(raw: f64) -> Option<i64> {
     Some(raw.floor() as i64)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_token_map(token: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
     let prefix = token.split(':').next().unwrap_or(token);
@@ -2962,6 +3073,7 @@ fn parse_token_map(token: &str) -> HashMap<String, String> {
     map
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_token_number(map: &HashMap<String, String>, key: &str) -> Option<f64> {
     map.get(key)
         .map(|value| value.trim())
@@ -2973,6 +3085,7 @@ fn parse_token_number(map: &HashMap<String, String>, key: &str) -> Option<f64> {
         .filter(|value| value.is_finite())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_json_number(value: &serde_json::Value) -> Option<f64> {
     match value {
         serde_json::Value::Number(num) => num.as_f64(),
@@ -2982,6 +3095,7 @@ fn parse_json_number(value: &serde_json::Value) -> Option<f64> {
     .filter(|value| value.is_finite())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn calc_used_percent(total: Option<f64>, remaining: Option<f64>) -> Option<i32> {
     let total = total?;
     let remaining = remaining?;
@@ -2993,6 +3107,7 @@ fn calc_used_percent(total: Option<f64>, remaining: Option<f64>) -> Option<i32> 
     Some(clamp_percent((used / total) * 100.0))
 }
 
+#[cfg(not(target_os = "macos"))]
 fn parse_reset_date_to_ts(reset_date: Option<&str>) -> Option<i64> {
     let reset_date = reset_date?.trim();
     if reset_date.is_empty() {
@@ -3003,10 +3118,12 @@ fn parse_reset_date_to_ts(reset_date: Option<&str>) -> Option<i64> {
         .map(|value| value.timestamp())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn clamp_percent(value: f64) -> i32 {
     value.round().clamp(0.0, 100.0) as i32
 }
 
+#[cfg(not(target_os = "macos"))]
 fn build_model_quota_lines(lang: &str, models: &[crate::models::quota::ModelQuota]) -> Vec<String> {
     let mut lines = Vec::new();
     for model in models.iter().take(4) {
@@ -3024,6 +3141,7 @@ fn build_model_quota_lines(lang: &str, models: &[crate::models::quota::ModelQuot
     lines
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_reset_time_from_ts(lang: &str, reset_ts: Option<i64>) -> String {
     let Some(reset_ts) = reset_ts else {
         return "—".to_string();
@@ -3036,6 +3154,7 @@ fn format_reset_time_from_ts(lang: &str, reset_ts: Option<i64>) -> String {
     format_remaining_duration(remaining_secs)
 }
 
+#[cfg(not(target_os = "macos"))]
 fn format_remaining_duration(remaining_secs: i64) -> String {
     let mut secs = remaining_secs.max(0);
     let days = secs / 86_400;
@@ -3054,6 +3173,7 @@ fn format_remaining_duration(remaining_secs: i64) -> String {
 }
 
 /// 格式化重置时间
+#[cfg(not(target_os = "macos"))]
 fn format_reset_time(lang: &str, reset_time: &str) -> String {
     if let Ok(reset) = chrono::DateTime::parse_from_rfc3339(reset_time) {
         let now = chrono::Utc::now();
@@ -3205,6 +3325,7 @@ pub fn update_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<(), Str
 }
 
 /// 获取本地化文本
+#[cfg(not(target_os = "macos"))]
 fn get_text(key: &str, lang: &str) -> String {
     match (key, lang) {
         // 简体中文

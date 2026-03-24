@@ -564,7 +564,6 @@ fn get_linux_v11_key(mode: SafeStorageReadMode) -> Option<[u8; 16]> {
     None
 }
 
-#[allow(unused_variables)]
 fn decrypt_secret_payload_with_mode(
     encrypted: &[u8],
     data_root: Option<&Path>,
@@ -575,6 +574,7 @@ fn decrypt_secret_payload_with_mode(
 
     #[cfg(target_os = "windows")]
     {
+        let _ = mode;
         let key = get_windows_encryption_key(data_root)?;
         return decrypt_windows_gcm_v10(&key, encrypted);
     }
@@ -1071,7 +1071,6 @@ pub fn inject_secret_to_state_db_for_qoder(
     inject_secret_to_state_db_with_mode(db_path, db_key, plaintext, SafeStorageReadMode::QoderOnly)
 }
 
-#[allow(dead_code)]
 pub fn inject_secret_to_state_db_for_workbuddy(
     db_path: &std::path::Path,
     db_key: &str,

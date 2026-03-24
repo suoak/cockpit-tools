@@ -8,11 +8,11 @@ English · [简体中文](README.md)
 [![GitHub issues](https://img.shields.io/github/issues/suoak/cockpit-tools)](https://github.com/suoak/cockpit-tools/issues)
 [![License](https://img.shields.io/github/license/suoak/cockpit-tools)](https://github.com/suoak/cockpit-tools)
 
-A **universal AI IDE account management tool**, currently supporting **Antigravity**, **Codex**, **GitHub Copilot**, **Windsurf**, **Kiro**, **Cursor**, **Gemini Cli**, **CodeBuddy**, **CodeBuddy CN**, **Qoder**, and **Trae**, with multi-instance parallel workflows.
+A **universal AI IDE account management tool**, currently supporting **Antigravity**, **Codex**, **GitHub Copilot**, **Windsurf**, **Kiro**, **Cursor**, **Gemini Cli**, **CodeBuddy**, **CodeBuddy CN**, **Qoder**, **Trae**, and **Zed**, with multi-instance parallel workflows.
 
 > Designed to help users efficiently manage multiple AI IDE accounts, this tool supports one-click switching, quota monitoring, wake-up tasks, and multi-instance parallel runs, helping you fully utilize resources from different accounts.
 
-**Features**: One-click Switch · Multi-account Management · Multi-instance · Quota Monitoring · Wake-up Tasks · Device Fingerprints · Plugin Integration · GitHub Copilot Management · Windsurf Management · Kiro Management · Cursor Management · Gemini Cli Management · CodeBuddy Management · CodeBuddy CN Management · Qoder Management · Trae Management
+**Features**: One-click Switch · Multi-account Management · Multi-instance · Quota Monitoring · Wake-up Tasks · Device Fingerprints · Plugin Integration · GitHub Copilot Management · Windsurf Management · Kiro Management · Cursor Management · Gemini Cli Management · CodeBuddy Management · CodeBuddy CN Management · Qoder Management · Trae Management · Zed Management
 
 **Languages**: Supports 17 languages
 
@@ -26,7 +26,7 @@ A **universal AI IDE account management tool**, currently supporting **Antigravi
 
 A brand new visual dashboard providing a one-stop status overview:
 
-- **Eleven-Platform Support**: Simultaneously displays Antigravity, Codex, GitHub Copilot, Windsurf, Kiro, Cursor, Gemini Cli, CodeBuddy, CodeBuddy CN, Qoder, and Trae account status
+- **Twelve-Platform Support**: Simultaneously displays Antigravity, Codex, GitHub Copilot, Windsurf, Kiro, Cursor, Gemini Cli, CodeBuddy, CodeBuddy CN, Qoder, Trae, and Zed account status
 - **Quota Monitoring**: Real-time view of remaining quotas and reset times for each model
 - **Quick Actions**: One-click refresh, one-click wake-up
 - **Visual Progress**: Intuitive progress bars showing quota consumption
@@ -202,10 +202,17 @@ Manage Trae instances with isolated profiles and lifecycle controls.
 - **Quick Lifecycle**: start/stop/force stop instances
 - **Window Control**: open instance windows and close all instances
 
-### 13. General Settings
+### 13. Zed Account Management
+
+- **Account Import**: Supports official OAuth sign-in, JSON import, and importing the current local sign-in state
+- **Usage View**: Shows subscription status, Edit Predictions, Token Spend, Spend Limit, and billing period end
+- **Batch Operations**: Supports tags, filters, export, and batch delete/refresh
+- **Switch Injection**: Applies the selected account back to the official Zed client using the client's real local persistence rules and restarts the client when needed
+
+### 14. General Settings
 
 - **Personalized Settings**: Theme switching, language settings, auto-refresh interval
-- **Platform Controls**: Centralized CodeBuddy CN/Qoder/Trae launch-path and quota-alert settings
+- **Platform Controls**: Centralized CodeBuddy CN/Qoder/Trae/Zed launch-path and quota-alert settings
 
 > ![Settings](docs/images/settings_page.png)
 
@@ -220,7 +227,7 @@ These are the most common security questions answered directly:
   - `~/.antigravity_cockpit`: Antigravity accounts, configs, WebSocket status, etc.
   - `~/.codex`: official Codex current login `auth.json`
   - `~/.gemini`: Gemini Cli local session files (for example `oauth_creds.json`, `google_accounts.json`, `settings.json`)
-  - local app data folder under `com.antigravity.cockpit-tools`: Codex / GitHub Copilot / Windsurf / Kiro / Cursor / Gemini Cli / CodeBuddy / CodeBuddy CN / Qoder / Trae multi-account index data, etc.
+  - local app data folder under `com.antigravity.cockpit-tools`: Codex / GitHub Copilot / Windsurf / Kiro / Cursor / Gemini Cli / CodeBuddy / CodeBuddy CN / Qoder / Trae / Zed multi-account index data, etc.
 - **WebSocket is local-only by default**: binds to `127.0.0.1`, default port `19528`; you can disable it or change the port in Settings.
 - **When network access happens**: OAuth login, token refresh, quota fetching, update checks, and other official API requests.
 - **Practical safety tips**:
@@ -250,8 +257,9 @@ If you want a stable setup with minimal tuning, follow the "Recommended" values.
 | CodeBuddy CN Auto Refresh | Periodically updates CodeBuddy CN quota | 5-10 minutes | Same as above |
 | Qoder Auto Refresh | Periodically updates Qoder quota | 5-10 minutes | Same as above |
 | Trae Auto Refresh | Periodically updates Trae quota | 5-10 minutes | Same as above |
+| Zed Auto Refresh | Periodically updates Zed quota | 5-10 minutes | Same as above |
 | Data Directory | Where account/config files are stored | Keep default | Only for troubleshooting or backups |
-| Antigravity/Codex/VS Code/Windsurf/Kiro/Cursor/Gemini Cli/CodeBuddy/CodeBuddy CN/Qoder/Trae/OpenCode App Path | Manually set executable path | Leave empty (auto-detect) | Change only if auto-detect fails or you use custom install paths |
+| Antigravity/Codex/VS Code/Windsurf/Kiro/Cursor/Gemini Cli/CodeBuddy/CodeBuddy CN/Qoder/Trae/Zed/OpenCode App Path | Manually set executable path | Leave empty (auto-detect) | Change only if auto-detect fails or you use custom install paths |
 | Auto-restart OpenCode on Codex switch | Sync OpenCode auth after Codex switch | ON if you use OpenCode; otherwise OFF | Enable for frequent Codex switching with OpenCode |
 
 Notes:

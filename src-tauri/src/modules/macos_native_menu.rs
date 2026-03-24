@@ -1597,14 +1597,14 @@ mod imp {
         account: &crate::models::windsurf::WindsurfAccount,
     ) -> WindsurfQuotaUsageSummary {
         let plan_status_roots = windsurf_plan_status_roots(account);
-        let daily_remaining = first_number_from_roots(
+        let daily_used = first_number_from_roots(
             &plan_status_roots,
             &[
                 &["dailyQuotaRemainingPercent"],
                 &["daily_quota_remaining_percent"],
             ],
         );
-        let weekly_remaining = first_number_from_roots(
+        let weekly_used = first_number_from_roots(
             &plan_status_roots,
             &[
                 &["weeklyQuotaRemainingPercent"],
@@ -1613,8 +1613,8 @@ mod imp {
         );
 
         WindsurfQuotaUsageSummary {
-            daily_used_percent: daily_remaining.map(|value| clamp_percent(100.0 - value)),
-            weekly_used_percent: weekly_remaining.map(|value| clamp_percent(100.0 - value)),
+            daily_used_percent: daily_used.map(clamp_percent),
+            weekly_used_percent: weekly_used.map(clamp_percent),
             daily_reset_ts: first_timestamp_from_roots(
                 &plan_status_roots,
                 &[&["dailyQuotaResetAtUnix"], &["daily_quota_reset_at_unix"]],
