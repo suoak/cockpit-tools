@@ -1,4 +1,4 @@
-﻿# SC-Cockpit Tools
+# SC-Cockpit Tools
 
 [English](README.en.md) · 简体中文
 
@@ -319,6 +319,18 @@ brew install --cask cockpit-tools
 brew install --cask --force cockpit-tools
 ```
 
+### 选项 C: Arch Linux (AUR)
+
+可通过 AUR 助手（如 `yay` 或 `paru`）安装：
+
+```bash
+# 源码构建包
+yay -S cockpit-tools
+
+# 预编译二进制包
+yay -S cockpit-tools-bin
+```
+
 ### 🛠️ 常见问题排查 (Troubleshooting)
 
 #### macOS 提示“应用已损坏，无法打开”？
@@ -362,6 +374,7 @@ npm run tauri build
 ```
 
 ---
+
 
 ## ☕ 赞助项目
 

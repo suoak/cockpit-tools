@@ -29,6 +29,8 @@ import { useQoderAccountStore } from './stores/useQoderAccountStore';
 import { useTraeAccountStore } from './stores/useTraeAccountStore';
 import { useWorkbuddyAccountStore } from './stores/useWorkbuddyAccountStore';
 import { useZedAccountStore } from './stores/useZedAccountStore';
+import { useSideNavLayoutStore } from './stores/useSideNavLayoutStore';
+import { usePlatformLayoutStore } from './stores/usePlatformLayoutStore';
 import type { UpdateCheckResult, UpdateInfo } from './components/UpdateNotification';
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
 import { parseUpdaterReleaseNotes, resolveUpdaterDownloadUrl } from './utils/updaterReleaseNotes';
@@ -374,6 +376,11 @@ function getQuotaAlertQuickSettingsType(platform: QuotaAlertPlatform): QuickSett
 
 function MainApp() {
   const { t } = useTranslation();
+  const sideNavLayoutMode = useSideNavLayoutStore((state) => state.mode);
+  const sideNavClassicCollapsed = useSideNavLayoutStore((state) => state.classicCollapsed);
+  const sideNavClassicFirstSyncDone = useSideNavLayoutStore((state) => state.classicFirstSyncDone);
+  const markSideNavClassicFirstSyncDone = useSideNavLayoutStore((state) => state.markClassicFirstSyncDone);
+  const syncSidebarEntriesFromDashboard = usePlatformLayoutStore((state) => state.syncSidebarEntriesFromDashboard);
   const [page, setPage] = useState<Page>('dashboard');
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
   const [updateNotificationKey, setUpdateNotificationKey] = useState(0);
@@ -453,6 +460,19 @@ function MainApp() {
   
   // 启用自动刷新 hook
   useAutoRefresh();
+
+  useEffect(() => {
+    if (sideNavLayoutMode !== 'classic' || sideNavClassicFirstSyncDone) {
+      return;
+    }
+    syncSidebarEntriesFromDashboard();
+    markSideNavClassicFirstSyncDone();
+  }, [
+    sideNavLayoutMode,
+    sideNavClassicFirstSyncDone,
+    syncSidebarEntriesFromDashboard,
+    markSideNavClassicFirstSyncDone,
+  ]);
 
   const openUpdateNotification = useCallback((source: UpdateCheckSource) => {
     if (source === 'manual') {
@@ -1740,14 +1760,11 @@ function MainApp() {
       }
     };
 
-    const timer = setTimeout(() => {
-      void checkUpdates('startup');
-      intervalId = window.setInterval(() => {
-        void checkUpdates('hourly');
-      }, UPDATE_POLL_INTERVAL_MS);
-    }, 8000);
+    void checkUpdates('startup');
+    intervalId = window.setInterval(() => {
+      void checkUpdates('hourly');
+    }, UPDATE_POLL_INTERVAL_MS);
     return () => {
-      clearTimeout(timer);
       if (intervalId !== undefined) {
         window.clearInterval(intervalId);
       }
@@ -2531,7 +2548,9 @@ function MainApp() {
     || (updateRemindersEnabled && updateAction.state !== 'hidden');
 
   return (
-    <div className="app-container">
+    <div
+      className={`app-container${sideNavLayoutMode === 'classic' ? ' app-container-side-nav-classic' : ''}${sideNavLayoutMode === 'classic' && sideNavClassicCollapsed ? ' app-container-side-nav-classic-collapsed' : ''}`}
+    >
       {/* 更新通知：活跃状态时保持挂载，关闭后继续保留当前更新状态 */}
       {shouldRenderUpdateNotification && (
         <div style={showUpdateNotification ? undefined : { display: 'none' }}>
@@ -2711,16 +2730,19 @@ function MainApp() {
         updateProgress={updateAction.progress}
         onUpdateActionClick={handleQuickUpdateActionClick}
         updateRemindersEnabled={updateRemindersEnabled}
+        onOpenLogViewer={() => setShowLogViewer(true)}
       />
 
-      <button
-        className="log-entry-fab"
-        onClick={() => setShowLogViewer(true)}
-        title={t('manual.dataPrivacy.keywords.5', '日志')}
-        aria-label={t('manual.dataPrivacy.keywords.5', '日志')}
-      >
-        <FileText size={18} />
-      </button>
+      {sideNavLayoutMode !== 'classic' && (
+        <button
+          className="log-entry-fab"
+          onClick={() => setShowLogViewer(true)}
+          title={t('manual.dataPrivacy.keywords.5', '日志')}
+          aria-label={t('manual.dataPrivacy.keywords.5', '日志')}
+        >
+          <FileText size={18} />
+        </button>
+      )}
 
       <Suspense fallback={null}>
         <PlatformLayoutModal
