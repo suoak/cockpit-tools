@@ -1,4 +1,4 @@
-﻿# SC-Cockpit Tools
+# SC-Cockpit Tools
 
 English · [简体中文](README.md)
 
@@ -399,7 +399,11 @@ Thanks to the project author for their open-source contributions! If these proje
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+- Allowed: personal learning, research, and non-commercial use/modification (with attribution and share-alike obligations).
+- Not allowed: any commercial use without authorization (including internal commercial operations, external paid services, paid product integration, or resale/redistribution for profit).
+- Commercial license: contact the author for a separate written commercial license and pricing.
 
 ---
 
@@ -407,7 +411,7 @@ Thanks to the project author for their open-source contributions! If these proje
 
 This project is for personal learning and research purposes only. By using this project, you agree to:
 
-- Not use this project for any commercial purposes
+- Not use this project for any commercial purposes without prior written authorization from the author
 - Bear all risks and responsibilities of using this project
 - Comply with relevant terms of service and laws and regulations
 
