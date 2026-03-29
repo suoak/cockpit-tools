@@ -270,12 +270,15 @@
       "openWindow": "Pencereyi aç",
       "showFloatingCard": "Yüzen kartı göster",
       "showFloatingCardDisabled": "Yüzen kartı göstermeden önce bir hesap bağlayın",
-      "showFloatingCardMissing": "Bağlı hesap artık mevcut değil, bu yüzden yüzen kart gösterilemiyor"
+      "showFloatingCardMissing": "Bağlı hesap artık mevcut değil, bu yüzden yüzen kart gösterilemiyor",
+      "syncThreads": "İş parçacıklarını eşitle",
+      "syncThreadsDisabled": "İş parçacıklarını eşitlemek için en az iki örnek gerekir"
     },
     "bulkConfirm": {
       "startAll": "Tüm durdurulmuş oturumlar başlatılsın mı?",
       "restartAll": "Tüm çalışan oturumlar yeniden başlatılsın mı?",
-      "stopAll": "Tüm oturumlar kapatılsın mı?"
+      "stopAll": "Tüm oturumlar kapatılsın mı?",
+      "syncThreads": "Tüm Codex örnekleri taranacak ve eksik iş parçacıkları otomatik olarak tamamlanacaktır. Mevcut iş parçacıkları yeniden yazılmayacak ve hedef örnek dosyaları herhangi bir yazma işleminden önce yedeklenecektir. Devam edilsin mi?"
     },
     "status": {
       "running": "Çalışıyor",
@@ -360,7 +363,8 @@
       "restartedAll": "Çalışan oturumlar yeniden başlatıldı",
       "closedAll": "Tüm oturumlar durduruldu",
       "allAlreadyRunning": "Tüm oturumlar zaten çalışıyor",
-      "noneRunning": "Çalışan oturum bulunamadı"
+      "noneRunning": "Çalışan oturum bulunamadı",
+      "syncThreadsNeedTwo": "İş parçacıklarını eşitlemek için en az iki örnek gerekir"
     },
     "runningDialog": {
       "title": "Oturum zaten çalışıyor",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "Uygulama yolu bulunamadı",
       "desc": "{{app}} uygulama yolu bulunamadı. Devam etmek için şimdi ayarlayın.",
-      "action": "Şimdi ayarla"
+      "action": "Şimdi ayarla",
+      "codexLaunchHint": "Kapattığınızda hesap değiştirme ve giriş üzerine yazma çalışmaya devam eder, ancak Codex uygulaması artık başlatılmaz ve bu yol istemi tekrar gösterilmez."
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "Grubu düzenle",
       "ungrouped": "Gruplanmamış",
       "currentGroupLabel": "Mevcut grup",
-      "accountPickerEmpty": "Eşleşen hesap yok"
+      "accountPickerEmpty": "Eşleşen hesap yok",
+      "filterHint": "Filtreleme için {{count}} grup seçildi",
+      "filterToggle": "Bu gruba göre filtrelemek için işaretleyin"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "Doğrulama zamanı"
       },
       "filters": {
-        "all": "Tümü"
+        "all": "Tümü",
+        "typeShort": "Tür",
+        "tagsShort": "Etiketler",
+        "groupsShort": "Gruplar"
       },
       "actions": {
         "selectAllAccounts": "Tümünü seç",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "Lütfen bir test modeli seçin",
       "testMissingAccount": "Lütfen bir test hesabı seçin",
       "testFailed": "Test, {{count}} istek için başarısız oldu",
+      "testCancelled": "Test iptal edildi",
       "testCompleted": "Test tamamlandı",
       "nameRequired": "Lütfen bir görev adı girin",
       "accountRequired": "En az bir hesap seçin",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "Kota sıfırlama tetikleyicileri güncel kota verilerine bağlıdır, bu yüzden sabit zaman önizlemesi yoktur.",
       "triggerQuotaReset": "Kota sıfırlama tetikleyicisi",
       "noticeSavedEnabledWithQuotaReset": "Görevler kaydedildi. Toplam: {{count}}. Codex otomatik yenileme {{minutes}} dakikaya ayarlandı."
+    },
+    "sessionManager": {
+      "title": "Oturum yöneticisi",
+      "desc": "Eşitleme ve temizlik burada bir arada: üstteki işlemle tüm örneklere tek tıkla eşitleyebilir, aşağıda her projeyi genişletip oturumları inceleyerek çöp kutusuna taşıyabilirsiniz.",
+      "actions": {
+        "moveToTrash": "Çöp kutusuna taşı",
+        "syncSessions": "Oturumları eşitle",
+        "expand": "Genişlet",
+        "collapse": "Daralt"
+      },
+      "confirm": {
+        "title": "Çöp kutusuna taşı",
+        "message": "Seçilen oturumlar daha sonra geri yüklenebilmesi için ilgili örneklerden çöp kutusuna taşınacaktır. Çalışan örneklerin değişikliğin görünmesi için yeniden başlatılması gerekebilir. Devam edilsin mi?",
+        "syncMessage": "Eksik iş parçacıkları ve bunlara ait oturum verileri tüm örneklerle eşitlenecektir. Mevcut içerik yeniden yazılmayacak ve hedef örnek dosyaları herhangi bir yazma işleminden önce yedeklenecektir. Devam edilsin mi?"
+      },
+      "empty": {
+        "title": "Yönetilecek oturum yok",
+        "desc": "Geçerli örnek kümesinde oturum kaydı bulunamadı."
+      },
+      "messages": {
+        "pickOne": "Lütfen en az bir oturum seçin",
+        "syncNeedTwo": "Oturumları eşitlemek için en az iki örnek gerekir"
+      },
+      "groupCount": "{{count}} oturum",
+      "updatedAt": "Güncellendi",
+      "locationRunning": " (çalışıyor)",
+      "untitled": "Adsız oturum"
+    },
+    "api": {
+      "baseUrl": "Temel URL",
+      "baseUrlPlaceholder": "Resmi varsayılanı kullanmak için boş bırakın",
+      "validation": {
+        "apiKeyCannotBeUrl": "API anahtarı bir URL olamaz. Alanların yer değiştirmediğini kontrol edin.",
+        "baseUrlInvalid": "Geçersiz temel URL. Lütfen http:// veya https:// içeren tam bir URL girin.",
+        "apiKeyEqualsBaseUrl": "API anahtarı temel URL ile aynı olamaz."
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "CodeBuddy CN çoklu örneği yalnızca macOS, Windows ve Linux'ta desteklenir."
+      }
+    },
+    "checkin": {
+      "title": "Günlük check-in",
+      "modalTitle": "Günlük check-in",
+      "status": "Check-in durumu",
+      "checkedIn": "Check-in yapıldı",
+      "notCheckedIn": "Check-in yapılmadı",
+      "button": "Check-in yap",
+      "button.loading": "Check-in yapılıyor...",
+      "done": "Tamam",
+      "success": "Check-in başarılı! {{days}} günlük seri",
+      "failure": "Check-in başarısız: {{message}}",
+      "failure.network": "Ağ hatası, lütfen daha sonra tekrar deneyin",
+      "lastCheckin": "Son check-in: {{time}}",
+      "streak": "{{days}} günlük seri",
+      "reward": "Ödül: {{reward}}",
+      "refreshStatus": "Yenile",
+      "checkAll": "Tümünü check-in yap",
+      "noAccounts": "Hesap yok",
+      "querying": "Yükleniyor...",
+      "streakDays": "{{days}} gün",
+      "streakRewardCountdown": "Bonus ödüle {{days}} gün kaldı",
+      "streakRewardToday": "Bonus ödül bugün kullanılabilir!",
+      "recentDates": "Son: ",
+      "quotaCategory": {
+        "base": "Temel paket",
+        "activity": "Etkinlik bonusu",
+        "extra": "Ek krediler",
+        "other": "Diğer",
+        "empty": "Kota verisi yok"
       }
     }
   },

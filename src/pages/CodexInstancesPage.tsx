@@ -27,7 +27,7 @@ export function CodexInstancesContent({ accountsForSelect }: CodexInstancesConte
   const instanceStore = useCodexInstanceStore();
   const { accounts: storeAccounts, fetchAccounts } = useCodexAccountStore();
   const accounts = accountsForSelect ?? storeAccounts;
-  const isSupportedPlatform = usePlatformRuntimeSupport('macos-windows');
+  const isSupportedPlatform = usePlatformRuntimeSupport('macos-only');
   const [showCodeReviewQuota, setShowCodeReviewQuota] = useState<boolean>(
     isCodexCodeReviewQuotaVisibleByDefault,
   );
@@ -95,22 +95,24 @@ export function CodexInstancesContent({ accountsForSelect }: CodexInstancesConte
   };
 
   return (
-    <PlatformInstancesContent
-      instanceStore={instanceStore}
-      accounts={accountsWithDisplayName}
-      fetchAccounts={fetchAccounts}
-      renderAccountQuotaPreview={renderCodexQuotaPreview}
-      renderAccountBadge={renderCodexPlanBadge}
-      getAccountSearchText={(account) => {
-        const presentation = resolvePresentation(account);
-        return `${presentation.displayName} ${presentation.planLabel}`;
-      }}
-      appType="codex"
-      isSupported={isSupportedPlatform}
-      unsupportedTitleKey="common.shared.instances.unsupported.title"
-      unsupportedTitleDefault="暂不支持当前系统"
-      unsupportedDescKey="codex.instances.unsupported.desc"
-      unsupportedDescDefault="Codex 多开实例仅支持 macOS 和 Windows。"
-    />
+    <div className="codex-instances-content">
+      <PlatformInstancesContent
+        instanceStore={instanceStore}
+        accounts={accountsWithDisplayName}
+        fetchAccounts={fetchAccounts}
+        renderAccountQuotaPreview={renderCodexQuotaPreview}
+        renderAccountBadge={renderCodexPlanBadge}
+        getAccountSearchText={(account) => {
+          const presentation = resolvePresentation(account);
+          return `${presentation.displayName} ${presentation.planLabel}`;
+        }}
+        appType="codex"
+        isSupported={isSupportedPlatform}
+        unsupportedTitleKey="common.shared.instances.unsupported.title"
+        unsupportedTitleDefault="暂不支持当前系统"
+        unsupportedDescKey="codex.instances.unsupported.desc"
+        unsupportedDescDefault="Codex 多开实例仅支持 macOS。"
+      />
+    </div>
   );
 }

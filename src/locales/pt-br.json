@@ -270,12 +270,15 @@
       "openWindow": "Abrir janela",
       "showFloatingCard": "Mostrar cartão flutuante",
       "showFloatingCardDisabled": "Vincule uma conta antes de mostrar o cartão flutuante",
-      "showFloatingCardMissing": "A conta vinculada não existe mais, então o cartão flutuante não pode ser exibido"
+      "showFloatingCardMissing": "A conta vinculada não existe mais, então o cartão flutuante não pode ser exibido",
+      "syncThreads": "Sincronizar threads",
+      "syncThreadsDisabled": "Pelo menos duas instâncias são necessárias para sincronizar threads"
     },
     "bulkConfirm": {
       "startAll": "Iniciar todas as instâncias paradas?",
       "restartAll": "Reiniciar todas as instâncias em execução?",
-      "stopAll": "Fechar todas as instâncias?"
+      "stopAll": "Fechar todas as instâncias?",
+      "syncThreads": "Todas as instâncias do Codex serão analisadas e os threads ausentes serão preenchidos automaticamente. Os threads existentes não serão gravados novamente, e os arquivos da instância de destino serão copiados antes de qualquer gravação. Continuar?"
     },
     "status": {
       "running": "Executando",
@@ -360,7 +363,8 @@
       "restartedAll": "Instâncias em execução reiniciadas",
       "closedAll": "Todas as instâncias foram paradas",
       "allAlreadyRunning": "Todas as instâncias já estão em execução",
-      "noneRunning": "Nenhuma instância em execução encontrada"
+      "noneRunning": "Nenhuma instância em execução encontrada",
+      "syncThreadsNeedTwo": "Pelo menos duas instâncias são necessárias para sincronizar threads"
     },
     "runningDialog": {
       "title": "A instância já está em execução",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "Caminho do aplicativo não encontrado",
       "desc": "Não foi possível encontrar o caminho do aplicativo {{app}}. Defina agora para continuar.",
-      "action": "Definir agora"
+      "action": "Definir agora",
+      "codexLaunchHint": "Ao desativar, a troca de conta e a sobrescrita de login continuam funcionando, mas o app Codex não será mais iniciado e este aviso de caminho não aparecerá novamente."
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "Editar grupo",
       "ungrouped": "Sem grupo",
       "currentGroupLabel": "Grupo atual",
-      "accountPickerEmpty": "Nenhuma conta correspondente"
+      "accountPickerEmpty": "Nenhuma conta correspondente",
+      "filterHint": "{{count}} grupo(s) selecionado(s) para filtrar",
+      "filterToggle": "Marque para filtrar por este grupo"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "Horário de verificação"
       },
       "filters": {
-        "all": "Todos"
+        "all": "Todos",
+        "typeShort": "Tipo",
+        "tagsShort": "Etiquetas",
+        "groupsShort": "Grupos"
       },
       "actions": {
         "selectAllAccounts": "Selecionar tudo",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "Selecione um modelo de teste",
       "testMissingAccount": "Selecione uma conta de teste",
       "testFailed": "Teste falhou em {{count}} solicitação(ões)",
+      "testCancelled": "Teste cancelado",
       "testCompleted": "Teste concluído",
       "nameRequired": "Informe o nome da tarefa",
       "accountRequired": "Selecione pelo menos uma conta",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "Os gatilhos de redefinição de cota dependem de dados recentes de cota, por isso não há prévia de horário fixo.",
       "triggerQuotaReset": "Gatilho de redefinição de cota",
       "noticeSavedEnabledWithQuotaReset": "Tarefas salvas. Total: {{count}}. A atualização automática do Codex foi ajustada para cada {{minutes}} minutos."
+    },
+    "sessionManager": {
+      "title": "Gerenciador de sessões",
+      "desc": "A sincronização e a limpeza ficam reunidas aqui: use a ação no topo para sincronizar com todas as instâncias e, abaixo, expanda cada projeto para revisar as sessões e movê-las para a lixeira.",
+      "actions": {
+        "moveToTrash": "Mover para a lixeira",
+        "syncSessions": "Sincronizar sessões",
+        "expand": "Expandir",
+        "collapse": "Recolher"
+      },
+      "confirm": {
+        "title": "Mover para a lixeira",
+        "message": "As sessões selecionadas serão movidas para a lixeira de suas instâncias para que possam ser restauradas depois. Instâncias em execução podem precisar ser reiniciadas antes que a mudança apareça. Continuar?",
+        "syncMessage": "Os threads ausentes e seus dados de sessão serão sincronizados com todas as instâncias. O conteúdo existente não será gravado novamente, e os arquivos da instância de destino serão copiados antes de qualquer gravação. Continuar?"
+      },
+      "empty": {
+        "title": "Nenhuma sessão para gerenciar",
+        "desc": "Nenhum registro de sessão foi encontrado no conjunto atual de instâncias."
+      },
+      "messages": {
+        "pickOne": "Selecione pelo menos uma sessão",
+        "syncNeedTwo": "Pelo menos duas instâncias são necessárias para sincronizar sessões"
+      },
+      "groupCount": "{{count}} sessões",
+      "updatedAt": "Atualizado",
+      "locationRunning": " (em execução)",
+      "untitled": "Sessão sem título"
+    },
+    "api": {
+      "baseUrl": "URL base",
+      "baseUrlPlaceholder": "Deixe em branco para usar o padrão oficial",
+      "validation": {
+        "apiKeyCannotBeUrl": "A chave de API não pode ser uma URL. Verifique se os campos foram invertidos.",
+        "baseUrlInvalid": "URL base inválida. Informe uma URL completa com http:// ou https://.",
+        "apiKeyEqualsBaseUrl": "A chave de API não pode ser igual à URL base."
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "A multiinstância CodeBuddy CN é compatível apenas com macOS, Windows e Linux."
+      }
+    },
+    "checkin": {
+      "title": "Check-in diário",
+      "modalTitle": "Check-in diário",
+      "status": "Status do check-in",
+      "checkedIn": "Check-in concluído",
+      "notCheckedIn": "Sem check-in",
+      "button": "Fazer check-in",
+      "button.loading": "Fazendo check-in...",
+      "done": "Concluído",
+      "success": "Check-in realizado com sucesso! Sequência de {{days}} dias",
+      "failure": "Falha no check-in: {{message}}",
+      "failure.network": "Erro de rede, tente novamente mais tarde",
+      "lastCheckin": "Último check-in: {{time}}",
+      "streak": "Sequência de {{days}} dias",
+      "reward": "Recompensa: {{reward}}",
+      "refreshStatus": "Atualizar",
+      "checkAll": "Fazer check-in em todos",
+      "noAccounts": "Sem contas",
+      "querying": "Carregando...",
+      "streakDays": "{{days}} dias",
+      "streakRewardCountdown": "Faltam {{days}} dias para a recompensa bônus",
+      "streakRewardToday": "Recompensa bônus disponível hoje!",
+      "recentDates": "Recentes: ",
+      "quotaCategory": {
+        "base": "Pacote base",
+        "activity": "Bônus de atividade",
+        "extra": "Créditos extras",
+        "other": "Outros",
+        "empty": "Sem dados de cota"
       }
     }
   },

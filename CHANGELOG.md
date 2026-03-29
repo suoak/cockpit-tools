@@ -7,6 +7,58 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.14] - 2026-03-28
+
+### Added
+- **CodeBuddy CN and WorkBuddy now share one account workspace and check-in flow with synchronized capabilities**: both platforms now use the same account list/table rendering, check-in modal interactions, and parsing/normalization pipeline so account actions and quota display behavior stay consistent.
+- **CodeBuddy CN now supports daily check-in end-to-end**: the account page and desktop command layer now include check-in API integration, status presentation, and in-context check-in dialog interactions.
+
+### Changed
+- **CodeBuddy CN quota presentation now uses a four-category model with unified aggregation logic**: quota data is reorganized into `base`, `activity`, `extra`, and `other` groups, and shared suite models now drive account-page and dashboard totals consistently.
+- **Settings now complete CodeBuddy CN and WorkBuddy refresh controls in one loop**: quick settings and settings page now expose aligned refresh options for both platforms and reuse shared auto-refresh wiring.
+- **Cloud Code quota requests now build metadata and User-Agent from detected official Antigravity installation details**: local quota fetching and onboarding now derive IDE version, platform, and client headers dynamically (including `x-goog-api-client`) instead of relying on hard-coded version/header values.
+
+### Fixed
+- **CodeBuddy instances and dashboard cards now resolve account type and quota aggregation more accurately**: instance rows now follow shared account-type mapping and dashboard cards no longer mix incorrect aggregates across providers.
+- **Check-in i18n keys are now fully aligned across locales (including ar and zh-tw)**: missing keys are added and duplicated English fallbacks are removed to keep localized check-in UI complete.
+
+---
+## [0.20.13] - 2026-03-28
+
+### Changed
+- **Antigravity wakeup now aligns official Language Server startup flags by selected client version mode**: Wakeup Tasks and Account Verification now expose an `>=1.21.6 / <1.21.6` selector, the selection is persisted locally and synchronized to desktop runtime, and the wakeup gateway now appends `--random_port` only for `<1.21.6` mode to match older official client behavior.
+- **Wakeup account pickers now support combined search + type/tag/group filtering with visible-scope batch selection**: task editing, manual tests, and account verification can all filter by account type, tags, and groups (including ungrouped), while “select all” now operates on the currently filtered result set.
+- **Codex API Key credential input now validates field intent before save/import**: API Key values that look like URLs are rejected, Base URL must be a valid HTTP(S) URL, and duplicate API Key/Base URL values are blocked to prevent swapped-input mistakes.
+- **Codex missing-path dialogs now support disabling launch-on-switch directly in place**: users can keep account switching/login-overwrite behavior while turning off automatic Codex app launch, and once disabled the missing-path prompt will no longer keep reappearing.
+
+---
+## [0.20.12] - 2026-03-27
+
+### Changed
+- **macOS tray interactions now align left-click and right-click behavior with native expectations while clearing stale menu highlight state**: left-click release now focuses and restores the main window, right-click press opens the tray context menu, and native menu teardown explicitly clears status-item highlight to avoid a stuck highlighted icon.
+- **Antigravity account store persistence now keeps only minimal account snapshots and recovers gracefully when localStorage quota is exceeded**: persisted token fields are sanitized, quota snapshots exclude heavy model payloads, and quota overflow now auto-cleans legacy/new cache keys instead of repeatedly failing writes.
+
+---
+## [0.20.11] - 2026-03-27
+
+### Added
+- **Codex now includes a dedicated Session Manager for multi-instance thread sync and trash cleanup (thanks @GiZGY, PR #324)**: users can sync missing session threads across instances from one place and move selected sessions to Trash with per-session visibility and grouped workspace context.
+- **Codex wakeup manual tests can now be cancelled while running**: test runs now carry a cancellation scope, the desktop wakeup execution can terminate in-flight Codex CLI processes, and the execution-results dialog supports explicit in-run cancellation.
+
+### Changed
+- **Homebrew cask metadata has been refreshed to keep packaged distribution in sync with the latest release assets**: the cask formula has been aligned with the current published binaries and checksums.
+
+---
+## [0.20.10] - 2026-03-27
+
+### Added
+- **Antigravity wakeup manual tests can now be cancelled directly from the active test dialog**: each test run now carries a cancellation scope through the desktop wakeup pipeline, so cancelling stops in-flight wakeup requests cleanly and shows a dedicated cancellation notice instead of waiting for every request to finish.
+
+### Changed
+- **Classic sidebar navigation is now flatter and keeps existing layout preferences through a unified local-store migration**: classic mode no longer depends on expandable grouped sections, remaining entries appear directly in `More`, the collapse handle moves with transform-based animation, and legacy sidebar preference keys are migrated into the new persisted store on upgrade.
+- **Antigravity account cache persistence is now consolidated into a unified persisted store with legacy-key migration**: cached account lists and current-account snapshots are rehydrated from the new store while older local keys are migrated and cleaned up automatically.
+
+---
 ## [0.20.9] - 2026-03-25
 
 ### Added

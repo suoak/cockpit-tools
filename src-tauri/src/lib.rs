@@ -255,6 +255,7 @@ pub fn run() {
             commands::system::save_general_config,
             commands::system::save_tray_platform_layout,
             commands::system::set_app_path,
+            commands::system::set_codex_launch_on_switch,
             commands::system::detect_app_path,
             commands::system::set_wakeup_override,
             commands::system::handle_window_close,
@@ -275,6 +276,7 @@ pub fn run() {
             commands::logs::logs_open_log_directory,
             // Wakeup Commands
             commands::wakeup::wakeup_ensure_runtime_ready,
+            commands::wakeup::wakeup_set_official_ls_version_mode,
             commands::wakeup::trigger_wakeup,
             commands::wakeup::fetch_available_models,
             commands::wakeup::wakeup_sync_state,
@@ -340,8 +342,12 @@ pub fn run() {
             commands::codex::codex_wakeup_save_state,
             commands::codex::codex_wakeup_load_history,
             commands::codex::codex_wakeup_clear_history,
+            commands::codex::codex_wakeup_cancel_scope,
+            commands::codex::codex_wakeup_release_scope,
             commands::codex::codex_wakeup_test,
             commands::codex::codex_wakeup_run_task,
+            commands::codex::load_codex_account_groups,
+            commands::codex::save_codex_account_groups,
             // GitHub Copilot Commands
             commands::github_copilot::list_github_copilot_accounts,
             commands::github_copilot::delete_github_copilot_account,
@@ -435,6 +441,8 @@ pub fn run() {
             commands::codebuddy_cn::get_codebuddy_cn_accounts_index_path,
             commands::codebuddy_cn::inject_codebuddy_cn_to_vscode,
             commands::codebuddy_cn::sync_codebuddy_cn_to_workbuddy,
+            commands::codebuddy_cn::get_checkin_status_codebuddy_cn,
+            commands::codebuddy_cn::checkin_codebuddy_cn,
             // WorkBuddy Commands
             commands::workbuddy::list_workbuddy_accounts,
             commands::workbuddy::delete_workbuddy_account,
@@ -452,6 +460,8 @@ pub fn run() {
             commands::workbuddy::get_workbuddy_accounts_index_path,
             commands::workbuddy::inject_workbuddy_to_vscode,
             commands::workbuddy::sync_workbuddy_to_codebuddy_cn,
+            commands::workbuddy::get_checkin_status_workbuddy,
+            commands::workbuddy::checkin_workbuddy,
             // WorkBuddy Instance Commands
             commands::workbuddy_instance::workbuddy_get_instance_defaults,
             commands::workbuddy_instance::workbuddy_list_instances,
@@ -635,6 +645,9 @@ pub fn run() {
             // Codex Instance Commands
             commands::codex_instance::codex_get_instance_defaults,
             commands::codex_instance::codex_list_instances,
+            commands::codex_instance::codex_sync_threads_across_instances,
+            commands::codex_instance::codex_list_sessions_across_instances,
+            commands::codex_instance::codex_move_sessions_to_trash_across_instances,
             commands::codex_instance::codex_create_instance,
             commands::codex_instance::codex_update_instance,
             commands::codex_instance::codex_delete_instance,

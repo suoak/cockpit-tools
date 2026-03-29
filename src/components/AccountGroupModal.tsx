@@ -24,9 +24,18 @@ interface AccountGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGroupsChanged: () => Promise<void> | void;
+  /** 当前被勾选用于筛选的分组 ID 列表 */
+  groupFilter?: string[];
+  /** 切换某个分组的筛选状态 */
+  onToggleGroupFilter?: (groupId: string) => void;
+  /** 清空分组筛选 */
+  onClearGroupFilter?: () => void;
 }
 
-export const AccountGroupModal = ({ isOpen, onClose, onGroupsChanged }: AccountGroupModalProps) => {
+export const AccountGroupModal = ({
+  isOpen, onClose, onGroupsChanged,
+  groupFilter = [], onToggleGroupFilter, onClearGroupFilter,
+}: AccountGroupModalProps) => {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<AccountGroup[]>([]);
   const [newName, setNewName] = useState('');
@@ -152,6 +161,16 @@ export const AccountGroupModal = ({ isOpen, onClose, onGroupsChanged }: AccountG
             </div>
           )}
 
+          {/* 筛选提示 */}
+          {groupFilter.length > 0 && onClearGroupFilter && (
+            <div className="group-filter-hint">
+              <span>{t('accounts.groups.filterHint', { count: groupFilter.length })}</span>
+              <button type="button" className="group-filter-clear-btn" onClick={onClearGroupFilter}>
+                {t('accounts.clearFilter', '清空筛选')}
+              </button>
+            </div>
+          )}
+
           {/* 分组列表 */}
           {groups.length === 0 ? (
             <div className="group-modal-empty">
@@ -161,7 +180,17 @@ export const AccountGroupModal = ({ isOpen, onClose, onGroupsChanged }: AccountG
           ) : (
             <div className="group-modal-list">
               {groups.map((group) => (
-                <div key={group.id} className="group-modal-item">
+                <div key={group.id} className={`group-modal-item ${groupFilter.includes(group.id) ? 'group-filter-active' : ''}`}>
+                  {/* 筛选复选框 */}
+                  {onToggleGroupFilter && (
+                    <input
+                      type="checkbox"
+                      className="group-filter-checkbox"
+                      checked={groupFilter.includes(group.id)}
+                      onChange={() => onToggleGroupFilter(group.id)}
+                      title={t('accounts.groups.filterToggle', '勾选以筛选此分组')}
+                    />
+                  )}
                   <FolderOpen size={18} className="group-icon" />
                   <div className="group-info">
                     {renamingId === group.id ? (

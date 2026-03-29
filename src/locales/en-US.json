@@ -328,12 +328,15 @@
       "openWindow": "Open Window",
       "showFloatingCard": "Show floating card",
       "showFloatingCardDisabled": "Bind an account before showing the floating card",
-      "showFloatingCardMissing": "The bound account no longer exists, so the floating card cannot be shown"
+      "showFloatingCardMissing": "The bound account no longer exists, so the floating card cannot be shown",
+      "syncThreads": "Sync Threads",
+      "syncThreadsDisabled": "At least two instances are required to sync threads"
     },
     "bulkConfirm": {
       "startAll": "Start all stopped instances?",
       "restartAll": "Restart all running instances?",
-      "stopAll": "Close all instances?"
+      "stopAll": "Close all instances?",
+      "syncThreads": "Scan all Codex instances and fill in missing threads automatically. Existing threads will not be written again, and target instance files will be backed up before any write occurs. Continue?"
     },
     "status": {
       "running": "Running",
@@ -418,7 +421,8 @@
       "restartedAll": "Restarted running instances",
       "closedAll": "Closed all instances",
       "allAlreadyRunning": "All instances are already running",
-      "noneRunning": "No running instances found"
+      "noneRunning": "No running instances found",
+      "syncThreadsNeedTwo": "At least two instances are required to sync threads"
     },
     "runningDialog": {
       "title": "Instance already running",
@@ -687,6 +691,7 @@
     "missing": {
       "title": "Application path not found",
       "desc": "Could not find the {{app}} application path. Please set it now to continue.",
+      "codexLaunchHint": "When turned off, account switching and login overwrite still run, but Codex App will no longer be launched and this path prompt will not appear again.",
       "action": "Set now"
     }
   },
@@ -857,7 +862,9 @@
       "editTitle": "Edit Group",
       "ungrouped": "Ungrouped",
       "currentGroupLabel": "Current Group",
-      "accountPickerEmpty": "No matching accounts"
+      "accountPickerEmpty": "No matching accounts",
+      "filterHint": "{{count}} group(s) selected for filtering",
+      "filterToggle": "Check to filter by this group"
     }
   },
   "overview": {
@@ -1062,7 +1069,10 @@
         "verifiedAt": "Verification time"
       },
       "filters": {
-        "all": "All"
+        "all": "All",
+        "typeShort": "Type",
+        "tagsShort": "Tags",
+        "groupsShort": "Groups"
       },
       "actions": {
         "selectAllAccounts": "Select all",
@@ -1161,7 +1171,8 @@
       "taskSaved": "Task \"{{name}}\" saved",
       "featureOff": "Wakeup disabled",
       "featureOn": "Wakeup enabled",
-      "refreshIntervalAdjusted": "Refresh interval adjusted: {{old}} → {{new}}"
+      "refreshIntervalAdjusted": "Refresh interval adjusted: {{old}} → {{new}}",
+      "testCancelled": "Test cancelled"
     },
     "refreshInterval": {
       "disabled": "Disabled",
@@ -1356,6 +1367,15 @@
     "token": {
       "desc": "Paste auth.json content or account JSON data",
       "placeholder": "Example: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
+    },
+    "api": {
+      "baseUrl": "Base URL",
+      "baseUrlPlaceholder": "Leave blank to use official default",
+      "validation": {
+        "apiKeyCannotBeUrl": "API key cannot be a URL. Please check if the fields are swapped.",
+        "baseUrlInvalid": "Invalid Base URL. Please enter a full http:// or https:// URL.",
+        "apiKeyEqualsBaseUrl": "API key cannot be the same as Base URL."
+      }
     },
     "local": {
       "desc": "Import the currently logged-in account from ~/.codex/auth.json",
@@ -1591,6 +1611,33 @@
         "high": "High",
         "xhigh": "XHigh"
       }
+    },
+    "sessionManager": {
+      "title": "Session Manager",
+      "desc": "Sync and cleanup live here together: use the top action to sync to all instances, then expand each project to review and trash sessions.",
+      "actions": {
+        "moveToTrash": "Move to Trash",
+        "syncSessions": "Sync Sessions",
+        "expand": "Expand",
+        "collapse": "Collapse"
+      },
+      "confirm": {
+        "title": "Move to Trash",
+        "message": "Selected sessions will be moved to Trash from their instances so they can be restored later. Running instances may need a restart before the change appears. Continue?",
+        "syncMessage": "Missing threads and their session data will be synced to all instances. Existing content will not be written again, and target instance files will be backed up before any write occurs. Continue?"
+      },
+      "empty": {
+        "title": "No sessions to manage",
+        "desc": "No session records were found in the current instance set."
+      },
+      "messages": {
+        "pickOne": "Please select at least one session",
+        "syncNeedTwo": "At least two instances are required to sync sessions"
+      },
+      "groupCount": "{{count}} sessions",
+      "updatedAt": "Updated",
+      "locationRunning": " (running)",
+      "untitled": "Untitled session"
     }
   },
   "codebuddy": {
@@ -2614,6 +2661,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "CodeBuddy CN multi-instance is supported on macOS, Windows, and Linux only."
+      }
+    },
+    "checkin": {
+      "title": "Daily Check-in",
+      "modalTitle": "Daily Check-in",
+      "status": "Check-in Status",
+      "checkedIn": "Checked In",
+      "notCheckedIn": "Not Checked In",
+      "button": "Check In",
+      "button.loading": "Checking in...",
+      "done": "Done",
+      "success": "Check-in successful! {{days}} day streak",
+      "failure": "Check-in failed: {{message}}",
+      "failure.network": "Network error, please try again later",
+      "lastCheckin": "Last check-in: {{time}}",
+      "streak": "{{days}}-day streak",
+      "reward": "Reward: {{reward}}",
+      "refreshStatus": "Refresh",
+      "checkAll": "Check In All",
+      "noAccounts": "No accounts",
+      "querying": "Loading...",
+      "streakDays": "{{days}} days",
+      "streakRewardCountdown": "{{days}} more days for bonus reward",
+      "streakRewardToday": "Bonus reward available today!",
+      "recentDates": "Recent: ",
+      "quotaCategory": {
+        "base": "Base Package",
+        "activity": "Activity Bonus",
+        "extra": "Extra Credits",
+        "other": "Other",
+        "empty": "No quota data"
       }
     }
   },

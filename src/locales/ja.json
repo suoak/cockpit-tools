@@ -270,12 +270,15 @@
       "openWindow": "ウィンドウを開く",
       "showFloatingCard": "フローティングカードを表示",
       "showFloatingCardDisabled": "フローティングカードを表示する前にアカウントを紐付けてください",
-      "showFloatingCardMissing": "紐付け済みアカウントが存在しないため、フローティングカードを表示できません"
+      "showFloatingCardMissing": "紐付け済みアカウントが存在しないため、フローティングカードを表示できません",
+      "syncThreads": "スレッドを同期",
+      "syncThreadsDisabled": "スレッドを同期するには少なくとも2つのインスタンスが必要です"
     },
     "bulkConfirm": {
       "startAll": "停止中のすべてのインスタンスを開始しますか？",
       "restartAll": "実行中のすべてのインスタンスを再起動しますか？",
-      "stopAll": "すべてのインスタンスを閉じますか？"
+      "stopAll": "すべてのインスタンスを閉じますか？",
+      "syncThreads": "すべての Codex インスタンスをスキャンし、不足しているスレッドを自動で補完します。既存のスレッドは再書き込みされず、書き込み前に対象インスタンスのファイルをバックアップします。続行しますか？"
     },
     "status": {
       "running": "実行中",
@@ -360,7 +363,8 @@
       "restartedAll": "実行中のインスタンスを再起動しました",
       "closedAll": "すべてのインスタンスを閉じました",
       "allAlreadyRunning": "すべてのインスタンスが既に実行中です",
-      "noneRunning": "実行中のインスタンスが見つかりません"
+      "noneRunning": "実行中のインスタンスが見つかりません",
+      "syncThreadsNeedTwo": "スレッドを同期するには少なくとも2つのインスタンスが必要です"
     },
     "runningDialog": {
       "title": "インスタンスは既に実行中です",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "アプリのパスが見つかりません",
       "desc": "{{app}} のアプリパスが見つかりません。続行するには今すぐ設定してください。",
-      "action": "今すぐ設定"
+      "action": "今すぐ設定",
+      "codexLaunchHint": "オフにすると、アカウント切替とログイン上書きは引き続き実行されますが、Codex アプリは起動されず、この起動パスの案内も再表示されません。"
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "グループを編集",
       "ungrouped": "未分類",
       "currentGroupLabel": "現在のグループ",
-      "accountPickerEmpty": "条件に一致するアカウントはありません"
+      "accountPickerEmpty": "条件に一致するアカウントはありません",
+      "filterHint": "フィルター対象に {{count}} 件のグループを選択中",
+      "filterToggle": "このグループで絞り込む"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "検証時間"
       },
       "filters": {
-        "all": "すべて"
+        "all": "すべて",
+        "typeShort": "種類",
+        "tagsShort": "タグ",
+        "groupsShort": "グループ"
       },
       "actions": {
         "selectAllAccounts": "すべて選択",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "テストモデルを選択してください",
       "testMissingAccount": "テストアカウントを選択してください",
       "testFailed": "テストが {{count}} 件失敗しました",
+      "testCancelled": "テストをキャンセルしました",
       "testCompleted": "テスト完了",
       "nameRequired": "タスク名を入力してください",
       "accountRequired": "少なくとも 1 つのアカウントを選択してください",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "クォータリセット起動は最新のクォータデータに依存するため、固定時刻のプレビューは利用できません。",
       "triggerQuotaReset": "クォータリセット起動",
       "noticeSavedEnabledWithQuotaReset": "タスクを保存しました。合計: {{count}}。Codex の自動更新は {{minutes}} 分間隔に調整されました。"
+    },
+    "sessionManager": {
+      "title": "セッション管理",
+      "desc": "同期と整理はここにまとめました：上部の操作で全インスタンスへ一括同期し、下で各プロジェクトを展開してセッションを確認し、ゴミ箱へ移動できます。",
+      "actions": {
+        "moveToTrash": "ゴミ箱へ移動",
+        "syncSessions": "セッションを同期",
+        "expand": "展開",
+        "collapse": "折りたたむ"
+      },
+      "confirm": {
+        "title": "ゴミ箱へ移動",
+        "message": "選択したセッションは対応するインスタンスからゴミ箱へ移動され、後で復元できます。実行中のインスタンスでは、変更が反映されるまで再起動が必要な場合があります。続行しますか？",
+        "syncMessage": "不足しているスレッドとそのセッションデータをすべてのインスタンスに同期します。既存の内容は再書き込みされず、書き込み前に対象インスタンスのファイルをバックアップします。続行しますか？"
+      },
+      "empty": {
+        "title": "管理できるセッションはまだありません",
+        "desc": "現在のインスタンスセットではセッション記録が見つかりませんでした。"
+      },
+      "messages": {
+        "pickOne": "少なくとも1件のセッションを選択してください",
+        "syncNeedTwo": "セッションを同期するには少なくとも2つのインスタンスが必要です"
+      },
+      "groupCount": "{{count}} 件のセッション",
+      "updatedAt": "更新済み",
+      "locationRunning": "（実行中）",
+      "untitled": "無題のセッション"
+    },
+    "api": {
+      "baseUrl": "ベース URL",
+      "baseUrlPlaceholder": "空欄のままにすると公式の既定値を使用します",
+      "validation": {
+        "apiKeyCannotBeUrl": "API キーに URL は設定できません。入力欄が逆になっていないか確認してください。",
+        "baseUrlInvalid": "ベース URL の形式が正しくありません。http:// または https:// を含む完全な URL を入力してください。",
+        "apiKeyEqualsBaseUrl": "API キーをベース URL と同じ値にはできません。"
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "CodeBuddy CN のマルチインスタンスは macOS、Windows、Linux のみ対応しています。"
+      }
+    },
+    "checkin": {
+      "title": "デイリーチェックイン",
+      "modalTitle": "デイリーチェックイン",
+      "status": "チェックイン状態",
+      "checkedIn": "チェックイン済み",
+      "notCheckedIn": "未チェックイン",
+      "button": "チェックイン",
+      "button.loading": "チェックイン中...",
+      "done": "完了",
+      "success": "チェックイン成功！{{days}}日連続",
+      "failure": "チェックインに失敗しました: {{message}}",
+      "failure.network": "ネットワークエラーです。しばらくしてから再試行してください",
+      "lastCheckin": "最終チェックイン: {{time}}",
+      "streak": "{{days}}日連続",
+      "reward": "報酬: {{reward}}",
+      "refreshStatus": "更新",
+      "checkAll": "一括チェックイン",
+      "noAccounts": "アカウントがありません",
+      "querying": "読み込み中...",
+      "streakDays": "{{days}}日",
+      "streakRewardCountdown": "ボーナス報酬まであと{{days}}日",
+      "streakRewardToday": "本日はボーナス報酬を受け取れます！",
+      "recentDates": "最近: ",
+      "quotaCategory": {
+        "base": "基本パッケージ",
+        "activity": "アクティビティボーナス",
+        "extra": "追加クレジット",
+        "other": "その他",
+        "empty": "クォータデータがありません"
       }
     }
   },

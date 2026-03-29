@@ -1,51 +1,112 @@
 import { create } from 'zustand';
-import { Account, RefreshStats } from '../types/account';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { Account, QuotaData, RefreshStats, TokenData } from '../types/account';
 import * as accountService from '../services/accountService';
 import { emitAccountsChanged, emitCurrentAccountChanged } from '../utils/accountSyncEvents';
 
-const ACCOUNTS_CACHE_KEY = 'agtools.accounts.cache';
-const CURRENT_ACCOUNT_CACHE_KEY = 'agtools.accounts.current';
+const ACCOUNTS_STORE_KEY = 'agtools.accounts.store.v1';
+const LEGACY_ACCOUNTS_CACHE_KEY = 'agtools.accounts.cache';
+const LEGACY_CURRENT_ACCOUNT_CACHE_KEY = 'agtools.accounts.current';
 
-const loadCachedAccounts = () => {
+let accountStoreQuotaCleanupScheduled = false;
+let accountStoreQuotaWarned = false;
+
+function isQuotaExceededError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return (
+      error.name === 'QuotaExceededError' ||
+      error.code === 22 ||
+      error.code === 1014
+    );
+  }
+  const message = String(error);
+  return message.includes('QuotaExceededError') || message.includes('quota');
+}
+
+function scheduleAccountStoreQuotaRecovery(storageKey: string) {
+  if (typeof window === 'undefined' || accountStoreQuotaCleanupScheduled) return;
+  accountStoreQuotaCleanupScheduled = true;
+  setTimeout(() => {
     try {
-        const raw = localStorage.getItem(ACCOUNTS_CACHE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(LEGACY_ACCOUNTS_CACHE_KEY);
+      localStorage.removeItem(LEGACY_CURRENT_ACCOUNT_CACHE_KEY);
+    } catch (error) {
+      console.warn('[AccountStore] 清理超限缓存失败:', error);
+    } finally {
+      accountStoreQuotaCleanupScheduled = false;
     }
-};
+  }, 0);
+}
 
-const loadCachedCurrentAccount = () => {
+const accountStoreStorage = createJSONStorage(() => ({
+  getItem: (name: string) => {
     try {
-        const raw = localStorage.getItem(CURRENT_ACCOUNT_CACHE_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw) as Account;
-    } catch {
-        return null;
+      return localStorage.getItem(name);
+    } catch (error) {
+      console.warn(`[AccountStore] 读取持久化数据失败: ${name}`, error);
+      return null;
     }
-};
-
-const persistAccountsCache = (accounts: Account[]) => {
+  },
+  setItem: (name: string, value: string) => {
     try {
-        localStorage.setItem(ACCOUNTS_CACHE_KEY, JSON.stringify(accounts));
-    } catch {
-        // ignore cache write failures
-    }
-};
-
-const persistCurrentAccountCache = (account: Account | null) => {
-    try {
-        if (!account) {
-            localStorage.removeItem(CURRENT_ACCOUNT_CACHE_KEY);
-            return;
+      localStorage.setItem(name, value);
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        if (!accountStoreQuotaWarned) {
+          console.warn(
+            '[AccountStore] 本地缓存空间不足，已自动清理账号缓存并回退为仅内存态。',
+            error
+          );
+          accountStoreQuotaWarned = true;
         }
-        localStorage.setItem(CURRENT_ACCOUNT_CACHE_KEY, JSON.stringify(account));
-    } catch {
-        // ignore cache write failures
+        scheduleAccountStoreQuotaRecovery(name);
+        return;
+      }
+      console.warn(`[AccountStore] 写入持久化数据失败: ${name}`, error);
     }
-};
+  },
+  removeItem: (name: string) => {
+    try {
+      localStorage.removeItem(name);
+    } catch (error) {
+      console.warn(`[AccountStore] 删除持久化数据失败: ${name}`, error);
+    }
+  },
+}));
+
+function toPersistedTokenSnapshot(token: TokenData): TokenData {
+  return {
+    access_token: '',
+    refresh_token: '',
+    expires_in: 0,
+    expiry_timestamp: 0,
+    token_type: token.token_type || 'Bearer',
+    email: token.email,
+    project_id: token.project_id,
+    is_gcp_tos: token.is_gcp_tos,
+    session_id: token.session_id,
+  };
+}
+
+function toPersistedQuotaSnapshot(quota?: QuotaData): QuotaData | undefined {
+  if (!quota) return undefined;
+  return {
+    models: [],
+    last_updated: quota.last_updated ?? 0,
+    is_forbidden: quota.is_forbidden,
+    subscription_tier: quota.subscription_tier,
+    tier_id: quota.tier_id,
+  };
+}
+
+function toPersistedAccountSnapshot(account: Account): Account {
+  return {
+    ...account,
+    token: toPersistedTokenSnapshot(account.token),
+    quota: toPersistedQuotaSnapshot(account.quota),
+  };
+}
 
 // 防抖状态（在 store 外部维护，避免触发 re-render）
 let fetchAccountsPromise: Promise<void> | null = null;
@@ -74,68 +135,68 @@ interface AccountState {
     updateAccountTags: (accountId: string, tags: string[]) => Promise<Account>;
 }
 
-export const useAccountStore = create<AccountState>((set, get) => ({
-    accounts: loadCachedAccounts(),
-    currentAccount: loadCachedCurrentAccount(),
-    loading: false,
-    error: null,
+export const useAccountStore = create<AccountState>()(
+  persist(
+    (set, get) => ({
+      accounts: [],
+      currentAccount: null,
+      loading: false,
+      error: null,
 
-    fetchAccounts: async () => {
-        const now = Date.now();
-        
-        // 如果正在请求中，且距离上次请求不足 DEBOUNCE_MS，复用现有 Promise
-        if (fetchAccountsPromise && now - fetchAccountsLastTime < DEBOUNCE_MS) {
-            return fetchAccountsPromise;
-        }
-        
-        fetchAccountsLastTime = now;
-        
-        fetchAccountsPromise = (async () => {
-            set({ loading: true, error: null });
-            try {
-                const accounts = await accountService.listAccounts();
-                set({ accounts, loading: false });
-                persistAccountsCache(accounts);
-            } catch (e) {
-                set({ error: String(e), loading: false });
-            } finally {
-                // 请求完成后延迟清除 Promise，允许短时间内的后续调用也复用结果
-                setTimeout(() => {
-                    fetchAccountsPromise = null;
-                }, 100);
-            }
-        })();
-        
-        return fetchAccountsPromise;
-    },
+      fetchAccounts: async () => {
+          const now = Date.now();
+          
+          // 如果正在请求中，且距离上次请求不足 DEBOUNCE_MS，复用现有 Promise
+          if (fetchAccountsPromise && now - fetchAccountsLastTime < DEBOUNCE_MS) {
+              return fetchAccountsPromise;
+          }
+          
+          fetchAccountsLastTime = now;
+          
+          fetchAccountsPromise = (async () => {
+              set({ loading: true, error: null });
+              try {
+                  const accounts = await accountService.listAccounts();
+                  set({ accounts, loading: false });
+              } catch (e) {
+                  set({ error: String(e), loading: false });
+              } finally {
+                  // 请求完成后延迟清除 Promise，允许短时间内的后续调用也复用结果
+                  setTimeout(() => {
+                      fetchAccountsPromise = null;
+                  }, 100);
+              }
+          })();
+          
+          return fetchAccountsPromise;
+      },
 
-    fetchCurrentAccount: async () => {
-        const now = Date.now();
-        
-        // 防抖：复用正在进行的请求
-        if (fetchCurrentPromise && now - fetchCurrentLastTime < DEBOUNCE_MS) {
-            return fetchCurrentPromise;
-        }
-        
-        fetchCurrentLastTime = now;
-        
-        fetchCurrentPromise = (async () => {
-            try {
-                await accountService.syncCurrentFromClient();
-                const account = await accountService.getCurrentAccount();
-                set({ currentAccount: account });
-                persistCurrentAccountCache(account);
-            } catch (e) {
-                console.error('Failed to fetch current account:', e);
-            } finally {
-                setTimeout(() => {
-                    fetchCurrentPromise = null;
-                }, 100);
-            }
-        })();
-        
-        return fetchCurrentPromise;
-    },
+      fetchCurrentAccount: async () => {
+          const now = Date.now();
+          
+          // 防抖：复用正在进行的请求
+          if (fetchCurrentPromise && now - fetchCurrentLastTime < DEBOUNCE_MS) {
+              return fetchCurrentPromise;
+          }
+          
+          fetchCurrentLastTime = now;
+          
+          fetchCurrentPromise = (async () => {
+              try {
+                  await accountService.syncCurrentFromClient();
+                  const account = await accountService.getCurrentAccount();
+                  set({ currentAccount: account });
+              } catch (e) {
+                  console.error('Failed to fetch current account:', e);
+              } finally {
+                  setTimeout(() => {
+                      fetchCurrentPromise = null;
+                  }, 100);
+              }
+          })();
+          
+          return fetchCurrentPromise;
+      },
 
     addAccount: async (email: string, refreshToken: string) => {
         const account = await accountService.addAccount(email, refreshToken);
@@ -275,7 +336,6 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             try {
                 const account = await accountService.getCurrentAccount();
                 set({ currentAccount: account });
-                persistCurrentAccountCache(account);
                 const nextCurrentAccountId = account?.id ?? null;
                 if (previousCurrentAccountId !== nextCurrentAccountId) {
                     await emitCurrentAccountChanged({
@@ -295,4 +355,50 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         await get().fetchAccounts();
         return account;
     },
-}));
+  }),
+  {
+    name: ACCOUNTS_STORE_KEY,
+    storage: accountStoreStorage,
+    partialize: (state) => ({
+      accounts: state.accounts.map(toPersistedAccountSnapshot),
+      currentAccount: state.currentAccount
+        ? toPersistedAccountSnapshot(state.currentAccount)
+        : null,
+    }),
+    onRehydrateStorage: () => (state) => {
+      // Migrate from old ACCOUNTS_CACHE_KEY if the new state is empty
+      if (state && state.accounts.length === 0 && typeof window !== 'undefined') {
+        setTimeout(() => {
+          try {
+            const oldAccountsRaw = localStorage.getItem(LEGACY_ACCOUNTS_CACHE_KEY);
+            const oldCurrentRaw = localStorage.getItem(LEGACY_CURRENT_ACCOUNT_CACHE_KEY);
+            let hasMigrated = false;
+            
+            if (oldAccountsRaw) {
+              const oldAccounts = JSON.parse(oldAccountsRaw);
+              if (Array.isArray(oldAccounts) && oldAccounts.length > 0) {
+                useAccountStore.setState({ accounts: oldAccounts });
+                hasMigrated = true;
+              }
+            }
+            if (oldCurrentRaw) {
+              const oldCurrent = JSON.parse(oldCurrentRaw);
+              if (oldCurrent && oldCurrent.id) {
+                useAccountStore.setState({ currentAccount: oldCurrent });
+                hasMigrated = true;
+              }
+            }
+            
+            // Cleanup the old keys if we migrated successfully
+            if (hasMigrated) {
+              localStorage.removeItem(LEGACY_ACCOUNTS_CACHE_KEY);
+              localStorage.removeItem(LEGACY_CURRENT_ACCOUNT_CACHE_KEY);
+            }
+          } catch (error) {
+            // ignore migration errors
+          }
+        }, 0);
+      }
+    },
+  }
+));

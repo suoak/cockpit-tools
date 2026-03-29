@@ -270,12 +270,15 @@
       "openWindow": "Abrir ventana",
       "showFloatingCard": "Mostrar tarjeta flotante",
       "showFloatingCardDisabled": "Vincula una cuenta antes de mostrar la tarjeta flotante",
-      "showFloatingCardMissing": "La cuenta vinculada ya no existe, por lo que no se puede mostrar la tarjeta flotante"
+      "showFloatingCardMissing": "La cuenta vinculada ya no existe, por lo que no se puede mostrar la tarjeta flotante",
+      "syncThreads": "Sincronizar hilos",
+      "syncThreadsDisabled": "Se requieren al menos dos instancias para sincronizar hilos"
     },
     "bulkConfirm": {
       "startAll": "¿Iniciar todas las instancias detenidas?",
       "restartAll": "¿Reiniciar todas las instancias en ejecución?",
-      "stopAll": "¿Cerrar todas las instancias?"
+      "stopAll": "¿Cerrar todas las instancias?",
+      "syncThreads": "Se analizarán todas las instancias de Codex y se completarán automáticamente los hilos faltantes. Los hilos existentes no se volverán a escribir y los archivos de la instancia de destino se respaldarán antes de cualquier escritura. ¿Continuar?"
     },
     "status": {
       "running": "En ejecución",
@@ -360,7 +363,8 @@
       "restartedAll": "Se reiniciaron las instancias en ejecución",
       "closedAll": "Se detuvieron todas las instancias",
       "allAlreadyRunning": "Todas las instancias ya están en ejecución",
-      "noneRunning": "No se encontraron instancias en ejecución"
+      "noneRunning": "No se encontraron instancias en ejecución",
+      "syncThreadsNeedTwo": "Se requieren al menos dos instancias para sincronizar hilos"
     },
     "runningDialog": {
       "title": "La instancia ya está en ejecución",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "No se encontró la ruta de la aplicación",
       "desc": "No se pudo encontrar la ruta de la aplicación {{app}}. Establécela ahora para continuar.",
-      "action": "Establecer ahora"
+      "action": "Establecer ahora",
+      "codexLaunchHint": "Al desactivarlo, el cambio de cuenta y la sobrescritura de inicio de sesión seguirán ejecutándose, pero ya no se iniciará Codex App y este aviso de ruta no volverá a mostrarse."
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "Editar grupo",
       "ungrouped": "Sin grupo",
       "currentGroupLabel": "Grupo actual",
-      "accountPickerEmpty": "No hay cuentas coincidentes"
+      "accountPickerEmpty": "No hay cuentas coincidentes",
+      "filterHint": "{{count}} grupo(s) seleccionado(s) para filtrar",
+      "filterToggle": "Marca para filtrar por este grupo"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "Hora de verificación"
       },
       "filters": {
-        "all": "Todos"
+        "all": "Todos",
+        "typeShort": "Tipo",
+        "tagsShort": "Etiquetas",
+        "groupsShort": "Grupos"
       },
       "actions": {
         "selectAllAccounts": "Seleccionar todo",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "Selecciona un modelo de prueba",
       "testMissingAccount": "Selecciona una cuenta de prueba",
       "testFailed": "Prueba fallida en {{count}} solicitud(es)",
+      "testCancelled": "Prueba cancelada",
       "testCompleted": "Prueba completada",
       "nameRequired": "Introduce el nombre de la tarea",
       "accountRequired": "Selecciona al menos una cuenta",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "Los disparadores por restablecimiento de cuota dependen de datos de cuota recientes, por lo que no hay vista previa de hora fija.",
       "triggerQuotaReset": "Disparador por restablecimiento de cuota",
       "noticeSavedEnabledWithQuotaReset": "Tareas guardadas. Total: {{count}}. La actualización automática de Codex se ajustó a cada {{minutes}} minutos."
+    },
+    "sessionManager": {
+      "title": "Gestor de sesiones",
+      "desc": "La sincronización y la limpieza se gestionan aquí: usa la acción superior para sincronizar con todas las instancias y luego expande cada proyecto para revisar las sesiones y moverlas a la papelera.",
+      "actions": {
+        "moveToTrash": "Mover a la papelera",
+        "syncSessions": "Sincronizar sesiones",
+        "expand": "Expandir",
+        "collapse": "Contraer"
+      },
+      "confirm": {
+        "title": "Mover a la papelera",
+        "message": "Las sesiones seleccionadas se moverán a la papelera desde sus instancias para que puedan restaurarse más tarde. Es posible que las instancias en ejecución necesiten reiniciarse antes de que aparezcan los cambios. ¿Continuar?",
+        "syncMessage": "Los hilos faltantes y sus datos de sesión se sincronizarán con todas las instancias. El contenido existente no se volverá a escribir y los archivos de la instancia de destino se respaldarán antes de cualquier escritura. ¿Continuar?"
+      },
+      "empty": {
+        "title": "No hay sesiones para gestionar",
+        "desc": "No se encontraron registros de sesiones en el conjunto actual de instancias."
+      },
+      "messages": {
+        "pickOne": "Selecciona al menos una sesión",
+        "syncNeedTwo": "Se requieren al menos dos instancias para sincronizar sesiones"
+      },
+      "groupCount": "{{count}} sesiones",
+      "updatedAt": "Actualizado",
+      "locationRunning": " (en ejecución)",
+      "untitled": "Sesión sin título"
+    },
+    "api": {
+      "baseUrl": "URL base",
+      "baseUrlPlaceholder": "Déjalo en blanco para usar el valor oficial predeterminado",
+      "validation": {
+        "apiKeyCannotBeUrl": "La clave de API no puede ser una URL. Verifica si los campos están intercambiados.",
+        "baseUrlInvalid": "URL base no válida. Introduce una URL completa con http:// o https://.",
+        "apiKeyEqualsBaseUrl": "La clave de API no puede ser igual a la URL base."
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "La función de múltiples instancias de CodeBuddy CN solo es compatible con macOS, Windows y Linux."
+      }
+    },
+    "checkin": {
+      "title": "Registro diario",
+      "modalTitle": "Registro diario",
+      "status": "Estado del registro",
+      "checkedIn": "Registrado",
+      "notCheckedIn": "Sin registrar",
+      "button": "Registrar",
+      "button.loading": "Registrando...",
+      "done": "Hecho",
+      "success": "¡Registro exitoso! Racha de {{days}} días",
+      "failure": "Error en el registro: {{message}}",
+      "failure.network": "Error de red, inténtalo de nuevo más tarde",
+      "lastCheckin": "Último registro: {{time}}",
+      "streak": "Racha de {{days}} días",
+      "reward": "Recompensa: {{reward}}",
+      "refreshStatus": "Actualizar",
+      "checkAll": "Registrar todo",
+      "noAccounts": "Sin cuentas",
+      "querying": "Cargando...",
+      "streakDays": "{{days}} días",
+      "streakRewardCountdown": "Faltan {{days}} días para la recompensa extra",
+      "streakRewardToday": "¡Recompensa extra disponible hoy!",
+      "recentDates": "Reciente: ",
+      "quotaCategory": {
+        "base": "Paquete base",
+        "activity": "Bono de actividad",
+        "extra": "Créditos extra",
+        "other": "Otros",
+        "empty": "No hay datos de cuota"
       }
     }
   },

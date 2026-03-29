@@ -29,12 +29,19 @@ import {
   FileText,
   ExternalLink,
   Pencil,
+  FolderOpen,
+  FolderPlus,
 } from 'lucide-react';
 import { useCodexAccountStore } from '../stores/useCodexAccountStore';
 import * as codexService from '../services/codexService';
 import { TagEditModal } from '../components/TagEditModal';
 import { ExportJsonModal } from '../components/ExportJsonModal';
 import { ModalErrorMessage } from '../components/ModalErrorMessage';
+import { CodexAccountGroupModal, CodexAddToGroupModal } from '../components/CodexAccountGroupModal';
+import {
+  type CodexAccountGroup,
+  getCodexAccountGroups,
+} from '../services/codexAccountGroupService';
 import {
   hasCodexAccountStructure,
   formatCodexLoginProvider,
@@ -51,6 +58,7 @@ import { confirm as confirmDialog, open as openFileDialog } from '@tauri-apps/pl
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { CodexOverviewTabsHeader, CodexTab } from '../components/CodexOverviewTabsHeader';
 import { CodexInstancesContent } from './CodexInstancesPage';
+import { CodexSessionManager } from '../components/codex/CodexSessionManager';
 import { CodexWakeupContent } from '../components/codex/CodexWakeupContent';
 import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
@@ -94,10 +102,60 @@ function normalizeCodexOverviewLayoutMode(
   return null;
 }
 
+function isHttpLikeUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    const lower = trimmed.toLowerCase();
+    return lower.startsWith('http://') || lower.startsWith('https://');
+  }
+}
+
+function normalizeHttpBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return trimmed.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
 export function CodexAccountsPage() {
   const [activeTab, setActiveTab] = useState<CodexTab>('overview');
   const untaggedKey = '__untagged__';
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
+
+  // ─── Codex 账号分组 ────────────────────────────────────────────
+  const [codexGroups, setCodexGroups] = useState<CodexAccountGroup[]>([]);
+  const [groupFilter, setGroupFilter] = useState<string[]>([]);
+  const [showCodexGroupModal, setShowCodexGroupModal] = useState(false);
+  const [showAddToCodexGroupModal, setShowAddToCodexGroupModal] = useState(false);
+
+  const reloadCodexGroups = useCallback(async () => {
+    setCodexGroups(await getCodexAccountGroups());
+  }, []);
+
+  useEffect(() => {
+    reloadCodexGroups();
+  }, [reloadCodexGroups]);
+
+  const toggleGroupFilterValue = useCallback((groupId: string) => {
+    setGroupFilter((prev) => {
+      if (prev.includes(groupId)) return prev.filter((id) => id !== groupId);
+      return [...prev, groupId];
+    });
+  }, []);
+
+  const clearGroupFilter = useCallback(() => {
+    setGroupFilter([]);
+  }, []);
+
   const [overviewLayoutMode, setOverviewLayoutMode] = useState<CodexOverviewLayoutMode>(() => {
     try {
       const saved = normalizeCodexOverviewLayoutMode(localStorage.getItem(CODEX_OVERVIEW_LAYOUT_MODE_KEY));
@@ -193,6 +251,48 @@ export function CodexAccountsPage() {
   const clearFilterTypes = useCallback(() => {
     setFilterTypes([]);
   }, []);
+
+  const validateApiKeyCredentialInputs = useCallback(
+    (
+      apiKeyRaw: string,
+      apiBaseUrlRaw: string,
+    ): { ok: true; apiKey: string; apiBaseUrl?: string } | { ok: false; message: string } => {
+      const apiKey = apiKeyRaw.trim();
+      if (!apiKey) {
+        return { ok: false, message: t('common.shared.token.empty', '请输入 Token 或 JSON') };
+      }
+      if (isHttpLikeUrl(apiKey)) {
+        return {
+          ok: false,
+          message: t('codex.api.validation.apiKeyCannotBeUrl', 'API Key 不能是 URL，请检查是否填反'),
+        };
+      }
+
+      const rawBaseUrl = apiBaseUrlRaw.trim();
+      if (!rawBaseUrl) {
+        return { ok: true, apiKey };
+      }
+      const normalizedBaseUrl = normalizeHttpBaseUrl(rawBaseUrl);
+      if (!normalizedBaseUrl) {
+        return {
+          ok: false,
+          message: t('codex.api.validation.baseUrlInvalid', 'Base URL 格式无效，请输入完整的 http:// 或 https:// 地址'),
+        };
+      }
+      if (normalizedBaseUrl === apiKey) {
+        return {
+          ok: false,
+          message: t('codex.api.validation.apiKeyEqualsBaseUrl', 'API Key 不能与 Base URL 相同'),
+        };
+      }
+      return {
+        ok: true,
+        apiKey,
+        apiBaseUrl: normalizedBaseUrl,
+      };
+    },
+    [t],
+  );
 
   const {
     accounts,
@@ -681,11 +781,10 @@ export function CodexAccountsPage() {
   };
 
   const handleApiKeyLogin = async () => {
-    const apiKey = apiKeyInput.trim();
-    const apiBaseUrl = apiBaseUrlInput.trim();
-    if (!apiKey) {
+    const validation = validateApiKeyCredentialInputs(apiKeyInput, apiBaseUrlInput);
+    if (!validation.ok) {
       page.setAddStatus('error');
-      page.setAddMessage(t('common.shared.token.empty', '请输入 Token 或 JSON'));
+      page.setAddMessage(validation.message);
       return;
     }
 
@@ -693,8 +792,8 @@ export function CodexAccountsPage() {
     page.setAddMessage(t('common.shared.token.importing', '正在导入...'));
     try {
       const account = await codexService.addCodexAccountWithApiKey(
-        apiKey,
-        apiBaseUrl || undefined,
+        validation.apiKey,
+        validation.apiBaseUrl,
       );
       await fetchAccounts();
       await fetchCurrentAccount();
@@ -838,11 +937,13 @@ export function CodexAccountsPage() {
     const accountId = editingApiKeyCredentialsId;
     if (!accountId) return;
 
-    const nextApiKey = editingApiKeyCredentialsValue.trim();
-    const nextApiBaseUrl = editingApiBaseUrlCredentialsValue.trim();
-    if (!nextApiKey) {
+    const validation = validateApiKeyCredentialInputs(
+      editingApiKeyCredentialsValue,
+      editingApiBaseUrlCredentialsValue,
+    );
+    if (!validation.ok) {
       setMessage({
-        text: t('common.shared.token.empty', '请输入 Token 或 JSON'),
+        text: validation.message,
         tone: 'error',
       });
       return;
@@ -852,8 +953,8 @@ export function CodexAccountsPage() {
     try {
       await updateApiKeyCredentials(
         accountId,
-        nextApiKey,
-        nextApiBaseUrl || undefined,
+        validation.apiKey,
+        validation.apiBaseUrl,
       );
       setMessage({ text: t('instances.messages.updated', '实例已更新') });
       setEditingApiKeyCredentialsId(null);
@@ -874,6 +975,7 @@ export function CodexAccountsPage() {
     setMessage,
     t,
     updateApiKeyCredentials,
+    validateApiKeyCredentialInputs,
   ]);
 
   // ─── Platform-specific: Presentation ─────────────────────────────────
@@ -1082,9 +1184,24 @@ export function CodexAccountsPage() {
       const selectedTags = new Set(tagFilter.map(normalizeTag));
       result = result.filter((a) => (a.tags || []).map(normalizeTag).some((tag) => selectedTags.has(tag)));
     }
+    // 分组筛选 — 仅保留仍存在于 codexGroups 中的 ID，防止已删除分组导致空筛选
+    if (groupFilter.length > 0) {
+      const existingGroupIds = new Set(codexGroups.map((g) => g.id));
+      const activeFilter = groupFilter.filter((id) => existingGroupIds.has(id));
+      if (activeFilter.length > 0) {
+        const groupAccountIds = new Set<string>();
+        const selectedGroupIds = new Set(activeFilter);
+        for (const group of codexGroups) {
+          if (selectedGroupIds.has(group.id)) {
+            for (const aid of group.accountIds) groupAccountIds.add(aid);
+          }
+        }
+        result = result.filter((a) => groupAccountIds.has(a.id));
+      }
+    }
     result.sort(compareAccountsBySort);
     return result;
-  }, [accounts, compareAccountsBySort, filterTypes, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
+  }, [accounts, codexGroups, compareAccountsBySort, filterTypes, groupFilter, normalizeTag, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
 
   const filteredIds = useMemo(() => filteredAccounts.map((account) => account.id), [filteredAccounts]);
   const exportSelectionCount = getScopedSelectedCount(filteredIds);
@@ -1526,7 +1643,7 @@ export function CodexAccountsPage() {
       <CodexOverviewTabsHeader
         active={activeTab}
         onTabChange={setActiveTab}
-        tabs={['overview', 'wakeup', 'instances']}
+        tabs={['overview', 'wakeup', 'instances', 'sessions']}
       />
 
       {activeTab === 'overview' && (<>
@@ -1566,6 +1683,7 @@ export function CodexAccountsPage() {
                 {tagFilter.length > 0 && (<button type="button" className="tag-filter-clear" onClick={clearTagFilter}>{t('accounts.clearFilter', '清空筛选')}</button>)}
               </div>)}
             </div>
+
             <div className="sort-select"><ArrowDownWideNarrow size={14} className="sort-icon" />
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={t('common.shared.sortLabel', '排序')}>
                 <option value="created_at">{t('common.shared.sort.createdAt', '按创建时间')}</option>
@@ -1595,7 +1713,11 @@ export function CodexAccountsPage() {
             <button className="btn btn-secondary icon-only" onClick={() => openAddModal('token')} disabled={importing} title={t('common.shared.import.label', '导入')}><Download size={14} /></button>
             <button className="btn btn-secondary export-btn icon-only" onClick={() => void handleExport(filteredIds)} disabled={exporting || filteredIds.length === 0}
               title={exportSelectionCount > 0 ? `${t('common.shared.export', '导出')} (${exportSelectionCount})` : t('common.shared.export', '导出')}><Upload size={14} /></button>
-            {selected.size > 0 && (<button className="btn btn-danger icon-only" onClick={handleBatchDelete} title={`${t('common.delete', '删除')} (${selected.size})`}><Trash2 size={14} /></button>)}
+            {selected.size > 0 && (<>
+              <button className="btn btn-secondary icon-only" onClick={() => setShowAddToCodexGroupModal(true)} title={t('codex.groups.addToGroup', '添加至分组')}><FolderPlus size={14} /></button>
+              <button className="btn btn-danger icon-only" onClick={handleBatchDelete} title={`${t('common.delete', '删除')} (${selected.size})`}><Trash2 size={14} /></button>
+            </>)}
+            <button className={`btn btn-secondary icon-only ${groupFilter.length > 0 ? 'btn-filter-active' : ''}`} onClick={() => setShowCodexGroupModal(true)} title={groupFilter.length > 0 ? `${t('accounts.groups.manageTitle', '分组管理')} (${groupFilter.length})` : t('accounts.groups.manageTitle', '分组管理')}><FolderOpen size={14} /></button>
             <QuickSettingsPopover type="codex" />
           </div>
         </div>
@@ -1851,10 +1973,32 @@ export function CodexAccountsPage() {
 
         <TagEditModal isOpen={!!showTagModal} initialTags={accounts.find((a) => a.id === showTagModal)?.tags || []} availableTags={availableTags}
           onClose={() => setShowTagModal(null)} onSave={handleSaveTags} />
+
+        {/* Codex 分组管理弹窗 */}
+        <CodexAccountGroupModal
+          isOpen={showCodexGroupModal}
+          onClose={() => setShowCodexGroupModal(false)}
+          onGroupsChanged={reloadCodexGroups}
+          groupFilter={groupFilter}
+          onToggleGroupFilter={toggleGroupFilterValue}
+          onClearGroupFilter={clearGroupFilter}
+        />
+
+        {/* Codex 添加到分组弹窗 */}
+        <CodexAddToGroupModal
+          isOpen={showAddToCodexGroupModal}
+          onClose={() => setShowAddToCodexGroupModal(false)}
+          accountIds={Array.from(selected)}
+          onAdded={reloadCodexGroups}
+        />
       </>)}
 
       {activeTab === 'instances' && (
         <CodexInstancesContent accountsForSelect={sortedAccountsForInstances} />
+      )}
+
+      {activeTab === 'sessions' && (
+        <CodexSessionManager />
       )}
 
       {activeTab === 'wakeup' && (

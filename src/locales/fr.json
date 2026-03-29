@@ -270,12 +270,15 @@
       "openWindow": "Ouvrir la fenêtre",
       "showFloatingCard": "Afficher la carte flottante",
       "showFloatingCardDisabled": "Liez d'abord un compte avant d'afficher la carte flottante",
-      "showFloatingCardMissing": "Le compte lié n'existe plus, la carte flottante ne peut donc pas être affichée"
+      "showFloatingCardMissing": "Le compte lié n'existe plus, la carte flottante ne peut donc pas être affichée",
+      "syncThreads": "Synchroniser les threads",
+      "syncThreadsDisabled": "Au moins deux instances sont nécessaires pour synchroniser les threads"
     },
     "bulkConfirm": {
       "startAll": "Démarrer toutes les instances arrêtées ?",
       "restartAll": "Redémarrer toutes les instances en cours ?",
-      "stopAll": "Fermer toutes les instances ?"
+      "stopAll": "Fermer toutes les instances ?",
+      "syncThreads": "Toutes les instances Codex seront analysées et les threads manquants seront complétés automatiquement. Les threads existants ne seront pas réécrits et les fichiers de l’instance cible seront sauvegardés avant toute écriture. Continuer ?"
     },
     "status": {
       "running": "En cours",
@@ -360,7 +363,8 @@
       "restartedAll": "Instances en cours redémarrées",
       "closedAll": "Toutes les instances ont été arrêtées",
       "allAlreadyRunning": "Toutes les instances sont déjà en cours d'exécution",
-      "noneRunning": "Aucune instance en cours d'exécution trouvée"
+      "noneRunning": "Aucune instance en cours d'exécution trouvée",
+      "syncThreadsNeedTwo": "Au moins deux instances sont nécessaires pour synchroniser les threads"
     },
     "runningDialog": {
       "title": "L'instance est déjà en cours d'exécution",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "Chemin de l’application introuvable",
       "desc": "Impossible de trouver le chemin de l’application {{app}}. Veuillez le définir maintenant pour continuer.",
-      "action": "Définir maintenant"
+      "action": "Définir maintenant",
+      "codexLaunchHint": "Une fois désactivé, le changement de compte et l'écrasement de connexion continuent de s'exécuter, mais l'application Codex ne sera plus lancée et cette invite de chemin ne réapparaîtra pas."
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "Modifier le groupe",
       "ungrouped": "Non groupé",
       "currentGroupLabel": "Groupe actuel",
-      "accountPickerEmpty": "Aucun compte correspondant"
+      "accountPickerEmpty": "Aucun compte correspondant",
+      "filterHint": "{{count}} groupe(s) sélectionné(s) pour le filtrage",
+      "filterToggle": "Cochez pour filtrer par ce groupe"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "Heure de vérification"
       },
       "filters": {
-        "all": "Tous"
+        "all": "Tous",
+        "typeShort": "Type",
+        "tagsShort": "Étiquettes",
+        "groupsShort": "Groupes"
       },
       "actions": {
         "selectAllAccounts": "Tout sélectionner",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "Veuillez sélectionner un modèle de test",
       "testMissingAccount": "Veuillez sélectionner un compte de test",
       "testFailed": "Test échoué pour {{count}} requête(s)",
+      "testCancelled": "Test annulé",
       "testCompleted": "Test terminé",
       "nameRequired": "Veuillez saisir le nom de la tâche",
       "accountRequired": "Sélectionnez au moins un compte",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "Les déclencheurs de réinitialisation du quota dépendent des données de quota récentes, donc aucun aperçu horaire fixe n'est disponible.",
       "triggerQuotaReset": "Déclencheur de réinitialisation du quota",
       "noticeSavedEnabledWithQuotaReset": "Tâches enregistrées. Total : {{count}}. L'actualisation automatique Codex a été réglée sur {{minutes}} minutes."
+    },
+    "sessionManager": {
+      "title": "Gestion des sessions",
+      "desc": "La synchronisation et le nettoyage sont regroupés ici : utilisez l’action en haut pour synchroniser toutes les instances, puis développez chaque projet pour examiner les sessions et les envoyer à la corbeille.",
+      "actions": {
+        "moveToTrash": "Déplacer vers la corbeille",
+        "syncSessions": "Synchroniser les sessions",
+        "expand": "Développer",
+        "collapse": "Réduire"
+      },
+      "confirm": {
+        "title": "Déplacer vers la corbeille",
+        "message": "Les sessions sélectionnées seront déplacées vers la corbeille depuis leurs instances afin de pouvoir être restaurées plus tard. Les instances en cours d’exécution peuvent nécessiter un redémarrage avant que la modification apparaisse. Continuer ?",
+        "syncMessage": "Les threads manquants et leurs données de session seront synchronisés vers toutes les instances. Le contenu existant ne sera pas réécrit et les fichiers de l’instance cible seront sauvegardés avant toute écriture. Continuer ?"
+      },
+      "empty": {
+        "title": "Aucune session à gérer",
+        "desc": "Aucun enregistrement de session n’a été trouvé dans l’ensemble d’instances actuel."
+      },
+      "messages": {
+        "pickOne": "Veuillez sélectionner au moins une session",
+        "syncNeedTwo": "Au moins deux instances sont nécessaires pour synchroniser les sessions"
+      },
+      "groupCount": "{{count}} sessions",
+      "updatedAt": "Mis à jour",
+      "locationRunning": " (en cours d’exécution)",
+      "untitled": "Session sans titre"
+    },
+    "api": {
+      "baseUrl": "URL de base",
+      "baseUrlPlaceholder": "Laissez vide pour utiliser la valeur officielle par défaut",
+      "validation": {
+        "apiKeyCannotBeUrl": "La clé API ne peut pas être une URL. Vérifiez si les champs sont inversés.",
+        "baseUrlInvalid": "URL de base invalide. Veuillez saisir une URL complète commençant par http:// ou https://.",
+        "apiKeyEqualsBaseUrl": "La clé API ne peut pas être identique à l'URL de base."
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "Le mode multi-instances CodeBuddy CN est pris en charge uniquement sur macOS, Windows et Linux."
+      }
+    },
+    "checkin": {
+      "title": "Check-in quotidien",
+      "modalTitle": "Check-in quotidien",
+      "status": "Statut du check-in",
+      "checkedIn": "Check-in effectué",
+      "notCheckedIn": "Pas encore check-in",
+      "button": "Faire le check-in",
+      "button.loading": "Check-in en cours...",
+      "done": "Terminé",
+      "success": "Check-in réussi ! Série de {{days}} jours",
+      "failure": "Échec du check-in : {{message}}",
+      "failure.network": "Erreur réseau, veuillez réessayer plus tard",
+      "lastCheckin": "Dernier check-in : {{time}}",
+      "streak": "Série de {{days}} jours",
+      "reward": "Récompense : {{reward}}",
+      "refreshStatus": "Actualiser",
+      "checkAll": "Tout check-in",
+      "noAccounts": "Aucun compte",
+      "querying": "Chargement...",
+      "streakDays": "{{days}} jours",
+      "streakRewardCountdown": "Encore {{days}} jours avant la récompense bonus",
+      "streakRewardToday": "Récompense bonus disponible aujourd’hui !",
+      "recentDates": "Récent : ",
+      "quotaCategory": {
+        "base": "Forfait de base",
+        "activity": "Bonus d’activité",
+        "extra": "Crédits supplémentaires",
+        "other": "Autre",
+        "empty": "Aucune donnée de quota"
       }
     }
   },

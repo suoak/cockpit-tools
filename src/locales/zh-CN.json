@@ -328,12 +328,15 @@
       "openWindow": "定位窗口",
       "showFloatingCard": "显示悬浮框",
       "showFloatingCardDisabled": "请先绑定账号后再显示悬浮框",
-      "showFloatingCardMissing": "绑定账号不存在，无法显示悬浮框"
+      "showFloatingCardMissing": "绑定账号不存在，无法显示悬浮框",
+      "syncThreads": "同步线程",
+      "syncThreadsDisabled": "至少需要两个实例才能同步线程"
     },
     "bulkConfirm": {
       "startAll": "确认启动所有未运行实例？",
       "restartAll": "确认重启所有运行中的实例？",
-      "stopAll": "确认关闭全部实例？"
+      "stopAll": "确认关闭全部实例？",
+      "syncThreads": "将扫描所有 Codex 实例并自动补齐缺失线程。已存在线程不会重复写入，发生写入前会先备份目标实例关键文件。确认继续？"
     },
     "status": {
       "running": "运行中",
@@ -418,7 +421,8 @@
       "restartedAll": "已重启运行中的实例",
       "closedAll": "已关闭所有实例",
       "allAlreadyRunning": "所有实例已在运行",
-      "noneRunning": "当前没有运行中的实例"
+      "noneRunning": "当前没有运行中的实例",
+      "syncThreadsNeedTwo": "至少需要两个实例才能同步线程"
     },
     "runningDialog": {
       "title": "实例已在运行",
@@ -687,6 +691,7 @@
     "missing": {
       "title": "未找到应用程序路径",
       "desc": "未找到 {{app}} 应用程序路径，请立即设置后继续启动。",
+      "codexLaunchHint": "关闭后仅执行切号与登录覆盖，不再尝试启动 Codex App，也不会再次要求设置启动路径。",
       "action": "立即设置"
     }
   },
@@ -857,7 +862,9 @@
       "editTitle": "编辑分组",
       "ungrouped": "未分组",
       "currentGroupLabel": "当前分组",
-      "accountPickerEmpty": "没有符合条件的账号"
+      "accountPickerEmpty": "没有符合条件的账号",
+      "filterHint": "已勾选 {{count}} 个分组做筛选",
+      "filterToggle": "勾选以筛选此分组"
     }
   },
   "overview": {
@@ -1062,7 +1069,10 @@
         "verifiedAt": "验证时间"
       },
       "filters": {
-        "all": "全部"
+        "all": "全部",
+        "typeShort": "类型",
+        "tagsShort": "标签",
+        "groupsShort": "分组"
       },
       "actions": {
         "selectAllAccounts": "全选",
@@ -1161,7 +1171,8 @@
       "taskSaved": "任务「{{name}}」已保存",
       "featureOff": "唤醒功能已关闭",
       "featureOn": "唤醒功能已开启",
-      "refreshIntervalAdjusted": "配额刷新间隔已调整：{{old}} → {{new}}"
+      "refreshIntervalAdjusted": "配额刷新间隔已调整：{{old}} → {{new}}",
+      "testCancelled": "测试已取消"
     },
     "refreshInterval": {
       "disabled": "禁用",
@@ -1356,6 +1367,15 @@
     "token": {
       "desc": "粘贴 auth.json 内容或账号 JSON 数据",
       "placeholder": "示例：{\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
+    },
+    "api": {
+      "baseUrl": "基础地址",
+      "baseUrlPlaceholder": "不填写则是官方默认",
+      "validation": {
+        "apiKeyCannotBeUrl": "API Key 不能是 URL，请检查是否填反",
+        "baseUrlInvalid": "Base URL 格式无效，请输入完整的 http:// 或 https:// 地址",
+        "apiKeyEqualsBaseUrl": "API Key 不能与 Base URL 相同"
+      }
     },
     "local": {
       "desc": "从 ~/.codex/auth.json 导入当前已登录的账号",
@@ -1591,6 +1611,33 @@
         "high": "高",
         "xhigh": "超高"
       }
+    },
+    "sessionManager": {
+      "title": "会话管理",
+      "desc": "同步和清理统一放在这里：顶部可一键同步到所有实例，下面按项目展开查看会话并移到废纸篓。",
+      "actions": {
+        "moveToTrash": "移到废纸篓",
+        "syncSessions": "同步会话",
+        "expand": "展开",
+        "collapse": "收起"
+      },
+      "confirm": {
+        "title": "移到废纸篓",
+        "message": "会将所选会话从对应实例中移到废纸篓，便于后续恢复；运行中的实例可能需要重启后才会反映。确认继续？",
+        "syncMessage": "会将缺失的线程与对应会话同步到所有实例中，已有内容不会重复写入，写入前会先备份目标实例关键文件。确认继续？"
+      },
+      "empty": {
+        "title": "还没有可管理的会话",
+        "desc": "当前实例集合中还没有发现会话记录。"
+      },
+      "messages": {
+        "pickOne": "请至少选择一条会话",
+        "syncNeedTwo": "至少需要两个实例才能同步会话"
+      },
+      "groupCount": "{{count}} 条会话",
+      "updatedAt": "最近更新",
+      "locationRunning": "（运行中）",
+      "untitled": "未命名会话"
     }
   },
   "codebuddy": {
@@ -2614,6 +2661,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "CodeBuddy CN 多开实例仅支持 macOS、Windows 和 Linux。"
+      }
+    },
+    "checkin": {
+      "title": "每日签到",
+      "modalTitle": "每日签到",
+      "status": "签到状态",
+      "checkedIn": "已签到",
+      "notCheckedIn": "未签到",
+      "button": "签到",
+      "button.loading": "签到中...",
+      "done": "已完成",
+      "success": "签到成功！连续签到 {{days}} 天",
+      "failure": "签到失败：{{message}}",
+      "failure.network": "网络异常，请稍后重试",
+      "lastCheckin": "最后签到：{{time}}",
+      "streak": "连续签到 {{days}} 天",
+      "reward": "奖励：{{reward}}",
+      "refreshStatus": "刷新状态",
+      "checkAll": "一键签到",
+      "noAccounts": "暂无账号",
+      "querying": "查询中...",
+      "streakDays": "{{days}} 天",
+      "streakRewardCountdown": "再签 {{days}} 天获大礼包",
+      "streakRewardToday": "今日可获得大礼包!",
+      "recentDates": "近期签到：",
+      "quotaCategory": {
+        "base": "基础体验包",
+        "activity": "活动赠送包",
+        "extra": "加量包",
+        "other": "其他",
+        "empty": "暂无配额数据"
       }
     }
   },

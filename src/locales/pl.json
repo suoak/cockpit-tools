@@ -270,12 +270,15 @@
       "openWindow": "Otwórz okno",
       "showFloatingCard": "Pokaż pływającą kartę",
       "showFloatingCardDisabled": "Przed wyświetleniem pływającej karty najpierw przypisz konto",
-      "showFloatingCardMissing": "Powiązane konto już nie istnieje, więc nie można wyświetlić pływającej karty"
+      "showFloatingCardMissing": "Powiązane konto już nie istnieje, więc nie można wyświetlić pływającej karty",
+      "syncThreads": "Synchronizuj wątki",
+      "syncThreadsDisabled": "Do synchronizacji wątków wymagane są co najmniej dwie instancje"
     },
     "bulkConfirm": {
       "startAll": "Uruchomić wszystkie zatrzymane instancje?",
       "restartAll": "Zrestartować wszystkie uruchomione instancje?",
-      "stopAll": "Zamknąć wszystkie instancje?"
+      "stopAll": "Zamknąć wszystkie instancje?",
+      "syncThreads": "Wszystkie instancje Codex zostaną przeskanowane, a brakujące wątki zostaną automatycznie uzupełnione. Istniejące wątki nie zostaną zapisane ponownie, a pliki instancji docelowej zostaną zarchiwizowane przed każdym zapisem. Kontynuować?"
     },
     "status": {
       "running": "Uruchomiona",
@@ -360,7 +363,8 @@
       "restartedAll": "Restartowano uruchomione instancje",
       "closedAll": "Wszystkie instancje zostały zatrzymane",
       "allAlreadyRunning": "Wszystkie instancje są już uruchomione",
-      "noneRunning": "Nie znaleziono uruchomionych instancji"
+      "noneRunning": "Nie znaleziono uruchomionych instancji",
+      "syncThreadsNeedTwo": "Do synchronizacji wątków wymagane są co najmniej dwie instancje"
     },
     "runningDialog": {
       "title": "Instancja jest już uruchomiona",
@@ -641,7 +645,8 @@
     "missing": {
       "title": "Nie znaleziono ścieżki aplikacji",
       "desc": "Nie udało się znaleźć ścieżki aplikacji {{app}}. Ustaw ją teraz, aby kontynuować.",
-      "action": "Ustaw teraz"
+      "action": "Ustaw teraz",
+      "codexLaunchHint": "Po wyłączeniu przełączanie konta i nadpisanie logowania nadal będą działać, ale aplikacja Codex nie będzie już uruchamiana i ten monit o ścieżkę nie pojawi się ponownie."
     }
   },
   "accounts": {
@@ -811,7 +816,9 @@
       "editTitle": "Edytuj grupę",
       "ungrouped": "Bez grupy",
       "currentGroupLabel": "Bieżąca grupa",
-      "accountPickerEmpty": "Brak pasujących kont"
+      "accountPickerEmpty": "Brak pasujących kont",
+      "filterHint": "Wybrano {{count}} grup do filtrowania",
+      "filterToggle": "Zaznacz, aby filtrować według tej grupy"
     }
   },
   "overview": {
@@ -1016,7 +1023,10 @@
         "verifiedAt": "Czas weryfikacji"
       },
       "filters": {
-        "all": "Wszystkie"
+        "all": "Wszystkie",
+        "typeShort": "Typ",
+        "tagsShort": "Tagi",
+        "groupsShort": "Grupy"
       },
       "actions": {
         "selectAllAccounts": "Zaznacz wszystko",
@@ -1107,6 +1117,7 @@
       "testMissingModel": "Wybierz model do testu",
       "testMissingAccount": "Wybierz konto do testu",
       "testFailed": "Test nie powiódł się dla {{count}} żądań",
+      "testCancelled": "Test anulowano",
       "testCompleted": "Test zakończony",
       "nameRequired": "Wpisz nazwę zadania",
       "accountRequired": "Wybierz co najmniej jedno konto",
@@ -1545,6 +1556,42 @@
       "nextRunsQuotaResetHint": "Wyzwalacze po resecie limitu zależą od najnowszych danych limitu, więc podgląd stałej godziny nie jest dostępny.",
       "triggerQuotaReset": "Wyzwalacz resetu limitu",
       "noticeSavedEnabledWithQuotaReset": "Zadania zapisane. Łącznie: {{count}}. Automatyczne odświeżanie Codex ustawiono na co {{minutes}} min."
+    },
+    "sessionManager": {
+      "title": "Menedżer sesji",
+      "desc": "Synchronizacja i porządki są tutaj razem: u góry możesz jednym kliknięciem zsynchronizować wszystko do wszystkich instancji, a niżej rozwinąć każdy projekt, przejrzeć sesje i przenieść je do kosza.",
+      "actions": {
+        "moveToTrash": "Przenieś do kosza",
+        "syncSessions": "Synchronizuj sesje",
+        "expand": "Rozwiń",
+        "collapse": "Zwiń"
+      },
+      "confirm": {
+        "title": "Przenieś do kosza",
+        "message": "Wybrane sesje zostaną przeniesione do kosza z odpowiednich instancji, aby można je było później przywrócić. Uruchomione instancje mogą wymagać ponownego uruchomienia, zanim zmiana będzie widoczna. Kontynuować?",
+        "syncMessage": "Brakujące wątki i ich dane sesji zostaną zsynchronizowane ze wszystkimi instancjami. Istniejąca zawartość nie zostanie zapisana ponownie, a pliki instancji docelowej zostaną zarchiwizowane przed każdym zapisem. Kontynuować?"
+      },
+      "empty": {
+        "title": "Brak sesji do zarządzania",
+        "desc": "Nie znaleziono żadnych wpisów sesji w bieżącym zestawie instancji."
+      },
+      "messages": {
+        "pickOne": "Wybierz co najmniej jedną sesję",
+        "syncNeedTwo": "Do synchronizacji sesji wymagane są co najmniej dwie instancje"
+      },
+      "groupCount": "{{count}} sesji",
+      "updatedAt": "Zaktualizowano",
+      "locationRunning": " (uruchomiona)",
+      "untitled": "Sesja bez tytułu"
+    },
+    "api": {
+      "baseUrl": "Bazowy URL",
+      "baseUrlPlaceholder": "Pozostaw puste, aby użyć oficjalnej wartości domyślnej",
+      "validation": {
+        "apiKeyCannotBeUrl": "Klucz API nie może być adresem URL. Sprawdź, czy pola nie są zamienione.",
+        "baseUrlInvalid": "Nieprawidłowy bazowy URL. Wpisz pełny adres URL z http:// lub https://.",
+        "apiKeyEqualsBaseUrl": "Klucz API nie może być taki sam jak bazowy URL."
+      }
     }
   },
   "githubCopilot": {
@@ -2501,6 +2548,37 @@
     "instances": {
       "unsupported": {
         "descPlatform": "Wiele instancji CodeBuddy CN jest obsługiwane tylko na macOS, Windows i Linux."
+      }
+    },
+    "checkin": {
+      "title": "Codzienne zameldowanie",
+      "modalTitle": "Codzienne zameldowanie",
+      "status": "Status zameldowania",
+      "checkedIn": "Zameldowano",
+      "notCheckedIn": "Brak zameldowania",
+      "button": "Zamelduj",
+      "button.loading": "Trwa zameldowanie...",
+      "done": "Gotowe",
+      "success": "Zameldowanie udane! Seria {{days}} dni",
+      "failure": "Zameldowanie nie powiodło się: {{message}}",
+      "failure.network": "Błąd sieci, spróbuj ponownie później",
+      "lastCheckin": "Ostatnie zameldowanie: {{time}}",
+      "streak": "Seria {{days}} dni",
+      "reward": "Nagroda: {{reward}}",
+      "refreshStatus": "Odśwież",
+      "checkAll": "Zamelduj wszystkie",
+      "noAccounts": "Brak kont",
+      "querying": "Ładowanie...",
+      "streakDays": "{{days}} dni",
+      "streakRewardCountdown": "Do nagrody bonusowej pozostało {{days}} dni",
+      "streakRewardToday": "Nagroda bonusowa dostępna dzisiaj!",
+      "recentDates": "Ostatnie: ",
+      "quotaCategory": {
+        "base": "Pakiet podstawowy",
+        "activity": "Bonus aktywności",
+        "extra": "Dodatkowe kredyty",
+        "other": "Inne",
+        "empty": "Brak danych limitu"
       }
     }
   },

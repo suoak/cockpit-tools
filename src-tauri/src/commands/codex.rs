@@ -451,6 +451,16 @@ pub fn codex_wakeup_clear_history() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn codex_wakeup_cancel_scope(cancel_scope_id: String) -> Result<(), String> {
+    codex_wakeup::cancel_wakeup_scope(&cancel_scope_id)
+}
+
+#[tauri::command]
+pub fn codex_wakeup_release_scope(cancel_scope_id: String) -> Result<(), String> {
+    codex_wakeup::release_wakeup_scope(&cancel_scope_id)
+}
+
+#[tauri::command]
 pub async fn codex_wakeup_test(
     app: AppHandle,
     account_ids: Vec<String>,
@@ -459,6 +469,7 @@ pub async fn codex_wakeup_test(
     model_display_name: Option<String>,
     model_reasoning_effort: Option<String>,
     run_id: Option<String>,
+    cancel_scope_id: Option<String>,
 ) -> Result<codex_wakeup::CodexWakeupBatchResult, String> {
     codex_wakeup::run_batch(
         Some(&app),
@@ -475,6 +486,7 @@ pub async fn codex_wakeup_test(
             task_name: None,
         },
         run_id,
+        cancel_scope_id.as_deref(),
     )
     .await
 }
@@ -486,4 +498,29 @@ pub async fn codex_wakeup_run_task(
     run_id: Option<String>,
 ) -> Result<codex_wakeup::CodexWakeupBatchResult, String> {
     codex_wakeup_scheduler::run_task_now(Some(&app), &task_id, "manual_task", run_id).await
+}
+
+// ─── Codex 账号分组持久化 ────────────────────────────────────────────
+
+const CODEX_GROUPS_FILE: &str = "codex_account_groups.json";
+
+#[tauri::command]
+pub async fn load_codex_account_groups() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let path = home.join(".antigravity_cockpit").join(CODEX_GROUPS_FILE);
+    if !path.exists() {
+        return Ok("[]".to_string());
+    }
+    std::fs::read_to_string(&path).map_err(|e| format!("Failed to read codex groups: {}", e))
+}
+
+#[tauri::command]
+pub async fn save_codex_account_groups(data: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let dir = home.join(".antigravity_cockpit");
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create dir: {}", e))?;
+    }
+    let path = dir.join(CODEX_GROUPS_FILE);
+    std::fs::write(&path, data).map_err(|e| format!("Failed to write codex groups: {}", e))
 }
