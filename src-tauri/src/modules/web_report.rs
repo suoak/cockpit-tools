@@ -154,7 +154,11 @@ fn needs_auth_refresh_trigger(now: chrono::DateTime<chrono::Utc>) -> bool {
 
 async fn run_refresh_for_service(policy: ServiceRefreshPolicy) -> Result<(), String> {
     match policy.key {
-        "antigravity" => super::account::refresh_all_quotas_logic().await.map(|_| ()),
+        "antigravity" => {
+            super::account::refresh_all_quotas_logic(super::account::QuotaRefreshTrigger::Auto)
+                .await
+                .map(|_| ())
+        }
         "codex" => super::codex_quota::refresh_all_quotas().await.map(|_| ()),
         "ghcp" => super::github_copilot_account::refresh_all_tokens()
             .await

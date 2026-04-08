@@ -21,6 +21,13 @@
     "detail": "Details",
     "editable": "Editable",
     "preview": "Preview",
+    "topRightAd": {
+      "ariaLabel": "Global top-right ad slot",
+      "badge": "AD",
+      "title": "Top-right ad slot",
+      "desc": "This area is fixed at the top-right across all pages for campaigns or brand ads.",
+      "action": "View details"
+    },
     "shared": {
       "addAccount": "Add Account",
       "columns": {
@@ -241,7 +248,8 @@
     "switchClassicLayoutTitle": "Switch to the classic sidebar layout",
     "switchClassicLayoutDesc": "The classic layout shows the full platform navigation and supports sidebar collapsing. You can switch back anytime in Settings > General > Sidebar Layout.",
     "switchClassicLayoutDontAskAgain": "Don't show this prompt again",
-    "switchClassicLayoutConfirm": "Switch now"
+    "switchClassicLayoutConfirm": "Switch now",
+    "2faManager": "2FA"
   },
   "platformLayout": {
     "title": "Platform Layout",
@@ -289,7 +297,7 @@
     "showSensitive": "Show emails"
   },
   "instances": {
-    "title": "Multi-Instance",
+    "title": "Instances",
     "subtitle": "Isolated profiles for multi-account parallel runs.",
     "defaultName": "Default Instance",
     "search": "Search instances",
@@ -477,7 +485,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Customize your SC-Cockpit Tools experience.",
+    "subtitle": "Customize your Cockpit Tools experience.",
     "tabs": {
       "general": "General",
       "network": "Network",
@@ -498,7 +506,7 @@
       "themeSystem": "System",
       "uiScale": "UI Scale",
       "uiScaleDesc": "Adjust interface scale",
-      "accountManagement": "Account Management",
+      "accountManagement": "Account",
       "autoRefresh": "Antigravity Auto Refresh Quota",
       "codexAutoRefresh": "Codex Auto Refresh Quota",
       "autoRefreshDesc": "Background update frequency",
@@ -510,6 +518,8 @@
       "every1hour": "Every hour",
       "minutes": "min",
       "refreshIntervalLimited": "Quota reset wakeup enabled, minimum refresh interval is 2 minutes",
+      "currentAccountRefreshTitle": "Current Account Refresh",
+      "currentAccountRefreshItemDesc": "Refresh current account only. Default is 1 minute.",
       "closeBehavior": "Close behavior",
       "closeBehaviorDesc": "Choose the default action when closing the window",
       "closeBehaviorAsk": "Ask every time",
@@ -527,6 +537,11 @@
       "floatingCardStartupDesc": "Display the floating account card automatically after app launch",
       "floatingCardAlwaysOnTop": "Keep floating card on top by default",
       "floatingCardAlwaysOnTopDesc": "New floating card windows stay on top when opened",
+      "appAutoLaunch": "Launch Cockpit Tools at login",
+      "appAutoLaunchDesc": "Automatically start the app after system sign-in",
+      "startupWakeupDisabled": "Disabled",
+      "startupWakeupImmediate": "Wake up immediately",
+      "startupWakeupDelayed": "Wake up after delay",
       "floatingCardShowNow": "Show floating card now",
       "floatingCardShowNowDesc": "After closing it, reopen it here or from the tray menu",
       "floatingCardShowNowAction": "Show floating card",
@@ -590,8 +605,24 @@
       "codebuddyPathSelect": "Select",
       "codebuddyPathReset": "Reset to default",
       "cursorPathReset": "Reset default",
+      "antigravityStartupWakeup": "Run Antigravity wakeup after startup",
+      "antigravityStartupWakeupDesc": "Run enabled Antigravity wakeup tasks once after app startup",
       "codexLaunchOnSwitch": "Launch Codex App when switching Codex",
       "codexLaunchOnSwitchDesc": "Start or restart Codex App after switching accounts",
+      "autoSwitchAccountScope": "Auto switch account scope",
+      "autoSwitchAccountScopeDesc": "Only monitor and switch accounts within this scope.",
+      "autoSwitchAccountScopeAll": "All accounts",
+      "autoSwitchAccountScopeSelected": "Selected accounts",
+      "autoSwitchAccountScopeChoose": "Choose accounts",
+      "autoSwitchAccountScopeManage": "Manage accounts",
+      "autoSwitchAccountScopeAllSummary": "Scope: all accounts ({{total}} total)",
+      "autoSwitchAccountScopeSummary": "Selected {{selected}} / {{total}} accounts",
+      "autoSwitchAccountScopeDialogTitle": "Select auto switch account scope",
+      "autoSwitchAccountScopeAllHint": "Current scope is all accounts. {{total}} account(s) will participate in auto switch.",
+      "codexAutoSwitchAccountScope": "Codex auto switch account scope",
+      "codexAutoSwitchAccountScopeDesc": "Current Codex auto switch status: {{status}}. Only accounts in this scope are considered.",
+      "codexStartupWakeup": "Run Codex wakeup after startup",
+      "codexStartupWakeupDesc": "Run enabled Codex wakeup tasks once after app startup",
       "autoUpdate": "Background Auto Update",
       "autoUpdateDesc": "When a new version is detected, update in the background and prompt for restart when ready.",
       "autoUpdateOff": "Off (manual update)",
@@ -624,7 +655,9 @@
       "openclawAuthOverwriteDesc": "When off, only Codex is switched and OpenClaw keeps its current login state",
       "ghcpOpencodeAuthOverwrite": "Overwrite OpenCode login when switching GitHub Copilot",
       "ghcpOpencodeRestart": "Restart OpenCode when switching GitHub Copilot",
-      "ghcpLaunchOnSwitch": "Launch GitHub Copilot App when switching GitHub Copilot"
+      "ghcpLaunchOnSwitch": "Launch GitHub Copilot App when switching GitHub Copilot",
+      "antigravityDualSwitchNoRestart": "Dual switch without restart",
+      "antigravityDualSwitchNoRestartDesc": "On switch, write local account data and call extension seamless switch in one flow, without restarting Antigravity."
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -666,8 +699,8 @@
       "proxyUrlRequired": "Proxy URL cannot be empty when global proxy is enabled."
     },
     "about": {
-      "appName": "SC-Cockpit Tools",
-      "slogan": "Professional Account Management Solution",
+      "appName": "Cockpit Tools",
+      "slogan": "Professional Account Solution",
       "author": "Author",
       "wechat": "WeChat",
       "github": "GitHub",
@@ -696,7 +729,7 @@
     }
   },
   "accounts": {
-    "title": "Account Management",
+    "title": "Account",
     "subtitle": "Manage your Antigravity account list.",
     "total": "{{count}} accounts",
     "search": "Search accounts...",
@@ -804,6 +837,40 @@
       "switchTo": "Switch to this account",
       "selectFingerprint": "Select fingerprint"
     },
+    "switchHistory": {
+      "title": "Switch History",
+      "empty": "No switch history yet",
+      "success": "Success",
+      "failed": "Failed",
+      "target": "Target: {{email}}",
+      "trigger": "Trigger: {{trigger}}",
+      "triggerManual": "Manual switch",
+      "triggerAuto": "Auto switch",
+      "triggerUnknown": "Unknown",
+      "origin": "Initiator: {{origin}}",
+      "originDesktop": "Desktop",
+      "originPlugin": "Plugin",
+      "originUnknown": "Unknown",
+      "autoReasonLabel": "Auto reason: {{reason}}",
+      "autoReason": "Rule: {{rule}}; threshold: {{threshold}}%; scope: {{scope}}; monitored groups: {{selectedGroups}}; hit groups: {{hitGroups}}; candidates: {{candidates}}",
+      "autoReasonUnknown": "Auto switch triggered, but no detailed reason was recorded",
+      "autoReasonRuleCurrentDisabled": "Current account is disabled",
+      "autoReasonRuleQuotaForbidden": "Current account quota is forbidden",
+      "autoReasonRuleGroupBelowThreshold": "Model group below threshold",
+      "autoReasonScopeAnyGroup": "Any model group",
+      "autoReasonScopeSelectedGroups": "Selected model groups",
+      "stageResult": "Local: {{local}} / Seamless: {{seamless}}",
+      "duration": "Duration: total {{total}}ms, local {{local}}ms, seamless {{seamless}}ms",
+      "error": "Failed at {{stage}} ({{code}}): {{message}}",
+      "stageLocal": "Local write",
+      "stageClientStart": "Client startup",
+      "stageSeamless": "Extension seamless",
+      "stageUnknown": "Unknown stage",
+      "clear": "Clear History",
+      "clearConfirm": "Clear all switch history records?",
+      "loadFailed": "Failed to load switch history: {{error}}",
+      "clearFailed": "Failed to clear switch history: {{error}}"
+    },
     "tabs": {
       "oauth": "OAuth Authorization",
       "token": "Refresh Token",
@@ -868,7 +935,7 @@
     }
   },
   "overview": {
-    "title": "Account Overview",
+    "title": "Overview",
     "subtitle": "Real-time monitoring of all account model quotas.",
     "total": "{{count}} accounts",
     "accountDisabled": "Account disabled",
@@ -878,10 +945,10 @@
     "switching": "Switching...",
     "fingerprint": "Fingerprint",
     "bound": "Bound",
-    "brandTitle": "Antigravity Account Management"
+    "brandTitle": "Antigravity Account"
   },
   "fingerprints": {
-    "title": "Device Fingerprints",
+    "title": "Fingerprints",
     "subtitle": "Manage device fingerprints bound to accounts.",
     "toolbar": {
       "generate": "Generate New",
@@ -1061,10 +1128,10 @@
     "actionFailed": "{{action}} failed: {{error}}"
   },
   "wakeup": {
-    "title": "Wakeup Tasks",
+    "title": "Wakeups",
     "subtitle": "Manage wakeup tasks with per-task control and a global switch.",
     "verification": {
-      "title": "Account Verification",
+      "title": "Verification",
       "columns": {
         "verifiedAt": "Verification time"
       },
@@ -1168,6 +1235,8 @@
       "accountRequired": "Select at least one account",
       "modelRequired": "Select at least one model",
       "crontabRequired": "Please enter a crontab expression",
+      "crontabValid": "Crontab expression is valid",
+      "crontabInvalid": "Crontab expression is invalid",
       "taskSaved": "Task \"{{name}}\" saved",
       "featureOff": "Wakeup disabled",
       "featureOn": "Wakeup enabled",
@@ -1182,6 +1251,7 @@
       "scheduled": "Scheduled",
       "crontab": "Crontab",
       "quotaReset": "Quota reset",
+      "startup": "After startup",
       "manual": "Run Test",
       "unknown": "Unknown"
     },
@@ -1205,7 +1275,7 @@
       "taskName": "Task name",
       "taskStatus": "Task status",
       "triggerMode": "Trigger mode",
-      "triggerModeHint": "1. Scheduled: trigger at set times.\n2. Crontab: define with an expression.\n3. Quota reset: trigger once when quota is full.",
+      "triggerModeHint": "1. Scheduled: trigger at set times.\n2. Crontab: define with an expression.\n3. Quota reset: trigger once when quota is full.\n4. After startup: trigger once after app start, with optional delay.",
       "modeScheduled": "📅 Scheduled",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Quota reset",
@@ -1307,14 +1377,14 @@
     "other_group": "Other Models"
   },
   "codex": {
-    "title": "Codex Account Management",
+    "title": "Codex Account",
     "subtitle": "Real-time monitoring of all Codex account model quotas.",
     "instances": {
       "subtitle": "Independent configuration per instance, parallel operation with multiple accounts.",
       "comingSoon": "Multi-Instance Coming Soon",
       "comingSoonDesc": "Run multiple Codex.app instances with different accounts simultaneously, stay tuned.",
       "unsupported": {
-        "desc": "Codex multi-instance is currently available on macOS and Windows."
+        "desc": "Codex multi-instance is currently available only on macOS."
       },
       "quota": {
         "hourly": "5h",
@@ -1323,13 +1393,13 @@
       "restartStrategy": {
         "safe": {
           "principle": "Send SIGTERM to the target Codex process so the app can save and exit, then relaunch that instance (force kill if needed).",
-          "commandMac": "macOS: kill -15 <pid> (match --user-data-dir)",
-          "commandWin": "Windows: taskkill /F /PID <pid> (match --user-data-dir)"
+          "commandMac": "macOS: kill -15 <pid> (match CODEX_HOME)",
+          "commandWin": "Windows: taskkill /F /PID <pid> (match CODEX_HOME)"
         },
         "force": {
-          "principle": "Match processes by --user-data-dir and terminate them forcibly (SIGKILL / taskkill /F), then relaunch the target instance.",
-          "commandMac": "macOS: pkill -9 -f \"--user-data-dir=<dir>\"",
-          "commandWin": "Windows: taskkill /F /PID <pid> (match --user-data-dir)"
+          "principle": "Match processes by CODEX_HOME and terminate them forcibly (SIGKILL / taskkill /F), then relaunch the target instance.",
+          "commandMac": "macOS: pkill -9 -f \"CODEX_HOME=<dir>\"",
+          "commandWin": "Windows: taskkill /F /PID <pid> (match CODEX_HOME)"
         }
       }
     },
@@ -1455,7 +1525,14 @@
       "runtimeVersion": "Version {{version}}",
       "installTitle": "Install Codex CLI first",
       "installSubtitle": "Before testing or running jobs, the app must be able to resolve the `codex` command.",
-      "installFootnote": "Recheck after install. You can also point to the binary with the CODEX_CLI_PATH environment variable.",
+      "installFootnote": "Recheck after install. You can also customize the Codex CLI and node paths above.",
+      "runtimeConfigTitle": "Custom runtime paths",
+      "runtimeConfigHint": "Use either an executable path or a directory path. Leave blank to auto-detect from system PATH.",
+      "runtimeConfigCodexCliLabel": "Codex CLI path",
+      "runtimeConfigCodexCliPlaceholder": "e.g. /opt/homebrew/bin/codex",
+      "runtimeConfigNodeLabel": "node path",
+      "runtimeConfigNodePlaceholder": "e.g. /opt/homebrew/bin/node",
+      "runtimeConfigApplyHint": "Click \"Recheck CLI\" to save changes and apply them immediately.",
       "copyCommand": "Copy command",
       "copied": "Copied",
       "addTask": "Add task",
@@ -1641,11 +1718,11 @@
     }
   },
   "codebuddy": {
-    "title": "CodeBuddy Account Management",
+    "title": "CodeBuddy Account",
     "noAccounts": "No CodeBuddy accounts",
     "addAccount": "Add CodeBuddy Account",
     "flowNotice": {
-      "title": "CodeBuddy Account Management Info (click to expand/collapse)",
+      "title": "CodeBuddy Account Info (click to expand/collapse)",
       "desc": "Switching accounts requires reading CodeBuddy local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
       "permission": "Permission scope: read CodeBuddy auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
       "network": "Network scope: OAuth login and token refresh require network requests to codebuddy.ai; quota queries call billing APIs. No local keys or credentials are uploaded."
@@ -1740,7 +1817,7 @@
     "oauthSuccessCloseLaterStatus": "✅ Account added. This WebView stays open."
   },
   "githubCopilot": {
-    "title": "GitHub Copilot Account Management",
+    "title": "GitHub Copilot Account",
     "instances": {
       "unsupported": {
         "desc": "GitHub Copilot multi-instance is available only on macOS."
@@ -1869,8 +1946,13 @@
       "title": "Auto Switch",
       "enable": "Enable Auto Switch",
       "threshold": "Switch Threshold",
-      "thresholdDesc": "Auto switch when any model quota falls below this percentage",
-      "hint": "Automatically switch to the account with the highest quota when any model quota is below the threshold."
+      "thresholdDesc": "Auto switch when monitored model groups hit this percentage threshold",
+      "triggerModel": "Trigger Model",
+      "scopeAnyGroup": "Any model group",
+      "scopeSelectedGroups": "Selected model groups",
+      "selectedGroups": "Selected groups",
+      "selectedGroupsEmpty": "No model groups available",
+      "hint": "Automatically switch to the account with the highest quota when monitored model groups hit the threshold."
     },
     "quotaAlert": {
       "title": "Quota Alert",
@@ -1957,7 +2039,7 @@
     }
   },
   "windsurf": {
-    "title": "Windsurf Account Management",
+    "title": "Windsurf Account",
     "instances": {
       "unsupported": {
         "desc": "Windsurf multi-instance is available only on macOS."
@@ -2059,7 +2141,7 @@
       "reason": "Processing paths include ~/.aws/sso/cache/kiro-auth-token.json, instance profile.json, and the kiro.kiroAgent entry in state.vscdb.",
       "storage": "Processed data includes Kiro session and quota information; requests to Kiro official APIs send required auth fields (such as code, refreshToken, accessToken, and profileArn). Enterprise/IdC refresh additionally sends required OIDC fields (such as client_id, client_secret, and refresh_token)."
     },
-    "title": "Kiro Account Management",
+    "title": "Kiro Account",
     "instances": {
       "unsupported": {
         "descPlatform": "Kiro multi-instance is available only on macOS, Windows and Linux."
@@ -2089,7 +2171,7 @@
     "quota": {
       "onDemand": "On-Demand"
     },
-    "title": "Cursor Account Management",
+    "title": "Cursor Account",
     "instances": {
       "unsupported": {
         "descPlatform": "Cursor multi-instance is supported on macOS, Windows, and Linux only."
@@ -2136,7 +2218,7 @@
       "resetsUnknown": "Reset time unknown",
       "onDemand": "On-Demand"
     },
-    "title": "Gemini Cli Account Management",
+    "title": "Gemini Cli Account",
     "instances": {
       "unsupported": "Gemini Cli multi-instance management is not supported yet.",
       "unsupportedDescPlatform": "Gemini Cli multi-instance is supported on macOS, Windows, and Linux only.",
@@ -2166,6 +2248,19 @@
     "import": {
       "localDesc": "Import Gemini Cli account data from local Gemini Cli config directory (~/.gemini) or a JSON file.",
       "localClient": "Import from local Gemini Cli"
+    },
+    "projectConfig": {
+      "button": "Set GCP Project",
+      "title": "Set GCP Project",
+      "selectLabel": "Select project",
+      "loading": "Loading project list...",
+      "auto": "Auto-select (do not specify manually)",
+      "empty": "No available project found. Ensure this account has access to GCP projects.",
+      "hint": "After saving, this project is preferred for quota requests and injected as GOOGLE_CLOUD_PROJECT in launch commands.",
+      "current": "Project: {{projectId}}",
+      "saved": "Project saved: {{projectId}}",
+      "cleared": "Switched back to automatic project resolution",
+      "savedWithRefreshError": "Project saved, but quota refresh failed: {{error}}"
     },
     "flowNotice": {
       "title": "Gemini Cli account guide (click to expand/collapse)",
@@ -2260,7 +2355,7 @@
       },
       "keywords": {
         "0": "antigravity",
-        "1": "account management",
+        "1": "Account",
         "2": "quota",
         "3": "tags"
       },
@@ -2274,7 +2369,7 @@
         "2": "Sort by quota/reset time and choose the account you want to use now."
       },
       "summary": "Manage the Antigravity account lifecycle: add, refresh quota, switch, group, and tag.",
-      "title": "Antigravity Account Management"
+      "title": "Antigravity Account"
     },
     "blocks": {
       "cautions": "Common pitfalls / notes",
@@ -2390,7 +2485,7 @@
     "navTitle": "User Manual",
     "providers": {
       "cautions": {
-        "0": "Account management notes describe local read/write and permission scope. Read first before operating.",
+        "0": "Account notes describe local read/write and permission scope. Read first before operating.",
         "1": "Some platforms or capabilities are system-limited. Follow on-page prompts."
       },
       "keywords": {
@@ -2428,7 +2523,7 @@
       "outcomes": {
         "0": "First check global status on Dashboard, then operate on specific platform pages.",
         "1": "Complete one full closed loop on one platform first, then scale to others.",
-        "2": "Understand that \"account management\" and \"multi-instance\" are two different workflows."
+        "2": "Understand that \"Account\" and \"multi-instance\" are two different workflows."
       },
       "steps": {
         "0": "Open \"Dashboard\" and confirm the platforms you need are visible.",
@@ -2496,7 +2591,7 @@
     }
   },
   "qoder": {
-    "title": "Qoder Account Management",
+    "title": "Qoder Account",
     "flowNotice": {
       "title": "Qoder account guide (click to expand/collapse)",
       "desc": "Supports official CLI device login authorization, local import, JSON import, account switching injection, multi-instance binding, and quota overview. Browser authorization does not require Qoder to stay running; injection writes back using Qoder client's actual on-disk rules.",
@@ -2600,7 +2695,7 @@
     }
   },
   "trae": {
-    "title": "Trae Account Management",
+    "title": "Trae Account",
     "empty": {
       "description": "Click \"Add Account\" to start managing your Trae accounts, or import from local Trae data or a JSON file."
     },
@@ -2642,14 +2737,14 @@
     }
   },
   "codebuddyCn": {
-    "title": "CodeBuddy CN Account Management",
+    "title": "CodeBuddy CN Account",
     "noAccounts": "No CodeBuddy CN accounts",
     "addAccount": "Add CodeBuddy CN Account",
     "search": "Search CodeBuddy CN accounts...",
     "oauthDesc": "Click the button below to open the CodeBuddy CN authorization page in your browser.",
     "tokenDesc": "Paste your CodeBuddy CN access token:",
     "flowNotice": {
-      "title": "CodeBuddy CN Account Management Info (click to expand/collapse)",
+      "title": "CodeBuddy CN Account Info (click to expand/collapse)",
       "desc": "Switching accounts requires reading CodeBuddy CN local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
       "permission": "Permission scope: read CodeBuddy CN auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
       "network": "Network scope: OAuth login and token refresh require network requests to codebuddy.cn and copilot.tencent.com; resource-package quota refresh calls billing APIs. No local keys or credentials are uploaded."
@@ -2696,11 +2791,11 @@
     }
   },
   "workbuddy": {
-    "title": "WorkBuddy Account Management",
+    "title": "WorkBuddy Account",
     "noAccounts": "No WorkBuddy accounts",
     "addAccount": "Add WorkBuddy Account",
     "flowNotice": {
-      "title": "WorkBuddy Account Management Info (click to expand/collapse)",
+      "title": "WorkBuddy Account Info (click to expand/collapse)",
       "desc": "Switching accounts requires reading WorkBuddy local auth storage and calling system credential services for decryption/re-encryption. Data is processed locally only.",
       "permission": "Permission scope: read WorkBuddy auth database (state.vscdb), call system credential capabilities (macOS Keychain / Windows DPAPI / Linux Secret Service) for decrypt/write-back.",
       "network": "Network scope: OAuth login and token refresh require network requests to WorkBuddy; quota queries call billing APIs. No local keys or credentials are uploaded."
@@ -2798,5 +2893,82 @@
         "descPlatform": "WorkBuddy multi-instance is supported on macOS, Windows, and Linux only."
       }
     }
+  },
+  "mfaVault": {
+    "pageDesc": "Securely store and manage your MFA backup recovery codes, passcode sets, and other sensitive authentication data. MFA records are stored locally only. Deleting records, clearing cache, or replacing/losing a device may cause MFA loss. Keep backups and import from backup when needed.",
+    "manualAdd": "Add Credential",
+    "add": "Add",
+    "credentialList": "Credential List",
+    "import": "Import",
+    "export": "Export",
+    "accountName": "Account Name",
+    "dynamicCode": "Code",
+    "remark": "Remark",
+    "time": "Time",
+    "actions": "Actions",
+    "noData": "No saved credential data",
+    "copyCode": "Copy Code",
+    "delete": "Delete",
+    "invalidSecretVal": "Invalid Secret",
+    "inputAccountPlaceholder": "Account Name *",
+    "inputSecretPlaceholder": "Secret / Recovery Code *",
+    "inputRemarkPlaceholder": "Remark (Optional)",
+    "confirmDeleteMsg": "Are you sure you want to permanently delete the credential record for [{{accountName}}]?",
+    "confirmDeleteTitle": "Delete Confirmation",
+    "importErrorMsg": "Import failed. Please check the file format (must be a valid JSON array containing secret; accountName is optional).",
+    "inputOtpAuthPlaceholder": "otpauth://totp/... or Base32 Secret",
+    "otpauthInputHint": "Supports otpauth://totp/... and Base32 Secret. Both formats can be queried and saved to the list.",
+    "pasteQrImageHint": "You can also paste a QR image directly into the input box.",
+    "uploadQrImage": "Upload QR Image",
+    "uploadQrImageTitle": "Select a QR image and recognize it automatically",
+    "recognizing": "Recognizing...",
+    "invalidOtpAuthInput": "Please enter a valid otpauth://totp/... URI or Base32 Secret.",
+    "qrDecodeFailed": "QR recognition failed. Please try a clearer image.",
+    "qrNotOtpAuth": "Content was recognized, but it is not a valid otpauth://totp/... URI or Base32 Secret.",
+    "editAccountName": "Edit Account Name",
+    "saveAccountName": "Save Account Name",
+    "cancelEditAccountName": "Cancel Edit",
+    "accountNameRequired": "Account name is required.",
+    "copySecret": "Copy Secret"
+  },
+  "twoFactorAuth": {
+    "pageTitle": "2FA",
+    "pageDescNew": "Securely store and manage your 2FA secrets and other sensitive authentication data. 2FA data is stored locally only. Deleting records, clearing cache, or replacing/losing your device may cause 2FA loss, so please keep your own backup.",
+    "panelQuery": "Workspace (Query Panel)",
+    "inputSecretPlaceholder": "Paste 2FA Secret here (e.g. JBSWY3DPEHPK3PXP)",
+    "inputRemarkPlaceholder": "[Optional] Set a remark name for this secret",
+    "btnQuery": "Query",
+    "btnSaveToFavorites": "Save to List",
+    "refreshInSeconds": "Refresh in {{time}}s",
+    "emptyQueryData": "No query data yet",
+    "invalidSecretFormat": "Invalid secret format detected",
+    "tabSaved": "★ Saved",
+    "tabHistory": "Recent Queries",
+    "btnImport": "Import",
+    "btnExport": "Export",
+    "btnClear": "Clear",
+    "tableRemark": "Remark",
+    "tableSecret": "Secret",
+    "tableCode": "Code",
+    "tableAddedTime": "Added Time",
+    "tableQueryTime": "Query Time",
+    "tableActions": "Actions",
+    "emptyHistory": "No query history",
+    "emptySaved": "No saved 2FA records yet",
+    "invalidSecretVal": "Invalid Secret",
+    "actionCopy": "Copy Code",
+    "actionReload": "Reload into Query Data",
+    "actionDelete": "Delete",
+    "confirmDeleteSavedTitle": "Delete Confirmation",
+    "confirmDeleteSavedMsg": "Are you sure you want to permanently delete \n{{secret}}\n?",
+    "confirmDeleteSavedFallback": "Are you sure you want to permanently delete this secret?",
+    "confirmDeleteHistoryTitle": "Delete History",
+    "confirmDeleteHistoryMsg": "Are you sure you want to delete the query history for \n{{secret}}\n?",
+    "confirmDeleteHistoryFallback": "Are you sure you want to delete this query history?",
+    "confirmClearAllTitle": "Clear History",
+    "confirmClearAllMsg": "Are you sure you want to clear all recent query history?",
+    "importErrorMsg": "Import failed. Please ensure the file format is a valid exported JSON array.",
+    "btnImportTitle": "Import Local JSON Backup",
+    "btnExportTitle": "Export Saved as JSON"
   }
 }

@@ -23,6 +23,7 @@ import {
   CircleAlert,
   Play,
   RotateCw,
+  History,
   ArrowDownWideNarrow,
   Rows3,
   GripVertical,
@@ -106,10 +107,21 @@ import {
   normalizeAccountTag,
   type AccountFilterType,
 } from '../utils/accountFilters'
+import {
+  FEATURE_UNLOCK_CHANGED_EVENT,
+  type FeatureUnlockChangedDetail,
+  isAntigravitySeamlessSwitchFeatureUnlocked,
+} from '../utils/featureUnlocks'
+import {
+  consumeQueuedExternalProviderImportForPlatform,
+  EXTERNAL_PROVIDER_IMPORT_EVENT,
+} from '../utils/externalProviderImport'
 
 interface AccountsPageProps {
   onNavigate?: (page: Page) => void
 }
+
+type AntigravitySwitchHistoryItem = accountService.AntigravitySwitchHistoryItem
 
 type ViewMode = 'grid' | 'list' | 'compact'
 
@@ -305,6 +317,14 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     text: string
     tone?: 'error'
   } | null>(null)
+  const [showSwitchHistoryModal, setShowSwitchHistoryModal] = useState(false)
+  const [switchHistoryLoading, setSwitchHistoryLoading] = useState(false)
+  const [switchHistoryClearing, setSwitchHistoryClearing] = useState(false)
+  const [switchHistoryClearConfirmOpen, setSwitchHistoryClearConfirmOpen] = useState(false)
+  const [switchHistory, setSwitchHistory] = useState<AntigravitySwitchHistoryItem[]>([])
+  const [antigravitySeamlessSwitchUnlocked, setAntigravitySeamlessSwitchUnlocked] = useState(
+    isAntigravitySeamlessSwitchFeatureUnlocked,
+  )
   const exportModal = useExportJsonModal({
     exportFilePrefix: 'accounts_export',
     exportJsonByIds: accountService.exportAccounts,
@@ -463,6 +483,36 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     activeGroupIdRef.current = activeGroupId
   }, [showAddModal, addTab, oauthUrl, addStatus, activeGroupId])
 
+  useEffect(() => {
+    const handleFeatureUnlockChanged = (event: Event) => {
+      const detail = (event as CustomEvent<FeatureUnlockChangedDetail>).detail
+      if (!detail || detail.feature !== 'antigravity.seamless_switch') {
+        return
+      }
+      setAntigravitySeamlessSwitchUnlocked(Boolean(detail.unlocked))
+    }
+
+    window.addEventListener(FEATURE_UNLOCK_CHANGED_EVENT, handleFeatureUnlockChanged as EventListener)
+    return () => {
+      window.removeEventListener(
+        FEATURE_UNLOCK_CHANGED_EVENT,
+        handleFeatureUnlockChanged as EventListener,
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    if (antigravitySeamlessSwitchUnlocked) {
+      return
+    }
+    if (showSwitchHistoryModal) {
+      setShowSwitchHistoryModal(false)
+    }
+    if (switchHistoryClearConfirmOpen) {
+      setSwitchHistoryClearConfirmOpen(false)
+    }
+  }, [antigravitySeamlessSwitchUnlocked, showSwitchHistoryModal, switchHistoryClearConfirmOpen])
+
   // 获取账号的配额数据 (modelId -> percentage)
   const getAccountQuotas = (account: Account): Record<string, number> => {
     const quotas: Record<string, number> = {}
@@ -540,8 +590,9 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
         sortBy,
         sortDirection,
         displayGroups,
+        currentAccountId: currentAccount?.id ?? null,
       }),
-    [displayGroups, sortBy, sortDirection]
+    [currentAccount?.id, displayGroups, sortBy, sortDirection]
   )
 
   const availableTags = useMemo(() => collectAvailableAccountTags(accounts), [accounts])
@@ -1014,7 +1065,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     }
   }
 
-  const resetAddModalState = () => {
+  const resetAddModalState = useCallback(() => {
     setAddStatus('idle')
     setAddMessage('')
     setTokenInput('')
@@ -1022,13 +1073,33 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     setOauthCallbackInput('')
     setOauthCallbackSubmitting(false)
     setOauthCallbackError(null)
-  }
+  }, [])
 
-  const openAddModal = (tab: 'oauth' | 'token' | 'import') => {
+  const openAddModal = useCallback((tab: 'oauth' | 'token' | 'import') => {
     setAddTab(tab)
     setShowAddModal(true)
     resetAddModalState()
-  }
+  }, [resetAddModalState])
+
+  const consumeExternalProviderImport = useCallback(() => {
+    const request = consumeQueuedExternalProviderImportForPlatform('antigravity')
+    if (!request) return
+    openAddModal('token')
+    setTokenInput(request.token)
+    setAddStatus('idle')
+    setAddMessage('')
+  }, [openAddModal])
+
+  useEffect(() => {
+    const handleExternalImportEvent = () => {
+      consumeExternalProviderImport()
+    }
+    consumeExternalProviderImport()
+    window.addEventListener(EXTERNAL_PROVIDER_IMPORT_EVENT, handleExternalImportEvent)
+    return () => {
+      window.removeEventListener(EXTERNAL_PROVIDER_IMPORT_EVENT, handleExternalImportEvent)
+    }
+  }, [consumeExternalProviderImport])
 
   const closeAddModal = () => {
     // 允许用户随时关闭弹窗，取消正在进行的 OAuth 流程
@@ -1098,6 +1169,130 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
       }
     }
     setSwitching(null)
+  }
+
+  const loadSwitchHistory = useCallback(async () => {
+    setSwitchHistoryLoading(true)
+    try {
+      const items = await accountService.loadAntigravitySwitchHistory()
+      setSwitchHistory(items)
+    } catch (error) {
+      setMessage({
+        text: t('accounts.switchHistory.loadFailed', { error: String(error) }),
+        tone: 'error',
+      })
+    } finally {
+      setSwitchHistoryLoading(false)
+    }
+  }, [t])
+
+  const openSwitchHistoryModal = async () => {
+    if (!antigravitySeamlessSwitchUnlocked) {
+      return
+    }
+    setShowSwitchHistoryModal(true)
+    setSwitchHistoryClearConfirmOpen(false)
+    await loadSwitchHistory()
+  }
+
+  const handleClearSwitchHistory = () => {
+    if (switchHistoryClearing || switchHistoryLoading || switchHistory.length === 0) {
+      return
+    }
+    setSwitchHistoryClearConfirmOpen(true)
+  }
+
+  const confirmClearSwitchHistory = async () => {
+    setSwitchHistoryClearing(true)
+    try {
+      await accountService.clearAntigravitySwitchHistory()
+      setSwitchHistory([])
+      setSwitchHistoryClearConfirmOpen(false)
+    } catch (error) {
+      setSwitchHistoryClearConfirmOpen(false)
+      setMessage({
+        text: t('accounts.switchHistory.clearFailed', { error: String(error) }),
+        tone: 'error',
+      })
+    } finally {
+      setSwitchHistoryClearing(false)
+    }
+  }
+
+  const formatSwitchHistoryStage = (stage?: string | null) => {
+    if (stage === 'local') {
+      return t('accounts.switchHistory.stageLocal', '本地落盘')
+    }
+    if (stage === 'client_start') {
+      return t('accounts.switchHistory.stageClientStart', '启动客户端')
+    }
+    if (stage === 'seamless') {
+      return t('accounts.switchHistory.stageSeamless', '扩展无感')
+    }
+    return t('accounts.switchHistory.stageUnknown', '未知阶段')
+  }
+
+  const formatSwitchHistoryTrigger = (triggerType?: string | null) => {
+    if (triggerType === 'auto') {
+      return t('accounts.switchHistory.triggerAuto', '自动切换')
+    }
+    if (triggerType === 'manual') {
+      return t('accounts.switchHistory.triggerManual', '手动切换')
+    }
+    return t('accounts.switchHistory.triggerUnknown', '未知')
+  }
+
+  const formatSwitchHistoryOrigin = (triggerSource?: string | null) => {
+    const normalizedSource = (triggerSource || '').trim().toLowerCase()
+    if (normalizedSource.startsWith('tools.ws.')) {
+      return t('accounts.switchHistory.originPlugin', '插件端')
+    }
+    if (normalizedSource.startsWith('tools.account.')) {
+      return t('accounts.switchHistory.originDesktop', '桌面端')
+    }
+    return t('accounts.switchHistory.originUnknown', '未知')
+  }
+
+  const formatSwitchHistoryAutoRule = (rule?: string | null) => {
+    if (rule === 'current_disabled') {
+      return t('accounts.switchHistory.autoReasonRuleCurrentDisabled', '当前账号已禁用')
+    }
+    if (rule === 'current_quota_forbidden') {
+      return t('accounts.switchHistory.autoReasonRuleQuotaForbidden', '当前账号配额受限')
+    }
+    if (rule === 'group_below_threshold') {
+      return t('accounts.switchHistory.autoReasonRuleGroupBelowThreshold', '模型分组低于阈值')
+    }
+    return t('accounts.switchHistory.triggerUnknown', '未知')
+  }
+
+  const formatSwitchHistoryAutoScope = (scopeMode?: string | null) => {
+    if (scopeMode === 'selected_groups') {
+      return t('accounts.switchHistory.autoReasonScopeSelectedGroups', '指定模型分组')
+    }
+    return t('accounts.switchHistory.autoReasonScopeAnyGroup', '任一模型分组')
+  }
+
+  const formatSwitchHistoryAutoReason = (
+    reason?: accountService.AntigravityAutoSwitchReason | null
+  ) => {
+    if (!reason) {
+      return t('accounts.switchHistory.autoReasonUnknown', '自动切号触发，未记录详细原因')
+    }
+    const hitGroupText = (reason.hitGroups || [])
+      .map((group) => `${group.groupName}=${group.percentage}%`)
+      .join('、')
+    const selectedGroupText = (reason.selectedGroupNames || []).join('、')
+    return t('accounts.switchHistory.autoReason', {
+      rule: formatSwitchHistoryAutoRule(reason.rule),
+      threshold: reason.threshold,
+      scope: formatSwitchHistoryAutoScope(reason.scopeMode),
+      selectedGroups: selectedGroupText || '-',
+      hitGroups: hitGroupText || '-',
+      candidates: reason.candidateCount ?? 0,
+      defaultValue:
+        '规则：{{rule}}；阈值：{{threshold}}%；范围：{{scope}}；监控分组：{{selectedGroups}}；命中分组：{{hitGroups}}；候选账号：{{candidates}}',
+    })
   }
 
   const handleImportFromTools = async () => {
@@ -2055,25 +2250,42 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
 
   // 渲染卡片视图
   const renderGridView = () => {
-    if (!groupByTag) {
-      return <div className="accounts-grid">{renderInlineFolderCards()}{renderGridCards(filteredAccounts)}</div>
-    }
-
     return (
-      <div className="tag-group-list">
-        {groupedAccounts.map(([groupKey, groupAccounts]) => (
-          <div key={groupKey} className="tag-group-section">
-            <div className="tag-group-header">
-              <span className="tag-group-title">
-                {resolveGroupLabel(groupKey)}
-              </span>
-              <span className="tag-group-count">{groupAccounts.length}</span>
-            </div>
-            <div className="tag-group-grid accounts-grid">
-              {renderGridCards(groupAccounts, groupKey)}
-            </div>
+      <div className="grid-view-container">
+        {filteredAccounts.length > 0 && (
+          <div className="grid-view-header" style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-color)' }}>
+              <input
+                type="checkbox"
+                checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0}
+                onChange={toggleSelectAll}
+              />
+              {t('common.selectAll', '全选')}
+            </label>
           </div>
-        ))}
+        )}
+        {!groupByTag ? (
+          <div className="accounts-grid">
+            {renderInlineFolderCards()}
+            {renderGridCards(filteredAccounts)}
+          </div>
+        ) : (
+          <div className="tag-group-list">
+            {groupedAccounts.map(([groupKey, groupAccounts]) => (
+              <div key={groupKey} className="tag-group-section">
+                <div className="tag-group-header">
+                  <span className="tag-group-title">
+                    {resolveGroupLabel(groupKey)}
+                  </span>
+                  <span className="tag-group-count">{groupAccounts.length}</span>
+                </div>
+                <div className="tag-group-grid accounts-grid">
+                  {renderGridCards(groupAccounts, groupKey)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -2866,6 +3078,16 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
                 className={refreshingAll ? 'loading-spinner' : ''}
               />
             </button>
+            {antigravitySeamlessSwitchUnlocked && (
+              <button
+                className="btn btn-secondary icon-only"
+                onClick={openSwitchHistoryModal}
+                title={t('accounts.switchHistory.title', '切换记录')}
+                aria-label={t('accounts.switchHistory.title', '切换记录')}
+              >
+                <History size={14} />
+              </button>
+            )}
             <button
               className="btn btn-secondary icon-only"
               onClick={togglePrivacyMode}
@@ -3255,6 +3477,206 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
         onOpenSavedDirectory={exportModal.openSavedDirectory}
         onCopySavedPath={exportModal.copySavedPath}
       />
+
+      {antigravitySeamlessSwitchUnlocked && showSwitchHistoryModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (switchHistoryClearing || switchHistoryClearConfirmOpen) return
+            setShowSwitchHistoryModal(false)
+            setSwitchHistoryClearConfirmOpen(false)
+          }}
+        >
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{t('accounts.switchHistory.title', '切换记录')}</h2>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  if (switchHistoryClearing || switchHistoryClearConfirmOpen) return
+                  setShowSwitchHistoryModal(false)
+                  setSwitchHistoryClearConfirmOpen(false)
+                }}
+                aria-label={t('common.close', '关闭')}
+              >
+                <X />
+              </button>
+            </div>
+            <div className="modal-body">
+              {switchHistoryLoading ? (
+                <div className="empty-state">
+                  <div className="loading-spinner" style={{ width: 28, height: 28 }} />
+                </div>
+              ) : switchHistory.length === 0 ? (
+                <div className="empty-state" style={{ minHeight: 180 }}>
+                  <p>{t('accounts.switchHistory.empty', '暂无切换记录')}</p>
+                </div>
+              ) : (
+                <div style={{ maxHeight: 420, overflowY: 'auto', display: 'grid', gap: 10 }}>
+                  {switchHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        display: 'grid',
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                          {new Date(item.timestamp).toLocaleString(locale)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: item.success ? 'var(--success, #10b981)' : 'var(--danger, #ef4444)',
+                          }}
+                        >
+                          {item.success
+                            ? t('accounts.switchHistory.success', '成功')
+                            : t('accounts.switchHistory.failed', '失败')}
+                        </div>
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>
+                        {t('accounts.switchHistory.target', {
+                          email: maskAccountText(item.targetEmail) || item.targetEmail || '-',
+                          defaultValue: '目标账号：{{email}}',
+                        })}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {t('accounts.switchHistory.trigger', {
+                          trigger: formatSwitchHistoryTrigger(item.triggerType),
+                          defaultValue: '触发方式：{{trigger}}',
+                        })}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {t('accounts.switchHistory.origin', {
+                          origin: formatSwitchHistoryOrigin(item.triggerSource),
+                          defaultValue: '触发端：{{origin}}',
+                        })}
+                      </div>
+                      {item.triggerType === 'auto' && (
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                          {t('accounts.switchHistory.autoReasonLabel', {
+                            reason: formatSwitchHistoryAutoReason(item.autoSwitchReason),
+                            defaultValue: '自动原因：{{reason}}',
+                          })}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {t('accounts.switchHistory.stageResult', {
+                          local: item.localOk
+                            ? t('accounts.switchHistory.success', '成功')
+                            : t('accounts.switchHistory.failed', '失败'),
+                          seamless: item.seamlessOk
+                            ? t('accounts.switchHistory.success', '成功')
+                            : t('accounts.switchHistory.failed', '失败'),
+                          defaultValue: '本地：{{local}} / 无感：{{seamless}}',
+                        })}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {t('accounts.switchHistory.duration', {
+                          total: item.totalDurationMs,
+                          local: item.localDurationMs,
+                          seamless: item.seamlessDurationMs ?? 0,
+                          defaultValue: '耗时：总 {{total}}ms，本地 {{local}}ms，无感 {{seamless}}ms',
+                        })}
+                      </div>
+                      {!item.success && (
+                        <div style={{ fontSize: 12, color: 'var(--danger, #ef4444)' }}>
+                          {t('accounts.switchHistory.error', {
+                            stage: formatSwitchHistoryStage(item.errorStage),
+                            code: item.errorCode || '-',
+                            message: item.errorMessage || '-',
+                            defaultValue: '失败阶段：{{stage}}（{{code}}）{{message}}',
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowSwitchHistoryModal(false)
+                  setSwitchHistoryClearConfirmOpen(false)
+                }}
+                disabled={switchHistoryClearing}
+              >
+                {t('common.close', '关闭')}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleClearSwitchHistory}
+                disabled={switchHistoryClearing || switchHistoryLoading || switchHistory.length === 0}
+              >
+                {switchHistoryClearing
+                  ? t('common.loading', '加载中...')
+                  : t('accounts.switchHistory.clear', '清空记录')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {antigravitySeamlessSwitchUnlocked && showSwitchHistoryModal && switchHistoryClearConfirmOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (switchHistoryClearing) return
+            setSwitchHistoryClearConfirmOpen(false)
+          }}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{t('common.confirm')}</h2>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  if (switchHistoryClearing) return
+                  setSwitchHistoryClearConfirmOpen(false)
+                }}
+                aria-label={t('common.close', '关闭')}
+              >
+                <X />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{t('accounts.switchHistory.clearConfirm', '确定清空全部切换记录吗？')}</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setSwitchHistoryClearConfirmOpen(false)}
+                disabled={switchHistoryClearing}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={confirmClearSwitchHistory}
+                disabled={switchHistoryClearing}
+              >
+                {switchHistoryClearing
+                  ? t('common.loading', '加载中...')
+                  : t('accounts.switchHistory.clear', '清空记录')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteConfirm && (
         <div

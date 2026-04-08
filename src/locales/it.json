@@ -162,6 +162,13 @@
       "updated": {
         "label": "Aggiornato {{relative}} fa"
       }
+    },
+    "topRightAd": {
+      "ariaLabel": "Slot pubblicitario globale in alto a destra",
+      "badge": "ANNUNCIO",
+      "title": "Slot pubblicitario in alto a destra",
+      "desc": "Quest’area è fissata in alto a destra su tutte le pagine per campagne o annunci del brand.",
+      "action": "Vedi dettagli"
     }
   },
   "nav": {
@@ -195,7 +202,8 @@
     "switchClassicLayoutTitle": "Passa al layout classico della barra laterale",
     "switchClassicLayoutDesc": "Il layout classico mostra l'intera navigazione delle piattaforme e supporta la chiusura della barra laterale. Puoi tornare indietro in qualsiasi momento da Impostazioni > Generale > Layout barra laterale.",
     "switchClassicLayoutDontAskAgain": "Non mostrare più questo avviso",
-    "switchClassicLayoutConfirm": "Passa ora"
+    "switchClassicLayoutConfirm": "Passa ora",
+    "2faManager": "Gestione 2FA"
   },
   "platformLayout": {
     "title": "Layout piattaforme",
@@ -578,7 +586,32 @@
       "sideNavLayout": "Layout della barra laterale",
       "sideNavLayoutDesc": "Passa dal layout originale a quello classico della barra laterale",
       "sideNavLayoutOriginal": "Layout originale",
-      "sideNavLayoutClassic": "Layout classico"
+      "sideNavLayoutClassic": "Layout classico",
+      "antigravityDualSwitchNoRestart": "Cambio doppio senza riavvio",
+      "antigravityDualSwitchNoRestartDesc": "Durante il cambio account, la scrittura dei dati locali e il cambio fluido dell’estensione vengono eseguiti in un unico flusso, senza riavviare Antigravity.",
+      "appAutoLaunch": "Avvia Cockpit Tools all'accesso",
+      "appAutoLaunchDesc": "Avvia automaticamente l'app dopo l'accesso al sistema",
+      "startupWakeupDisabled": "Disattivato",
+      "startupWakeupImmediate": "Riattiva subito",
+      "startupWakeupDelayed": "Riattiva con ritardo",
+      "antigravityStartupWakeup": "Esegui il risveglio Antigravity all'avvio",
+      "antigravityStartupWakeupDesc": "Esegui una volta le attività di risveglio Antigravity abilitate dopo l'avvio dell'app",
+      "codexStartupWakeup": "Esegui il risveglio Codex all'avvio",
+      "codexStartupWakeupDesc": "Esegui una volta le attività di risveglio Codex abilitate dopo l'avvio dell'app",
+      "currentAccountRefreshTitle": "Aggiornamento account corrente",
+      "currentAccountRefreshItemDesc": "Aggiorna solo l’account corrente. Il predefinito è 1 minuto.",
+      "autoSwitchAccountScope": "Ambito di cambio automatico account",
+      "autoSwitchAccountScopeDesc": "Monitoraggio e cambio avvengono solo all’interno di questo ambito.",
+      "autoSwitchAccountScopeAll": "Tutti gli account",
+      "autoSwitchAccountScopeSelected": "Account selezionati",
+      "autoSwitchAccountScopeChoose": "Seleziona account",
+      "autoSwitchAccountScopeManage": "Gestisci account",
+      "autoSwitchAccountScopeAllSummary": "Ambito attuale: tutti gli account (totale {{total}})",
+      "autoSwitchAccountScopeSummary": "Selezionati {{selected}} / {{total}} account",
+      "autoSwitchAccountScopeDialogTitle": "Seleziona l’ambito account per il cambio automatico",
+      "autoSwitchAccountScopeAllHint": "L’ambito attuale include tutti gli account. {{total}} account parteciperanno al cambio automatico.",
+      "codexAutoSwitchAccountScope": "Ambito di cambio automatico account Codex",
+      "codexAutoSwitchAccountScopeDesc": "Stato attuale del cambio automatico Codex: {{status}}. Verranno considerati solo gli account in questo ambito."
     },
     "network": {
       "apiTitle": "API della cabina di pilotaggio antigravità",
@@ -819,6 +852,40 @@
       "accountPickerEmpty": "Nessun account corrispondente",
       "filterHint": "{{count}} gruppi selezionati per il filtro",
       "filterToggle": "Seleziona per filtrare per questo gruppo"
+    },
+    "switchHistory": {
+      "title": "Cronologia dei cambi",
+      "empty": "Nessuna cronologia dei cambi al momento",
+      "success": "Riuscito",
+      "failed": "Non riuscito",
+      "target": "Account di destinazione: {{email}}",
+      "trigger": "Attivatore: {{trigger}}",
+      "triggerManual": "Cambio manuale",
+      "triggerAuto": "Cambio automatico",
+      "triggerUnknown": "Sconosciuto",
+      "origin": "Origine: {{origin}}",
+      "originDesktop": "App desktop",
+      "originPlugin": "Estensione",
+      "originUnknown": "Sconosciuto",
+      "autoReasonLabel": "Motivo automatico: {{reason}}",
+      "autoReason": "Regola: {{rule}}; soglia: {{threshold}}%; ambito: {{scope}}; gruppi monitorati: {{selectedGroups}}; gruppi colpiti: {{hitGroups}}; candidati: {{candidates}}",
+      "autoReasonUnknown": "È stato attivato il cambio automatico, ma non è stato registrato un motivo dettagliato",
+      "autoReasonRuleCurrentDisabled": "L’account corrente è disabilitato",
+      "autoReasonRuleQuotaForbidden": "La quota dell’account corrente è limitata",
+      "autoReasonRuleGroupBelowThreshold": "Gruppo di modelli sotto soglia",
+      "autoReasonScopeAnyGroup": "Qualsiasi gruppo di modelli",
+      "autoReasonScopeSelectedGroups": "Gruppi di modelli selezionati",
+      "stageResult": "Locale: {{local}} / Fluido: {{seamless}}",
+      "duration": "Durata: totale {{total}}ms, locale {{local}}ms, fluido {{seamless}}ms",
+      "error": "Errore nella fase {{stage}} ({{code}}): {{message}}",
+      "stageLocal": "Scrittura locale",
+      "stageClientStart": "Avvio client",
+      "stageSeamless": "Estensione fluida",
+      "stageUnknown": "Fase sconosciuta",
+      "clear": "Cancella cronologia",
+      "clearConfirm": "Cancellare tutta la cronologia dei cambi?",
+      "loadFailed": "Impossibile caricare la cronologia dei cambi: {{error}}",
+      "clearFailed": "Impossibile cancellare la cronologia dei cambi: {{error}}"
     }
   },
   "overview": {
@@ -1123,6 +1190,8 @@
       "accountRequired": "Seleziona almeno un account",
       "modelRequired": "Seleziona almeno un modello",
       "crontabRequired": "Inserisci un'espressione crontab",
+      "crontabValid": "L'espressione crontab è valida",
+      "crontabInvalid": "L'espressione crontab non è valida",
       "taskSaved": "Attività \"{{name}}\" salvata",
       "featureOff": "Risveglio disabilitato",
       "featureOn": "Risveglio abilitato",
@@ -1137,7 +1206,8 @@
       "crontab": "Crontab",
       "quotaReset": "Reset quota",
       "manual": "Test immediato",
-      "unknown": "Sconosciuto"
+      "unknown": "Sconosciuto",
+      "startup": "Dopo l'avvio"
     },
     "taskCard": {
       "accountsCount": "Account {{count}}",
@@ -1555,7 +1625,14 @@
       },
       "nextRunsQuotaResetHint": "I trigger dopo reset quota dipendono dai dati quota più recenti, quindi non è disponibile un'anteprima a orario fisso.",
       "triggerQuotaReset": "Trigger reset quota",
-      "noticeSavedEnabledWithQuotaReset": "Attività salvate. Totale: {{count}}. L'aggiornamento automatico di Codex è stato impostato ogni {{minutes}} minuti."
+      "noticeSavedEnabledWithQuotaReset": "Attività salvate. Totale: {{count}}. L'aggiornamento automatico di Codex è stato impostato ogni {{minutes}} minuti.",
+      "runtimeConfigTitle": "Percorsi runtime personalizzati",
+      "runtimeConfigHint": "Puoi indicare un percorso eseguibile o una cartella. Lascia vuoto per il rilevamento automatico da PATH.",
+      "runtimeConfigCodexCliLabel": "Percorso Codex CLI",
+      "runtimeConfigCodexCliPlaceholder": "es. /opt/homebrew/bin/codex",
+      "runtimeConfigNodeLabel": "Percorso node",
+      "runtimeConfigNodePlaceholder": "es. /opt/homebrew/bin/node",
+      "runtimeConfigApplyHint": "Dopo la modifica, fai clic su \"Ricontrolla CLI\" per salvare e applicare subito."
     },
     "sessionManager": {
       "title": "Gestione sessioni",
@@ -1724,8 +1801,13 @@
       "title": "Cambio automatico",
       "enable": "Cambio automatico",
       "threshold": "Soglia di cambio",
-      "thresholdDesc": "Il cambio automatico si attiva quando la quota di un modello scende sotto questa percentuale",
-      "hint": "Passa automaticamente all'account con la quota più alta quando la quota di un modello scende sotto la soglia."
+      "thresholdDesc": "Il cambio automatico si attiva quando i gruppi di modelli monitorati raggiungono questa soglia percentuale",
+      "hint": "Passa automaticamente all’account con quota più alta quando i gruppi di modelli monitorati raggiungono la soglia.",
+      "triggerModel": "Modello di attivazione",
+      "scopeAnyGroup": "Qualsiasi gruppo di modelli",
+      "scopeSelectedGroups": "Gruppi di modelli selezionati",
+      "selectedGroups": "Gruppi selezionati",
+      "selectedGroupsEmpty": "Nessun gruppo di modelli disponibile"
     },
     "quotaAlert": {
       "title": "Avviso quota",
@@ -2348,6 +2430,19 @@
       "desc": "Gestisci gli account Gemini Cli importando dall'installazione locale di Gemini Cli o incollando token JWT. I dati vengono elaborati solo localmente.",
       "reason": "Ambito autorizzazioni: lettura e scrittura di oauth_creds.json, google_accounts.json e settings.json nel percorso predefinito ~/.gemini o nel percorso istanza (GEMINI_CLI_HOME/.gemini) per importare account e iniettare credenziali locali (cambio account).",
       "storage": "Ambito rete: OAuth e aggiornamento quota chiamano le API ufficiali Google/Gemini (come oauth2.googleapis.com e googleapis.com). Vengono inviati solo i campi necessari di autenticazione/quota; i file locali non vengono caricati su server di terze parti."
+    },
+    "projectConfig": {
+      "button": "Imposta progetto GCP",
+      "title": "Imposta progetto GCP",
+      "selectLabel": "Seleziona progetto",
+      "loading": "Caricamento elenco progetti...",
+      "auto": "Selezione automatica (senza specifica manuale)",
+      "empty": "Nessun progetto disponibile trovato. Verifica che questo account abbia accesso ai progetti GCP.",
+      "hint": "Dopo il salvataggio, questo progetto sarà preferito per le richieste quota e verrà iniettato come GOOGLE_CLOUD_PROJECT all’avvio.",
+      "current": "Progetto: {{projectId}}",
+      "saved": "Progetto salvato: {{projectId}}",
+      "cleared": "Ripristinato il rilevamento automatico del progetto",
+      "savedWithRefreshError": "Progetto salvato, ma aggiornamento quota non riuscito: {{error}}"
     }
   },
   "codebuddy": {
@@ -2798,5 +2893,82 @@
       "dontAskAgain": "Non chiedere più"
     },
     "lockedPlatform": "Piattaforma bloccata dall'istanza"
+  },
+  "twoFactorAuth": {
+    "pageTitle": "2FA Query [it]",
+    "pageDescNew": "Enter or paste a 2FA Base32 secret to instantly generate a token. The system automatically corrects and removes non-standard characters. [it]",
+    "panelQuery": "Workspace (Query Panel) [it]",
+    "inputSecretPlaceholder": "Paste 2FA Secret here (e.g. JBSWY3DPEHPK3PXP) [it]",
+    "inputRemarkPlaceholder": "[Optional] Set a remark name for this secret [it]",
+    "btnQuery": "Query [it]",
+    "btnSaveToFavorites": "Save to List [it]",
+    "refreshInSeconds": "Refresh in {{time}}s [it]",
+    "emptyQueryData": "No query data yet [it]",
+    "invalidSecretFormat": "Invalid secret format detected [it]",
+    "tabSaved": "★ Saved [it]",
+    "tabHistory": "Recent Queries [it]",
+    "btnImport": "Import [it]",
+    "btnExport": "Export [it]",
+    "btnClear": "Clear [it]",
+    "tableRemark": "Remark [it]",
+    "tableSecret": "Secret [it]",
+    "tableCode": "Code [it]",
+    "tableAddedTime": "Added Time [it]",
+    "tableQueryTime": "Query Time [it]",
+    "tableActions": "Actions [it]",
+    "emptyHistory": "No query history [it]",
+    "emptySaved": "No saved 2FA records yet [it]",
+    "invalidSecretVal": "Invalid Secret [it]",
+    "actionCopy": "Copy Code [it]",
+    "actionReload": "Reload into Query Data [it]",
+    "actionDelete": "Delete [it]",
+    "confirmDeleteSavedTitle": "Delete Confirmation [it]",
+    "confirmDeleteSavedMsg": "Are you sure you want to permanently delete \n{{secret}}\n? [it]",
+    "confirmDeleteSavedFallback": "Are you sure you want to permanently delete this secret? [it]",
+    "confirmDeleteHistoryTitle": "Delete History [it]",
+    "confirmDeleteHistoryMsg": "Are you sure you want to delete the query history for \n{{secret}}\n? [it]",
+    "confirmDeleteHistoryFallback": "Are you sure you want to delete this query history? [it]",
+    "confirmClearAllTitle": "Clear History [it]",
+    "confirmClearAllMsg": "Are you sure you want to clear all recent query history? [it]",
+    "importErrorMsg": "Import failed. Please ensure the file format is a valid exported JSON array. [it]",
+    "btnImportTitle": "Import Local JSON Backup [it]",
+    "btnExportTitle": "Export Saved as JSON [it]"
+  },
+  "mfaVault": {
+    "pageDesc": "Archivia e gestisci in modo sicuro i codici di recupero MFA di backup, set di passcode e altri dati sensibili di autenticazione. I record MFA vengono salvati solo in locale. Eliminazione, pulizia cache o cambio/perdita dispositivo possono causare perdita MFA. Si consiglia di eseguire backup e importare dal backup quando necessario.",
+    "manualAdd": "Aggiungi credenziale manualmente",
+    "add": "Aggiungi",
+    "credentialList": "Elenco credenziali",
+    "import": "Importa",
+    "export": "Esporta",
+    "accountName": "Nome account",
+    "dynamicCode": "Codice dinamico",
+    "remark": "Nota",
+    "time": "Ora",
+    "actions": "Azioni",
+    "noData": "Nessuna credenziale salvata",
+    "copyCode": "Copia codice",
+    "delete": "Elimina",
+    "invalidSecretVal": "Secret non valido",
+    "inputAccountPlaceholder": "Nome account *",
+    "inputSecretPlaceholder": "Secret / Codice di recupero (Secret) *",
+    "inputRemarkPlaceholder": "Nota (facoltativa)",
+    "confirmDeleteMsg": "Confermi l'eliminazione permanente della credenziale di [{{accountName}}]?",
+    "confirmDeleteTitle": "Conferma eliminazione",
+    "importErrorMsg": "Importazione non riuscita. Verifica il formato file (array JSON valido con accountName e secret).",
+    "inputOtpAuthPlaceholder": "otpauth://totp/... oppure segreto Base32",
+    "otpauthInputHint": "Supporta otpauth://totp/... e segreto Base32. Entrambi i formati possono essere consultati e salvati nell'elenco.",
+    "pasteQrImageHint": "Puoi anche incollare direttamente un'immagine QR nel campo di input.",
+    "uploadQrImage": "Carica immagine QR",
+    "uploadQrImageTitle": "Seleziona un'immagine QR e riconoscila automaticamente",
+    "recognizing": "Riconoscimento in corso...",
+    "invalidOtpAuthInput": "Inserisci un URI otpauth://totp/... valido o un segreto Base32.",
+    "qrDecodeFailed": "Riconoscimento QR non riuscito. Prova con un'immagine più nitida.",
+    "qrNotOtpAuth": "Contenuto riconosciuto, ma non è un URI otpauth://totp/... valido né un segreto Base32.",
+    "editAccountName": "Modifica nome account",
+    "saveAccountName": "Salva nome account",
+    "cancelEditAccountName": "Annulla modifica",
+    "accountNameRequired": "Il nome account è obbligatorio.",
+    "copySecret": "Copia segreto"
   }
 }

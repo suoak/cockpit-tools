@@ -6,6 +6,7 @@ import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useTranslation } from 'react-i18next';
 import { FileText, FolderOpen, RefreshCw, X } from 'lucide-react';
 import { SideNav } from './components/layout/SideNav';
@@ -31,6 +32,7 @@ import { useWorkbuddyAccountStore } from './stores/useWorkbuddyAccountStore';
 import { useZedAccountStore } from './stores/useZedAccountStore';
 import { useSideNavLayoutStore } from './stores/useSideNavLayoutStore';
 import { usePlatformLayoutStore } from './stores/usePlatformLayoutStore';
+import { useTopRightAdStore } from './stores/useTopRightAdStore';
 import type { UpdateCheckResult, UpdateInfo } from './components/UpdateNotification';
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
 import { parseUpdaterReleaseNotes, resolveUpdaterDownloadUrl } from './utils/updaterReleaseNotes';
@@ -45,6 +47,10 @@ import {
   UPDATE_DOWNLOAD_RETRY_DELAYS_MS,
 } from './utils/updaterRetry';
 import { loadWakeupOfficialLsVersionMode } from './utils/wakeupOfficialLsVersion';
+import {
+  dispatchExternalProviderImportEvent,
+  normalizeExternalProviderImportPayload,
+} from './utils/externalProviderImport';
 
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
@@ -104,6 +110,9 @@ const WakeupVerificationPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })),
 );
+const TwoFactorAuthPage = lazy(() =>
+  import('./pages/TwoFactorAuthPage').then((module) => ({ default: module.TwoFactorAuthPage })),
+);
 const ManualPage = lazy(() =>
   import('./pages/ManualPage').then((module) => ({ default: module.ManualPage })),
 );
@@ -130,6 +139,7 @@ const BreakoutModal = lazy(() =>
 const LogViewerModal = lazy(() =>
   import('./components/LogViewerModal').then((module) => ({ default: module.LogViewerModal })),
 );
+
 
 interface GeneralConfigTheme {
   theme: string;
@@ -428,10 +438,35 @@ function MainApp() {
   const updateDownloadOwnerRef = useRef<'none' | 'shared' | 'silent'>('none');
   const updateCheckRequestIdRef = useRef(0);
   const { showModal, closeModal } = useGlobalModal();
+  const topRightAdState = useTopRightAdStore((state) => state.state);
+  const fetchTopRightAdState = useTopRightAdStore((state) => state.fetchState);
   const trayRefreshInFlightRef = useRef(false);
+  const openPlatformLayoutModal = useCallback(() => {
+    setPlatformLayoutRequestedGroupId(null);
+    setShowPlatformLayoutModal(true);
+  }, []);
+  const handleTopRightAdClick = useCallback(async () => {
+    const target = topRightAdState.ad?.ctaUrl?.trim();
+    if (!target || !/^https?:\/\//i.test(target)) {
+      return;
+    }
+    try {
+      await openUrl(target);
+    } catch {
+      window.open(target, '_blank', 'noopener,noreferrer');
+    }
+  }, [topRightAdState.ad?.ctaUrl]);
   const openBreakout = useCallback(() => {
     setHasBreakoutSession(true);
     setShowBreakout(true);
+  }, []);
+  const handleExternalProviderImportRawPayload = useCallback((rawPayload: unknown) => {
+    const normalized = normalizeExternalProviderImportPayload(rawPayload);
+    if (!normalized) return;
+    setPage(normalized.page);
+    window.setTimeout(() => {
+      dispatchExternalProviderImportEvent(normalized);
+    }, 0);
   }, []);
   const handleBreakoutMinimize = useCallback(() => {
     setShowBreakout(false);
@@ -464,6 +499,20 @@ function MainApp() {
   
   // 启用自动刷新 hook
   useAutoRefresh();
+
+  useEffect(() => {
+    void fetchTopRightAdState();
+  }, [fetchTopRightAdState]);
+
+  useEffect(() => {
+    const handleLanguageChanged = () => {
+      void fetchTopRightAdState();
+    };
+    window.addEventListener('general-language-updated', handleLanguageChanged);
+    return () => {
+      window.removeEventListener('general-language-updated', handleLanguageChanged);
+    };
+  }, [fetchTopRightAdState]);
 
   useEffect(() => {
     if (sideNavLayoutMode !== 'classic' || sideNavClassicFirstSyncDone) {
@@ -1267,71 +1316,9 @@ function MainApp() {
 
   useEffect(() => {
     let cancelled = false;
-    const delayMs = 200;
-    const hasConfiguredPath = (value?: string) => Boolean(value?.trim());
-    const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-    const detectAppPathsOnStartup = async () => {
-      try {
-        const config = await invoke<GeneralConfig>('get_general_config');
-        if (cancelled) {
-          return;
-        }
-
-        const platform = (navigator.platform || '').toLowerCase();
-        const userAgent = navigator.userAgent.toLowerCase();
-        const isMacOrWindows =
-          platform.includes('mac') ||
-          platform.includes('win') ||
-          userAgent.includes('mac') ||
-          userAgent.includes('windows');
-        const queue: Array<AppPathMissingDetail['app']> = [];
-
-        if (!hasConfiguredPath(config.antigravity_app_path)) {
-          queue.push('antigravity');
-        }
-        if (!hasConfiguredPath(config.vscode_app_path)) {
-          queue.push('vscode');
-        }
-        if (!hasConfiguredPath(config.windsurf_app_path)) {
-          queue.push('windsurf');
-        }
-        if (!hasConfiguredPath(config.kiro_app_path)) {
-          queue.push('kiro');
-        }
-        if (isMacOrWindows && !hasConfiguredPath(config.codex_app_path)) {
-          queue.push('codex');
-        }
-
-        for (let i = 0; i < queue.length; i += 1) {
-          if (cancelled) {
-            return;
-          }
-          if (i > 0) {
-            await sleep(delayMs);
-            if (cancelled) {
-              return;
-            }
-          }
-          await invoke('detect_app_path', { app: queue[i] });
-        }
-      } catch (error) {
-        console.error('启动路径探测失败:', error);
-      }
-    };
-
-    const timer = window.setTimeout(() => {
-      void detectAppPathsOnStartup();
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, []);
-
-  useEffect(() => {
     const syncWakeupStateOnStartup = async () => {
+      let officialLsVersionMode = loadWakeupOfficialLsVersionMode();
       try {
         // 一次性迁移：升级到该版本后先将唤醒总开关置为关闭，用户仍可手动再开启
         if (localStorage.getItem(WAKEUP_FORCE_DISABLE_MIGRATION_KEY) !== '1') {
@@ -1341,13 +1328,40 @@ function MainApp() {
         const enabled = localStorage.getItem(WAKEUP_ENABLED_KEY) === 'true';
         const tasksRaw = localStorage.getItem(TASKS_STORAGE_KEY);
         const tasks = tasksRaw ? JSON.parse(tasksRaw) : [];
-        const officialLsVersionMode = loadWakeupOfficialLsVersionMode();
+        officialLsVersionMode = loadWakeupOfficialLsVersionMode();
         await invoke('wakeup_sync_state', { enabled, tasks, officialLsVersionMode });
       } catch (error) {
         console.error('唤醒任务状态同步失败:', error);
       }
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        await invoke('wakeup_run_enabled_tasks', {
+          triggerSource: 'startup',
+          officialLsVersionMode,
+        });
+      } catch (error) {
+        console.error('执行 Antigravity 启动后唤醒失败:', error);
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        await invoke('codex_wakeup_run_enabled_tasks', { triggerType: 'startup' });
+      } catch (error) {
+        console.error('执行 Codex 启动后唤醒失败:', error);
+      }
     };
-    syncWakeupStateOnStartup();
+    void syncWakeupStateOnStartup();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Check for updates on startup
@@ -2488,6 +2502,36 @@ function MainApp() {
     };
   }, []);
 
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    listen('external:provider-import', (event) => {
+      handleExternalProviderImportRawPayload(event.payload);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleExternalProviderImportRawPayload]);
+
+  useEffect(() => {
+    let canceled = false;
+    void invoke<unknown>('external_import_take_pending')
+      .then((payload) => {
+        if (canceled || !payload) return;
+        handleExternalProviderImportRawPayload(payload);
+      })
+      .catch((error) => {
+        console.warn('[ExternalImport] 读取待处理导入请求失败:', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [handleExternalProviderImportRawPayload]);
+
   // 窗口拖拽处理
   const handleDragStart = () => {
     getCurrentWindow().startDragging();
@@ -2763,9 +2807,9 @@ function MainApp() {
       )}
       
       {/* 顶部固定拖拽区域 */}
-      <div 
+      <div
         className="drag-region"
-        data-tauri-drag-region 
+        data-tauri-drag-region
         onMouseDown={handleDragStart}
       />
 
@@ -2773,10 +2817,7 @@ function MainApp() {
       <SideNav
         page={page}
         setPage={setPage}
-        onOpenPlatformLayout={() => {
-          setPlatformLayoutRequestedGroupId(null);
-          setShowPlatformLayoutModal(true);
-        }}
+        onOpenPlatformLayout={openPlatformLayoutModal}
         easterEggClickCount={easterEggClickCount}
         onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
         hasBreakoutSession={hasBreakoutSession}
@@ -2819,11 +2860,31 @@ function MainApp() {
           {page === 'dashboard' && (
             <DashboardPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => {
-                setPlatformLayoutRequestedGroupId(null);
-                setShowPlatformLayoutModal(true);
-              }}
+              onOpenPlatformLayout={openPlatformLayoutModal}
               onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
+              topCenterBanner={
+                topRightAdState.ad ? (
+                  <div
+                    className="global-promo-center"
+                    role="complementary"
+                    aria-label={t('common.topRightAd.ariaLabel', '全局右上角广告位')}
+                  >
+                    <div className="global-promo-slot">
+                      <span className="global-ad-slot-badge">
+                        {topRightAdState.ad.badge || t('common.topRightAd.badge', '广告')}
+                      </span>
+                      <div className="global-promo-main">
+                        <p className="global-promo-text">{topRightAdState.ad.text}</p>
+                      </div>
+                      {topRightAdState.ad.ctaUrl ? (
+                        <button className="global-ad-slot-action" onClick={handleTopRightAdClick}>
+                          {topRightAdState.ad.ctaLabel || t('common.topRightAd.action', '查看详情')}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null
+              }
             />
           )}
           {page === 'overview' && <AccountsPage onNavigate={setPage} />}
@@ -2843,13 +2904,11 @@ function MainApp() {
           {page === 'fingerprints' && <FingerprintsPage onNavigate={setPage} />}
           {page === 'wakeup' && <WakeupTasksPage onNavigate={setPage} />}
           {page === 'verification' && <WakeupVerificationPage onNavigate={setPage} />}
+          {page === '2fa' && <TwoFactorAuthPage />}
           {page === 'manual' && (
             <ManualPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => {
-                setPlatformLayoutRequestedGroupId(null);
-                setShowPlatformLayoutModal(true);
-              }}
+              onOpenPlatformLayout={openPlatformLayoutModal}
             />
           )}
           {page === 'settings' && <SettingsPage />}

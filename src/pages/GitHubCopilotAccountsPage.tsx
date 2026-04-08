@@ -39,6 +39,7 @@ import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
 import { MultiSelectFilterDropdown, type MultiSelectFilterOption } from '../components/MultiSelectFilterDropdown';
 import type { GitHubCopilotAccount } from '../types/githubCopilot';
+import { compareCurrentAccountFirst } from '../utils/currentAccountSort';
 
 const GHCP_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.github_copilot.flow_notice_collapsed';
 const GHCP_CURRENT_ACCOUNT_ID_KEY = 'agtools.github_copilot.current_account_id';
@@ -222,6 +223,11 @@ export function GitHubCopilotAccountsPage() {
   const normalizeTag = (tag: string) => tag.trim().toLowerCase();
 
   const compareAccountsBySort = useCallback((a: GitHubCopilotAccount, b: GitHubCopilotAccount) => {
+    const currentFirstDiff = compareCurrentAccountFirst(a.id, b.id, currentAccountId);
+    if (currentFirstDiff !== 0) {
+      return currentFirstDiff;
+    }
+
     if (sortBy === 'created_at') {
       const diff = b.created_at - a.created_at;
       return sortDirection === 'desc' ? diff : -diff;
@@ -253,7 +259,7 @@ export function GitHubCopilotAccountsPage() {
           : (resolveUsageMetric(b, 'premium')?.percentage ?? -1);
     const diff = bValue - aValue;
     return sortDirection === 'desc' ? diff : -diff;
-  }, [parseResetAt, resolveUsageMetric, sortBy, sortDirection]);
+  }, [currentAccountId, parseResetAt, resolveUsageMetric, sortBy, sortDirection]);
 
   const sortedAccountsForInstances = useMemo(
     () => [...accounts].sort(compareAccountsBySort),
@@ -906,7 +912,16 @@ export function GitHubCopilotAccountsPage() {
           <p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p>
         </div>
       ) : viewMode === 'grid' ? (
-        groupByTag ? (
+        <div className="grid-view-container">
+          {filteredAccounts.length > 0 && (
+            <div className="grid-view-header" style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-color)' }}>
+                <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
+                {t('common.selectAll', '全选')}
+              </label>
+            </div>
+          )}
+          {groupByTag ? (
           <div className="tag-group-list">
             {groupedAccounts.map(([groupKey, groupAccounts]) => (
               <div key={groupKey} className="tag-group-section">
@@ -924,7 +939,8 @@ export function GitHubCopilotAccountsPage() {
           <div className="ghcp-accounts-grid">
             {renderGridCards(filteredAccounts)}
           </div>
-        )
+        )}
+        </div>
       ) : groupByTag ? (
         <div className="account-table-container grouped">
           <table className="account-table">

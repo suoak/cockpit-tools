@@ -42,6 +42,8 @@ pub struct ScheduleConfig {
     pub time_window_enabled: Option<bool>,
     pub time_window_start: Option<String>,
     pub time_window_end: Option<String>,
+    pub fallback_times: Option<Vec<String>>,
+    pub startup_delay_minutes: Option<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +73,8 @@ struct ScheduleConfigNormalized {
     time_window_enabled: bool,
     time_window_start: Option<String>,
     time_window_end: Option<String>,
+    fallback_times: Vec<String>,
+    startup_delay_minutes: Option<i32>,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -120,6 +124,13 @@ fn normalize_schedule(raw: ScheduleConfig) -> ScheduleConfigNormalized {
         .unwrap_or_else(|| "07:00".to_string());
     let interval_end_time = raw.interval_end_time.unwrap_or_else(|| "22:00".to_string());
     let max_output_tokens = raw.max_output_tokens.unwrap_or(0).max(0);
+    let fallback_times = raw
+        .fallback_times
+        .filter(|times| !times.is_empty())
+        .unwrap_or_else(|| vec!["07:00".to_string()]);
+    let startup_delay_minutes = raw
+        .startup_delay_minutes
+        .map(|value| value.clamp(0, 24 * 60));
     ScheduleConfigNormalized {
         repeat_mode: raw.repeat_mode,
         daily_times,
@@ -137,6 +148,8 @@ fn normalize_schedule(raw: ScheduleConfig) -> ScheduleConfigNormalized {
         time_window_enabled: raw.time_window_enabled.unwrap_or(false),
         time_window_start: raw.time_window_start,
         time_window_end: raw.time_window_end,
+        fallback_times,
+        startup_delay_minutes,
     }
 }
 
@@ -168,6 +181,86 @@ pub fn ensure_started(app: AppHandle) {
             sleep(Duration::from_secs(30)).await;
         }
     });
+}
+
+pub async fn run_enabled_tasks_now(app: &AppHandle, trigger_source: &str) -> usize {
+    let snapshot = {
+        let guard = state().lock().expect("wakeup state lock");
+        guard.clone()
+    };
+
+    if !snapshot.enabled {
+        return 0;
+    }
+
+    let source = {
+        let trimmed = trigger_source.trim();
+        if trimmed.is_empty() {
+            "startup"
+        } else {
+            trimmed
+        }
+    };
+
+    if source == "startup" {
+        let startup_tasks: Vec<(String, i32)> = snapshot
+            .tasks
+            .iter()
+            .filter(|task| task.enabled)
+            .filter_map(|task| {
+                task.schedule
+                    .startup_delay_minutes
+                    .map(|delay| (task.id.clone(), delay.max(0)))
+            })
+            .collect();
+
+        for (task_id, delay_minutes) in startup_tasks.iter() {
+            let app_handle = app.clone();
+            let task_id = task_id.clone();
+            let delay_seconds = (*delay_minutes as u64) * 60;
+            tauri::async_runtime::spawn(async move {
+                if delay_seconds > 0 {
+                    sleep(Duration::from_secs(delay_seconds)).await;
+                }
+                if let Some(task) = resolve_startup_task_to_run(&task_id) {
+                    run_task(&app_handle, &task, "startup").await;
+                }
+            });
+        }
+        return startup_tasks.len();
+    }
+
+    let mut started_count = 0usize;
+    for task in snapshot.tasks.iter() {
+        if !task.enabled || task.schedule.startup_delay_minutes.is_some() {
+            continue;
+        }
+        let running = {
+            let guard = state().lock().expect("wakeup state lock");
+            guard.running_tasks.contains(&task.id)
+        };
+        if running {
+            continue;
+        }
+        run_task(app, task, source).await;
+        started_count += 1;
+    }
+
+    started_count
+}
+
+fn resolve_startup_task_to_run(task_id: &str) -> Option<WakeupTask> {
+    let guard = state().lock().expect("wakeup state lock");
+    if !guard.enabled || guard.running_tasks.contains(task_id) {
+        return None;
+    }
+    guard
+        .tasks
+        .iter()
+        .find(|task| {
+            task.id == task_id && task.enabled && task.schedule.startup_delay_minutes.is_some()
+        })
+        .cloned()
 }
 
 fn parse_time_to_minutes(value: &str) -> Option<i32> {
@@ -248,32 +341,31 @@ fn next_run_time(
             }
         }
     } else if schedule.repeat_mode == "interval" {
-        let start_time = schedule.interval_start_time.clone();
-        let end_hour: i32 = schedule
-            .interval_end_time
-            .split(':')
-            .next()
-            .and_then(|h| h.parse().ok())
-            .unwrap_or(22);
+        let start_minutes = parse_time_to_minutes(&schedule.interval_start_time).unwrap_or(7 * 60);
+        let end_minutes = parse_time_to_minutes(&schedule.interval_end_time).unwrap_or(22 * 60);
         let interval = schedule.interval_hours.max(1);
 
         for day_offset in 0..7 {
-            for h in (parse_time_to_minutes(&start_time).unwrap_or(0) / 60..=end_hour)
-                .step_by(interval as usize)
-            {
-                let time = format!(
-                    "{:02}:{:02}",
-                    h,
-                    parse_time_to_minutes(&start_time).unwrap_or(0) % 60
-                );
-                if let Some(candidate) = build_datetime(after, day_offset, &time) {
-                    if candidate > after {
-                        results.push(candidate);
-                        if !results.is_empty() {
-                            return results.into_iter().min();
-                        }
+            let base_date = after + chrono::Duration::days(day_offset);
+            let Some(window_start) = build_datetime_from_minutes(base_date, start_minutes) else {
+                continue;
+            };
+            let Some(mut window_end) = build_datetime_from_minutes(base_date, end_minutes) else {
+                continue;
+            };
+            if start_minutes > end_minutes {
+                window_end += chrono::Duration::days(1);
+            }
+
+            let mut candidate = window_start;
+            while candidate <= window_end {
+                if candidate > after {
+                    results.push(candidate);
+                    if !results.is_empty() {
+                        return results.into_iter().min();
                     }
                 }
+                candidate += chrono::Duration::hours(interval as i64);
             }
         }
     }
@@ -297,71 +389,244 @@ fn build_datetime_from_date(date: DateTime<Local>, time: &str) -> Option<DateTim
     Local.from_local_datetime(&naive).single()
 }
 
-fn next_crontab_time(expr: &str, after: DateTime<Local>) -> Option<DateTime<Local>> {
-    let parts: Vec<&str> = expr.trim().split_whitespace().collect();
-    if parts.len() < 5 {
-        return None;
-    }
-    let minutes = parse_cron_field(parts[0], 59)?;
-    let hours = parse_cron_field(parts[1], 23)?;
+fn build_datetime_from_minutes(date: DateTime<Local>, minutes: i32) -> Option<DateTime<Local>> {
+    let normalized = minutes.rem_euclid(24 * 60);
+    let h = (normalized / 60) as u32;
+    let m = (normalized % 60) as u32;
+    let naive_date = date.date_naive();
+    let naive = naive_date.and_hms_opt(h, m, 0)?;
+    Local.from_local_datetime(&naive).single()
+}
 
-    for day_offset in 0..7 {
-        for h in &hours {
-            for m in &minutes {
-                let candidate = build_datetime(after, day_offset, &format!("{:02}:{:02}", h, m));
-                if let Some(candidate) = candidate {
-                    if candidate > after {
-                        return Some(candidate);
-                    }
-                }
-            }
+#[derive(Debug, Clone)]
+struct CronField {
+    values: HashSet<i32>,
+    wildcard: bool,
+}
+
+impl CronField {
+    fn contains(&self, value: i32) -> bool {
+        self.values.contains(&value)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ParsedCrontab {
+    minute: CronField,
+    hour: CronField,
+    day_of_month: CronField,
+    month: CronField,
+    day_of_week: CronField,
+}
+
+fn next_crontab_time(expr: &str, after: DateTime<Local>) -> Option<DateTime<Local>> {
+    let parsed = parse_crontab_expression(expr).ok()?;
+    let mut candidate = (after + chrono::Duration::minutes(1))
+        .with_second(0)
+        .and_then(|value| value.with_nanosecond(0))?;
+
+    const MAX_LOOKAHEAD_MINUTES: i64 = 366 * 24 * 60;
+    for _ in 0..MAX_LOOKAHEAD_MINUTES {
+        if crontab_matches_time(&parsed, candidate) {
+            return Some(candidate);
         }
+        candidate += chrono::Duration::minutes(1);
     }
     None
 }
 
-fn parse_cron_field(field: &str, max: i32) -> Option<Vec<i32>> {
-    if field == "*" {
-        return Some((0..=max).collect());
+fn crontab_matches_time(expr: &ParsedCrontab, candidate: DateTime<Local>) -> bool {
+    let minute = candidate.minute() as i32;
+    let hour = candidate.hour() as i32;
+    let day_of_month = candidate.day() as i32;
+    let month = candidate.month() as i32;
+    let day_of_week = candidate.weekday().num_days_from_sunday() as i32;
+
+    if !expr.minute.contains(minute) || !expr.hour.contains(hour) || !expr.month.contains(month) {
+        return false;
     }
-    if field.contains(',') {
-        let mut result = Vec::new();
-        for part in field.split(',') {
-            result.push(part.parse().ok()?);
-        }
-        return Some(result);
+
+    let day_of_month_match = expr.day_of_month.contains(day_of_month);
+    let day_of_week_match = expr.day_of_week.contains(day_of_week);
+    let day_match = if expr.day_of_month.wildcard && expr.day_of_week.wildcard {
+        true
+    } else if expr.day_of_month.wildcard {
+        day_of_week_match
+    } else if expr.day_of_week.wildcard {
+        day_of_month_match
+    } else {
+        day_of_month_match || day_of_week_match
+    };
+
+    day_match
+}
+
+pub fn validate_crontab_expression(expr: &str) -> Result<(), String> {
+    parse_crontab_expression(expr).map(|_| ())
+}
+
+fn parse_crontab_expression(expr: &str) -> Result<ParsedCrontab, String> {
+    let parts: Vec<&str> = expr.trim().split_whitespace().collect();
+    if parts.len() != 5 {
+        return Err("crontab 表达式必须是 5 段（分 时 日 月 周）".to_string());
     }
-    if field.contains('-') {
-        let parts: Vec<&str> = field.split('-').collect();
-        if parts.len() != 2 {
-            return None;
-        }
-        let start: i32 = parts[0].parse().ok()?;
-        let end: i32 = parts[1].parse().ok()?;
-        if end < start {
-            return None;
-        }
-        return Some((start..=end).collect());
+
+    Ok(ParsedCrontab {
+        minute: parse_cron_field(parts[0], 0, 59, false, "分钟")?,
+        hour: parse_cron_field(parts[1], 0, 23, false, "小时")?,
+        day_of_month: parse_cron_field(parts[2], 1, 31, false, "日期")?,
+        month: parse_cron_field(parts[3], 1, 12, false, "月份")?,
+        day_of_week: parse_cron_field(parts[4], 0, 7, true, "星期")?,
+    })
+}
+
+fn parse_cron_field(
+    field: &str,
+    min: i32,
+    max: i32,
+    normalize_weekday: bool,
+    field_label: &str,
+) -> Result<CronField, String> {
+    let trimmed = field.trim();
+    if trimmed.is_empty() {
+        return Err(format!("crontab {}字段不能为空", field_label));
     }
-    if field.contains('/') {
-        let parts: Vec<&str> = field.split('/').collect();
-        if parts.len() != 2 {
-            return None;
+
+    if trimmed == "*" {
+        let mut values = HashSet::new();
+        for value in min..=max {
+            values.insert(normalize_cron_value(value, normalize_weekday));
         }
-        let step: i32 = parts[1].parse().ok()?;
+        return Ok(CronField {
+            values,
+            wildcard: true,
+        });
+    }
+
+    let mut values = HashSet::new();
+    for segment in trimmed.split(',') {
+        let segment = segment.trim();
+        if segment.is_empty() {
+            return Err(format!("crontab {}字段包含空片段", field_label));
+        }
+        parse_cron_segment(
+            segment,
+            min,
+            max,
+            normalize_weekday,
+            field_label,
+            &mut values,
+        )?;
+    }
+
+    if values.is_empty() {
+        return Err(format!("crontab {}字段没有可用取值", field_label));
+    }
+
+    Ok(CronField {
+        values,
+        wildcard: false,
+    })
+}
+
+fn parse_cron_segment(
+    segment: &str,
+    min: i32,
+    max: i32,
+    normalize_weekday: bool,
+    field_label: &str,
+    out: &mut HashSet<i32>,
+) -> Result<(), String> {
+    let (range_part, step) = if let Some((left, right)) = segment.split_once('/') {
+        let step = parse_cron_number(right, field_label, "步长")?;
         if step <= 0 {
-            return None;
+            return Err(format!("crontab {}字段步长必须大于 0", field_label));
         }
-        let mut result = Vec::new();
-        let mut value = 0;
-        while value <= max {
-            result.push(value);
-            value += step;
-        }
-        return Some(result);
+        (left.trim(), step)
+    } else {
+        (segment, 1)
+    };
+
+    if range_part == "*" {
+        insert_cron_range(out, min, max, step, normalize_weekday);
+        return Ok(());
     }
-    let value: i32 = field.parse().ok()?;
-    Some(vec![value])
+
+    if let Some((start_raw, end_raw)) = range_part.split_once('-') {
+        let start = parse_cron_number(start_raw, field_label, "范围起点")?;
+        let end = parse_cron_number(end_raw, field_label, "范围终点")?;
+        validate_cron_value(start, min, max, normalize_weekday, field_label)?;
+        validate_cron_value(end, min, max, normalize_weekday, field_label)?;
+        if end < start {
+            return Err(format!(
+                "crontab {}字段范围无效：{}-{}",
+                field_label, start, end
+            ));
+        }
+        insert_cron_range(out, start, end, step, normalize_weekday);
+        return Ok(());
+    }
+
+    let single = parse_cron_number(range_part, field_label, "取值")?;
+    validate_cron_value(single, min, max, normalize_weekday, field_label)?;
+    if step == 1 {
+        out.insert(normalize_cron_value(single, normalize_weekday));
+    } else {
+        insert_cron_range(out, single, max, step, normalize_weekday);
+    }
+    Ok(())
+}
+
+fn parse_cron_number(raw: &str, field_label: &str, value_label: &str) -> Result<i32, String> {
+    raw.trim().parse::<i32>().map_err(|_| {
+        format!(
+            "crontab {}字段{}无效：{}",
+            field_label,
+            value_label,
+            raw.trim()
+        )
+    })
+}
+
+fn validate_cron_value(
+    value: i32,
+    min: i32,
+    max: i32,
+    normalize_weekday: bool,
+    field_label: &str,
+) -> Result<(), String> {
+    if normalize_weekday && value == 7 {
+        return Ok(());
+    }
+    if value < min || value > max {
+        return Err(format!(
+            "crontab {}字段取值超出范围（{}-{}）：{}",
+            field_label, min, max, value
+        ));
+    }
+    Ok(())
+}
+
+fn normalize_cron_value(value: i32, normalize_weekday: bool) -> i32 {
+    if normalize_weekday && value == 7 {
+        0
+    } else {
+        value
+    }
+}
+
+fn insert_cron_range(
+    out: &mut HashSet<i32>,
+    start: i32,
+    end: i32,
+    step: i32,
+    normalize_weekday: bool,
+) {
+    let mut value = start;
+    while value <= end {
+        out.insert(normalize_cron_value(value, normalize_weekday));
+        value += step;
+    }
 }
 
 fn normalize_max_tokens(value: i32) -> u32 {
@@ -450,6 +715,9 @@ async fn run_scheduler_once(app: &AppHandle) {
         if snapshot.running_tasks.contains(&task.id) {
             continue;
         }
+        if task.schedule.startup_delay_minutes.is_some() {
+            continue;
+        }
 
         if task.schedule.wake_on_reset {
             handle_quota_reset_task(app, task, now).await;
@@ -472,21 +740,30 @@ async fn run_scheduler_once(app: &AppHandle) {
         // 只有到达预定时间才触发（不再提前30秒）
         if let Some(next_run) = next_run {
             if next_run <= now {
-                run_task(app, task, "scheduled").await;
+                let trigger_source = if task.schedule.crontab.is_some() {
+                    "crontab"
+                } else {
+                    "scheduled"
+                };
+                run_task(app, task, trigger_source).await;
             }
         }
     }
 }
 
 async fn handle_quota_reset_task(app: &AppHandle, task: &WakeupTask, now: DateTime<Local>) {
-    if task.schedule.time_window_enabled
-        && !is_in_time_window(
+    if task.schedule.time_window_enabled {
+        let in_window = is_in_time_window(
             task.schedule.time_window_start.as_ref(),
             task.schedule.time_window_end.as_ref(),
             now,
-        )
-    {
-        return;
+        );
+        let in_fallback_time = task.schedule.fallback_times.iter().any(|time| {
+            parse_time_to_minutes(time) == Some((now.hour() as i32) * 60 + now.minute() as i32)
+        });
+        if !in_window && !in_fallback_time {
+            return;
+        }
     }
 
     let accounts = match modules::list_accounts() {
@@ -615,7 +892,8 @@ async fn run_task_with_models(
         for model in &models {
             let started = chrono::Utc::now();
             let result =
-                modules::wakeup::trigger_wakeup(&account.id, model, &prompt, max_tokens, None).await;
+                modules::wakeup::trigger_wakeup(&account.id, model, &prompt, max_tokens, None)
+                    .await;
             let duration = chrono::Utc::now()
                 .signed_duration_since(started)
                 .num_milliseconds()

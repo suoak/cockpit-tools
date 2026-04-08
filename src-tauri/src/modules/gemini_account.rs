@@ -16,15 +16,17 @@ const GEMINI_QUOTA_ALERT_COOLDOWN_SECONDS: i64 = 10 * 60;
 const GEMINI_OAUTH_FILE: &str = "oauth_creds.json";
 const GEMINI_GOOGLE_ACCOUNTS_FILE: &str = "google_accounts.json";
 const GEMINI_SETTINGS_FILE: &str = "settings.json";
+const GEMINI_FILE_KEYCHAIN_FILE: &str = "gemini-credentials.json";
 const GEMINI_HOME_DIR: &str = ".gemini";
+const GEMINI_KEYCHAIN_SERVICE: &str = "gemini-cli-oauth";
+const GEMINI_KEYCHAIN_ACCOUNT: &str = "main-account";
 
 const GOOGLE_TOKEN_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 const CODE_ASSIST_LOAD_ENDPOINT: &str =
     "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist";
-const CODE_ASSIST_QUOTA_ENDPOINT: &str =
-    "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
-const GOOGLE_PROJECTS_ENDPOINT: &str = "https://cloudresourcemanager.googleapis.com/v1/projects";
+const CODE_ASSIST_REQUEST_RETRY_COUNT: usize = 3;
+const CODE_ASSIST_REQUEST_RETRY_DELAY_MS: u64 = 100;
 
 lazy_static::lazy_static! {
     static ref GEMINI_ACCOUNT_INDEX_LOCK: Mutex<()> = Mutex::new(());
@@ -39,6 +41,22 @@ struct LocalOauthCreds {
     token_type: Option<String>,
     scope: Option<String>,
     expiry_date: Option<Value>,
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalKeychainOauthCreds {
+    token: Option<LocalKeychainToken>,
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalKeychainToken {
+    access_token: Option<String>,
+    refresh_token: Option<String>,
+    token_type: Option<String>,
+    scope: Option<String>,
+    expires_at: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,6 +95,7 @@ struct GoogleUserInfoResponse {
 #[derive(Debug)]
 struct LoadCodeAssistStatus {
     tier_id: Option<String>,
+    tier_name: Option<String>,
     project_id: Option<String>,
 }
 
@@ -125,6 +144,24 @@ fn parse_jwt_claim_string(token: &str, key: &str) -> Option<String> {
         .ok()?;
     let value: Value = serde_json::from_slice(&payload).ok()?;
     normalize_non_empty(value.get(key).and_then(|item| item.as_str()))
+}
+
+fn merge_local_oauth_creds(
+    primary: LocalOauthCreds,
+    fallback: Option<LocalOauthCreds>,
+) -> LocalOauthCreds {
+    let Some(fallback) = fallback else {
+        return primary;
+    };
+
+    LocalOauthCreds {
+        access_token: primary.access_token.or(fallback.access_token),
+        refresh_token: primary.refresh_token.or(fallback.refresh_token),
+        id_token: primary.id_token.or(fallback.id_token),
+        token_type: primary.token_type.or(fallback.token_type),
+        scope: primary.scope.or(fallback.scope),
+        expiry_date: primary.expiry_date.or(fallback.expiry_date),
+    }
 }
 
 fn get_data_dir() -> Result<PathBuf, String> {
@@ -669,8 +706,96 @@ fn read_local_oauth_creds_from_path(
     Ok(Some(creds))
 }
 
+#[cfg(target_os = "macos")]
+fn is_macos_default_keychain_available() -> bool {
+    let output = match std::process::Command::new("security")
+        .arg("default-keychain")
+        .output()
+    {
+        Ok(output) => output,
+        Err(_) => return false,
+    };
+
+    if !output.status.success() {
+        return false;
+    }
+
+    let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if raw.is_empty() {
+        return false;
+    }
+
+    let normalized = raw.trim_matches('"');
+    !normalized.trim().is_empty() && Path::new(normalized).exists()
+}
+
+#[cfg(not(target_os = "macos"))]
+fn is_macos_default_keychain_available() -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn read_local_oauth_creds_from_keychain() -> Result<Option<LocalOauthCreds>, String> {
+    if !is_macos_default_keychain_available() {
+        return Ok(None);
+    }
+
+    let output = std::process::Command::new("security")
+        .arg("find-generic-password")
+        .arg("-s")
+        .arg(GEMINI_KEYCHAIN_SERVICE)
+        .arg("-a")
+        .arg(GEMINI_KEYCHAIN_ACCOUNT)
+        .arg("-w")
+        .output()
+        .map_err(|e| format!("执行 security 读取 Gemini keychain 失败: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("could not be found") {
+            return Ok(None);
+        }
+        return Err(format!(
+            "读取 Gemini keychain 凭据失败: status={}, stderr={}",
+            output.status,
+            stderr.trim()
+        ));
+    }
+
+    let secret = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if secret.is_empty() {
+        return Ok(None);
+    }
+
+    let parsed = serde_json::from_str::<LocalKeychainOauthCreds>(&secret)
+        .map_err(|e| format!("解析 Gemini keychain 凭据失败: {}", e))?;
+    let token = parsed
+        .token
+        .ok_or_else(|| "Gemini keychain 凭据缺少 token 字段".to_string())?;
+
+    Ok(Some(LocalOauthCreds {
+        access_token: normalize_non_empty(token.access_token.as_deref()),
+        refresh_token: normalize_non_empty(token.refresh_token.as_deref()),
+        id_token: None,
+        token_type: normalize_non_empty(token.token_type.as_deref()),
+        scope: normalize_non_empty(token.scope.as_deref()),
+        expiry_date: token.expires_at,
+    }))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn read_local_oauth_creds_from_keychain() -> Result<Option<LocalOauthCreds>, String> {
+    Ok(None)
+}
+
 fn read_local_oauth_creds() -> Result<Option<LocalOauthCreds>, String> {
-    read_local_oauth_creds_from_path(None)
+    let keychain_creds = read_local_oauth_creds_from_keychain()?;
+    let file_creds = read_local_oauth_creds_from_path(None)?;
+
+    match (keychain_creds, file_creds) {
+        (Some(primary), fallback) => Ok(Some(merge_local_oauth_creds(primary, fallback))),
+        (None, fallback) => Ok(fallback),
+    }
 }
 
 fn read_local_google_accounts_from_path(
@@ -806,7 +931,7 @@ pub fn import_from_local() -> Result<Option<GeminiAccount>, String> {
     };
 
     let access_token = normalize_non_empty(local_creds.access_token.as_deref())
-        .ok_or_else(|| "本地 Gemini oauth_creds.json 缺少 access_token".to_string())?;
+        .ok_or_else(|| "本地 Gemini 凭据缺少 access_token".to_string())?;
 
     let active_email = read_local_google_accounts()?
         .active
@@ -900,6 +1025,97 @@ fn write_local_oauth_creds_to_path(
     fs::write(path, content).map_err(|e| format!("写入本地 Gemini oauth_creds.json 失败: {}", e))
 }
 
+#[cfg(target_os = "macos")]
+fn write_local_oauth_creds_to_keychain(account: &GeminiAccount) -> Result<(), String> {
+    if !is_macos_default_keychain_available() {
+        logger::log_info("[Gemini Switch] 未检测到可用 macOS keychain，跳过 keychain 写入");
+        return Ok(());
+    }
+
+    let access_token = normalize_non_empty(Some(account.access_token.as_str()))
+        .ok_or_else(|| "Gemini keychain 写入失败: access_token 为空".to_string())?;
+    let token_type =
+        normalize_non_empty(account.token_type.as_deref()).unwrap_or_else(|| "Bearer".to_string());
+
+    let mut token = serde_json::Map::new();
+    token.insert("accessToken".to_string(), Value::String(access_token));
+    token.insert("tokenType".to_string(), Value::String(token_type));
+    if let Some(refresh_token) = normalize_non_empty(account.refresh_token.as_deref()) {
+        token.insert("refreshToken".to_string(), Value::String(refresh_token));
+    }
+    if let Some(scope) = normalize_non_empty(account.scope.as_deref()) {
+        token.insert("scope".to_string(), Value::String(scope));
+    }
+    if let Some(expires_at) = account.expiry_date {
+        token.insert("expiresAt".to_string(), serde_json::json!(expires_at));
+    }
+
+    let payload = serde_json::json!({
+        "serverName": GEMINI_KEYCHAIN_ACCOUNT,
+        "token": token,
+        "updatedAt": now_ts_ms(),
+    });
+    let secret = serde_json::to_string(&payload)
+        .map_err(|e| format!("序列化 Gemini keychain 凭据失败: {}", e))?;
+
+    let output = std::process::Command::new("security")
+        .arg("add-generic-password")
+        .arg("-U")
+        .arg("-s")
+        .arg(GEMINI_KEYCHAIN_SERVICE)
+        .arg("-a")
+        .arg(GEMINI_KEYCHAIN_ACCOUNT)
+        .arg("-w")
+        .arg(&secret)
+        .output()
+        .map_err(|e| format!("执行 security 写入 Gemini keychain 失败: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(format!(
+            "写入 Gemini keychain 失败: status={}, stderr={}, stdout={}",
+            output.status,
+            if stderr.trim().is_empty() {
+                "<empty>"
+            } else {
+                stderr.trim()
+            },
+            if stdout.trim().is_empty() {
+                "<empty>"
+            } else {
+                stdout.trim()
+            }
+        ));
+    }
+
+    logger::log_info(&format!(
+        "[Gemini Switch] 已更新 keychain 登录信息: service={}, account={}",
+        GEMINI_KEYCHAIN_SERVICE, GEMINI_KEYCHAIN_ACCOUNT
+    ));
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn write_local_oauth_creds_to_keychain(_account: &GeminiAccount) -> Result<(), String> {
+    Ok(())
+}
+
+fn clear_local_file_keychain_to_path(cli_home_root: Option<&Path>) -> Result<(), String> {
+    let path = resolve_gemini_home(cli_home_root)?.join(GEMINI_FILE_KEYCHAIN_FILE);
+    if !path.exists() {
+        return Ok(());
+    }
+
+    fs::remove_file(&path).map_err(|e| {
+        format!(
+            "清理 Gemini file keychain 失败: path={}, error={}",
+            path.display(),
+            e
+        )
+    })
+}
+
 fn update_local_active_account_with_path(
     email: &str,
     cli_home_root: Option<&Path>,
@@ -936,6 +1152,94 @@ fn parse_tier_plan_name(tier_id: Option<&str>) -> Option<String> {
 
 fn is_unauthorized_error(error: &str) -> bool {
     error.contains("UNAUTHORIZED") || error.contains("401")
+}
+
+fn should_retry_code_assist_status(status: reqwest::StatusCode) -> bool {
+    let code = status.as_u16();
+    code == 429 || code == 499 || code >= 500
+}
+
+async fn post_code_assist_json_with_retry(
+    access_token: &str,
+    endpoint: &str,
+    payload: &Value,
+    action_name: &str,
+) -> Result<Value, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let mut attempt = 0usize;
+    loop {
+        attempt += 1;
+        let response = client
+            .post(endpoint)
+            .header(AUTHORIZATION, format!("Bearer {}", access_token))
+            .header(CONTENT_TYPE, "application/json")
+            .json(payload)
+            .send()
+            .await;
+
+        match response {
+            Ok(resp) => {
+                if resp.status().as_u16() == 401 {
+                    return Err("UNAUTHORIZED: Gemini access_token 已失效".to_string());
+                }
+
+                if resp.status().is_success() {
+                    return resp
+                        .json::<Value>()
+                        .await
+                        .map_err(|e| format!("解析 Gemini {} 响应失败: {}", action_name, e));
+                }
+
+                let status = resp.status();
+                if should_retry_code_assist_status(status)
+                    && attempt <= CODE_ASSIST_REQUEST_RETRY_COUNT
+                {
+                    logger::log_warn(&format!(
+                        "[Gemini {}] 请求失败将重试: attempt={}/{}, status={}",
+                        action_name,
+                        attempt,
+                        CODE_ASSIST_REQUEST_RETRY_COUNT + 1,
+                        status
+                    ));
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        CODE_ASSIST_REQUEST_RETRY_DELAY_MS,
+                    ))
+                    .await;
+                    continue;
+                }
+
+                let body = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "<empty-body>".to_string());
+                return Err(format!(
+                    "请求 Gemini {} 失败: status={}, body={}",
+                    action_name, status, body
+                ));
+            }
+            Err(err) => {
+                if attempt <= CODE_ASSIST_REQUEST_RETRY_COUNT {
+                    logger::log_warn(&format!(
+                        "[Gemini {}] 请求异常将重试: attempt={}/{}, error={}",
+                        action_name,
+                        attempt,
+                        CODE_ASSIST_REQUEST_RETRY_COUNT + 1,
+                        err
+                    ));
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        CODE_ASSIST_REQUEST_RETRY_DELAY_MS,
+                    ))
+                    .await;
+                    continue;
+                }
+                return Err(format!("请求 Gemini {} 失败: {}", action_name, err));
+            }
+        }
+    }
 }
 
 async fn refresh_access_token(refresh_token: &str) -> Result<GoogleTokenRefreshResponse, String> {
@@ -1004,48 +1308,30 @@ async fn fetch_google_userinfo(access_token: &str) -> Option<GoogleUserInfoRespo
 }
 
 async fn load_code_assist_status(access_token: &str) -> Result<LoadCodeAssistStatus, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+    let mut metadata = serde_json::Map::new();
+    metadata.insert(
+        "ideType".to_string(),
+        Value::String("IDE_UNSPECIFIED".to_string()),
+    );
+    metadata.insert(
+        "platform".to_string(),
+        Value::String("PLATFORM_UNSPECIFIED".to_string()),
+    );
+    metadata.insert(
+        "pluginType".to_string(),
+        Value::String("GEMINI".to_string()),
+    );
 
-    let response = client
-        .post(CODE_ASSIST_LOAD_ENDPOINT)
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
-        .header(CONTENT_TYPE, "application/json")
-        .json(&serde_json::json!({
-            "metadata": {
-                "ideType": "GEMINI_CLI",
-                "pluginType": "GEMINI"
-            }
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("请求 Gemini loadCodeAssist 失败: {}", e))?;
+    let mut payload = serde_json::Map::new();
+    payload.insert("metadata".to_string(), Value::Object(metadata));
 
-    if response.status().as_u16() == 401 {
-        return Err("UNAUTHORIZED: Gemini access_token 已失效".to_string());
-    }
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "<empty-body>".to_string());
-        return Err(format!(
-            "请求 Gemini loadCodeAssist 失败: status={}, body={}",
-            status, body
-        ));
-    }
-
-    let raw_body = response
-        .text()
-        .await
-        .map_err(|e| format!("读取 Gemini loadCodeAssist 响应失败: {}", e))?;
-
-    let value = serde_json::from_str::<Value>(&raw_body)
-        .map_err(|e| format!("解析 Gemini loadCodeAssist 响应失败: {}", e))?;
+    let value = post_code_assist_json_with_retry(
+        access_token,
+        CODE_ASSIST_LOAD_ENDPOINT,
+        &Value::Object(payload),
+        "loadCodeAssist",
+    )
+    .await?;
 
     let current_tier_id = normalize_non_empty(
         value
@@ -1117,6 +1403,7 @@ async fn load_code_assist_status(access_token: &str) -> Result<LoadCodeAssistSta
         .or_else(|| ineligible_tier_id.clone())
         .or_else(|| default_allowed_tier_id.clone())
         .or_else(|| first_allowed_tier_id.clone());
+    let selected_tier_name = paid_tier_name.clone().or_else(|| current_tier_name.clone());
 
     let project_id = normalize_non_empty(
         value
@@ -1165,96 +1452,9 @@ async fn load_code_assist_status(access_token: &str) -> Result<LoadCodeAssistSta
 
     Ok(LoadCodeAssistStatus {
         tier_id: selected_tier_id,
+        tier_name: selected_tier_name,
         project_id,
     })
-}
-
-async fn discover_gemini_project_id(access_token: &str) -> Option<String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .ok()?;
-
-    let response = client
-        .get(GOOGLE_PROJECTS_ENDPOINT)
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
-        .send()
-        .await
-        .ok()?;
-
-    if !response.status().is_success() {
-        return None;
-    }
-
-    let value = response.json::<Value>().await.ok()?;
-    let projects = value.get("projects")?.as_array()?;
-
-    for project in projects {
-        let project_id = normalize_non_empty(project.get("projectId").and_then(|v| v.as_str()));
-        let Some(project_id) = project_id else {
-            continue;
-        };
-
-        if project_id.starts_with("gen-lang-client") {
-            return Some(project_id);
-        }
-
-        let has_gen_label = project
-            .get("labels")
-            .and_then(|v| v.get("generative-language"))
-            .is_some();
-        if has_gen_label {
-            return Some(project_id);
-        }
-    }
-
-    None
-}
-
-async fn retrieve_user_quota(
-    access_token: &str,
-    project_id: Option<&str>,
-) -> Result<Value, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
-
-    let body = if let Some(project_id) = normalize_non_empty(project_id) {
-        serde_json::json!({ "project": project_id })
-    } else {
-        serde_json::json!({})
-    };
-
-    let response = client
-        .post(CODE_ASSIST_QUOTA_ENDPOINT)
-        .header(AUTHORIZATION, format!("Bearer {}", access_token))
-        .header(CONTENT_TYPE, "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("请求 Gemini retrieveUserQuota 失败: {}", e))?;
-
-    if response.status().as_u16() == 401 {
-        return Err("UNAUTHORIZED: Gemini access_token 已失效".to_string());
-    }
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "<empty-body>".to_string());
-        return Err(format!(
-            "请求 Gemini retrieveUserQuota 失败: status={}, body={}",
-            status, body
-        ));
-    }
-
-    response
-        .json::<Value>()
-        .await
-        .map_err(|e| format!("解析 Gemini retrieveUserQuota 响应失败: {}", e))
 }
 
 async fn ensure_access_token_valid(account: &mut GeminiAccount) -> Result<(), String> {
@@ -1311,22 +1511,7 @@ async fn refresh_account_token_once(account_id: &str) -> Result<GeminiAccount, S
     }
     let load_status = load_status?;
 
-    let mut project_id = load_status
-        .project_id
-        .clone()
-        .or_else(|| account.project_id.clone());
-    if project_id.is_none() {
-        project_id = discover_gemini_project_id(&account.access_token).await;
-    }
-
-    let mut quota_data = retrieve_user_quota(&account.access_token, project_id.as_deref()).await;
-    if let Err(err) = &quota_data {
-        if is_unauthorized_error(err) {
-            force_refresh_access_token(&mut account).await?;
-            quota_data = retrieve_user_quota(&account.access_token, project_id.as_deref()).await;
-        }
-    }
-    let quota_data = quota_data?;
+    let project_id = load_status.project_id.clone();
 
     if let Some(userinfo) = fetch_google_userinfo(&account.access_token).await {
         if let Some(email) = normalize_non_empty(userinfo.email.as_deref()) {
@@ -1361,14 +1546,14 @@ async fn refresh_account_token_once(account_id: &str) -> Result<GeminiAccount, S
     if let Some(tier_id) = load_status.tier_id {
         account.tier_id = Some(tier_id);
     }
-    account.plan_name = parse_tier_plan_name(account.tier_id.as_deref());
+    account.plan_name = load_status
+        .tier_name
+        .or_else(|| parse_tier_plan_name(account.tier_id.as_deref()));
     account.selected_auth_type = account
         .selected_auth_type
         .clone()
         .or_else(|| Some("oauth-personal".to_string()));
-    account.gemini_usage_raw = Some(quota_data);
     let refreshed_at = now_ts();
-    account.usage_updated_at = Some(refreshed_at);
     account.last_used = refreshed_at;
     account.status = None;
     account.status_reason = None;
@@ -1428,6 +1613,8 @@ pub fn inject_to_gemini_home(account_id: &str, cli_home_root: Option<&Path>) -> 
         load_account_file(account_id).ok_or_else(|| "Gemini 账号不存在".to_string())?;
 
     write_local_oauth_creds_to_path(&account, cli_home_root)?;
+    write_local_oauth_creds_to_keychain(&account)?;
+    clear_local_file_keychain_to_path(cli_home_root)?;
     update_local_active_account_with_path(&account.email, cli_home_root)?;
     write_local_selected_auth_type_to_path("oauth-personal", cli_home_root)?;
 

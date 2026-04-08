@@ -162,6 +162,13 @@
       "updated": {
         "label": "Mis à jour il y a {{relative}}"
       }
+    },
+    "topRightAd": {
+      "ariaLabel": "Emplacement publicitaire global en haut à droite",
+      "badge": "PUB",
+      "title": "Emplacement publicitaire en haut à droite",
+      "desc": "Cette zone est fixée en haut à droite sur toutes les pages pour les campagnes ou publicités de marque.",
+      "action": "Voir les détails"
     }
   },
   "nav": {
@@ -195,7 +202,8 @@
     "switchClassicLayoutTitle": "Passer à la disposition classique de la barre latérale",
     "switchClassicLayoutDesc": "La disposition classique affiche toute la navigation des plateformes et prend en charge le repli de la barre latérale. Vous pouvez revenir à tout moment dans Paramètres > Général > Disposition de la barre latérale.",
     "switchClassicLayoutDontAskAgain": "Ne plus afficher ce message",
-    "switchClassicLayoutConfirm": "Basculer maintenant"
+    "switchClassicLayoutConfirm": "Basculer maintenant",
+    "2faManager": "Gestion 2FA"
   },
   "platformLayout": {
     "title": "Disposition des plateformes",
@@ -578,7 +586,32 @@
       "sideNavLayout": "Disposition de la barre latérale",
       "sideNavLayoutDesc": "Basculer entre la disposition originale et classique de la barre latérale",
       "sideNavLayoutOriginal": "Disposition originale",
-      "sideNavLayoutClassic": "Disposition classique"
+      "sideNavLayoutClassic": "Disposition classique",
+      "antigravityDualSwitchNoRestart": "Bascule double sans redémarrage",
+      "antigravityDualSwitchNoRestartDesc": "Lors du changement de compte, les données locales sont écrites et la bascule fluide de l’extension est exécutée dans un seul flux, sans redémarrer Antigravity.",
+      "appAutoLaunch": "Lancer Cockpit Tools à la connexion",
+      "appAutoLaunchDesc": "Démarrer automatiquement l'application après la connexion au système",
+      "startupWakeupDisabled": "Désactivé",
+      "startupWakeupImmediate": "Réveiller immédiatement",
+      "startupWakeupDelayed": "Réveiller avec délai",
+      "antigravityStartupWakeup": "Exécuter le réveil Antigravity au démarrage",
+      "antigravityStartupWakeupDesc": "Exécuter une fois les tâches de réveil Antigravity activées après le démarrage de l'app",
+      "codexStartupWakeup": "Exécuter le réveil Codex au démarrage",
+      "codexStartupWakeupDesc": "Exécuter une fois les tâches de réveil Codex activées après le démarrage de l'app",
+      "currentAccountRefreshTitle": "Actualisation du compte actuel",
+      "currentAccountRefreshItemDesc": "Actualise uniquement le compte actuel. Valeur par défaut : 1 minute.",
+      "autoSwitchAccountScope": "Portée de bascule automatique des comptes",
+      "autoSwitchAccountScopeDesc": "La surveillance et la bascule ne s’appliquent qu’aux comptes de cette portée.",
+      "autoSwitchAccountScopeAll": "Tous les comptes",
+      "autoSwitchAccountScopeSelected": "Comptes sélectionnés",
+      "autoSwitchAccountScopeChoose": "Choisir des comptes",
+      "autoSwitchAccountScopeManage": "Gérer les comptes",
+      "autoSwitchAccountScopeAllSummary": "Portée actuelle : tous les comptes ({{total}} au total)",
+      "autoSwitchAccountScopeSummary": "{{selected}} / {{total}} comptes sélectionnés",
+      "autoSwitchAccountScopeDialogTitle": "Choisir la portée des comptes pour la bascule automatique",
+      "autoSwitchAccountScopeAllHint": "La portée actuelle inclut tous les comptes. {{total}} compte(s) participeront à la bascule automatique.",
+      "codexAutoSwitchAccountScope": "Portée de bascule automatique des comptes Codex",
+      "codexAutoSwitchAccountScopeDesc": "État actuel de la bascule automatique Codex : {{status}}. Seuls les comptes de cette portée seront pris en compte."
     },
     "network": {
       "apiTitle": "API du cockpit antigravité",
@@ -819,6 +852,40 @@
       "accountPickerEmpty": "Aucun compte correspondant",
       "filterHint": "{{count}} groupe(s) sélectionné(s) pour le filtrage",
       "filterToggle": "Cochez pour filtrer par ce groupe"
+    },
+    "switchHistory": {
+      "title": "Historique des bascules",
+      "empty": "Aucun historique de bascule pour le moment",
+      "success": "Réussi",
+      "failed": "Échec",
+      "target": "Compte cible : {{email}}",
+      "trigger": "Déclencheur : {{trigger}}",
+      "triggerManual": "Bascule manuelle",
+      "triggerAuto": "Bascule automatique",
+      "triggerUnknown": "Inconnu",
+      "origin": "Initiateur : {{origin}}",
+      "originDesktop": "Bureau",
+      "originPlugin": "Extension",
+      "originUnknown": "Inconnu",
+      "autoReasonLabel": "Raison auto : {{reason}}",
+      "autoReason": "Règle : {{rule}} ; seuil : {{threshold}}% ; portée : {{scope}} ; groupes surveillés : {{selectedGroups}} ; groupes touchés : {{hitGroups}} ; candidats : {{candidates}}",
+      "autoReasonUnknown": "La bascule automatique a été déclenchée, mais aucune raison détaillée n’a été enregistrée",
+      "autoReasonRuleCurrentDisabled": "Le compte actuel est désactivé",
+      "autoReasonRuleQuotaForbidden": "Le quota du compte actuel est bloqué",
+      "autoReasonRuleGroupBelowThreshold": "Groupe de modèles sous le seuil",
+      "autoReasonScopeAnyGroup": "N’importe quel groupe de modèles",
+      "autoReasonScopeSelectedGroups": "Groupes de modèles sélectionnés",
+      "stageResult": "Local : {{local}} / Fluide : {{seamless}}",
+      "duration": "Durée : total {{total}}ms, local {{local}}ms, fluide {{seamless}}ms",
+      "error": "Échec à l’étape {{stage}} ({{code}}) : {{message}}",
+      "stageLocal": "Écriture locale",
+      "stageClientStart": "Démarrage du client",
+      "stageSeamless": "Extension fluide",
+      "stageUnknown": "Étape inconnue",
+      "clear": "Effacer l’historique",
+      "clearConfirm": "Effacer tout l’historique des bascules ?",
+      "loadFailed": "Échec du chargement de l’historique des bascules : {{error}}",
+      "clearFailed": "Échec de l’effacement de l’historique des bascules : {{error}}"
     }
   },
   "overview": {
@@ -1123,6 +1190,8 @@
       "accountRequired": "Sélectionnez au moins un compte",
       "modelRequired": "Sélectionnez au moins un modèle",
       "crontabRequired": "Veuillez saisir une expression crontab",
+      "crontabValid": "L'expression crontab est valide",
+      "crontabInvalid": "L'expression crontab est invalide",
       "taskSaved": "Tâche « {{name}} » enregistrée",
       "featureOff": "Réveil désactivé",
       "featureOn": "Réveil activé",
@@ -1137,7 +1206,8 @@
       "crontab": "Crontab",
       "quotaReset": "Réinitialisation de quota",
       "manual": "Tester maintenant",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "startup": "Après le démarrage"
     },
     "taskCard": {
       "accountsCount": "Comptes {{count}}",
@@ -1555,7 +1625,14 @@
       },
       "nextRunsQuotaResetHint": "Les déclencheurs de réinitialisation du quota dépendent des données de quota récentes, donc aucun aperçu horaire fixe n'est disponible.",
       "triggerQuotaReset": "Déclencheur de réinitialisation du quota",
-      "noticeSavedEnabledWithQuotaReset": "Tâches enregistrées. Total : {{count}}. L'actualisation automatique Codex a été réglée sur {{minutes}} minutes."
+      "noticeSavedEnabledWithQuotaReset": "Tâches enregistrées. Total : {{count}}. L'actualisation automatique Codex a été réglée sur {{minutes}} minutes.",
+      "runtimeConfigTitle": "Chemins d’exécution personnalisés",
+      "runtimeConfigHint": "Vous pouvez renseigner un chemin d’exécutable ou de dossier. Laissez vide pour une détection automatique via PATH.",
+      "runtimeConfigCodexCliLabel": "Chemin de Codex CLI",
+      "runtimeConfigCodexCliPlaceholder": "ex. : /opt/homebrew/bin/codex",
+      "runtimeConfigNodeLabel": "Chemin de node",
+      "runtimeConfigNodePlaceholder": "ex. : /opt/homebrew/bin/node",
+      "runtimeConfigApplyHint": "Après modification, cliquez sur « Vérifier à nouveau CLI » pour enregistrer et appliquer immédiatement."
     },
     "sessionManager": {
       "title": "Gestion des sessions",
@@ -1724,8 +1801,13 @@
       "title": "Changement automatique",
       "enable": "Changement automatique",
       "threshold": "Seuil de changement",
-      "thresholdDesc": "Le changement automatique se déclenche lorsque le quota d'un modèle tombe en dessous de ce pourcentage",
-      "hint": "Bascule automatiquement vers le compte avec le quota le plus élevé lorsque le quota d'un modèle descend en dessous du seuil."
+      "thresholdDesc": "La bascule automatique se déclenche lorsque les groupes de modèles surveillés atteignent ce seuil en pourcentage",
+      "hint": "Bascule automatiquement vers le compte avec le quota le plus élevé lorsque les groupes de modèles surveillés atteignent le seuil.",
+      "triggerModel": "Modèle de déclenchement",
+      "scopeAnyGroup": "N’importe quel groupe de modèles",
+      "scopeSelectedGroups": "Groupes de modèles sélectionnés",
+      "selectedGroups": "Groupes sélectionnés",
+      "selectedGroupsEmpty": "Aucun groupe de modèles disponible"
     },
     "quotaAlert": {
       "title": "Alerte de quota",
@@ -2348,6 +2430,19 @@
       "desc": "Gérez les comptes Gemini Cli en important depuis l'installation locale de Gemini Cli ou en collant des jetons JWT. Les données sont traitées uniquement en local.",
       "reason": "Portée des autorisations : lecture et écriture de oauth_creds.json, google_accounts.json et settings.json sous ~/.gemini par défaut ou le chemin d’instance (GEMINI_CLI_HOME/.gemini) pour l’import de comptes et l’injection locale d’identifiants (changement de compte).",
       "storage": "Portée réseau : OAuth et l’actualisation du quota appellent les API officielles Google/Gemini (comme oauth2.googleapis.com et googleapis.com). Seuls les champs d’authentification/quota nécessaires sont envoyés ; les fichiers locaux ne sont pas téléversés vers des serveurs tiers."
+    },
+    "projectConfig": {
+      "button": "Définir le projet GCP",
+      "title": "Définir le projet GCP",
+      "selectLabel": "Sélectionner un projet",
+      "loading": "Chargement de la liste des projets...",
+      "auto": "Sélection automatique (sans définition manuelle)",
+      "empty": "Aucun projet disponible trouvé. Vérifiez que ce compte a accès aux projets GCP.",
+      "hint": "Après enregistrement, ce projet sera prioritaire pour les requêtes de quota et injecté comme GOOGLE_CLOUD_PROJECT au lancement.",
+      "current": "Projet : {{projectId}}",
+      "saved": "Projet enregistré : {{projectId}}",
+      "cleared": "Retour à la résolution automatique du projet",
+      "savedWithRefreshError": "Projet enregistré, mais l’actualisation du quota a échoué : {{error}}"
     }
   },
   "codebuddy": {
@@ -2798,5 +2893,82 @@
       "dontAskAgain": "Ne plus demander"
     },
     "lockedPlatform": "Plateforme verrouillée par l'instance"
+  },
+  "twoFactorAuth": {
+    "pageTitle": "2FA Query [fr]",
+    "pageDescNew": "Enter or paste a 2FA Base32 secret to instantly generate a token. The system automatically corrects and removes non-standard characters. [fr]",
+    "panelQuery": "Workspace (Query Panel) [fr]",
+    "inputSecretPlaceholder": "Paste 2FA Secret here (e.g. JBSWY3DPEHPK3PXP) [fr]",
+    "inputRemarkPlaceholder": "[Optional] Set a remark name for this secret [fr]",
+    "btnQuery": "Query [fr]",
+    "btnSaveToFavorites": "Save to List [fr]",
+    "refreshInSeconds": "Refresh in {{time}}s [fr]",
+    "emptyQueryData": "No query data yet [fr]",
+    "invalidSecretFormat": "Invalid secret format detected [fr]",
+    "tabSaved": "★ Saved [fr]",
+    "tabHistory": "Recent Queries [fr]",
+    "btnImport": "Import [fr]",
+    "btnExport": "Export [fr]",
+    "btnClear": "Clear [fr]",
+    "tableRemark": "Remark [fr]",
+    "tableSecret": "Secret [fr]",
+    "tableCode": "Code [fr]",
+    "tableAddedTime": "Added Time [fr]",
+    "tableQueryTime": "Query Time [fr]",
+    "tableActions": "Actions [fr]",
+    "emptyHistory": "No query history [fr]",
+    "emptySaved": "No saved 2FA records yet [fr]",
+    "invalidSecretVal": "Invalid Secret [fr]",
+    "actionCopy": "Copy Code [fr]",
+    "actionReload": "Reload into Query Data [fr]",
+    "actionDelete": "Delete [fr]",
+    "confirmDeleteSavedTitle": "Delete Confirmation [fr]",
+    "confirmDeleteSavedMsg": "Are you sure you want to permanently delete \n{{secret}}\n? [fr]",
+    "confirmDeleteSavedFallback": "Are you sure you want to permanently delete this secret? [fr]",
+    "confirmDeleteHistoryTitle": "Delete History [fr]",
+    "confirmDeleteHistoryMsg": "Are you sure you want to delete the query history for \n{{secret}}\n? [fr]",
+    "confirmDeleteHistoryFallback": "Are you sure you want to delete this query history? [fr]",
+    "confirmClearAllTitle": "Clear History [fr]",
+    "confirmClearAllMsg": "Are you sure you want to clear all recent query history? [fr]",
+    "importErrorMsg": "Import failed. Please ensure the file format is a valid exported JSON array. [fr]",
+    "btnImportTitle": "Import Local JSON Backup [fr]",
+    "btnExportTitle": "Export Saved as JSON [fr]"
+  },
+  "mfaVault": {
+    "pageDesc": "Stockez et gérez en toute sécurité vos codes de récupération MFA, ensembles de mots de passe et autres données d’authentification sensibles. Les enregistrements MFA sont stockés uniquement en local. La suppression, le vidage du cache ou le changement/perte d’appareil peut entraîner une perte MFA. Pensez à sauvegarder et à importer depuis la sauvegarde si nécessaire.",
+    "manualAdd": "Ajouter un identifiant manuellement",
+    "add": "Ajouter",
+    "credentialList": "Liste des identifiants",
+    "import": "Importer",
+    "export": "Exporter",
+    "accountName": "Nom du compte",
+    "dynamicCode": "Code dynamique",
+    "remark": "Remarque",
+    "time": "Heure",
+    "actions": "Actions",
+    "noData": "Aucun identifiant enregistré",
+    "copyCode": "Copier le code",
+    "delete": "Supprimer",
+    "invalidSecretVal": "Secret invalide",
+    "inputAccountPlaceholder": "Nom du compte *",
+    "inputSecretPlaceholder": "Secret / Code de récupération (Secret) *",
+    "inputRemarkPlaceholder": "Remarque (facultatif)",
+    "confirmDeleteMsg": "Voulez-vous vraiment supprimer définitivement l’identifiant de [{{accountName}}] ?",
+    "confirmDeleteTitle": "Confirmer la suppression",
+    "importErrorMsg": "Échec de l’importation. Vérifiez le format du fichier (tableau JSON valide contenant accountName et secret).",
+    "inputOtpAuthPlaceholder": "otpauth://totp/... ou secret Base32",
+    "otpauthInputHint": "Prend en charge otpauth://totp/... et le secret Base32. Les deux formats peuvent être consultés et enregistrés dans la liste.",
+    "pasteQrImageHint": "Vous pouvez aussi coller une image QR directement dans le champ de saisie.",
+    "uploadQrImage": "Importer une image QR",
+    "uploadQrImageTitle": "Sélectionnez une image QR et lancez la reconnaissance automatique",
+    "recognizing": "Reconnaissance...",
+    "invalidOtpAuthInput": "Veuillez saisir une URI otpauth://totp/... valide ou un secret Base32.",
+    "qrDecodeFailed": "La reconnaissance du QR a échoué. Essayez avec une image plus nette.",
+    "qrNotOtpAuth": "Le contenu a été reconnu, mais ce n’est pas une URI otpauth://totp/... valide ni un secret Base32.",
+    "editAccountName": "Modifier le nom du compte",
+    "saveAccountName": "Enregistrer le nom du compte",
+    "cancelEditAccountName": "Annuler la modification",
+    "accountNameRequired": "Le nom du compte est requis.",
+    "copySecret": "Copier le secret"
   }
 }

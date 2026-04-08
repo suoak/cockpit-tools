@@ -71,10 +71,10 @@ const buildWakeupTestScopeId = () =>
 type Translator = (key: string, options?: Record<string, unknown>) => string;
 const getReadableModelLabel = (id: string) => getAntigravityModelDisplayName(id);
 
-type TriggerMode = 'scheduled' | 'crontab' | 'quota_reset';
+type TriggerMode = 'scheduled' | 'crontab' | 'quota_reset' | 'startup';
 type RepeatMode = 'daily' | 'weekly' | 'interval';
 
-type TriggerSource = 'scheduled' | 'crontab' | 'quota_reset';
+type TriggerSource = 'scheduled' | 'crontab' | 'quota_reset' | 'startup';
 type HistoryTriggerSource = TriggerSource | 'manual';
 type HistoryTriggerType = 'manual' | 'auto';
 
@@ -104,6 +104,7 @@ interface ScheduleConfig {
   timeWindowStart?: string;
   timeWindowEnd?: string;
   fallbackTimes?: string[];
+  startupDelayMinutes?: number;
 }
 
 interface WakeupTask {
@@ -113,6 +114,21 @@ interface WakeupTask {
   createdAt: number;
   lastRunAt?: number;
   schedule: ScheduleConfig;
+}
+
+interface WakeupGeneralConfig {
+  language?: string;
+  theme?: string;
+  auto_refresh_minutes: number;
+  codex_auto_refresh_minutes?: number;
+  close_behavior?: string;
+  opencode_app_path?: string;
+  antigravity_app_path?: string;
+  codex_app_path?: string;
+  vscode_app_path?: string;
+  opencode_sync_on_switch?: boolean;
+  opencode_auth_overwrite_on_switch?: boolean;
+  codex_launch_on_switch?: boolean;
 }
 
 interface WakeupHistoryRecord {
@@ -192,6 +208,15 @@ const DEFAULT_SCHEDULE: ScheduleConfig = {
   maxOutputTokens: 0,
 };
 
+const MAX_STARTUP_DELAY_MINUTES = 1440;
+
+const normalizeStartupDelayMinutes = (value?: number): number | undefined => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return undefined;
+  }
+  return Math.min(MAX_STARTUP_DELAY_MINUTES, Math.max(0, Math.floor(value)));
+};
+
 const normalizeSchedule = (schedule: ScheduleConfig): ScheduleConfig => {
   const dailyTimes = schedule.dailyTimes?.length ? schedule.dailyTimes : ['08:00'];
   const weeklyDays = schedule.weeklyDays?.length ? schedule.weeklyDays : [1, 2, 3, 4, 5];
@@ -212,6 +237,7 @@ const normalizeSchedule = (schedule: ScheduleConfig): ScheduleConfig => {
     intervalEndTime,
     maxOutputTokens,
     fallbackTimes,
+    startupDelayMinutes: normalizeStartupDelayMinutes(schedule.startupDelayMinutes),
   };
 };
 
@@ -317,6 +343,13 @@ const normalizeTimeInput = (value: string) => {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
+const parseTimeToMinutes = (value: string | undefined, fallbackMinutes: number) => {
+  const normalized = normalizeTimeInput(value || '');
+  if (!normalized) return fallbackMinutes;
+  const [hour, minute] = normalized.split(':').map(Number);
+  return hour * 60 + minute;
+};
+
 const calculateNextRuns = (config: ScheduleConfig, count: number) => {
   const now = new Date();
   const results: Date[] = [];
@@ -352,18 +385,30 @@ const calculateNextRuns = (config: ScheduleConfig, count: number) => {
       }
     }
   } else if (config.repeatMode === 'interval') {
-    const [startH, startM] = (config.intervalStartTime || '07:00').split(':').map(Number);
-    const endH = config.intervalEndTime ? Number.parseInt(config.intervalEndTime.split(':')[0], 10) : 22;
-    const interval = config.intervalHours || 4;
+    const startMinutes = parseTimeToMinutes(config.intervalStartTime, 7 * 60);
+    const endMinutes = parseTimeToMinutes(config.intervalEndTime, 22 * 60);
+    const intervalHours = Math.max(1, config.intervalHours || 4);
+    const intervalMs = intervalHours * 60 * 60 * 1000;
 
     for (let dayOffset = 0; dayOffset < 7 && results.length < count; dayOffset += 1) {
-      for (let h = startH; h <= endH; h += interval) {
-        const date = new Date(now);
-        date.setDate(date.getDate() + dayOffset);
-        date.setHours(h, startM, 0, 0);
-        if (date > now) {
-          results.push(date);
-          if (results.length >= count) break;
+      const baseDate = new Date(now);
+      baseDate.setDate(baseDate.getDate() + dayOffset);
+
+      const windowStart = new Date(baseDate);
+      windowStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+      const windowEnd = new Date(baseDate);
+      windowEnd.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+      if (startMinutes > endMinutes) {
+        windowEnd.setDate(windowEnd.getDate() + 1);
+      }
+
+      for (
+        let candidate = new Date(windowStart);
+        candidate <= windowEnd && results.length < count;
+        candidate = new Date(candidate.getTime() + intervalMs)
+      ) {
+        if (candidate > now) {
+          results.push(new Date(candidate));
         }
       }
     }
@@ -372,45 +417,188 @@ const calculateNextRuns = (config: ScheduleConfig, count: number) => {
   return results.slice(0, count);
 };
 
+interface ParsedCronField {
+  values: Set<number>;
+  wildcard: boolean;
+}
+
+interface ParsedCrontab {
+  minute: ParsedCronField;
+  hour: ParsedCronField;
+  dayOfMonth: ParsedCronField;
+  month: ParsedCronField;
+  dayOfWeek: ParsedCronField;
+}
+
+const normalizeCrontabDayOfWeek = (value: number) => (value === 7 ? 0 : value);
+
+const parseCrontabNumber = (raw: string): number => {
+  const parsed = Number.parseInt(raw.trim(), 10);
+  if (Number.isNaN(parsed)) {
+    throw new Error('invalid_crontab_number');
+  }
+  return parsed;
+};
+
+const validateCrontabValue = (
+  value: number,
+  min: number,
+  max: number,
+  normalizeDayOfWeek: boolean,
+) => {
+  if (normalizeDayOfWeek && value === 7) return;
+  if (value < min || value > max) {
+    throw new Error('crontab_value_out_of_range');
+  }
+};
+
+const insertCrontabRange = (
+  target: Set<number>,
+  start: number,
+  end: number,
+  step: number,
+  normalizeDayOfWeek: boolean,
+) => {
+  for (let value = start; value <= end; value += step) {
+    target.add(normalizeDayOfWeek ? normalizeCrontabDayOfWeek(value) : value);
+  }
+};
+
+const parseCrontabSegment = (
+  segment: string,
+  min: number,
+  max: number,
+  normalizeDayOfWeek: boolean,
+  target: Set<number>,
+) => {
+  const [rawRange, rawStep] = segment.split('/');
+  const rangePart = rawRange.trim();
+  const step = rawStep ? parseCrontabNumber(rawStep) : 1;
+  if (step <= 0) {
+    throw new Error('crontab_step_must_be_positive');
+  }
+
+  if (rangePart === '*') {
+    insertCrontabRange(target, min, max, step, normalizeDayOfWeek);
+    return;
+  }
+
+  if (rangePart.includes('-')) {
+    const [rawStart, rawEnd] = rangePart.split('-');
+    const start = parseCrontabNumber(rawStart);
+    const end = parseCrontabNumber(rawEnd);
+    validateCrontabValue(start, min, max, normalizeDayOfWeek);
+    validateCrontabValue(end, min, max, normalizeDayOfWeek);
+    if (end < start) {
+      throw new Error('crontab_range_invalid');
+    }
+    insertCrontabRange(target, start, end, step, normalizeDayOfWeek);
+    return;
+  }
+
+  const single = parseCrontabNumber(rangePart);
+  validateCrontabValue(single, min, max, normalizeDayOfWeek);
+  if (step === 1) {
+    target.add(normalizeDayOfWeek ? normalizeCrontabDayOfWeek(single) : single);
+    return;
+  }
+  insertCrontabRange(target, single, max, step, normalizeDayOfWeek);
+};
+
+const parseCrontabField = (
+  field: string,
+  min: number,
+  max: number,
+  normalizeDayOfWeek: boolean,
+): ParsedCronField => {
+  const trimmed = field.trim();
+  if (!trimmed) {
+    throw new Error('crontab_field_empty');
+  }
+
+  if (trimmed === '*') {
+    const values = new Set<number>();
+    insertCrontabRange(values, min, max, 1, normalizeDayOfWeek);
+    return { values, wildcard: true };
+  }
+
+  const values = new Set<number>();
+  const segments = trimmed.split(',');
+  if (segments.length === 0) {
+    throw new Error('crontab_field_empty');
+  }
+  segments.forEach((segment) => {
+    const normalizedSegment = segment.trim();
+    if (!normalizedSegment) {
+      throw new Error('crontab_segment_empty');
+    }
+    parseCrontabSegment(normalizedSegment, min, max, normalizeDayOfWeek, values);
+  });
+
+  if (values.size === 0) {
+    throw new Error('crontab_no_values');
+  }
+  return { values, wildcard: false };
+};
+
+const parseCrontabExpression = (expr: string): ParsedCrontab => {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    throw new Error('crontab_parts_must_be_five');
+  }
+
+  return {
+    minute: parseCrontabField(parts[0], 0, 59, false),
+    hour: parseCrontabField(parts[1], 0, 23, false),
+    dayOfMonth: parseCrontabField(parts[2], 1, 31, false),
+    month: parseCrontabField(parts[3], 1, 12, false),
+    dayOfWeek: parseCrontabField(parts[4], 0, 7, true),
+  };
+};
+
+const isCrontabMatch = (parsed: ParsedCrontab, date: Date): boolean => {
+  const minute = date.getMinutes();
+  const hour = date.getHours();
+  const dayOfMonth = date.getDate();
+  const month = date.getMonth() + 1;
+  const dayOfWeek = date.getDay();
+
+  if (
+    !parsed.minute.values.has(minute)
+    || !parsed.hour.values.has(hour)
+    || !parsed.month.values.has(month)
+  ) {
+    return false;
+  }
+
+  const dayOfMonthMatch = parsed.dayOfMonth.values.has(dayOfMonth);
+  const dayOfWeekMatch = parsed.dayOfWeek.values.has(dayOfWeek);
+  if (parsed.dayOfMonth.wildcard && parsed.dayOfWeek.wildcard) {
+    return true;
+  }
+  if (parsed.dayOfMonth.wildcard) {
+    return dayOfWeekMatch;
+  }
+  if (parsed.dayOfWeek.wildcard) {
+    return dayOfMonthMatch;
+  }
+  return dayOfMonthMatch || dayOfWeekMatch;
+};
+
 const calculateCrontabNextRuns = (crontab: string, count: number) => {
   try {
-    const parts = crontab.trim().split(/\s+/);
-    if (parts.length < 5) return [];
-    const [minute, hour] = parts;
+    const parsed = parseCrontabExpression(crontab);
     const results: Date[] = [];
-    const now = new Date();
+    const candidate = new Date();
+    candidate.setSeconds(0, 0);
+    candidate.setMinutes(candidate.getMinutes() + 1);
 
-    const parseField = (field: string, max: number) => {
-      if (field === '*') return Array.from({ length: max + 1 }, (_, i) => i);
-      if (field.includes(',')) return field.split(',').map(Number);
-      if (field.includes('-')) {
-        const [start, end] = field.split('-').map(Number);
-        return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    const maxLookaheadMinutes = 366 * 24 * 60;
+    for (let i = 0; i < maxLookaheadMinutes && results.length < count; i += 1) {
+      if (isCrontabMatch(parsed, candidate)) {
+        results.push(new Date(candidate));
       }
-      if (field.includes('/')) {
-        const [, step] = field.split('/');
-        const stepValue = Number(step) || 1;
-        return Array.from({ length: Math.ceil((max + 1) / stepValue) }, (_, i) => i * stepValue);
-      }
-      return [Number(field)];
-    };
-
-    const minutes = parseField(minute, 59);
-    const hours = parseField(hour, 23);
-
-    for (let dayOffset = 0; dayOffset < 7 && results.length < count; dayOffset += 1) {
-      for (const h of hours) {
-        for (const m of minutes) {
-          const date = new Date(now);
-          date.setDate(date.getDate() + dayOffset);
-          date.setHours(h, m, 0, 0);
-          if (date > now) {
-            results.push(date);
-            if (results.length >= count) break;
-          }
-        }
-        if (results.length >= count) break;
-      }
+      candidate.setMinutes(candidate.getMinutes() + 1);
     }
 
     return results;
@@ -462,6 +650,7 @@ const filterAvailableModels = (
   });
 
 const getTriggerMode = (task: WakeupTask): TriggerMode => {
+  if (typeof task.schedule.startupDelayMinutes === 'number') return 'startup';
   if (task.schedule.wakeOnReset) return 'quota_reset';
   if (task.schedule.crontab) return 'crontab';
   return 'scheduled';
@@ -517,6 +706,10 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
   const [formMaxOutputTokens, setFormMaxOutputTokens] = useState(0);
   const [formCrontab, setFormCrontab] = useState('');
   const [formCrontabError, setFormCrontabError] = useState('');
+  const [formStartupDelayMode, setFormStartupDelayMode] = useState<'immediate' | 'delayed'>(
+    'immediate',
+  );
+  const [formStartupDelayMinutes, setFormStartupDelayMinutes] = useState('1');
   const {
     message: formError,
     scrollKey: formErrorScrollKey,
@@ -1357,6 +1550,12 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
 
   const describeTask = (task: WakeupTask) => {
     const schedule = task.schedule;
+    if (typeof schedule.startupDelayMinutes === 'number') {
+      if (schedule.startupDelayMinutes <= 0) {
+        return t('settings.general.startupWakeupImmediate');
+      }
+      return `${t('wakeup.triggerSource.startup')} +${schedule.startupDelayMinutes}${t('settings.general.minutes')}`;
+    }
     if (schedule.wakeOnReset) {
       return t('wakeup.format.quotaReset');
     }
@@ -1387,6 +1586,13 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
 
   const getNextRunLabel = (task: WakeupTask) => {
     const mode = getTriggerMode(task);
+    if (mode === 'startup') {
+      const delayMinutes = normalizeStartupDelayMinutes(task.schedule.startupDelayMinutes) ?? 0;
+      if (delayMinutes <= 0) {
+        return t('settings.general.startupWakeupImmediate');
+      }
+      return `${t('wakeup.triggerSource.startup')} +${delayMinutes}${t('settings.general.minutes')}`;
+    }
     if (mode === 'quota_reset') return t('wakeup.format.none');
     if (mode === 'crontab') {
       const nextRuns = calculateCrontabNextRuns(task.schedule.crontab || '', 1);
@@ -1425,6 +1631,8 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     setFormMaxOutputTokens(0);
     setFormCrontab('');
     setFormCrontabError('');
+    setFormStartupDelayMode('immediate');
+    setFormStartupDelayMinutes('1');
     setFormTimeWindowEnabled(false);
     setFormTimeWindowStart('09:00');
     setFormTimeWindowEnd('18:00');
@@ -1465,6 +1673,9 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     setFormMaxOutputTokens(schedule.maxOutputTokens ?? 0);
     setFormCrontab(schedule.crontab || '');
     setFormCrontabError('');
+    const startupDelayMinutes = normalizeStartupDelayMinutes(schedule.startupDelayMinutes) ?? 0;
+    setFormStartupDelayMode(startupDelayMinutes > 0 ? 'delayed' : 'immediate');
+    setFormStartupDelayMinutes(String(startupDelayMinutes > 0 ? startupDelayMinutes : 1));
     setFormTimeWindowEnabled(Boolean(schedule.timeWindowEnabled));
     setFormTimeWindowStart(schedule.timeWindowStart || '09:00');
     setFormTimeWindowEnd(schedule.timeWindowEnd || '18:00');
@@ -1724,7 +1935,7 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
    */
   const ensureMinRefreshInterval = async (minMinutes: number) => {
     try {
-      const config = await invoke<any>('get_general_config');
+      const config = await invoke<WakeupGeneralConfig>('get_general_config');
       
       // 如果刷新间隔大于最小值（或禁用），自动调整
       if (config.auto_refresh_minutes < 0 || config.auto_refresh_minutes > minMinutes) {
@@ -1741,8 +1952,8 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
           antigravityAppPath: config.antigravity_app_path ?? '',
           codexAppPath: config.codex_app_path ?? '',
           vscodeAppPath: config.vscode_app_path ?? '',
-          opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? true,
-          opencodeAuthOverwriteOnSwitch: config.opencode_auth_overwrite_on_switch ?? true,
+          opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? false,
+          opencodeAuthOverwriteOnSwitch: config.opencode_auth_overwrite_on_switch ?? false,
           codexLaunchOnSwitch: config.codex_launch_on_switch ?? true,
         });
         
@@ -1763,6 +1974,24 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     }
   };
 
+  const validateCrontabInput = async (expr: string, options?: { showSuccess?: boolean }) => {
+    const showSuccess = options?.showSuccess ?? false;
+    const trimmed = expr.trim();
+    if (!trimmed) {
+      setFormCrontabError(t('wakeup.notice.crontabRequired'));
+      return false;
+    }
+    try {
+      await invoke('wakeup_validate_crontab', { expr: trimmed });
+      setFormCrontabError(showSuccess ? t('wakeup.notice.crontabValid') : '');
+      return true;
+    } catch (error) {
+      console.error('[WakeupTasks] 校验 crontab 失败:', error);
+      setFormCrontabError(t('wakeup.notice.crontabInvalid'));
+      return false;
+    }
+  };
+
   const handleSaveTask = async () => {
     const name = formName.trim();
     if (!name) {
@@ -1780,6 +2009,12 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     if (formTriggerMode === 'crontab' && !formCrontab.trim()) {
       setFormCrontabError(t('wakeup.notice.crontabRequired'));
       return;
+    }
+    if (formTriggerMode === 'crontab') {
+      const valid = await validateCrontabInput(formCrontab, { showSuccess: false });
+      if (!valid) {
+        return;
+      }
     }
 
     const resolvedDailyTimes = [...formDailyTimes];
@@ -1818,6 +2053,16 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     }
     resolvedFallbackTimes.sort();
 
+    const startupDelayMinutes =
+      formTriggerMode === 'startup'
+        ? formStartupDelayMode === 'delayed'
+          ? Math.min(
+              MAX_STARTUP_DELAY_MINUTES,
+              Math.max(1, Number(formStartupDelayMinutes) || 1),
+            )
+          : 0
+        : undefined;
+
     const schedule = normalizeSchedule({
       ...DEFAULT_SCHEDULE,
       repeatMode: formRepeatMode,
@@ -1831,6 +2076,7 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
       selectedAccounts: formSelectedAccounts,
       crontab: formTriggerMode === 'crontab' ? formCrontab.trim() : undefined,
       wakeOnReset: formTriggerMode === 'quota_reset',
+      startupDelayMinutes,
       customPrompt: formCustomPrompt.trim() || undefined,
       maxOutputTokens: normalizeMaxOutputTokens(formMaxOutputTokens, 0),
       timeWindowEnabled: formTriggerMode === 'quota_reset' ? formTimeWindowEnabled : false,
@@ -1962,6 +2208,8 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
         return t('wakeup.triggerSource.crontab');
       case 'quota_reset':
         return t('wakeup.triggerSource.quotaReset');
+      case 'startup':
+        return t('wakeup.triggerSource.startup');
       case 'manual':
         return t('wakeup.triggerSource.manual');
       default:
@@ -2460,6 +2708,13 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
                   >
                     {t('wakeup.form.modeQuotaReset')}
                   </button>
+                  <button
+                    type="button"
+                    className={`wakeup-segment-btn ${formTriggerMode === 'startup' ? 'active' : ''}`}
+                    onClick={() => setFormTriggerMode('startup')}
+                  >
+                    {t('wakeup.triggerSource.startup')}
+                  </button>
                 </div>
               </div>
 
@@ -2828,11 +3083,7 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
                       <button
                         className="btn btn-secondary"
                         onClick={() => {
-                          if (!formCrontab.trim()) {
-                            setFormCrontabError(t('wakeup.notice.crontabRequired'));
-                          } else {
-                            setFormCrontabError(t('wakeup.form.crontabValidateHint'));
-                          }
+                          void validateCrontabInput(formCrontab, { showSuccess: true });
                         }}
                       >
                         {t('wakeup.form.crontabValidate')}
@@ -2941,6 +3192,48 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
                         >
                           {t('common.add')}
                         </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {formTriggerMode === 'startup' && (
+                <div className="wakeup-mode-panel">
+                  <div className="wakeup-form-group">
+                    <label>{t('wakeup.triggerSource.startup')}</label>
+                    <div className="wakeup-toggle-group">
+                      <button
+                        type="button"
+                        className={`btn btn-secondary ${formStartupDelayMode === 'immediate' ? 'is-active' : ''}`}
+                        onClick={() => setFormStartupDelayMode('immediate')}
+                      >
+                        {t('settings.general.startupWakeupImmediate')}
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-secondary ${formStartupDelayMode === 'delayed' ? 'is-active' : ''}`}
+                        onClick={() => setFormStartupDelayMode('delayed')}
+                      >
+                        {t('settings.general.startupWakeupDelayed')}
+                      </button>
+                    </div>
+                  </div>
+                  {formStartupDelayMode === 'delayed' && (
+                    <div className="wakeup-form-group">
+                      <label>{t('settings.general.startupWakeupDelayed')}</label>
+                      <div className="wakeup-inline-row">
+                        <input
+                          className="wakeup-input wakeup-input-small"
+                          type="number"
+                          min={1}
+                          max={MAX_STARTUP_DELAY_MINUTES}
+                          value={formStartupDelayMinutes}
+                          onChange={(event) =>
+                            setFormStartupDelayMinutes(event.target.value.replace(/[^\d]/g, ''))
+                          }
+                        />
+                        <span>{t('settings.general.minutes')}</span>
                       </div>
                     </div>
                   )}

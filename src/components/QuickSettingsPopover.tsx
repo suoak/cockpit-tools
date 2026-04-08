@@ -1,13 +1,45 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { Settings, RefreshCw, FolderOpen, Zap, X } from 'lucide-react';
+import * as accountService from '../services/accountService';
+import * as codexService from '../services/codexService';
+import { getAccountGroups, type AccountGroup } from '../services/accountGroupService';
+import {
+  getCodexAccountGroups,
+  type CodexAccountGroup,
+} from '../services/codexAccountGroupService';
+import {
+  AutoSwitchAccountScopeSelector,
+  type AutoSwitchAccountScopeMode,
+  type AutoSwitchScopeAccount,
+} from './AutoSwitchAccountScopeSelector';
+import {
+  buildAccountTierCounts,
+  buildAccountTierFilterOptions,
+} from '../utils/accountFilters';
+import { getSubscriptionTier } from '../utils/account';
 import {
   isCodexCodeReviewQuotaVisibleByDefault,
   persistCodexCodeReviewQuotaVisible,
 } from '../utils/codexPreferences';
+import {
+  FEATURE_UNLOCK_CHANGED_EVENT,
+  type FeatureUnlockChangedDetail,
+  isAntigravitySeamlessSwitchFeatureUnlocked,
+} from '../utils/featureUnlocks';
+import {
+  buildDefaultCurrentAccountRefreshMinutesMap,
+  type CurrentAccountRefreshMinutesMap,
+  type CurrentAccountRefreshPlatform,
+  loadCurrentAccountRefreshMinutesMap,
+  saveCurrentAccountRefreshMinutesMap,
+} from '../utils/currentAccountRefresh';
+import type { Account } from '../types/account';
+import type { CodexAccount } from '../types/codex';
+import { getDisplayGroups, type DisplayGroup } from '../services/groupService';
 import './QuickSettingsPopover.css';
 
 /** GeneralConfig from backend */
@@ -51,11 +83,18 @@ interface GeneralConfig {
   ghcp_launch_on_switch: boolean;
   openclaw_auth_overwrite_on_switch: boolean;
   codex_launch_on_switch: boolean;
+  antigravity_dual_switch_no_restart_enabled: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
+  auto_switch_scope_mode: string;
+  auto_switch_selected_group_ids: string[];
+  auto_switch_account_scope_mode?: string;
+  auto_switch_selected_account_ids?: string[];
   codex_auto_switch_enabled: boolean;
   codex_auto_switch_primary_threshold: number;
   codex_auto_switch_secondary_threshold: number;
+  codex_auto_switch_account_scope_mode?: string;
+  codex_auto_switch_selected_account_ids?: string[];
   quota_alert_enabled: boolean;
   quota_alert_threshold: number;
   codex_quota_alert_enabled: boolean;
@@ -139,6 +178,50 @@ interface QuickSettingsPopoverProps {
   type: QuickSettingsType;
 }
 
+const AUTO_SWITCH_SCOPE_ALL_ACCOUNTS: AutoSwitchAccountScopeMode = 'all_accounts';
+const AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS: AutoSwitchAccountScopeMode = 'selected_accounts';
+const CURRENT_ACCOUNT_REFRESH_PRESETS = ['1', '2', '5', '10', '15'];
+
+const getCurrentAccountRefreshPlatformForType = (
+  platformType: QuickSettingsType,
+): CurrentAccountRefreshPlatform => {
+  switch (platformType) {
+    case 'antigravity':
+      return 'antigravity';
+    case 'codex':
+      return 'codex';
+    case 'github_copilot':
+      return 'ghcp';
+    case 'windsurf':
+      return 'windsurf';
+    case 'kiro':
+      return 'kiro';
+    case 'cursor':
+      return 'cursor';
+    case 'gemini':
+      return 'gemini';
+    case 'codebuddy':
+      return 'codebuddy';
+    case 'codebuddy_cn':
+      return 'codebuddy_cn';
+    case 'qoder':
+      return 'qoder';
+    case 'trae':
+      return 'trae';
+    case 'workbuddy':
+      return 'workbuddy';
+    case 'zed':
+      return 'zed';
+  }
+};
+
+const normalizeAutoSwitchAccountScopeMode = (
+  value?: string | null,
+): AutoSwitchAccountScopeMode =>
+  value === AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS
+    ? AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS
+    : AUTO_SWITCH_SCOPE_ALL_ACCOUNTS;
+
 export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -147,29 +230,112 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const [pathDetecting, setPathDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshEditing, setRefreshEditing] = useState(false);
+  const [currentAccountRefreshEditing, setCurrentAccountRefreshEditing] = useState(false);
   const [thresholdEditing, setThresholdEditing] = useState(false);
   const [quotaAlertThresholdEditing, setQuotaAlertThresholdEditing] = useState(false);
   const [customRefresh, setCustomRefresh] = useState('');
+  const [currentAccountCustomRefresh, setCurrentAccountCustomRefresh] = useState('');
   const [customThreshold, setCustomThreshold] = useState('');
   const [quotaAlertCustomThreshold, setQuotaAlertCustomThreshold] = useState('');
   const [codexAutoSwitchPrimaryCustomThreshold, setCodexAutoSwitchPrimaryCustomThreshold] = useState('');
   const [codexAutoSwitchSecondaryCustomThreshold, setCodexAutoSwitchSecondaryCustomThreshold] = useState('');
   const [codexQuotaAlertPrimaryCustomThreshold, setCodexQuotaAlertPrimaryCustomThreshold] = useState('');
   const [codexQuotaAlertSecondaryCustomThreshold, setCodexQuotaAlertSecondaryCustomThreshold] = useState('');
+  const [autoSwitchDisplayGroups, setAutoSwitchDisplayGroups] = useState<DisplayGroup[]>([]);
+  const [antigravityAccounts, setAntigravityAccounts] = useState<Account[]>([]);
+  const [antigravityAccountGroups, setAntigravityAccountGroups] = useState<AccountGroup[]>([]);
+  const [codexAccounts, setCodexAccounts] = useState<CodexAccount[]>([]);
+  const [codexAccountGroups, setCodexAccountGroups] = useState<CodexAccountGroup[]>([]);
   const [codexShowCodeReviewQuota, setCodexShowCodeReviewQuota] = useState(
     isCodexCodeReviewQuotaVisibleByDefault,
+  );
+  const [currentAccountRefreshMap, setCurrentAccountRefreshMap] =
+    useState<CurrentAccountRefreshMinutesMap>(() => buildDefaultCurrentAccountRefreshMinutesMap());
+  const [antigravitySeamlessSwitchUnlocked, setAntigravitySeamlessSwitchUnlocked] = useState(
+    isAntigravitySeamlessSwitchFeatureUnlocked,
   );
   const modalRef = useRef<HTMLDivElement>(null);
   const refreshPresets = ['-1', '2', '5', '10', '15'];
   const thresholdPresets = ['0', '20', '40', '60'];
+  const antigravityScopeTypeOptions = useMemo(
+    () => buildAccountTierFilterOptions(t, buildAccountTierCounts(antigravityAccounts, {})),
+    [antigravityAccounts, t],
+  );
+  const antigravityScopeAccounts = useMemo<AutoSwitchScopeAccount[]>(
+    () =>
+      antigravityAccounts.map((account) => {
+        const disabledReason = account.disabled_reason || '';
+        const typeValue =
+          disabledReason === 'verification_required'
+            ? 'VERIFICATION_REQUIRED'
+            : disabledReason === 'tos_violation'
+              ? 'TOS_VIOLATION'
+              : getSubscriptionTier(account.quota);
+        return {
+          id: account.id,
+          label: account.email,
+          searchableText: account.email,
+          tags: account.tags || [],
+          type: typeValue,
+        };
+      }),
+    [antigravityAccounts],
+  );
+  const antigravityScopeGroups = useMemo(
+    () =>
+      antigravityAccountGroups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        accountIds: group.accountIds || [],
+      })),
+    [antigravityAccountGroups],
+  );
+  const codexScopeAccounts = useMemo<AutoSwitchScopeAccount[]>(
+    () =>
+      codexAccounts.map((account) => ({
+        id: account.id,
+        label: account.email,
+        searchableText: account.email,
+        tags: account.tags || [],
+      })),
+    [codexAccounts],
+  );
+  const codexScopeGroups = useMemo(
+    () =>
+      codexAccountGroups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        accountIds: group.accountIds || [],
+      })),
+    [codexAccountGroups],
+  );
 
   // Load config when modal opens
   useEffect(() => {
     if (isOpen) {
       loadConfig();
       setCodexShowCodeReviewQuota(isCodexCodeReviewQuotaVisibleByDefault());
+      setAntigravitySeamlessSwitchUnlocked(isAntigravitySeamlessSwitchFeatureUnlocked());
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleFeatureUnlockChanged = (event: Event) => {
+      const detail = (event as CustomEvent<FeatureUnlockChangedDetail>).detail;
+      if (!detail || detail.feature !== 'antigravity.seamless_switch') {
+        return;
+      }
+      setAntigravitySeamlessSwitchUnlocked(Boolean(detail.unlocked));
+    };
+
+    window.addEventListener(FEATURE_UNLOCK_CHANGED_EVENT, handleFeatureUnlockChanged as EventListener);
+    return () => {
+      window.removeEventListener(
+        FEATURE_UNLOCK_CHANGED_EVENT,
+        handleFeatureUnlockChanged as EventListener,
+      );
+    };
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -204,15 +370,45 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const loadConfig = async () => {
     try {
       setError(null);
-      const cfg = await invoke<GeneralConfig>('get_general_config');
+      const antigravityScopeDataPromise =
+        type === 'antigravity'
+          ? Promise.all([
+              accountService.listAccounts(),
+              getAccountGroups(),
+            ]).catch(() => [[] as Account[], [] as AccountGroup[]] as const)
+          : Promise.resolve([[] as Account[], [] as AccountGroup[]] as const);
+      const codexScopeDataPromise =
+        type === 'codex'
+          ? Promise.all([
+              codexService.listCodexAccounts(),
+              getCodexAccountGroups(),
+            ]).catch(() => [[] as CodexAccount[], [] as CodexAccountGroup[]] as const)
+          : Promise.resolve([[] as CodexAccount[], [] as CodexAccountGroup[]] as const);
+
+      const [cfg, groups, antigravityScopeData, codexScopeData] = await Promise.all([
+        invoke<GeneralConfig>('get_general_config'),
+        getDisplayGroups().catch(() => [] as DisplayGroup[]),
+        antigravityScopeDataPromise,
+        codexScopeDataPromise,
+      ]);
+      const [nextAntigravityAccounts, nextAntigravityGroups] = antigravityScopeData;
+      const [nextCodexAccounts, nextCodexGroups] = codexScopeData;
       setConfig(cfg);
+      setAutoSwitchDisplayGroups(groups);
+      setAntigravityAccounts(nextAntigravityAccounts || []);
+      setAntigravityAccountGroups(nextAntigravityGroups || []);
+      setCodexAccounts(nextCodexAccounts || []);
+      setCodexAccountGroups(nextCodexGroups || []);
       // 非预设值通过下拉中的动态选项展示，不默认进入输入态
       setRefreshEditing(false);
+      setCurrentAccountRefreshEditing(false);
       setThresholdEditing(false);
       setQuotaAlertThresholdEditing(false);
       setCustomRefresh('');
+      setCurrentAccountCustomRefresh('');
       setCustomThreshold('');
       setQuotaAlertCustomThreshold('');
+      setCurrentAccountRefreshMap(loadCurrentAccountRefreshMinutesMap());
       setCodexAutoSwitchPrimaryCustomThreshold(String(cfg.codex_auto_switch_primary_threshold));
       setCodexAutoSwitchSecondaryCustomThreshold(String(cfg.codex_auto_switch_secondary_threshold));
       setCodexQuotaAlertPrimaryCustomThreshold(String(cfg.codex_quota_alert_primary_threshold));
@@ -292,11 +488,18 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           ghcpLaunchOnSwitch: merged.ghcp_launch_on_switch,
           openclawAuthOverwriteOnSwitch: merged.openclaw_auth_overwrite_on_switch,
           codexLaunchOnSwitch: merged.codex_launch_on_switch,
+          antigravityDualSwitchNoRestartEnabled: merged.antigravity_dual_switch_no_restart_enabled,
           autoSwitchEnabled: merged.auto_switch_enabled,
           autoSwitchThreshold: merged.auto_switch_threshold,
+          autoSwitchScopeMode: merged.auto_switch_scope_mode,
+          autoSwitchSelectedGroupIds: merged.auto_switch_selected_group_ids,
+          autoSwitchAccountScopeMode: merged.auto_switch_account_scope_mode,
+          autoSwitchSelectedAccountIds: merged.auto_switch_selected_account_ids,
           codexAutoSwitchEnabled: merged.codex_auto_switch_enabled,
           codexAutoSwitchPrimaryThreshold: merged.codex_auto_switch_primary_threshold,
           codexAutoSwitchSecondaryThreshold: merged.codex_auto_switch_secondary_threshold,
+          codexAutoSwitchAccountScopeMode: merged.codex_auto_switch_account_scope_mode,
+          codexAutoSwitchSelectedAccountIds: merged.codex_auto_switch_selected_account_ids,
           quotaAlertEnabled: merged.quota_alert_enabled,
           quotaAlertThreshold: merged.quota_alert_threshold,
           codexQuotaAlertEnabled: merged.codex_quota_alert_enabled,
@@ -695,9 +898,23 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const refreshValue = config ? (config[getRefreshKey()] as number) : 10;
   const isPreset = refreshPresets.includes(String(refreshValue));
   const showRefreshInput = refreshEditing;
+  const currentAccountRefreshPlatform = getCurrentAccountRefreshPlatformForType(type);
+  const currentAccountRefreshValue = currentAccountRefreshMap[currentAccountRefreshPlatform] ?? 1;
+  const isCurrentAccountRefreshPreset = CURRENT_ACCOUNT_REFRESH_PRESETS.includes(
+    String(currentAccountRefreshValue),
+  );
+  const showCurrentAccountRefreshInput = currentAccountRefreshEditing;
 
   const isThresholdPreset = config ? thresholdPresets.includes(String(config.auto_switch_threshold)) : true;
   const showThresholdInput = thresholdEditing;
+  const autoSwitchScopeMode = config?.auto_switch_scope_mode === 'selected_groups'
+    ? 'selected_groups'
+    : 'any_group';
+  const autoSwitchSelectedGroupIds = config?.auto_switch_selected_group_ids ?? [];
+  const validAutoSwitchGroupIdSet = new Set(autoSwitchDisplayGroups.map((group) => group.id));
+  const normalizedAutoSwitchSelectedGroupIds = autoSwitchSelectedGroupIds.filter((groupId) =>
+    validAutoSwitchGroupIdSet.has(groupId)
+  );
   const quotaAlertEnabledKey = getQuotaAlertEnabledKeyForType(type);
   const quotaAlertThresholdKey = getQuotaAlertThresholdKeyForType(type);
   const quotaAlertEnabledValue = config ? Boolean(config[quotaAlertEnabledKey]) : false;
@@ -716,6 +933,14 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const codexQuotaAlertSecondaryThresholdValue = config
     ? Number(config.codex_quota_alert_secondary_threshold)
     : 20;
+  const autoSwitchAccountScopeMode = normalizeAutoSwitchAccountScopeMode(
+    config?.auto_switch_account_scope_mode,
+  );
+  const autoSwitchSelectedAccountIds = config?.auto_switch_selected_account_ids ?? [];
+  const codexAutoSwitchAccountScopeMode = normalizeAutoSwitchAccountScopeMode(
+    config?.codex_auto_switch_account_scope_mode,
+  );
+  const codexAutoSwitchSelectedAccountIds = config?.codex_auto_switch_selected_account_ids ?? [];
 
   const handleRefreshSelectChange = (val: string) => {
     if (val === 'custom') {
@@ -740,6 +965,43 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     setRefreshEditing(false);
   };
 
+  const saveCurrentAccountRefresh = (minutes: number) => {
+    setCurrentAccountRefreshMap((prev) => {
+      const next = saveCurrentAccountRefreshMinutesMap({
+        ...prev,
+        [currentAccountRefreshPlatform]: minutes,
+      });
+      window.dispatchEvent(new Event('config-updated'));
+      return next;
+    });
+  };
+
+  const handleCurrentAccountRefreshSelectChange = (value: string) => {
+    if (value === 'custom') {
+      setCurrentAccountCustomRefresh(String(currentAccountRefreshValue || 1));
+      setCurrentAccountRefreshEditing(true);
+      return;
+    }
+    const parsed = parseInt(value, 10);
+    if (!isNaN(parsed) && parsed >= 1) {
+      saveCurrentAccountRefresh(parsed);
+    }
+    setCurrentAccountCustomRefresh('');
+    setCurrentAccountRefreshEditing(false);
+  };
+
+  const handleCurrentAccountCustomRefreshApply = () => {
+    const parsed = parseInt(currentAccountCustomRefresh, 10);
+    if (!isNaN(parsed) && parsed >= 1) {
+      saveCurrentAccountRefresh(parsed);
+      setCurrentAccountCustomRefresh('');
+      setCurrentAccountRefreshEditing(false);
+      return;
+    }
+    setCurrentAccountCustomRefresh('');
+    setCurrentAccountRefreshEditing(false);
+  };
+
   const handleThresholdSelectChange = (val: string) => {
     if (val === 'custom') {
       setCustomThreshold(String(config?.auto_switch_threshold ?? 20));
@@ -761,6 +1023,33 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
     }
     setCustomThreshold('');
     setThresholdEditing(false);
+  };
+
+  const handleAutoSwitchScopeModeChange = (value: string) => {
+    if (value !== 'selected_groups') {
+      saveConfig({ auto_switch_scope_mode: 'any_group' });
+      return;
+    }
+    const nextSelected = normalizedAutoSwitchSelectedGroupIds.length > 0
+      ? normalizedAutoSwitchSelectedGroupIds
+      : autoSwitchDisplayGroups.map((group) => group.id);
+    saveConfig({
+      auto_switch_scope_mode: 'selected_groups',
+      auto_switch_selected_group_ids: nextSelected,
+    });
+  };
+
+  const handleAutoSwitchGroupToggle = (groupId: string) => {
+    const selected = new Set(normalizedAutoSwitchSelectedGroupIds);
+    if (selected.has(groupId)) {
+      if (selected.size === 1) {
+        return;
+      }
+      selected.delete(groupId);
+    } else {
+      selected.add(groupId);
+    }
+    saveConfig({ auto_switch_selected_group_ids: [...selected] });
   };
 
   const handleQuotaAlertThresholdSelectChange = (val: string) => {
@@ -1079,6 +1368,59 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
               </div>
             </div>
 
+            <div className="qs-section">
+              <div className="qs-section-header">
+                <RefreshCw size={15} />
+                <span>{t('settings.general.currentAccountRefreshTitle')}</span>
+              </div>
+              <div className="qs-field-group">
+                {showCurrentAccountRefreshInput ? (
+                  <div className="qs-inline-input">
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      className="qs-select qs-select--input-mode qs-select--with-unit"
+                      value={currentAccountCustomRefresh}
+                      placeholder={t('quickSettings.inputMinutes', '输入分钟数')}
+                      onChange={(e) =>
+                        setCurrentAccountCustomRefresh(e.target.value.replace(/[^\d]/g, ''))
+                      }
+                      onBlur={handleCurrentAccountCustomRefreshApply}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCurrentAccountCustomRefreshApply();
+                        }
+                      }}
+                    />
+                    <span className="qs-input-unit">{t('settings.general.minutes')}</span>
+                  </div>
+                ) : (
+                  <select
+                    className="qs-select"
+                    value={String(currentAccountRefreshValue)}
+                    onChange={(e) => handleCurrentAccountRefreshSelectChange(e.target.value)}
+                  >
+                    {!isCurrentAccountRefreshPreset && (
+                      <option value={String(currentAccountRefreshValue)}>
+                        {currentAccountRefreshValue} {t('settings.general.minutes')}
+                      </option>
+                    )}
+                    <option value="1">1 {t('settings.general.minutes')}</option>
+                    <option value="2">2 {t('settings.general.minutes')}</option>
+                    <option value="5">5 {t('settings.general.minutes')}</option>
+                    <option value="10">10 {t('settings.general.minutes')}</option>
+                    <option value="15">15 {t('settings.general.minutes')}</option>
+                    <option value="custom">{t('quickSettings.customInput', '自定义')}</option>
+                  </select>
+                )}
+                <div className="qs-hint" style={{ marginTop: 6 }}>
+                  {t('settings.general.currentAccountRefreshItemDesc')}
+                </div>
+              </div>
+            </div>
+
             {/* ─── App Path ─── */}
             {showAppPathSection && (
               <div className="qs-section">
@@ -1380,6 +1722,27 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                         </div>
                       </div>
 
+                      <div className="qs-row qs-row--top">
+                        <div className="qs-row-label">
+                          <span>{t('settings.general.codexAutoSwitchAccountScope', 'Codex 自动切号账号范围')}</span>
+                        </div>
+                        <div className="qs-row-control qs-row-control--fill">
+                          <AutoSwitchAccountScopeSelector
+                            mode={codexAutoSwitchAccountScopeMode}
+                            onModeChange={(mode) =>
+                              saveConfig({ codex_auto_switch_account_scope_mode: mode })
+                            }
+                            selectedAccountIds={codexAutoSwitchSelectedAccountIds}
+                            onSelectedAccountIdsChange={(ids) =>
+                              saveConfig({ codex_auto_switch_selected_account_ids: ids })
+                            }
+                            accounts={codexScopeAccounts}
+                            groups={codexScopeGroups}
+                            useDialog
+                          />
+                        </div>
+                      </div>
+
                       <div className="qs-hint">
                         {t(
                           'quickSettings.autoSwitch.hint',
@@ -1492,6 +1855,42 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                   <span>{t('quickSettings.autoSwitch.title', '自动切号')}</span>
                 </div>
 
+                {antigravitySeamlessSwitchUnlocked && (
+                  <>
+                    <div className="qs-row">
+                      <div className="qs-row-label">
+                        <span>
+                          {t(
+                            'settings.general.antigravityDualSwitchNoRestart',
+                            '无感双通道切号（不重启）'
+                          )}
+                        </span>
+                      </div>
+                      <div className="qs-row-control">
+                        <label className="qs-switch">
+                          <input
+                            type="checkbox"
+                            checked={config.antigravity_dual_switch_no_restart_enabled}
+                            onChange={(e) =>
+                              saveConfig({
+                                antigravity_dual_switch_no_restart_enabled: e.target.checked,
+                              })
+                            }
+                          />
+                          <span className="qs-switch-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="qs-hint">
+                      {t(
+                        'settings.general.antigravityDualSwitchNoRestartDesc',
+                        '切号时同时执行本地落盘与扩展无感切号，不再自动重启 Antigravity。'
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <div className="qs-row">
                   <div className="qs-row-label">
                     <span>{t('quickSettings.autoSwitch.enable', '启用自动切号')}</span>
@@ -1555,13 +1954,89 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
                         )}
                       </div>
                     </div>
+
+                    <div className="qs-row">
+                      <div className="qs-row-label">
+                        <span>{t('quickSettings.autoSwitch.triggerModel', '触发模型')}</span>
+                      </div>
+                      <div className="qs-row-control">
+                        <select
+                          className="qs-select"
+                          value={autoSwitchScopeMode}
+                          onChange={(e) => handleAutoSwitchScopeModeChange(e.target.value)}
+                        >
+                          <option value="any_group">
+                            {t('quickSettings.autoSwitch.scopeAnyGroup', '任一模型分组')}
+                          </option>
+                          <option value="selected_groups">
+                            {t('quickSettings.autoSwitch.scopeSelectedGroups', '指定模型分组')}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {autoSwitchScopeMode === 'selected_groups' && (
+                      <div className="qs-row qs-row--top">
+                        <div className="qs-row-label">
+                          <span>{t('quickSettings.autoSwitch.selectedGroups', '指定分组')}</span>
+                        </div>
+                        <div className="qs-row-control qs-row-control--fill">
+                          {autoSwitchDisplayGroups.length === 0 ? (
+                            <div className="qs-hint qs-hint--compact">
+                              {t('quickSettings.autoSwitch.selectedGroupsEmpty', '暂无可选分组')}
+                            </div>
+                          ) : (
+                            <div className="qs-check-group-inline">
+                              {autoSwitchDisplayGroups.map((group) => {
+                                const checked = normalizedAutoSwitchSelectedGroupIds.includes(group.id);
+                                return (
+                                  <label
+                                    key={group.id}
+                                    className="qs-check-item"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => handleAutoSwitchGroupToggle(group.id)}
+                                    />
+                                    <span>{group.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="qs-row qs-row--top">
+                      <div className="qs-row-label">
+                        <span>{t('settings.general.autoSwitchAccountScope', '自动切号账号范围')}</span>
+                      </div>
+                      <div className="qs-row-control qs-row-control--fill">
+                        <AutoSwitchAccountScopeSelector
+                          mode={autoSwitchAccountScopeMode}
+                          onModeChange={(mode) =>
+                            saveConfig({ auto_switch_account_scope_mode: mode })
+                          }
+                          selectedAccountIds={autoSwitchSelectedAccountIds}
+                          onSelectedAccountIdsChange={(ids) =>
+                            saveConfig({ auto_switch_selected_account_ids: ids })
+                          }
+                          accounts={antigravityScopeAccounts}
+                          groups={antigravityScopeGroups}
+                          typeOptions={antigravityScopeTypeOptions}
+                          useDialog
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 <div className="qs-hint">
                   {t(
                     'quickSettings.autoSwitch.hint',
-                    '当任意模型配额低于阈值时，自动切换到配额最高的账号。'
+                    '当命中监控的模型分组阈值时，自动切换到配额最高的账号。'
                   )}
                 </div>
 

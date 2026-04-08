@@ -88,9 +88,6 @@ pub async fn refresh_gemini_token(
 
     match gemini_account::refresh_account_token(&account_id).await {
         Ok(account) => {
-            if let Err(e) = gemini_account::run_quota_alert_if_needed() {
-                logger::log_warn(&format!("[QuotaAlert][Gemini] 预警检查失败: {}", e));
-            }
             let _ = crate::modules::tray::update_tray_menu(&app);
             logger::log_info(&format!(
                 "[Gemini Command] 刷新完成: account_id={}, email={}, elapsed={}ms",
@@ -121,15 +118,6 @@ pub async fn refresh_all_gemini_tokens(app: AppHandle) -> Result<i32, String> {
     let results = gemini_account::refresh_all_tokens().await?;
     let success_count = results.iter().filter(|(_, item)| item.is_ok()).count();
     let failed_count = results.len().saturating_sub(success_count);
-
-    if success_count > 0 {
-        if let Err(e) = gemini_account::run_quota_alert_if_needed() {
-            logger::log_warn(&format!(
-                "[QuotaAlert][Gemini] 全量刷新后预警检查失败: {}",
-                e
-            ));
-        }
-    }
 
     let _ = crate::modules::tray::update_tray_menu(&app);
     logger::log_info(&format!(

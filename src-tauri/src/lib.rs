@@ -70,7 +70,11 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if modules::external_import::handle_external_import_args(app, &args, "single-instance")
+            {
+                return;
+            }
             let _ = app.get_webview_window("main").map(|window| {
                 let _ = window.show();
                 let _ = window.unminimize();
@@ -89,6 +93,10 @@ pub fn run() {
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
+                app.handle().plugin(tauri_plugin_autostart::init(
+                    tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+                    None::<Vec<&'static str>>,
+                ))?;
                 info!("[Updater] Tauri Updater + Process 插件已初始化");
             }
 
@@ -160,6 +168,13 @@ pub fn run() {
                 logger::log_warn(&format!("[FloatingCard] 启动时显示悬浮卡片失败: {}", err));
             }
 
+            let startup_args: Vec<String> = std::env::args().collect();
+            let _ = modules::external_import::handle_external_import_args(
+                &app.handle(),
+                &startup_args,
+                "startup",
+            );
+
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -200,6 +215,8 @@ pub fn run() {
             commands::account::refresh_all_quotas,
             commands::account::refresh_current_quota,
             commands::account::switch_account,
+            commands::account::load_antigravity_switch_history,
+            commands::account::clear_antigravity_switch_history,
             commands::account::bind_account_fingerprint,
             commands::account::get_bound_accounts,
             commands::account::update_account_tags,
@@ -269,6 +286,7 @@ pub fn run() {
             commands::system::set_floating_card_confirm_on_close,
             commands::system::save_floating_card_position,
             commands::system::show_main_window_and_navigate,
+            commands::system::external_import_take_pending,
             commands::system::open_folder,
             commands::system::delete_corrupted_file,
             // Logs Commands
@@ -279,7 +297,9 @@ pub fn run() {
             commands::wakeup::wakeup_set_official_ls_version_mode,
             commands::wakeup::trigger_wakeup,
             commands::wakeup::fetch_available_models,
+            commands::wakeup::wakeup_validate_crontab,
             commands::wakeup::wakeup_sync_state,
+            commands::wakeup::wakeup_run_enabled_tasks,
             commands::wakeup::wakeup_load_history,
             commands::wakeup::wakeup_add_history,
             commands::wakeup::wakeup_clear_history,
@@ -302,6 +322,7 @@ pub fn run() {
             commands::announcement::announcement_mark_as_read,
             commands::announcement::announcement_mark_all_as_read,
             commands::announcement::announcement_force_refresh,
+            commands::announcement::announcement_get_top_right_ad,
             // Group Commands
             commands::group::get_group_settings,
             commands::group::save_group_settings,
@@ -337,6 +358,7 @@ pub fn run() {
             commands::codex::close_codex_oauth_port,
             commands::codex::update_codex_account_tags,
             commands::codex::codex_wakeup_get_cli_status,
+            commands::codex::codex_wakeup_update_runtime_config,
             commands::codex::codex_wakeup_get_overview,
             commands::codex::codex_wakeup_get_state,
             commands::codex::codex_wakeup_save_state,
@@ -346,6 +368,7 @@ pub fn run() {
             commands::codex::codex_wakeup_release_scope,
             commands::codex::codex_wakeup_test,
             commands::codex::codex_wakeup_run_task,
+            commands::codex::codex_wakeup_run_enabled_tasks,
             commands::codex::load_codex_account_groups,
             commands::codex::save_codex_account_groups,
             // GitHub Copilot Commands

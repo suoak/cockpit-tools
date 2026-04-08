@@ -24,6 +24,7 @@ import { PlatformOverviewTabsHeader, PlatformOverviewTab } from '../components/p
 import { CodebuddyInstancesContent } from './CodebuddyInstancesPage';
 import { DosageNotifyUsageStatus } from '../components/platform/DosageNotifyUsageStatus';
 import { MultiSelectFilterDropdown, type MultiSelectFilterOption } from '../components/MultiSelectFilterDropdown';
+import { compareCurrentAccountFirst } from '../utils/currentAccountSort';
 
 const CB_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.codebuddy.flow_notice_collapsed';
 const CB_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddy.current_account_id';
@@ -204,11 +205,16 @@ export function CodebuddyAccountsPage() {
       result = result.filter((acc) => (acc.tags || []).map(normalizeTag).some((tag) => selectedTags.has(tag)));
     }
     result.sort((a, b) => {
+      const currentFirstDiff = compareCurrentAccountFirst(a.id, b.id, currentAccountId);
+      if (currentFirstDiff !== 0) {
+        return currentFirstDiff;
+      }
+
       const diff = b.created_at - a.created_at;
       return sortDirection === 'desc' ? diff : -diff;
     });
     return result;
-  }, [accounts, searchQuery, filterTypes, resolvePlanKey, tagFilter, normalizeTag, sortBy, sortDirection]);
+  }, [accounts, currentAccountId, searchQuery, filterTypes, resolvePlanKey, tagFilter, normalizeTag, sortBy, sortDirection]);
 
   const filteredIds = useMemo(() => filteredAccounts.map((account) => account.id), [filteredAccounts]);
   const exportSelectionCount = getScopedSelectedCount(filteredIds);
@@ -612,7 +618,16 @@ export function CodebuddyAccountsPage() {
           <p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p>
         </div>
       ) : viewMode === 'grid' ? (
-        groupByTag ? (
+        <div className="grid-view-container">
+          {filteredAccounts.length > 0 && (
+            <div className="grid-view-header" style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-color)' }}>
+                <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
+                {t('common.selectAll', '全选')}
+              </label>
+            </div>
+          )}
+          {groupByTag ? (
           <div className="tag-group-list">
             {groupedAccounts.map(([groupKey, groupAccounts]) => (
               <div key={groupKey} className="tag-group-section">
@@ -626,7 +641,8 @@ export function CodebuddyAccountsPage() {
           </div>
         ) : (
           <div className="ghcp-accounts-grid">{renderGridCards(filteredAccounts)}</div>
-        )
+        )}
+        </div>
       ) : groupByTag ? (
         <div className="account-table-container grouped">
           <table className="account-table">

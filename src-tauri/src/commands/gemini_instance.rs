@@ -79,11 +79,16 @@ fn build_launch_command(context: &GeminiLaunchContext) -> String {
 
     #[cfg(target_os = "windows")]
     {
-        let mut command = if context.use_home_env {
+        let mut env_prefixes = Vec::new();
+        if context.use_home_env {
             let escaped_home = context.user_data_dir.replace('"', "\"\"");
-            format!("set \"GEMINI_CLI_HOME={}\" && gemini", escaped_home)
-        } else {
+            env_prefixes.push(format!("set \"GEMINI_CLI_HOME={}\"", escaped_home));
+        }
+
+        let mut command = if env_prefixes.is_empty() {
             "gemini".to_string()
+        } else {
+            format!("{} && gemini", env_prefixes.join(" && "))
         };
         for arg in parsed_args {
             if !arg.trim().is_empty() {
@@ -96,13 +101,18 @@ fn build_launch_command(context: &GeminiLaunchContext) -> String {
 
     #[cfg(not(target_os = "windows"))]
     {
-        let mut command = if context.use_home_env {
-            format!(
-                "GEMINI_CLI_HOME={} gemini",
+        let mut env_prefixes = Vec::new();
+        if context.use_home_env {
+            env_prefixes.push(format!(
+                "GEMINI_CLI_HOME={}",
                 posix_shell_quote(&context.user_data_dir)
-            )
-        } else {
+            ));
+        }
+
+        let mut command = if env_prefixes.is_empty() {
             "gemini".to_string()
+        } else {
+            format!("{} gemini", env_prefixes.join(" "))
         };
         for arg in parsed_args {
             let trimmed = arg.trim();

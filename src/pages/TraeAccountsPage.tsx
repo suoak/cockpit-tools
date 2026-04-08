@@ -47,6 +47,7 @@ import {
   getTraeUsage,
   TRAE_PRODUCT_TYPE,
 } from '../types/trae';
+import { compareCurrentAccountFirst } from '../utils/currentAccountSort';
 
 const TRAE_CURRENT_ACCOUNT_ID_KEY = 'agtools.trae.current_account_id';
 const TRAE_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.trae.flow_notice_collapsed';
@@ -289,6 +290,11 @@ export function TraeAccountsPage() {
 
   const compareAccountsBySort = useCallback(
     (left: TraeAccount, right: TraeAccount) => {
+      const currentFirstDiff = compareCurrentAccountFirst(left.id, right.id, currentAccountId);
+      if (currentFirstDiff !== 0) {
+        return currentFirstDiff;
+      }
+
       if (sortBy === 'plan') {
         const diff = getTraePlanBadge(left).localeCompare(getTraePlanBadge(right));
         return sortDirection === 'desc' ? -diff : diff;
@@ -304,7 +310,7 @@ export function TraeAccountsPage() {
       const diff = left.created_at - right.created_at;
       return sortDirection === 'desc' ? -diff : diff;
     },
-    [sortBy, sortDirection],
+    [currentAccountId, sortBy, sortDirection],
   );
 
   const sortedAccountsForInstances = useMemo(
@@ -1145,7 +1151,16 @@ export function TraeAccountsPage() {
               <p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p>
             </div>
           ) : viewMode === 'grid' ? (
-            groupByTag ? (
+        <div className="grid-view-container">
+          {filteredAccounts.length > 0 && (
+            <div className="grid-view-header" style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-color)' }}>
+                <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
+                {t('common.selectAll', '全选')}
+              </label>
+            </div>
+          )}
+          {groupByTag ? (
               <div className="tag-group-list">
                 {groupedAccounts.map(([groupKey, groupAccounts]) => (
                   <div key={groupKey} className="tag-group-section">
@@ -1161,8 +1176,9 @@ export function TraeAccountsPage() {
               </div>
             ) : (
               <div className="ghcp-accounts-grid">{renderGridCards(filteredAccounts)}</div>
-            )
-          ) : groupByTag ? (
+            )}
+        </div>
+      ) : groupByTag ? (
             <div className="account-table-container grouped">
               <table className="account-table">
                 <thead>

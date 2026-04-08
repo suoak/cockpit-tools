@@ -7,10 +7,43 @@ import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { changeLanguage, getCurrentLanguage, normalizeLanguage } from '../i18n';
 import * as accountService from '../services/accountService';
+import * as codexService from '../services/codexService';
+import { getAccountGroups, type AccountGroup } from '../services/accountGroupService';
+import {
+  getCodexAccountGroups,
+  type CodexAccountGroup,
+} from '../services/codexAccountGroupService';
 import { showFloatingCardWindow } from '../services/floatingCardService';
 import { usePlatformRuntimeSupport } from '../hooks/usePlatformRuntimeSupport';
 import { usePlatformLayoutStore } from '../stores/usePlatformLayoutStore';
 import { SideNavLayoutMode, useSideNavLayoutStore } from '../stores/useSideNavLayoutStore';
+import { UnlockFireworksOverlay } from '../components/UnlockFireworksOverlay';
+import {
+  AutoSwitchAccountScopeSelector,
+  type AutoSwitchAccountScopeMode,
+  type AutoSwitchScopeAccount,
+} from '../components/AutoSwitchAccountScopeSelector';
+import {
+  buildAccountTierCounts,
+  buildAccountTierFilterOptions,
+} from '../utils/accountFilters';
+import { getSubscriptionTier } from '../utils/account';
+import type { Account } from '../types/account';
+import type { CodexAccount } from '../types/codex';
+import {
+  FEATURE_UNLOCK_CHANGED_EVENT,
+  type FeatureUnlockChangedDetail,
+  isAntigravitySeamlessSwitchFeatureUnlocked,
+  persistAntigravitySeamlessSwitchFeatureUnlocked,
+} from '../utils/featureUnlocks';
+import {
+  buildDefaultCurrentAccountRefreshMinutesMap,
+  CURRENT_ACCOUNT_REFRESH_PLATFORMS,
+  type CurrentAccountRefreshMinutesMap,
+  type CurrentAccountRefreshPlatform,
+  loadCurrentAccountRefreshMinutesMap,
+  saveCurrentAccountRefreshMinutesMap,
+} from '../utils/currentAccountRefresh';
 import { ALL_PLATFORM_IDS, PlatformId } from '../types/platform';
 import { SettingsAccountTransferSection } from '../components/SettingsAccountTransferSection';
 import './settings/Settings.css';
@@ -54,6 +87,7 @@ interface GeneralConfig {
   hide_dock_icon?: boolean;
   floating_card_show_on_startup?: boolean;
   floating_card_always_on_top?: boolean;
+  app_auto_launch_enabled?: boolean;
   opencode_app_path: string;
   antigravity_app_path: string;
   codex_app_path: string;
@@ -89,8 +123,16 @@ interface GeneralConfig {
   opencode_auth_overwrite_on_switch: boolean;
   openclaw_auth_overwrite_on_switch: boolean;
   codex_launch_on_switch: boolean;
+  antigravity_dual_switch_no_restart_enabled: boolean;
   auto_switch_enabled: boolean;
   auto_switch_threshold: number;
+  auto_switch_account_scope_mode?: string;
+  auto_switch_selected_account_ids?: string[];
+  codex_auto_switch_enabled?: boolean;
+  codex_auto_switch_primary_threshold?: number;
+  codex_auto_switch_secondary_threshold?: number;
+  codex_auto_switch_account_scope_mode?: string;
+  codex_auto_switch_selected_account_ids?: string[];
   quota_alert_enabled: boolean;
   quota_alert_threshold: number;
   codex_quota_alert_enabled: boolean;
@@ -122,8 +164,13 @@ type AppPathTarget =
   | 'workbuddy'
   | 'zed';
 const REFRESH_PRESET_VALUES = ['-1', '2', '5', '10', '15'];
+const CURRENT_ACCOUNT_REFRESH_PRESET_VALUES = ['1', '2', '5', '10', '15'];
 const THRESHOLD_PRESET_VALUES = ['0', '20', '40', '60'];
 const UI_SCALE_OPTIONS = ['0.9', '1', '1.1', '1.25', '1.5'] as const;
+const ANTIGRAVITY_SEAMLESS_SWITCH_UNLOCK_REQUIRED_TAPS = 10;
+const UNLOCK_FIREWORKS_VISIBLE_MS = 6000;
+const AUTO_SWITCH_SCOPE_ALL_ACCOUNTS: AutoSwitchAccountScopeMode = 'all_accounts';
+const AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS: AutoSwitchAccountScopeMode = 'selected_accounts';
 const FALLBACK_PLATFORM_SETTINGS_ORDER: Record<PlatformId, number> = {
   antigravity: 0,
   codex: 1,
@@ -152,6 +199,32 @@ const generateReportToken = () => {
   const bytes = new Uint8Array(12);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const normalizeAutoSwitchAccountScopeMode = (
+  value?: string | null,
+): AutoSwitchAccountScopeMode =>
+  value === AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS
+    ? AUTO_SWITCH_SCOPE_SELECTED_ACCOUNTS
+    : AUTO_SWITCH_SCOPE_ALL_ACCOUNTS;
+
+const toCurrentAccountRefreshMinutesStringMap = (
+  map: CurrentAccountRefreshMinutesMap,
+): Record<CurrentAccountRefreshPlatform, string> => {
+  return CURRENT_ACCOUNT_REFRESH_PLATFORMS.reduce((result, platform) => {
+    result[platform] = String(map[platform]);
+    return result;
+  }, {} as Record<CurrentAccountRefreshPlatform, string>);
+};
+
+const buildDefaultCurrentAccountRefreshCustomModeMap = (): Record<
+  CurrentAccountRefreshPlatform,
+  boolean
+> => {
+  return CURRENT_ACCOUNT_REFRESH_PLATFORMS.reduce((result, platform) => {
+    result[platform] = false;
+    return result;
+  }, {} as Record<CurrentAccountRefreshPlatform, boolean>);
 };
 
 export function SettingsPage() {
@@ -207,6 +280,7 @@ export function SettingsPage() {
   const [hideDockIcon, setHideDockIcon] = useState(false);
   const [floatingCardShowOnStartup, setFloatingCardShowOnStartup] = useState(true);
   const [floatingCardAlwaysOnTop, setFloatingCardAlwaysOnTop] = useState(false);
+  const [appAutoLaunchEnabled, setAppAutoLaunchEnabled] = useState(false);
   const [opencodeAppPath, setOpencodeAppPath] = useState('');
   const [antigravityAppPath, setAntigravityAppPath] = useState('');
   const [codexAppPath, setCodexAppPath] = useState('');
@@ -226,6 +300,14 @@ export function SettingsPage() {
   const [qoderAutoRefresh, setQoderAutoRefresh] = useState('10');
   const [traeAutoRefresh, setTraeAutoRefresh] = useState('10');
   const [zedAutoRefresh, setZedAutoRefresh] = useState('10');
+  const [currentAccountRefreshMinutes, setCurrentAccountRefreshMinutes] = useState<
+    Record<CurrentAccountRefreshPlatform, string>
+  >(() =>
+    toCurrentAccountRefreshMinutesStringMap(buildDefaultCurrentAccountRefreshMinutesMap()),
+  );
+  const [currentAccountRefreshCustomMode, setCurrentAccountRefreshCustomMode] = useState<
+    Record<CurrentAccountRefreshPlatform, boolean>
+  >(() => buildDefaultCurrentAccountRefreshCustomModeMap());
   const [codebuddyQuotaAlertEnabled, setCodebuddyQuotaAlertEnabled] = useState(false);
   const [codebuddyQuotaAlertThreshold, setCodebuddyQuotaAlertThreshold] = useState('20');
   const [codebuddyCnQuotaAlertEnabled, setCodebuddyCnQuotaAlertEnabled] = useState(false);
@@ -251,12 +333,22 @@ export function SettingsPage() {
   const [codebuddyCnQuotaAlertThresholdCustomMode, setCodebuddyCnQuotaAlertThresholdCustomMode] = useState(false);
   const [workbuddyQuotaAlertThresholdCustomMode, setWorkbuddyQuotaAlertThresholdCustomMode] = useState(false);
   const [appPathResetDetectingTargets, setAppPathResetDetectingTargets] = useState<Set<AppPathTarget>>(new Set());
-  const [opencodeSyncOnSwitch, setOpencodeSyncOnSwitch] = useState(true);
-  const [opencodeAuthOverwriteOnSwitch, setOpencodeAuthOverwriteOnSwitch] = useState(true);
+  const [opencodeSyncOnSwitch, setOpencodeSyncOnSwitch] = useState(false);
+  const [opencodeAuthOverwriteOnSwitch, setOpencodeAuthOverwriteOnSwitch] = useState(false);
   const [openclawAuthOverwriteOnSwitch, setOpenclawAuthOverwriteOnSwitch] = useState(false);
   const [codexLaunchOnSwitch, setCodexLaunchOnSwitch] = useState(true);
+  const [antigravityDualSwitchNoRestartEnabled, setAntigravityDualSwitchNoRestartEnabled] = useState(false);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(false);
   const [autoSwitchThreshold, setAutoSwitchThreshold] = useState('20');
+  const [autoSwitchAccountScopeMode, setAutoSwitchAccountScopeMode] =
+    useState<AutoSwitchAccountScopeMode>(AUTO_SWITCH_SCOPE_ALL_ACCOUNTS);
+  const [autoSwitchSelectedAccountIds, setAutoSwitchSelectedAccountIds] = useState<string[]>([]);
+  const [codexAutoSwitchEnabled, setCodexAutoSwitchEnabled] = useState(false);
+  const [codexAutoSwitchAccountScopeMode, setCodexAutoSwitchAccountScopeMode] =
+    useState<AutoSwitchAccountScopeMode>(AUTO_SWITCH_SCOPE_ALL_ACCOUNTS);
+  const [codexAutoSwitchSelectedAccountIds, setCodexAutoSwitchSelectedAccountIds] = useState<
+    string[]
+  >([]);
   const [quotaAlertEnabled, setQuotaAlertEnabled] = useState(false);
   const [quotaAlertThreshold, setQuotaAlertThreshold] = useState('20');
   const [codexQuotaAlertEnabled, setCodexQuotaAlertEnabled] = useState(false);
@@ -286,9 +378,16 @@ export function SettingsPage() {
   const [kiroQuotaAlertThresholdCustomMode, setKiroQuotaAlertThresholdCustomMode] = useState(false);
   const [cursorQuotaAlertThresholdCustomMode, setCursorQuotaAlertThresholdCustomMode] = useState(false);
   const [geminiQuotaAlertThresholdCustomMode, setGeminiQuotaAlertThresholdCustomMode] = useState(false);
+  const [antigravitySeamlessSwitchUnlocked, setAntigravitySeamlessSwitchUnlocked] = useState(
+    isAntigravitySeamlessSwitchFeatureUnlocked,
+  );
+  const [, setAboutAvatarTapCount] = useState(0);
+  const [showUnlockFireworks, setShowUnlockFireworks] = useState(false);
+  const unlockFireworksTimerRef = useRef<number | null>(null);
   const [generalLoaded, setGeneralLoaded] = useState(false);
   const generalSaveTimerRef = useRef<number | null>(null);
   const suppressGeneralSaveRef = useRef(false);
+  const currentAccountRefreshPersistReadyRef = useRef(false);
   
   const [appVersion, setAppVersion] = useState('');
   const [updateChecking, setUpdateChecking] = useState(false);
@@ -302,6 +401,80 @@ export function SettingsPage() {
   const [updateRemindersEnabled, setUpdateRemindersEnabled] = useState(true);
   const [updateRemindersLoaded, setUpdateRemindersLoaded] = useState(false);
   const updateRemindersTouchedRef = useRef(false);
+  const [antigravityAccounts, setAntigravityAccounts] = useState<Account[]>([]);
+  const [antigravityAccountGroups, setAntigravityAccountGroups] = useState<AccountGroup[]>([]);
+  const [codexAccounts, setCodexAccounts] = useState<CodexAccount[]>([]);
+  const [codexGroups, setCodexGroups] = useState<CodexAccountGroup[]>([]);
+
+  const antigravityScopeTypeOptions = useMemo(
+    () => buildAccountTierFilterOptions(t, buildAccountTierCounts(antigravityAccounts, {})),
+    [antigravityAccounts, t],
+  );
+  const antigravityScopeAccounts = useMemo<AutoSwitchScopeAccount[]>(
+    () =>
+      antigravityAccounts.map((account) => {
+        const disabledReason = account.disabled_reason || '';
+        const type =
+          disabledReason === 'verification_required'
+            ? 'VERIFICATION_REQUIRED'
+            : disabledReason === 'tos_violation'
+              ? 'TOS_VIOLATION'
+              : getSubscriptionTier(account.quota);
+        return {
+          id: account.id,
+          label: account.email,
+          searchableText: account.email,
+          tags: account.tags || [],
+          type,
+        };
+      }),
+    [antigravityAccounts],
+  );
+  const codexScopeAccounts = useMemo<AutoSwitchScopeAccount[]>(
+    () =>
+      codexAccounts.map((account) => ({
+        id: account.id,
+        label: account.email,
+        searchableText: account.email,
+        tags: account.tags || [],
+      })),
+    [codexAccounts],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    const loadAutoSwitchScopeData = async () => {
+      try {
+        const [nextAntigravityAccounts, nextAntigravityGroups, nextCodexAccounts, nextCodexGroups] =
+          await Promise.all([
+            accountService.listAccounts(),
+            getAccountGroups(),
+            codexService.listCodexAccounts(),
+            getCodexAccountGroups(),
+          ]);
+        if (!mounted) return;
+        setAntigravityAccounts(nextAntigravityAccounts || []);
+        setAntigravityAccountGroups(nextAntigravityGroups || []);
+        setCodexAccounts(nextCodexAccounts || []);
+        setCodexGroups(nextCodexGroups || []);
+      } catch (error) {
+        console.error('加载自动切号账号范围数据失败:', error);
+        if (!mounted) return;
+        setAntigravityAccounts([]);
+        setAntigravityAccountGroups([]);
+        setCodexAccounts([]);
+        setCodexGroups([]);
+      }
+    };
+
+    if (activeTab === 'general') {
+      void loadAutoSwitchScopeData();
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     getVersion().then(ver => setAppVersion(`v${ver}`));
@@ -372,6 +545,32 @@ export function SettingsPage() {
       window.removeEventListener('update-check-finished', handleFinished as EventListener);
     };
   }, [t]);
+
+  useEffect(() => {
+    const handleFeatureUnlockChanged = (event: Event) => {
+      const detail = (event as CustomEvent<FeatureUnlockChangedDetail>).detail;
+      if (!detail || detail.feature !== 'antigravity.seamless_switch') {
+        return;
+      }
+      setAntigravitySeamlessSwitchUnlocked(Boolean(detail.unlocked));
+    };
+
+    window.addEventListener(FEATURE_UNLOCK_CHANGED_EVENT, handleFeatureUnlockChanged as EventListener);
+    return () => {
+      window.removeEventListener(
+        FEATURE_UNLOCK_CHANGED_EVENT,
+        handleFeatureUnlockChanged as EventListener,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (unlockFireworksTimerRef.current !== null) {
+        window.clearTimeout(unlockFireworksTimerRef.current);
+      }
+    };
+  }, []);
   
   // Network States
   const [wsEnabled, setWsEnabled] = useState(true);
@@ -475,7 +674,6 @@ export function SettingsPage() {
     const parsedZedQuotaAlertThreshold = Number.parseInt(zedQuotaAlertThreshold, 10);
     const parsedCursorQuotaAlertThreshold = Number.parseInt(cursorQuotaAlertThreshold, 10);
     const parsedGeminiQuotaAlertThreshold = Number.parseInt(geminiQuotaAlertThreshold, 10);
-
     if (suppressGeneralSaveRef.current) {
       suppressGeneralSaveRef.current = false;
       return;
@@ -505,6 +703,7 @@ export function SettingsPage() {
           hideDockIcon,
           floatingCardShowOnStartup,
           floatingCardAlwaysOnTop,
+          appAutoLaunchEnabled,
           opencodeAppPath,
           antigravityAppPath,
           codexAppPath,
@@ -522,8 +721,13 @@ export function SettingsPage() {
           opencodeAuthOverwriteOnSwitch,
           openclawAuthOverwriteOnSwitch,
           codexLaunchOnSwitch,
+          antigravityDualSwitchNoRestartEnabled,
           autoSwitchEnabled,
           autoSwitchThreshold: Number.isNaN(parsedAutoSwitchThreshold) ? 20 : parsedAutoSwitchThreshold,
+          autoSwitchAccountScopeMode,
+          autoSwitchSelectedAccountIds,
+          codexAutoSwitchAccountScopeMode,
+          codexAutoSwitchSelectedAccountIds,
           quotaAlertEnabled,
           quotaAlertThreshold: Number.isNaN(parsedQuotaAlertThreshold) ? 20 : parsedQuotaAlertThreshold,
           codexQuotaAlertEnabled,
@@ -604,6 +808,7 @@ export function SettingsPage() {
     hideDockIcon,
     floatingCardShowOnStartup,
     floatingCardAlwaysOnTop,
+    appAutoLaunchEnabled,
     generalLoaded,
     language,
     theme,
@@ -625,8 +830,13 @@ export function SettingsPage() {
     opencodeAuthOverwriteOnSwitch,
     openclawAuthOverwriteOnSwitch,
     codexLaunchOnSwitch,
+    antigravityDualSwitchNoRestartEnabled,
     autoSwitchEnabled,
     autoSwitchThreshold,
+    autoSwitchAccountScopeMode,
+    autoSwitchSelectedAccountIds,
+    codexAutoSwitchAccountScopeMode,
+    codexAutoSwitchSelectedAccountIds,
     quotaAlertEnabled,
     quotaAlertThreshold,
     codexQuotaAlertEnabled,
@@ -657,6 +867,25 @@ export function SettingsPage() {
     geminiQuotaAlertThreshold,
     t,
   ]);
+
+  useEffect(() => {
+    if (!generalLoaded) {
+      return;
+    }
+
+    if (!currentAccountRefreshPersistReadyRef.current) {
+      currentAccountRefreshPersistReadyRef.current = true;
+      return;
+    }
+
+    const payload = CURRENT_ACCOUNT_REFRESH_PLATFORMS.reduce((result, platform) => {
+      const raw = Number.parseInt(currentAccountRefreshMinutes[platform], 10);
+      result[platform] = Number.isNaN(raw) ? 1 : raw;
+      return result;
+    }, {} as Partial<Record<CurrentAccountRefreshPlatform, number>>);
+    saveCurrentAccountRefreshMinutesMap(payload);
+    window.dispatchEvent(new Event('config-updated'));
+  }, [generalLoaded, currentAccountRefreshMinutes]);
 
   useEffect(() => {
     const handleLanguageUpdated = (event: Event) => {
@@ -860,6 +1089,7 @@ export function SettingsPage() {
       setHideDockIcon(Boolean(config.hide_dock_icon));
       setFloatingCardShowOnStartup(config.floating_card_show_on_startup ?? true);
       setFloatingCardAlwaysOnTop(config.floating_card_always_on_top ?? false);
+      setAppAutoLaunchEnabled(config.app_auto_launch_enabled ?? false);
       setOpencodeAppPath(config.opencode_app_path || '');
       setAntigravityAppPath(config.antigravity_app_path || '');
       setCodexAppPath(config.codex_app_path || '');
@@ -879,6 +1109,9 @@ export function SettingsPage() {
       setQoderAutoRefresh(String(config.qoder_auto_refresh_minutes ?? 10));
       setTraeAutoRefresh(String(config.trae_auto_refresh_minutes ?? 10));
       setZedAutoRefresh(String(config.zed_auto_refresh_minutes ?? 10));
+      setCurrentAccountRefreshMinutes(
+        toCurrentAccountRefreshMinutesStringMap(loadCurrentAccountRefreshMinutesMap()),
+      );
       setCodebuddyQuotaAlertEnabled(config.codebuddy_quota_alert_enabled ?? false);
       setCodebuddyQuotaAlertThreshold(String(config.codebuddy_quota_alert_threshold ?? 20));
       setCodebuddyCnQuotaAlertEnabled(config.codebuddy_cn_quota_alert_enabled ?? false);
@@ -891,12 +1124,24 @@ export function SettingsPage() {
       setTraeQuotaAlertThreshold(String(config.trae_quota_alert_threshold ?? 20));
       setZedQuotaAlertEnabled(config.zed_quota_alert_enabled ?? false);
       setZedQuotaAlertThreshold(String(config.zed_quota_alert_threshold ?? 20));
-      setOpencodeSyncOnSwitch(config.opencode_sync_on_switch ?? true);
-      setOpencodeAuthOverwriteOnSwitch(config.opencode_auth_overwrite_on_switch ?? true);
+      setOpencodeSyncOnSwitch(config.opencode_sync_on_switch ?? false);
+      setOpencodeAuthOverwriteOnSwitch(config.opencode_auth_overwrite_on_switch ?? false);
       setOpenclawAuthOverwriteOnSwitch(config.openclaw_auth_overwrite_on_switch ?? false);
       setCodexLaunchOnSwitch(config.codex_launch_on_switch ?? true);
+      setAntigravityDualSwitchNoRestartEnabled(
+        config.antigravity_dual_switch_no_restart_enabled ?? false
+      );
       setAutoSwitchEnabled(config.auto_switch_enabled ?? false);
       setAutoSwitchThreshold(String(config.auto_switch_threshold ?? 20));
+      setAutoSwitchAccountScopeMode(
+        normalizeAutoSwitchAccountScopeMode(config.auto_switch_account_scope_mode),
+      );
+      setAutoSwitchSelectedAccountIds(config.auto_switch_selected_account_ids ?? []);
+      setCodexAutoSwitchEnabled(config.codex_auto_switch_enabled ?? false);
+      setCodexAutoSwitchAccountScopeMode(
+        normalizeAutoSwitchAccountScopeMode(config.codex_auto_switch_account_scope_mode),
+      );
+      setCodexAutoSwitchSelectedAccountIds(config.codex_auto_switch_selected_account_ids ?? []);
       setQuotaAlertEnabled(config.quota_alert_enabled ?? false);
       setQuotaAlertThreshold(String(config.quota_alert_threshold ?? 20));
       setCodexQuotaAlertEnabled(config.codex_quota_alert_enabled ?? false);
@@ -938,6 +1183,8 @@ export function SettingsPage() {
       setZedQuotaAlertThresholdCustomMode(false);
       setCursorQuotaAlertThresholdCustomMode(false);
       setGeminiQuotaAlertThresholdCustomMode(false);
+      setCurrentAccountRefreshCustomMode(buildDefaultCurrentAccountRefreshCustomModeMap());
+      currentAccountRefreshPersistReadyRef.current = false;
       // 同步语言
       changeLanguage(config.language);
       applyTheme(config.theme);
@@ -1133,6 +1380,105 @@ export function SettingsPage() {
     return String(bounded);
   };
 
+  const setCurrentAccountRefreshValue = (
+    platform: CurrentAccountRefreshPlatform,
+    value: string,
+  ) => {
+    setCurrentAccountRefreshMinutes((prev) => ({
+      ...prev,
+      [platform]: value,
+    }));
+  };
+
+  const setCurrentAccountRefreshCustomModeValue = (
+    platform: CurrentAccountRefreshPlatform,
+    enabled: boolean,
+  ) => {
+    setCurrentAccountRefreshCustomMode((prev) => ({
+      ...prev,
+      [platform]: enabled,
+    }));
+  };
+
+  const renderCurrentAccountRefreshRow = (platform: CurrentAccountRefreshPlatform) => {
+    const value = currentAccountRefreshMinutes[platform];
+    const customMode = currentAccountRefreshCustomMode[platform];
+    const isPreset = CURRENT_ACCOUNT_REFRESH_PRESET_VALUES.includes(value);
+
+    return (
+      <div className="settings-row">
+        <div className="row-label">
+          <div className="row-title">{t('settings.general.currentAccountRefreshTitle')}</div>
+          <div className="row-desc">{t('settings.general.currentAccountRefreshItemDesc')}</div>
+        </div>
+        <div className="row-control">
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {customMode ? (
+              <div className="settings-inline-input" style={{ minWidth: '120px', width: 'auto' }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  className="settings-select settings-select--input-mode settings-select--with-unit"
+                  value={value}
+                  placeholder={t('quickSettings.inputMinutes', '输入分钟数')}
+                  onChange={(event) =>
+                    setCurrentAccountRefreshValue(platform, sanitizeNumberInput(event.target.value))
+                  }
+                  onBlur={() => {
+                    const normalized = normalizeNumberInput(value, 1, 999);
+                    setCurrentAccountRefreshValue(platform, normalized);
+                    setCurrentAccountRefreshCustomModeValue(platform, false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      const normalized = normalizeNumberInput(value, 1, 999);
+                      setCurrentAccountRefreshValue(platform, normalized);
+                      setCurrentAccountRefreshCustomModeValue(platform, false);
+                    }
+                  }}
+                />
+                <span className="settings-input-unit">{t('settings.general.minutes')}</span>
+              </div>
+            ) : (
+              <select
+                className="settings-select"
+                style={{ minWidth: '120px', width: 'auto' }}
+                value={value}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  if (nextValue === 'custom') {
+                    setCurrentAccountRefreshCustomModeValue(platform, true);
+                    setCurrentAccountRefreshValue(
+                      platform,
+                      value || String(CURRENT_ACCOUNT_REFRESH_PRESET_VALUES[0]),
+                    );
+                    return;
+                  }
+                  setCurrentAccountRefreshCustomModeValue(platform, false);
+                  setCurrentAccountRefreshValue(platform, nextValue);
+                }}
+              >
+                {!isPreset && (
+                  <option value={value}>
+                    {value} {t('settings.general.minutes')}
+                  </option>
+                )}
+                <option value="1">1 {t('settings.general.minutes')}</option>
+                <option value="2">2 {t('settings.general.minutes')}</option>
+                <option value="5">5 {t('settings.general.minutes')}</option>
+                <option value="10">10 {t('settings.general.minutes')}</option>
+                <option value="15">15 {t('settings.general.minutes')}</option>
+                <option value="custom">{t('settings.general.autoRefreshCustom')}</option>
+              </select>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const autoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(autoRefresh);
   const codexAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(codexAutoRefresh);
   const ghcpAutoRefreshIsPreset = REFRESH_PRESET_VALUES.includes(ghcpAutoRefresh);
@@ -1171,6 +1517,32 @@ export function SettingsPage() {
         detail: { source: 'manual' as UpdateCheckSource },
       }),
     );
+  };
+
+  const triggerUnlockFireworks = () => {
+    if (unlockFireworksTimerRef.current !== null) {
+      window.clearTimeout(unlockFireworksTimerRef.current);
+      unlockFireworksTimerRef.current = null;
+    }
+    setShowUnlockFireworks(true);
+    unlockFireworksTimerRef.current = window.setTimeout(() => {
+      setShowUnlockFireworks(false);
+      unlockFireworksTimerRef.current = null;
+    }, UNLOCK_FIREWORKS_VISIBLE_MS);
+  };
+
+  const handleAboutAvatarTap = () => {
+    setAboutAvatarTapCount((prev) => {
+      const next = prev + 1;
+      if (next % ANTIGRAVITY_SEAMLESS_SWITCH_UNLOCK_REQUIRED_TAPS === 0) {
+        if (!antigravitySeamlessSwitchUnlocked) {
+          persistAntigravitySeamlessSwitchFeatureUnlocked(true);
+          setAntigravitySeamlessSwitchUnlocked(true);
+        }
+        triggerUnlockFireworks();
+      }
+      return next;
+    });
   };
 
   return (
@@ -1402,6 +1774,23 @@ export function SettingsPage() {
 
               <div className="settings-row">
                 <div className="row-label">
+                  <div className="row-title">{t('settings.general.appAutoLaunch')}</div>
+                  <div className="row-desc">{t('settings.general.appAutoLaunchDesc')}</div>
+                </div>
+                <div className="row-control">
+                  <select
+                    className="settings-select"
+                    value={appAutoLaunchEnabled ? 'true' : 'false'}
+                    onChange={(e) => setAppAutoLaunchEnabled(e.target.value === 'true')}
+                  >
+                    <option value="false">{t('common.disable', '停用')}</option>
+                    <option value="true">{t('common.enable', '启用')}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="row-label">
                   <div className="row-title">{t('settings.general.floatingCardShowNow', '立即显示悬浮卡片')}</div>
                   <div className="row-desc">{t('settings.general.floatingCardShowNowDesc', '关闭后可在这里或托盘菜单中重新打开')}</div>
                 </div>
@@ -1527,6 +1916,8 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              {renderCurrentAccountRefreshRow('antigravity')}
+
               <div className="settings-row">
                 <div className="row-label">
                   <div className="row-title">{t('settings.general.antigravityAppPath', 'Antigravity 启动路径')}</div>
@@ -1561,6 +1952,37 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {antigravitySeamlessSwitchUnlocked && (
+                <div className="settings-row">
+                  <div className="row-label">
+                    <div className="row-title">
+                      {t(
+                        'settings.general.antigravityDualSwitchNoRestart',
+                        '无感双通道切号（不重启）'
+                      )}
+                    </div>
+                    <div className="row-desc">
+                      {t(
+                        'settings.general.antigravityDualSwitchNoRestartDesc',
+                        '切号时同时执行本地落盘与扩展无感切号，不再自动重启 Antigravity。'
+                      )}
+                    </div>
+                  </div>
+                  <div className="row-control">
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={antigravityDualSwitchNoRestartEnabled}
+                        onChange={(e) =>
+                          setAntigravityDualSwitchNoRestartEnabled(e.target.checked)
+                        }
+                      />
+                      <span className="slider"></span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="settings-row">
                 <div className="row-label">
@@ -1636,6 +2058,30 @@ export function SettingsPage() {
                         <option value="custom">{t('settings.general.autoRefreshCustom')}</option>
                       </select>
                     )}
+                  </div>
+                </div>
+              )}
+              {autoSwitchEnabled && (
+                <div className="settings-row settings-row--align-start" style={{ animation: 'fadeUp 0.3s ease both' }}>
+                  <div className="row-label">
+                    <div className="row-title">
+                      {t('settings.general.autoSwitchAccountScope')}
+                    </div>
+                    <div className="row-desc">
+                      {t('settings.general.autoSwitchAccountScopeDesc')}
+                    </div>
+                  </div>
+                  <div className="row-control row-control--grow">
+                    <AutoSwitchAccountScopeSelector
+                      mode={autoSwitchAccountScopeMode}
+                      onModeChange={setAutoSwitchAccountScopeMode}
+                      selectedAccountIds={autoSwitchSelectedAccountIds}
+                      onSelectedAccountIdsChange={setAutoSwitchSelectedAccountIds}
+                      accounts={antigravityScopeAccounts}
+                      groups={antigravityAccountGroups}
+                      typeOptions={antigravityScopeTypeOptions}
+                      useDialog
+                    />
                   </div>
                 </div>
               )}
@@ -1790,6 +2236,8 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              {renderCurrentAccountRefreshRow('codex')}
+
               <div className="settings-row">
                 <div className="row-label">
                   <div className="row-title">{t('settings.general.codexAppPath', 'Codex 启动路径')}</div>
@@ -1839,6 +2287,27 @@ export function SettingsPage() {
                     />
                     <span className="slider"></span>
                   </label>
+                </div>
+              </div>
+              <div className="settings-row settings-row--align-start">
+                <div className="row-label">
+                  <div className="row-title">{t('settings.general.codexAutoSwitchAccountScope')}</div>
+                  <div className="row-desc">
+                    {t('settings.general.codexAutoSwitchAccountScopeDesc', {
+                      status: codexAutoSwitchEnabled ? t('common.enabled') : t('common.disabled'),
+                    })}
+                  </div>
+                </div>
+                <div className="row-control row-control--grow">
+                  <AutoSwitchAccountScopeSelector
+                    mode={codexAutoSwitchAccountScopeMode}
+                    onModeChange={setCodexAutoSwitchAccountScopeMode}
+                    selectedAccountIds={codexAutoSwitchSelectedAccountIds}
+                    onSelectedAccountIdsChange={setCodexAutoSwitchSelectedAccountIds}
+                    accounts={codexScopeAccounts}
+                    groups={codexGroups}
+                    useDialog
+                  />
                 </div>
               </div>
 
@@ -2091,6 +2560,8 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              {renderCurrentAccountRefreshRow('ghcp')}
+
               <div className="settings-row">
                 <div className="row-label">
                   <div className="row-title">{t('settings.general.vscodeAppPath', 'VS Code 启动路径')}</div>
@@ -2275,6 +2746,8 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {renderCurrentAccountRefreshRow('windsurf')}
 
               <div className="settings-row">
                 <div className="row-label">
@@ -2461,6 +2934,8 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              {renderCurrentAccountRefreshRow('kiro')}
+
               <div className="settings-row">
                 <div className="row-label">
                   <div className="row-title">{t('settings.general.kiroAppPath', 'Kiro 启动路径')}</div>
@@ -2646,6 +3121,8 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {renderCurrentAccountRefreshRow('codebuddy')}
 
               <div className="settings-row">
                 <div className="row-label">
@@ -2835,6 +3312,8 @@ export function SettingsPage() {
                     </div>
                   </div>
 
+                  {renderCurrentAccountRefreshRow('codebuddy_cn')}
+
                   <div className="settings-row">
                     <div className="row-label">
                       <div className="row-title">{t('settings.general.codebuddyCnAppPath', 'CodeBuddy CN 启动路径')}</div>
@@ -3022,6 +3501,8 @@ export function SettingsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {renderCurrentAccountRefreshRow('qoder')}
 
                   <div className="settings-row">
                     <div className="row-label">
@@ -3211,6 +3692,8 @@ export function SettingsPage() {
                     </div>
                   </div>
 
+                  {renderCurrentAccountRefreshRow('trae')}
+
                   <div className="settings-row">
                     <div className="row-label">
                       <div className="row-title">{t('settings.general.traeAppPath', 'Trae 启动路径')}</div>
@@ -3399,6 +3882,8 @@ export function SettingsPage() {
                     </div>
                   </div>
 
+                  {renderCurrentAccountRefreshRow('workbuddy')}
+
                   <div className="settings-row">
                     <div className="row-label">
                       <div className="row-title">{t('settings.general.workbuddyAppPath', 'WorkBuddy 启动路径')}</div>
@@ -3585,6 +4070,8 @@ export function SettingsPage() {
                     </div>
                   </div>
 
+                  {renderCurrentAccountRefreshRow('zed')}
+
                   <div className="settings-row">
                     <div className="row-label">
                       <div className="row-title">{t('settings.general.zedAppPath', 'Zed 启动路径')}</div>
@@ -3769,6 +4256,8 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              {renderCurrentAccountRefreshRow('cursor')}
+
               <div className="settings-row">
                 <div className="row-label">
                   <div className="row-title">{t('quickSettings.cursor.appPath', 'Cursor 路径')}</div>
@@ -3952,6 +4441,8 @@ export function SettingsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {renderCurrentAccountRefreshRow('gemini')}
 
                   <div className="settings-row">
                     <div className="row-label">
@@ -4319,7 +4810,11 @@ export function SettingsPage() {
         {activeTab === 'about' && (
           <div className="about-container">
             <div className="about-logo-section">
-              <div className="app-icon-squircle">
+              <div
+                className={`app-icon-squircle${showUnlockFireworks ? ' unlock-fireworks-active' : ''}`}
+                onClick={handleAboutAvatarTap}
+                onMouseDown={(event) => event.preventDefault()}
+              >
                 <Rocket size={40} />
               </div>
               <div className="app-info">
@@ -4388,6 +4883,9 @@ export function SettingsPage() {
         )}
         </div>
       </div>
+      {showUnlockFireworks && (
+        <UnlockFireworksOverlay />
+      )}
     </main>
   );
 }

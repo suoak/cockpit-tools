@@ -162,6 +162,13 @@
       "updated": {
         "label": "Обновлено {{relative}} назад"
       }
+    },
+    "topRightAd": {
+      "ariaLabel": "Глобальный рекламный слот в правом верхнем углу",
+      "badge": "РЕКЛАМА",
+      "title": "Рекламный слот в правом верхнем углу",
+      "desc": "Эта область фиксируется в правом верхнем углу на всех страницах и подходит для кампаний или брендовой рекламы.",
+      "action": "Подробнее"
     }
   },
   "nav": {
@@ -195,7 +202,8 @@
     "switchClassicLayoutTitle": "Переключить на классический макет боковой панели",
     "switchClassicLayoutDesc": "Классический макет показывает полную навигацию по платформам и поддерживает сворачивание боковой панели. Вы можете вернуться в любой момент: Настройки > Общие > Макет боковой панели.",
     "switchClassicLayoutDontAskAgain": "Больше не показывать это сообщение",
-    "switchClassicLayoutConfirm": "Переключить сейчас"
+    "switchClassicLayoutConfirm": "Переключить сейчас",
+    "2faManager": "Управление 2FA"
   },
   "platformLayout": {
     "title": "Макет платформ",
@@ -578,7 +586,32 @@
       "sideNavLayout": "Макет боковой панели",
       "sideNavLayoutDesc": "Переключение между оригинальным и классическим макетом боковой панели",
       "sideNavLayoutOriginal": "Оригинальный макет",
-      "sideNavLayoutClassic": "Классический макет"
+      "sideNavLayoutClassic": "Классический макет",
+      "antigravityDualSwitchNoRestart": "Двойное переключение без перезапуска",
+      "antigravityDualSwitchNoRestartDesc": "При переключении аккаунта локальная запись данных и плавное переключение через расширение выполняются в одном потоке без перезапуска Antigravity.",
+      "appAutoLaunch": "Запускать Cockpit Tools при входе в систему",
+      "appAutoLaunchDesc": "Автоматически запускать приложение после входа в систему",
+      "startupWakeupDisabled": "Отключено",
+      "startupWakeupImmediate": "Разбудить сразу",
+      "startupWakeupDelayed": "Разбудить с задержкой",
+      "antigravityStartupWakeup": "Выполнять пробуждение Antigravity после запуска",
+      "antigravityStartupWakeupDesc": "После запуска приложения один раз выполнять включенные задачи пробуждения Antigravity",
+      "codexStartupWakeup": "Выполнять пробуждение Codex после запуска",
+      "codexStartupWakeupDesc": "После запуска приложения один раз выполнять включенные задачи пробуждения Codex",
+      "currentAccountRefreshTitle": "Обновление текущего аккаунта",
+      "currentAccountRefreshItemDesc": "Обновляется только текущий аккаунт. Значение по умолчанию — 1 минута.",
+      "autoSwitchAccountScope": "Область автопереключения аккаунтов",
+      "autoSwitchAccountScopeDesc": "Мониторинг и переключение выполняются только в рамках этой области.",
+      "autoSwitchAccountScopeAll": "Все аккаунты",
+      "autoSwitchAccountScopeSelected": "Выбранные аккаунты",
+      "autoSwitchAccountScopeChoose": "Выбрать аккаунты",
+      "autoSwitchAccountScopeManage": "Управлять аккаунтами",
+      "autoSwitchAccountScopeAllSummary": "Текущая область: все аккаунты (всего {{total}})",
+      "autoSwitchAccountScopeSummary": "Выбрано {{selected}} из {{total}} аккаунтов",
+      "autoSwitchAccountScopeDialogTitle": "Выберите область аккаунтов для автопереключения",
+      "autoSwitchAccountScopeAllHint": "Текущая область включает все аккаунты. В автопереключении будут участвовать {{total}} аккаунтов.",
+      "codexAutoSwitchAccountScope": "Область автопереключения аккаунтов Codex",
+      "codexAutoSwitchAccountScopeDesc": "Текущий статус автопереключения Codex: {{status}}. Учитываются только аккаунты в этой области."
     },
     "network": {
       "apiTitle": "API антигравитационной кабины",
@@ -819,6 +852,40 @@
       "accountPickerEmpty": "Подходящих аккаунтов не найдено",
       "filterHint": "Для фильтра выбрано групп: {{count}}",
       "filterToggle": "Отметьте, чтобы фильтровать по этой группе"
+    },
+    "switchHistory": {
+      "title": "История переключений",
+      "empty": "История переключений пока пуста",
+      "success": "Успешно",
+      "failed": "Ошибка",
+      "target": "Целевой аккаунт: {{email}}",
+      "trigger": "Триггер: {{trigger}}",
+      "triggerManual": "Ручное переключение",
+      "triggerAuto": "Автопереключение",
+      "triggerUnknown": "Неизвестно",
+      "origin": "Источник: {{origin}}",
+      "originDesktop": "Рабочий стол",
+      "originPlugin": "Расширение",
+      "originUnknown": "Неизвестно",
+      "autoReasonLabel": "Автопричина: {{reason}}",
+      "autoReason": "Правило: {{rule}}; порог: {{threshold}}%; область: {{scope}}; отслеживаемые группы: {{selectedGroups}}; сработавшие группы: {{hitGroups}}; кандидаты: {{candidates}}",
+      "autoReasonUnknown": "Автопереключение сработало, но подробная причина не записана",
+      "autoReasonRuleCurrentDisabled": "Текущий аккаунт отключён",
+      "autoReasonRuleQuotaForbidden": "Квота текущего аккаунта ограничена",
+      "autoReasonRuleGroupBelowThreshold": "Группа моделей ниже порога",
+      "autoReasonScopeAnyGroup": "Любая группа моделей",
+      "autoReasonScopeSelectedGroups": "Выбранные группы моделей",
+      "stageResult": "Локально: {{local}} / Плавно: {{seamless}}",
+      "duration": "Длительность: всего {{total}}ms, локально {{local}}ms, плавно {{seamless}}ms",
+      "error": "Сбой на этапе {{stage}} ({{code}}): {{message}}",
+      "stageLocal": "Локальная запись",
+      "stageClientStart": "Запуск клиента",
+      "stageSeamless": "Плавное расширение",
+      "stageUnknown": "Неизвестный этап",
+      "clear": "Очистить историю",
+      "clearConfirm": "Очистить всю историю переключений?",
+      "loadFailed": "Не удалось загрузить историю переключений: {{error}}",
+      "clearFailed": "Не удалось очистить историю переключений: {{error}}"
     }
   },
   "overview": {
@@ -1123,6 +1190,8 @@
       "accountRequired": "Выберите хотя бы один аккаунт",
       "modelRequired": "Выберите хотя бы одну модель",
       "crontabRequired": "Введите выражение crontab",
+      "crontabValid": "Выражение crontab корректно",
+      "crontabInvalid": "Выражение crontab некорректно",
       "taskSaved": "Задача \"{{name}}\" сохранена",
       "featureOff": "Пробуждение выключено",
       "featureOn": "Пробуждение включено",
@@ -1137,7 +1206,8 @@
       "crontab": "Кронтаб",
       "quotaReset": "Сброс квоты",
       "manual": "Сразу тест",
-      "unknown": "Неизвестно"
+      "unknown": "Неизвестно",
+      "startup": "После запуска"
     },
     "taskCard": {
       "accountsCount": "Аккаунты {{count}}",
@@ -1555,7 +1625,14 @@
       },
       "nextRunsQuotaResetHint": "Триггеры сброса квоты зависят от актуальных данных квоты, поэтому предпросмотр фиксированного времени недоступен.",
       "triggerQuotaReset": "Триггер сброса квоты",
-      "noticeSavedEnabledWithQuotaReset": "Задачи сохранены. Всего: {{count}}. Автообновление Codex настроено на каждые {{minutes}} минут."
+      "noticeSavedEnabledWithQuotaReset": "Задачи сохранены. Всего: {{count}}. Автообновление Codex настроено на каждые {{minutes}} минут.",
+      "runtimeConfigTitle": "Пользовательские пути runtime",
+      "runtimeConfigHint": "Можно указать путь к исполняемому файлу или каталогу. Оставьте пустым для автоопределения через PATH.",
+      "runtimeConfigCodexCliLabel": "Путь к Codex CLI",
+      "runtimeConfigCodexCliPlaceholder": "например: /opt/homebrew/bin/codex",
+      "runtimeConfigNodeLabel": "Путь к node",
+      "runtimeConfigNodePlaceholder": "например: /opt/homebrew/bin/node",
+      "runtimeConfigApplyHint": "После изменения нажмите «Проверить CLI снова», чтобы сразу сохранить и применить."
     },
     "sessionManager": {
       "title": "Управление сессиями",
@@ -1724,8 +1801,13 @@
       "title": "Автопереключение",
       "enable": "Автопереключение",
       "threshold": "Порог переключения",
-      "thresholdDesc": "Автопереключение срабатывает, когда квота любой модели падает ниже этого процента",
-      "hint": "Автоматически переключается на аккаунт с наибольшей квотой, когда квота любой модели падает ниже порога."
+      "thresholdDesc": "Автопереключение срабатывает, когда отслеживаемые группы моделей достигают этого процентного порога",
+      "hint": "Автоматически переключает на аккаунт с наибольшей квотой, когда отслеживаемые группы моделей достигают порога.",
+      "triggerModel": "Модель-триггер",
+      "scopeAnyGroup": "Любая группа моделей",
+      "scopeSelectedGroups": "Выбранные группы моделей",
+      "selectedGroups": "Выбранные группы",
+      "selectedGroupsEmpty": "Нет доступных групп моделей"
     },
     "quotaAlert": {
       "title": "Предупреждение о квоте",
@@ -2348,6 +2430,19 @@
     },
     "switch": {
       "success": "Аккаунт успешно переключен"
+    },
+    "projectConfig": {
+      "button": "Настроить проект GCP",
+      "title": "Настроить проект GCP",
+      "selectLabel": "Выберите проект",
+      "loading": "Загрузка списка проектов...",
+      "auto": "Автовыбор (без ручного указания)",
+      "empty": "Доступные проекты не найдены. Убедитесь, что у этой учетной записи есть доступ к проектам GCP.",
+      "hint": "После сохранения этот проект будет приоритетным для запросов квоты и будет подставляться как GOOGLE_CLOUD_PROJECT при запуске.",
+      "current": "Проект: {{projectId}}",
+      "saved": "Проект сохранен: {{projectId}}",
+      "cleared": "Возврат к автоматическому определению проекта",
+      "savedWithRefreshError": "Проект сохранен, но обновление квоты не удалось: {{error}}"
     }
   },
   "codebuddy": {
@@ -2798,5 +2893,82 @@
       "dontAskAgain": "Больше не спрашивать"
     },
     "lockedPlatform": "Платформа заблокирована экземпляром"
+  },
+  "twoFactorAuth": {
+    "pageTitle": "2FA Query [ru]",
+    "pageDescNew": "Enter or paste a 2FA Base32 secret to instantly generate a token. The system automatically corrects and removes non-standard characters. [ru]",
+    "panelQuery": "Workspace (Query Panel) [ru]",
+    "inputSecretPlaceholder": "Paste 2FA Secret here (e.g. JBSWY3DPEHPK3PXP) [ru]",
+    "inputRemarkPlaceholder": "[Optional] Set a remark name for this secret [ru]",
+    "btnQuery": "Query [ru]",
+    "btnSaveToFavorites": "Save to List [ru]",
+    "refreshInSeconds": "Refresh in {{time}}s [ru]",
+    "emptyQueryData": "No query data yet [ru]",
+    "invalidSecretFormat": "Invalid secret format detected [ru]",
+    "tabSaved": "★ Saved [ru]",
+    "tabHistory": "Recent Queries [ru]",
+    "btnImport": "Import [ru]",
+    "btnExport": "Export [ru]",
+    "btnClear": "Clear [ru]",
+    "tableRemark": "Remark [ru]",
+    "tableSecret": "Secret [ru]",
+    "tableCode": "Code [ru]",
+    "tableAddedTime": "Added Time [ru]",
+    "tableQueryTime": "Query Time [ru]",
+    "tableActions": "Actions [ru]",
+    "emptyHistory": "No query history [ru]",
+    "emptySaved": "No saved 2FA records yet [ru]",
+    "invalidSecretVal": "Invalid Secret [ru]",
+    "actionCopy": "Copy Code [ru]",
+    "actionReload": "Reload into Query Data [ru]",
+    "actionDelete": "Delete [ru]",
+    "confirmDeleteSavedTitle": "Delete Confirmation [ru]",
+    "confirmDeleteSavedMsg": "Are you sure you want to permanently delete \n{{secret}}\n? [ru]",
+    "confirmDeleteSavedFallback": "Are you sure you want to permanently delete this secret? [ru]",
+    "confirmDeleteHistoryTitle": "Delete History [ru]",
+    "confirmDeleteHistoryMsg": "Are you sure you want to delete the query history for \n{{secret}}\n? [ru]",
+    "confirmDeleteHistoryFallback": "Are you sure you want to delete this query history? [ru]",
+    "confirmClearAllTitle": "Clear History [ru]",
+    "confirmClearAllMsg": "Are you sure you want to clear all recent query history? [ru]",
+    "importErrorMsg": "Import failed. Please ensure the file format is a valid exported JSON array. [ru]",
+    "btnImportTitle": "Import Local JSON Backup [ru]",
+    "btnExportTitle": "Export Saved as JSON [ru]"
+  },
+  "mfaVault": {
+    "pageDesc": "Безопасно храните и управляйте резервными кодами восстановления MFA, наборами паролей и другими чувствительными данными аутентификации. Записи MFA хранятся только локально. Удаление, очистка кэша или смена/потеря устройства может привести к потере MFA. Рекомендуется делать резервную копию и при необходимости импортировать из неё.",
+    "manualAdd": "Добавить запись вручную",
+    "add": "Добавить",
+    "credentialList": "Список записей",
+    "import": "Импорт",
+    "export": "Экспорт",
+    "accountName": "Имя аккаунта",
+    "dynamicCode": "Динамический код",
+    "remark": "Примечание",
+    "time": "Время",
+    "actions": "Действия",
+    "noData": "Нет сохранённых записей",
+    "copyCode": "Копировать код",
+    "delete": "Удалить",
+    "invalidSecretVal": "Неверный secret",
+    "inputAccountPlaceholder": "Имя аккаунта *",
+    "inputSecretPlaceholder": "Secret / Код восстановления (Secret) *",
+    "inputRemarkPlaceholder": "Примечание (необязательно)",
+    "confirmDeleteMsg": "Вы уверены, что хотите навсегда удалить запись [{{accountName}}]?",
+    "confirmDeleteTitle": "Подтверждение удаления",
+    "importErrorMsg": "Не удалось импортировать. Проверьте формат файла (должен быть корректный JSON-массив с accountName и secret).",
+    "inputOtpAuthPlaceholder": "otpauth://totp/... или секрет Base32",
+    "otpauthInputHint": "Поддерживаются otpauth://totp/... и секрет Base32. Оба формата можно проверить и сохранить в список.",
+    "pasteQrImageHint": "Также можно вставить изображение QR прямо в поле ввода.",
+    "uploadQrImage": "Загрузить QR-изображение",
+    "uploadQrImageTitle": "Выберите QR-изображение и распознайте его автоматически",
+    "recognizing": "Распознавание...",
+    "invalidOtpAuthInput": "Введите корректный URI otpauth://totp/... или секрет Base32.",
+    "qrDecodeFailed": "Не удалось распознать QR. Попробуйте более четкое изображение.",
+    "qrNotOtpAuth": "Содержимое распознано, но это не корректный URI otpauth://totp/... и не секрет Base32.",
+    "editAccountName": "Изменить имя аккаунта",
+    "saveAccountName": "Сохранить имя аккаунта",
+    "cancelEditAccountName": "Отменить редактирование",
+    "accountNameRequired": "Имя аккаунта обязательно.",
+    "copySecret": "Скопировать секрет"
   }
 }

@@ -32,6 +32,10 @@ import {
   emitCurrentAccountChanged,
   normalizeProviderPagePlatformId,
 } from '../utils/accountSyncEvents';
+import {
+  consumeQueuedExternalProviderImportForPlatform,
+  EXTERNAL_PROVIDER_IMPORT_EVENT,
+} from '../utils/externalProviderImport';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -808,6 +812,28 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
     setShowAddModal(false);
     resetAddModalState();
   }, [resetAddModalState]);
+
+  const consumeExternalProviderImport = useCallback(() => {
+    if (!platformId) return;
+    const request = consumeQueuedExternalProviderImportForPlatform(platformId);
+    if (!request) return;
+    openAddModal('token');
+    setTokenInput(request.token);
+    setAddStatus('idle');
+    setAddMessage(null);
+  }, [openAddModal, platformId]);
+
+  useEffect(() => {
+    if (!platformId) return;
+    const handleExternalImportEvent = () => {
+      consumeExternalProviderImport();
+    };
+    consumeExternalProviderImport();
+    window.addEventListener(EXTERNAL_PROVIDER_IMPORT_EVENT, handleExternalImportEvent);
+    return () => {
+      window.removeEventListener(EXTERNAL_PROVIDER_IMPORT_EVENT, handleExternalImportEvent);
+    };
+  }, [consumeExternalProviderImport, platformId]);
 
   const handlePickImportFile = useCallback(() => {
     importFileInputRef.current?.click();

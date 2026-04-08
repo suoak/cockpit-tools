@@ -38,10 +38,10 @@ import {
   getGeminiPlanBadgeClass,
   getGeminiPlanDisplayName,
   getGeminiAccountDisplayEmail,
-  getGeminiTierQuotaSummary,
   isGeminiAccountBanned,
 } from '../types/gemini';
 import type { GeminiAccount } from '../types/gemini';
+import { compareCurrentAccountFirst } from '../utils/currentAccountSort';
 
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
 import { GeminiOverviewTabsHeader, GeminiTab } from '../components/GeminiOverviewTabsHeader';
@@ -72,12 +72,6 @@ interface GeminiLaunchModalState {
   executing: boolean;
   executeMessage: string | null;
   executeError: string | null;
-}
-
-function getGeminiQuotaClass(percentage: number): string {
-  if (percentage >= 90) return 'critical';
-  if (percentage >= 70) return 'warning';
-  return 'high';
 }
 
 export function GeminiAccountsPage() {
@@ -274,82 +268,55 @@ export function GeminiAccountsPage() {
     [resolveDisplayEmail],
   );
 
-  // ─── Platform-specific: Quota ──────────────────────────────────────
+  const resolveAuthMethodText = useCallback((account: GeminiAccount) => {
+    const raw = (account.selected_auth_type || '').trim();
+    const email = (account.email || '').trim();
+    const normalized = raw.toLowerCase();
 
-  const formatRelativeDuration = useCallback(
-    (seconds: number) => {
-      const safe = Math.max(0, Math.floor(seconds));
-      const totalMinutes = Math.floor(safe / 60);
-      if (totalMinutes < 1) {
-        return t('common.shared.time.lessThanMinute', '<1分钟');
-      }
-      const days = Math.floor(totalMinutes / (60 * 24));
-      const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-      const minutes = totalMinutes % 60;
-      if (days > 0 && hours > 0) {
-        return t('common.shared.time.relativeDaysHours', '{{days}}天{{hours}}小时', { days, hours });
-      }
-      if (days > 0) {
-        return t('common.shared.time.relativeDays', '{{days}}天', { days });
-      }
-      if (hours > 0 && minutes > 0) {
-        return t('common.shared.time.relativeHoursMinutes', '{{hours}}小时{{minutes}}分钟', { hours, minutes });
-      }
-      if (hours > 0) {
-        return t('common.shared.time.relativeHours', '{{hours}}小时', { hours });
-      }
-      return t('common.shared.time.relativeMinutes', '{{minutes}}分钟', { minutes });
-    },
-    [t],
-  );
+    if (normalized.includes('oauth') || normalized.includes('google')) {
+      return email ? `Signed in with Google (${email})` : 'Signed in with Google';
+    }
 
-  const resolveUpdatedText = useCallback(
-    (account: GeminiAccount) => {
-      const updatedAt = account.last_used || account.created_at || 0;
-      const secondsAgo = Math.floor(Date.now() / 1000) - updatedAt;
-      return t('gemini.updated.label', 'Updated {{relative}} ago', {
-        relative: formatRelativeDuration(secondsAgo),
-      });
-    },
-    [formatRelativeDuration, t],
-  );
+    if (email) {
+      return `Signed in with Google (${email})`;
+    }
 
-  const resolveTierQuota = useCallback(
-    (account: GeminiAccount, tier: 'pro' | 'flash') => {
-      const tierSummary = getGeminiTierQuotaSummary(account);
-      const target = tier === 'pro' ? tierSummary.pro : tierSummary.flash;
-      const hasRemaining =
-        typeof target.remainingPercent === 'number' && Number.isFinite(target.remainingPercent);
-      const remaining = hasRemaining
-        ? Math.max(0, Math.min(100, Math.round(target.remainingPercent!)))
-        : 0;
-      const usedPercent = 100 - remaining;
-      const resetText =
-        typeof target.resetAt === 'number' && Number.isFinite(target.resetAt)
-          ? (() => {
-              const secondsLeft = Math.floor(target.resetAt - Date.now() / 1000);
-              if (secondsLeft <= 0) {
-                return t('gemini.quota.resetsSoon', 'Resets soon');
-              }
-              return t('gemini.quota.resetsIn', 'Resets in {{relative}}', {
-                relative: formatRelativeDuration(secondsLeft),
-              });
-            })()
-          : t('gemini.quota.resetsUnknown', 'Reset time unknown');
+    return raw || '--';
+  }, []);
 
-      return {
-        label: t(`gemini.quota.${tier}`, tier === 'pro' ? 'Pro' : 'Flash'),
-        percentage: remaining,
-        quotaClass: getGeminiQuotaClass(usedPercent),
-        leftText: hasRemaining
-          ? t('gemini.quota.left', '{{value}}% left', { value: remaining })
-          : '--',
-        resetText,
-        hasRemaining,
-      };
-    },
-    [formatRelativeDuration, t],
-  );
+  const resolveTierRawText = useCallback((account: GeminiAccount) => {
+    const raw = (account.plan_name || account.tier_id || '').trim();
+    if (!raw) return '--';
+
+    const normalized = raw.toLowerCase();
+    if (normalized.startsWith('gemini code assist')) {
+      return raw;
+    }
+
+    if (
+      normalized.includes('google_one_ai_premium')
+      || normalized.includes('google one ai premium')
+      || normalized.includes('google_one_ai_pro')
+      || normalized.includes('google one ai pro')
+      || normalized.includes('pro-tier')
+    ) {
+      return 'Gemini Code Assist in Google One AI Pro';
+    }
+
+    if (normalized.includes('ultra')) {
+      return 'Gemini Code Assist in Google AI Ultra';
+    }
+
+    if (
+      normalized.includes('standard-tier')
+      || normalized.includes('free-tier')
+      || normalized === 'free'
+    ) {
+      return 'Gemini Code Assist';
+    }
+
+    return raw;
+  }, []);
 
   // ─── Platform-specific: Dynamic tier filter ────────────────────────
 
@@ -419,35 +386,14 @@ export function GeminiAccountsPage() {
   // ─── Filtering & Sorting ──────────────────────────────────────────
 
   const compareAccountsBySort = useCallback((a: GeminiAccount, b: GeminiAccount) => {
-    const getTierMetrics = (account: GeminiAccount) => {
-      const summary = getGeminiTierQuotaSummary(account);
-      const remainingCandidates = [summary.pro.remainingPercent, summary.flash.remainingPercent]
-        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-      const remaining = remainingCandidates.length > 0 ? Math.min(...remainingCandidates) : null;
-      const resetCandidates = [summary.pro.resetAt, summary.flash.resetAt]
-        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-      const nearestReset = resetCandidates.length > 0 ? Math.min(...resetCandidates) : null;
-      return { remaining, nearestReset };
-    };
+    const currentFirstDiff = compareCurrentAccountFirst(a.id, b.id, currentAccountId);
+    if (currentFirstDiff !== 0) {
+      return currentFirstDiff;
+    }
 
-    if (sortBy === 'created_at') {
-      const diff = b.created_at - a.created_at;
-      return sortDirection === 'desc' ? diff : -diff;
-    }
-    if (sortBy === 'plan_end') {
-      const aReset = getTierMetrics(a).nearestReset;
-      const bReset = getTierMetrics(b).nearestReset;
-      if (aReset == null && bReset == null) return 0;
-      if (aReset == null) return 1;
-      if (bReset == null) return -1;
-      const diff = bReset - aReset;
-      return sortDirection === 'desc' ? diff : -diff;
-    }
-    const aValue = getTierMetrics(a).remaining ?? -1;
-    const bValue = getTierMetrics(b).remaining ?? -1;
-    const diff = bValue - aValue;
+    const diff = b.created_at - a.created_at;
     return sortDirection === 'desc' ? diff : -diff;
-  }, [sortBy, sortDirection]);
+  }, [currentAccountId, sortDirection]);
 
   const sortedAccountsForInstances = useMemo(
     () => [...accounts].sort(compareAccountsBySort),
@@ -529,9 +475,8 @@ export function GeminiAccountsPage() {
     items.map((account) => {
       const displayEmail = resolveDisplayEmail(account);
       const emailText = displayEmail || account.id;
-      const updatedText = resolveUpdatedText(account);
-      const proQuota = resolveTierQuota(account, 'pro');
-      const flashQuota = resolveTierQuota(account, 'flash');
+      const authMethodText = resolveAuthMethodText(account);
+      const tierText = resolveTierRawText(account);
       const planLabel = resolvePlanLabel(account);
       const planClass = getGeminiPlanBadgeClass(undefined, account);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -576,7 +521,14 @@ export function GeminiAccountsPage() {
           </div>
 
           <div className="account-sub-line">
-            <span className="kiro-table-subline">{updatedText}</span>
+            <span className="kiro-table-subline">
+              Auth Method: {authMethodText}
+            </span>
+          </div>
+          <div className="account-sub-line">
+            <span className="kiro-table-subline">
+              Tier: {tierText}
+            </span>
           </div>
 
           {accountTags.length > 0 && (
@@ -588,25 +540,7 @@ export function GeminiAccountsPage() {
             </div>
           )}
 
-          <div className="ghcp-quota-section">
-            {[proQuota, flashQuota].map((quota) => (
-              <div className="quota-item windsurf-credit-item" key={`${account.id}-${quota.label}`}>
-                <div className="quota-header">
-                  <span className="quota-label">{quota.label}</span>
-                </div>
-                <div className="quota-bar-track">
-                  <div className={`quota-bar ${quota.quotaClass}`} style={{ width: `${Math.min(quota.percentage, 100)}%` }} />
-                </div>
-                <div className="windsurf-credit-meta-row">
-                  <span className="windsurf-credit-left">{quota.leftText}</span>
-                  <span className="windsurf-credit-used">{quota.resetText}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
           <div className="card-footer">
-            <span className="card-date">{updatedText}</span>
             <div className="card-actions">
               <button className="card-action-btn success" onClick={() => handleInjectToVSCode?.(account.id)} disabled={!!injecting || isBanned}
                 title={isBanned ? t('accounts.status.forbidden_msg') : t('gemini.injectToGemini', '切换到 Gemini')}>
@@ -615,7 +549,7 @@ export function GeminiAccountsPage() {
               <button className="card-action-btn" onClick={() => openTagModal(account.id)} title={t('accounts.editTags', '编辑标签')}>
                 <Tag size={14} />
               </button>
-              <button className="card-action-btn" onClick={() => handleRefresh(account.id)} disabled={refreshing === account.id} title={t('common.shared.refreshQuota', '刷新配额')}>
+              <button className="card-action-btn" onClick={() => handleRefresh(account.id)} disabled={refreshing === account.id} title={t('common.refresh', '刷新')}>
                 <RotateCw size={14} className={refreshing === account.id ? 'loading-spinner' : ''} />
               </button>
               <button
@@ -638,9 +572,8 @@ export function GeminiAccountsPage() {
     items.map((account) => {
       const displayEmail = resolveDisplayEmail(account);
       const emailText = displayEmail || account.id;
-      const updatedText = resolveUpdatedText(account);
-      const proQuota = resolveTierQuota(account, 'pro');
-      const flashQuota = resolveTierQuota(account, 'flash');
+      const authMethodText = resolveAuthMethodText(account);
+      const tierText = resolveTierRawText(account);
       const planLabel = resolvePlanLabel(account);
       const planClass = getGeminiPlanBadgeClass(undefined, account);
       const accountTags = (account.tags || []).map((tag) => tag.trim()).filter(Boolean);
@@ -672,7 +605,14 @@ export function GeminiAccountsPage() {
                 </div>
               )}
               <div className="account-sub-line">
-                <span className="kiro-table-subline">{updatedText}</span>
+                <span className="kiro-table-subline">
+                  Auth Method: {authMethodText}
+                </span>
+              </div>
+              <div className="account-sub-line">
+                <span className="kiro-table-subline">
+                  Tier: {tierText}
+                </span>
               </div>
               {accountTags.length > 0 && (
                 <div className="account-tags-inline">
@@ -680,34 +620,6 @@ export function GeminiAccountsPage() {
                   {moreTagCount > 0 && <span className="tag-pill more">+{moreTagCount}</span>}
                 </div>
               )}
-            </div>
-          </td>
-          <td>
-            <div className="quota-item windsurf-table-credit-item">
-              <div className="quota-header">
-                <span className="quota-name">{proQuota.label}</span>
-                <span className={`quota-value ${proQuota.quotaClass}`}>{proQuota.leftText}</span>
-              </div>
-              <div className="windsurf-credit-meta-row table">
-                <span className="windsurf-credit-used">{proQuota.resetText}</span>
-              </div>
-              <div className="quota-progress-track">
-                <div className={`quota-progress-bar ${proQuota.quotaClass}`} style={{ width: `${Math.min(proQuota.percentage, 100)}%` }} />
-              </div>
-            </div>
-          </td>
-          <td>
-            <div className="quota-item windsurf-table-credit-item">
-              <div className="quota-header">
-                <span className="quota-name">{flashQuota.label}</span>
-                <span className={`quota-value ${flashQuota.quotaClass}`}>{flashQuota.leftText}</span>
-              </div>
-              <div className="windsurf-credit-meta-row table">
-                <span className="windsurf-credit-used">{flashQuota.resetText}</span>
-              </div>
-              <div className="quota-progress-track">
-                <div className={`quota-progress-bar ${flashQuota.quotaClass}`} style={{ width: `${Math.min(flashQuota.percentage, 100)}%` }} />
-              </div>
             </div>
           </td>
           <td className="sticky-action-cell table-action-cell">
@@ -719,7 +631,7 @@ export function GeminiAccountsPage() {
               <button className="action-btn" onClick={() => openTagModal(account.id)} title={t('accounts.editTags', '编辑标签')}>
                 <Tag size={14} />
               </button>
-              <button className="action-btn" onClick={() => handleRefresh(account.id)} disabled={refreshing === account.id} title={t('common.shared.refreshQuota', '刷新配额')}>
+              <button className="action-btn" onClick={() => handleRefresh(account.id)} disabled={refreshing === account.id} title={t('common.refresh', '刷新')}>
                 <RotateCw size={14} className={refreshing === account.id ? 'loading-spinner' : ''} />
               </button>
               <button
@@ -834,8 +746,6 @@ export function GeminiAccountsPage() {
             <ArrowDownWideNarrow size={14} className="sort-icon" />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={t('common.shared.sortLabel', '排序')}>
               <option value="created_at">{t('common.shared.sort.createdAt', '按创建时间')}</option>
-              <option value="credits">{t('common.shared.sort.credits', '按剩余 Credits')}</option>
-              <option value="plan_end">{t('common.shared.sort.planEnd', '按配额周期结束时间')}</option>
             </select>
           </div>
 
@@ -894,7 +804,16 @@ export function GeminiAccountsPage() {
           <p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p>
         </div>
       ) : viewMode === 'grid' ? (
-        groupByTag ? (
+        <div className="grid-view-container">
+          {filteredAccounts.length > 0 && (
+            <div className="grid-view-header" style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-color)' }}>
+                <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
+                {t('common.selectAll', '全选')}
+              </label>
+            </div>
+          )}
+          {groupByTag ? (
           <div className="tag-group-list">
             {groupedAccounts.map(([groupKey, groupAccounts]) => (
               <div key={groupKey} className="tag-group-section">
@@ -908,7 +827,8 @@ export function GeminiAccountsPage() {
           </div>
         ) : (
           <div className="ghcp-accounts-grid">{renderGridCards(filteredAccounts)}</div>
-        )
+        )}
+        </div>
       ) : groupByTag ? (
         <div className="account-table-container grouped">
           <table className="account-table">
@@ -918,8 +838,6 @@ export function GeminiAccountsPage() {
                   <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
                 </th>
                 <th style={{ width: 240 }}>{t('common.shared.columns.email', '邮箱')}</th>
-                <th>{t('gemini.quota.pro', 'Pro')}</th>
-                <th>{t('gemini.quota.flash', 'Flash')}</th>
                 <th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th>
               </tr>
             </thead>
@@ -927,7 +845,7 @@ export function GeminiAccountsPage() {
               {groupedAccounts.map(([groupKey, groupAccounts]) => (
                 <Fragment key={groupKey}>
                   <tr className="tag-group-row">
-                    <td colSpan={5}>
+                    <td colSpan={3}>
                       <div className="tag-group-header">
                         <span className="tag-group-title">{resolveGroupLabel(groupKey)}</span>
                         <span className="tag-group-count">{groupAccounts.length}</span>
@@ -949,8 +867,6 @@ export function GeminiAccountsPage() {
                   <input type="checkbox" checked={selected.size === filteredAccounts.length && filteredAccounts.length > 0} onChange={() => toggleSelectAll(filteredAccounts.map((a) => a.id))} />
                 </th>
                 <th style={{ width: 240 }}>{t('common.shared.columns.email', '邮箱')}</th>
-                <th>{t('gemini.quota.pro', 'Pro')}</th>
-                <th>{t('gemini.quota.flash', 'Flash')}</th>
                 <th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th>
               </tr>
             </thead>

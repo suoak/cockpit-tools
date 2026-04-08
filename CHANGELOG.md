@@ -7,6 +7,65 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.19] - 2026-04-07
+
+### Changed
+- **All platforms now support a dedicated current-account refresh interval with matching Quick Settings entry points (default: 1 minute)**: each platform can tune current-account refresh cadence independently without changing that platform's full quota auto-refresh interval.
+- **Wakeup tasks now support an `After startup` trigger with optional delay for both Antigravity and Codex**: enabled startup tasks are dispatched automatically after app launch, while regular scheduler loops skip startup-only tasks.
+- **Codex wakeup runtime setup now supports explicit `codex` / `node` path configuration with required-path hints**: when auto-detection fails, users can provide executable or directory paths in the runtime guide and recheck/apply immediately.
+- **Auto-switch scope now supports selecting specific accounts (not only model groups)**: Antigravity and Codex can now limit auto-switch monitoring and candidate selection to selected account IDs from Settings and Quick Settings.
+- **System settings now include app auto-launch control with native autostart sync**: desktop config now reads and applies real OS autostart status through the autostart plugin instead of frontend-only state.
+
+### Fixed
+- **Codex account import now fails fast on disk-full conditions with clear progress feedback**: import now performs a writable precheck and returns explicit disk-space errors instead of partial silent failures.
+- **Instance directory deletion now consistently moves directories to recycle/trash across platforms**: deletion now uses unified trash semantics instead of mixed platform-specific removal paths.
+
+---
+## [0.20.18] - 2026-04-04
+
+### Changed
+- **Codex CLI detection now scans common user-level install paths in the home directory**: runtime lookup now includes `~/.npm-global/bin`, `~/.local/bin`, `~/.cargo/bin`, `~/.volta/bin`, `~/.yarn/bin`, and `~/bin`, improving detection reliability for non-system installs.
+- **Wakeup scheduling now aligns crontab/interval previews with actual runtime rules**: both desktop and frontend now validate full 5-field crontab syntax (including ranges, steps, list values, and weekday normalization), interval windows support overnight ranges, and quota-reset tasks can use fallback trigger times outside the configured time window.
+- **Gemini token sync now prioritizes keychain credentials and enforces project-aware quota refresh**: local credential loading merges macOS keychain and file data, account switching writes tokens back to keychain while cleaning legacy file-keychain artifacts, and quota requests now require and pass the resolved project id consistently.
+- **Antigravity quota refresh now distinguishes manual-batch vs automatic refresh triggers**: auto refresh continues skipping disabled/forbidden accounts, while manual batch refresh keeps full-account processing behavior.
+
+---
+## [0.20.17] - 2026-04-01
+
+### Changed
+- **Antigravity auto-switch now supports model-group scope selection (`any_group` / `selected_groups`) and group-level threshold evaluation**: quick settings can target specific display groups, config now persists selected group IDs, and candidate selection follows monitored-group thresholds.
+- **Codex shared-resource link sync now force-rebuilds mismatched instance links instead of blocking with manual-merge errors**: when shared directories/files diverge from global defaults, stale instance targets are removed and recreated as symlinks automatically.
+
+### Fixed
+- **Antigravity account switch failure now rehydrates current-account state before returning errors**: the account store refetches account lists/current account and emits account-change events only when the effective current account actually changes, preventing stale UI state after failed switches.
+
+---
+## [0.20.16] - 2026-03-31
+
+### Added
+- **Gemini accounts now support per-account GCP project selection from live cloud projects**: account cards/tables now provide a project settings dialog that lists accessible projects, supports switching back to automatic project resolution, and persists the selected project id.
+- **Codex instances now auto-link shared Skills/Rules/AGENTS resources during create/start flows**: `skills`, `rules`, `vendor_imports/skills`, and `AGENTS.md` are synchronized against default Codex Home with migration and conflict guards.
+
+### Changed
+- **Gemini quota refresh and CLI launch now prefer the configured project id when available**: project selection is refreshed after save, project id is shown in account rows/cards, and launch commands inject `GOOGLE_CLOUD_PROJECT`.
+- **Current-account-first ordering is now unified across account pages and instance pickers**: active current accounts are promoted before other sort keys in Antigravity, Codex, Gemini, Cursor, Windsurf, Kiro, Qoder, Trae, Zed, GitHub Copilot, CodeBuddy CN, and WorkBuddy views.
+- **OpenCode switch-related defaults are now disabled by default**: `sync_on_switch` and `auth_overwrite_on_switch` now default to off in config loading, settings initialization, and wakeup task context.
+- **Codex code-review quota visibility now defaults to hidden**: local preference now requires explicit opt-in to show this metric.
+- **Updater dependency graph now includes reqwest socks capability for the updater path**: improves compatibility when global proxy is configured as `socks5://`.
+
+---
+## [0.20.15] - 2026-03-30
+
+### Added
+- **A dedicated 2FA Manager page is now available in Classic sidebar navigation**: users can query Base32 secrets, view rolling OTP codes, save favorites, review recent history, and import/export saved records as JSON from one workspace.
+
+### Changed
+- **Codex multi-account local storage is now unified under `~/.antigravity_cockpit` with one-time migration from legacy paths**: existing `codex_accounts.json` and account detail files are copied to the new directory without overwriting newer files.
+- **Grid-view batch selection is now consistent across account pages**: `Select All` is now shown in grid mode for platform account pages and shared suite views, including grouped-by-tag rendering.
+- **2FA page labels and actions are now fully wired to i18n keys across locales**: navigation labels, confirmations, table headers, and action text no longer rely on hard-coded UI strings.
+- **The log viewer modal footer now includes an explicit close action**: users can dismiss the dialog directly from the footer without relying on header controls.
+
+---
 ## [0.20.14] - 2026-03-28
 
 ### Added

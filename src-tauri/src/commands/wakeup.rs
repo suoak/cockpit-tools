@@ -37,6 +37,11 @@ pub async fn fetch_available_models() -> Result<Vec<modules::wakeup::AvailableMo
 }
 
 #[tauri::command]
+pub fn wakeup_validate_crontab(expr: String) -> Result<(), String> {
+    modules::wakeup_scheduler::validate_crontab_expression(&expr)
+}
+
+#[tauri::command]
 pub async fn wakeup_sync_state(
     app: AppHandle,
     enabled: bool,
@@ -47,6 +52,18 @@ pub async fn wakeup_sync_state(
     modules::wakeup_scheduler::sync_state(enabled, tasks);
     modules::wakeup_scheduler::ensure_started(app);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn wakeup_run_enabled_tasks(
+    app: AppHandle,
+    trigger_source: Option<String>,
+    official_ls_version_mode: Option<String>,
+) -> Result<u32, String> {
+    modules::wakeup::set_official_ls_version_mode(official_ls_version_mode.as_deref())?;
+    let source = trigger_source.unwrap_or_else(|| "startup".to_string());
+    let started = modules::wakeup_scheduler::run_enabled_tasks_now(&app, &source).await;
+    Ok(started as u32)
 }
 
 #[tauri::command]

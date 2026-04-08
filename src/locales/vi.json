@@ -162,6 +162,13 @@
       "updated": {
         "label": "Cập nhật {{relative}} trước"
       }
+    },
+    "topRightAd": {
+      "ariaLabel": "Vị trí quảng cáo toàn cục góc trên bên phải",
+      "badge": "QUẢNG CÁO",
+      "title": "Vị trí quảng cáo góc trên bên phải",
+      "desc": "Khu vực này được cố định ở góc trên bên phải trên mọi trang, phù hợp cho chiến dịch hoặc quảng cáo thương hiệu.",
+      "action": "Xem chi tiết"
     }
   },
   "nav": {
@@ -195,7 +202,8 @@
     "switchClassicLayoutTitle": "Chuyển sang bố cục thanh bên cổ điển",
     "switchClassicLayoutDesc": "Bố cục cổ điển hiển thị đầy đủ điều hướng nền tảng và hỗ trợ thu gọn thanh bên. Bạn có thể chuyển lại bất cứ lúc nào tại Cài đặt > Chung > Bố cục thanh bên.",
     "switchClassicLayoutDontAskAgain": "Không hiển thị lại thông báo này",
-    "switchClassicLayoutConfirm": "Chuyển ngay"
+    "switchClassicLayoutConfirm": "Chuyển ngay",
+    "2faManager": "Quản lý 2FA"
   },
   "platformLayout": {
     "title": "Bố cục nền tảng",
@@ -578,7 +586,32 @@
       "sideNavLayout": "Bố cục thanh bên",
       "sideNavLayoutDesc": "Chuyển giữa bố cục thanh bên gốc và cổ điển",
       "sideNavLayoutOriginal": "Bố cục gốc",
-      "sideNavLayoutClassic": "Bố cục cổ điển"
+      "sideNavLayoutClassic": "Bố cục cổ điển",
+      "antigravityDualSwitchNoRestart": "Chuyển đôi không cần khởi động lại",
+      "antigravityDualSwitchNoRestartDesc": "Khi chuyển tài khoản, việc ghi dữ liệu cục bộ và chuyển đổi liền mạch qua tiện ích mở rộng được thực hiện trong một luồng, không cần khởi động lại Antigravity.",
+      "appAutoLaunch": "Khởi chạy Cockpit Tools khi đăng nhập",
+      "appAutoLaunchDesc": "Tự động khởi chạy ứng dụng sau khi đăng nhập hệ thống",
+      "startupWakeupDisabled": "Tắt",
+      "startupWakeupImmediate": "Đánh thức ngay",
+      "startupWakeupDelayed": "Đánh thức sau độ trễ",
+      "antigravityStartupWakeup": "Chạy đánh thức Antigravity sau khi khởi động",
+      "antigravityStartupWakeupDesc": "Sau khi ứng dụng khởi động, chạy một lần các tác vụ đánh thức Antigravity đã bật",
+      "codexStartupWakeup": "Chạy đánh thức Codex sau khi khởi động",
+      "codexStartupWakeupDesc": "Sau khi ứng dụng khởi động, chạy một lần các tác vụ đánh thức Codex đã bật",
+      "currentAccountRefreshTitle": "Làm mới tài khoản hiện tại",
+      "currentAccountRefreshItemDesc": "Chỉ làm mới tài khoản hiện tại. Mặc định là 1 phút.",
+      "autoSwitchAccountScope": "Phạm vi chuyển tài khoản tự động",
+      "autoSwitchAccountScopeDesc": "Chỉ theo dõi và chuyển tài khoản trong phạm vi này.",
+      "autoSwitchAccountScopeAll": "Tất cả tài khoản",
+      "autoSwitchAccountScopeSelected": "Tài khoản đã chọn",
+      "autoSwitchAccountScopeChoose": "Chọn tài khoản",
+      "autoSwitchAccountScopeManage": "Quản lý tài khoản",
+      "autoSwitchAccountScopeAllSummary": "Phạm vi hiện tại: tất cả tài khoản (tổng {{total}})",
+      "autoSwitchAccountScopeSummary": "Đã chọn {{selected}} / {{total}} tài khoản",
+      "autoSwitchAccountScopeDialogTitle": "Chọn phạm vi tài khoản để chuyển tự động",
+      "autoSwitchAccountScopeAllHint": "Phạm vi hiện tại là tất cả tài khoản. {{total}} tài khoản sẽ tham gia chuyển tự động.",
+      "codexAutoSwitchAccountScope": "Phạm vi chuyển tự động tài khoản Codex",
+      "codexAutoSwitchAccountScopeDesc": "Trạng thái chuyển tự động Codex hiện tại: {{status}}. Chỉ tài khoản trong phạm vi này mới được xét."
     },
     "network": {
       "apiTitle": "API Antigravity Cockpit",
@@ -819,6 +852,40 @@
       "accountPickerEmpty": "Không có tài khoản phù hợp",
       "filterHint": "Đã chọn {{count}} nhóm để lọc",
       "filterToggle": "Chọn để lọc theo nhóm này"
+    },
+    "switchHistory": {
+      "title": "Lịch sử chuyển đổi",
+      "empty": "Chưa có lịch sử chuyển đổi",
+      "success": "Thành công",
+      "failed": "Thất bại",
+      "target": "Tài khoản đích: {{email}}",
+      "trigger": "Trình kích hoạt: {{trigger}}",
+      "triggerManual": "Chuyển thủ công",
+      "triggerAuto": "Chuyển tự động",
+      "triggerUnknown": "Không xác định",
+      "origin": "Nguồn kích hoạt: {{origin}}",
+      "originDesktop": "Máy tính để bàn",
+      "originPlugin": "Tiện ích mở rộng",
+      "originUnknown": "Không xác định",
+      "autoReasonLabel": "Lý do tự động: {{reason}}",
+      "autoReason": "Quy tắc: {{rule}}; ngưỡng: {{threshold}}%; phạm vi: {{scope}}; nhóm theo dõi: {{selectedGroups}}; nhóm trúng ngưỡng: {{hitGroups}}; tài khoản ứng viên: {{candidates}}",
+      "autoReasonUnknown": "Đã kích hoạt chuyển tự động nhưng không ghi lại lý do chi tiết",
+      "autoReasonRuleCurrentDisabled": "Tài khoản hiện tại đã bị vô hiệu hóa",
+      "autoReasonRuleQuotaForbidden": "Hạn mức của tài khoản hiện tại bị hạn chế",
+      "autoReasonRuleGroupBelowThreshold": "Nhóm mô hình thấp hơn ngưỡng",
+      "autoReasonScopeAnyGroup": "Bất kỳ nhóm mô hình nào",
+      "autoReasonScopeSelectedGroups": "Nhóm mô hình đã chọn",
+      "stageResult": "Cục bộ: {{local}} / Liền mạch: {{seamless}}",
+      "duration": "Thời gian: tổng {{total}}ms, cục bộ {{local}}ms, liền mạch {{seamless}}ms",
+      "error": "Lỗi ở giai đoạn {{stage}} ({{code}}): {{message}}",
+      "stageLocal": "Ghi cục bộ",
+      "stageClientStart": "Khởi động ứng dụng",
+      "stageSeamless": "Tiện ích mở rộng liền mạch",
+      "stageUnknown": "Giai đoạn không xác định",
+      "clear": "Xóa lịch sử",
+      "clearConfirm": "Xóa toàn bộ lịch sử chuyển đổi?",
+      "loadFailed": "Không thể tải lịch sử chuyển đổi: {{error}}",
+      "clearFailed": "Không thể xóa lịch sử chuyển đổi: {{error}}"
     }
   },
   "overview": {
@@ -1123,6 +1190,8 @@
       "accountRequired": "Chọn ít nhất một tài khoản",
       "modelRequired": "Chọn ít nhất một mô hình",
       "crontabRequired": "Vui lòng nhập biểu thức crontab",
+      "crontabValid": "Biểu thức crontab hợp lệ",
+      "crontabInvalid": "Biểu thức crontab không hợp lệ",
       "taskSaved": "Nhiệm vụ \"{{name}}\" đã được lưu",
       "featureOff": "Đã tắt đánh thức",
       "featureOn": "Đã bật đánh thức",
@@ -1137,7 +1206,8 @@
       "crontab": "crontab",
       "quotaReset": "Đặt lại hạn mức",
       "manual": "Chạy thử",
-      "unknown": "Không xác định"
+      "unknown": "Không xác định",
+      "startup": "Sau khi khởi động"
     },
     "taskCard": {
       "accountsCount": "Tài khoản {{count}}",
@@ -1555,7 +1625,14 @@
       },
       "nextRunsQuotaResetHint": "Kích hoạt đặt lại hạn mức phụ thuộc dữ liệu hạn mức mới nhất nên không có xem trước thời gian cố định.",
       "triggerQuotaReset": "Kích hoạt đặt lại hạn mức",
-      "noticeSavedEnabledWithQuotaReset": "Đã lưu tác vụ. Tổng: {{count}}. Làm mới tự động Codex đã được điều chỉnh mỗi {{minutes}} phút."
+      "noticeSavedEnabledWithQuotaReset": "Đã lưu tác vụ. Tổng: {{count}}. Làm mới tự động Codex đã được điều chỉnh mỗi {{minutes}} phút.",
+      "runtimeConfigTitle": "Đường dẫn runtime tùy chỉnh",
+      "runtimeConfigHint": "Bạn có thể nhập đường dẫn tệp thực thi hoặc thư mục. Để trống để tự động phát hiện từ PATH.",
+      "runtimeConfigCodexCliLabel": "Đường dẫn Codex CLI",
+      "runtimeConfigCodexCliPlaceholder": "ví dụ: /opt/homebrew/bin/codex",
+      "runtimeConfigNodeLabel": "Đường dẫn node",
+      "runtimeConfigNodePlaceholder": "ví dụ: /opt/homebrew/bin/node",
+      "runtimeConfigApplyHint": "Sau khi chỉnh sửa, bấm \"Kiểm tra lại CLI\" để lưu và áp dụng ngay."
     },
     "sessionManager": {
       "title": "Quản lý phiên",
@@ -1724,8 +1801,13 @@
       "title": "Tự động chuyển đổi",
       "enable": "Tự động chuyển đổi",
       "threshold": "Ngưỡng chuyển đổi",
-      "thresholdDesc": "Tự động chuyển đổi được kích hoạt khi hạn ngạch của bất kỳ mô hình nào giảm xuống dưới tỷ lệ phần trăm này",
-      "hint": "Tự động chuyển sang tài khoản có hạn ngạch cao nhất khi hạn ngạch của bất kỳ mô hình nào giảm xuống dưới ngưỡng."
+      "thresholdDesc": "Tự động chuyển sẽ kích hoạt khi các nhóm mô hình đang theo dõi chạm ngưỡng phần trăm này",
+      "hint": "Tự động chuyển sang tài khoản có hạn mức cao nhất khi các nhóm mô hình đang theo dõi chạm ngưỡng.",
+      "triggerModel": "Mô hình kích hoạt",
+      "scopeAnyGroup": "Bất kỳ nhóm mô hình nào",
+      "scopeSelectedGroups": "Nhóm mô hình đã chọn",
+      "selectedGroups": "Nhóm đã chọn",
+      "selectedGroupsEmpty": "Không có nhóm mô hình nào khả dụng"
     },
     "quotaAlert": {
       "title": "Cảnh báo hạn mức",
@@ -2348,6 +2430,19 @@
     },
     "switch": {
       "success": "Chuyển đổi tài khoản thành công"
+    },
+    "projectConfig": {
+      "button": "Đặt dự án GCP",
+      "title": "Đặt dự án GCP",
+      "selectLabel": "Chọn dự án",
+      "loading": "Đang tải danh sách dự án...",
+      "auto": "Tự động chọn (không chỉ định thủ công)",
+      "empty": "Không tìm thấy dự án khả dụng. Hãy đảm bảo tài khoản này có quyền truy cập dự án GCP.",
+      "hint": "Sau khi lưu, dự án này sẽ được ưu tiên cho các yêu cầu hạn mức và được chèn thành GOOGLE_CLOUD_PROJECT khi khởi chạy.",
+      "current": "Dự án: {{projectId}}",
+      "saved": "Đã lưu dự án: {{projectId}}",
+      "cleared": "Đã chuyển về tự động xác định dự án",
+      "savedWithRefreshError": "Đã lưu dự án nhưng làm mới hạn mức thất bại: {{error}}"
     }
   },
   "codebuddy": {
@@ -2798,5 +2893,82 @@
       "dontAskAgain": "Đừng hỏi lại"
     },
     "lockedPlatform": "Nền tảng đã bị khóa theo instance"
+  },
+  "twoFactorAuth": {
+    "pageTitle": "2FA Query [vi]",
+    "pageDescNew": "Enter or paste a 2FA Base32 secret to instantly generate a token. The system automatically corrects and removes non-standard characters. [vi]",
+    "panelQuery": "Workspace (Query Panel) [vi]",
+    "inputSecretPlaceholder": "Paste 2FA Secret here (e.g. JBSWY3DPEHPK3PXP) [vi]",
+    "inputRemarkPlaceholder": "[Optional] Set a remark name for this secret [vi]",
+    "btnQuery": "Query [vi]",
+    "btnSaveToFavorites": "Save to List [vi]",
+    "refreshInSeconds": "Refresh in {{time}}s [vi]",
+    "emptyQueryData": "No query data yet [vi]",
+    "invalidSecretFormat": "Invalid secret format detected [vi]",
+    "tabSaved": "★ Saved [vi]",
+    "tabHistory": "Recent Queries [vi]",
+    "btnImport": "Import [vi]",
+    "btnExport": "Export [vi]",
+    "btnClear": "Clear [vi]",
+    "tableRemark": "Remark [vi]",
+    "tableSecret": "Secret [vi]",
+    "tableCode": "Code [vi]",
+    "tableAddedTime": "Added Time [vi]",
+    "tableQueryTime": "Query Time [vi]",
+    "tableActions": "Actions [vi]",
+    "emptyHistory": "No query history [vi]",
+    "emptySaved": "No saved 2FA records yet [vi]",
+    "invalidSecretVal": "Invalid Secret [vi]",
+    "actionCopy": "Copy Code [vi]",
+    "actionReload": "Reload into Query Data [vi]",
+    "actionDelete": "Delete [vi]",
+    "confirmDeleteSavedTitle": "Delete Confirmation [vi]",
+    "confirmDeleteSavedMsg": "Are you sure you want to permanently delete \n{{secret}}\n? [vi]",
+    "confirmDeleteSavedFallback": "Are you sure you want to permanently delete this secret? [vi]",
+    "confirmDeleteHistoryTitle": "Delete History [vi]",
+    "confirmDeleteHistoryMsg": "Are you sure you want to delete the query history for \n{{secret}}\n? [vi]",
+    "confirmDeleteHistoryFallback": "Are you sure you want to delete this query history? [vi]",
+    "confirmClearAllTitle": "Clear History [vi]",
+    "confirmClearAllMsg": "Are you sure you want to clear all recent query history? [vi]",
+    "importErrorMsg": "Import failed. Please ensure the file format is a valid exported JSON array. [vi]",
+    "btnImportTitle": "Import Local JSON Backup [vi]",
+    "btnExportTitle": "Export Saved as JSON [vi]"
+  },
+  "mfaVault": {
+    "pageDesc": "Lưu trữ và quản lý an toàn mã khôi phục dự phòng MFA, bộ mật mã và các dữ liệu xác thực nhạy cảm khác. Bản ghi MFA chỉ được lưu cục bộ. Xóa dữ liệu, dọn bộ nhớ đệm hoặc đổi/mất thiết bị có thể làm mất MFA. Hãy sao lưu và nhập từ bản sao lưu khi cần.",
+    "manualAdd": "Thêm thông tin xác thực thủ công",
+    "add": "Thêm",
+    "credentialList": "Danh sách thông tin xác thực",
+    "import": "Nhập",
+    "export": "Xuất",
+    "accountName": "Tên tài khoản",
+    "dynamicCode": "Mã động",
+    "remark": "Ghi chú",
+    "time": "Thời gian",
+    "actions": "Thao tác",
+    "noData": "Chưa có thông tin xác thực đã lưu",
+    "copyCode": "Sao chép mã",
+    "delete": "Xóa",
+    "invalidSecretVal": "Secret không hợp lệ",
+    "inputAccountPlaceholder": "Tên tài khoản *",
+    "inputSecretPlaceholder": "Secret / Mã khôi phục (Secret) *",
+    "inputRemarkPlaceholder": "Ghi chú (tùy chọn)",
+    "confirmDeleteMsg": "Bạn có chắc muốn xóa vĩnh viễn thông tin xác thực của [{{accountName}}]?",
+    "confirmDeleteTitle": "Xác nhận xóa",
+    "importErrorMsg": "Nhập thất bại. Vui lòng kiểm tra định dạng tệp (phải là mảng JSON hợp lệ chứa accountName và secret).",
+    "inputOtpAuthPlaceholder": "otpauth://totp/... hoặc mã bí mật Base32",
+    "otpauthInputHint": "Hỗ trợ otpauth://totp/... và mã bí mật Base32. Cả hai định dạng đều có thể truy vấn và lưu vào danh sách.",
+    "pasteQrImageHint": "Bạn cũng có thể dán trực tiếp ảnh QR vào ô nhập liệu để nhận diện.",
+    "uploadQrImage": "Tải lên ảnh QR",
+    "uploadQrImageTitle": "Chọn ảnh QR và tự động nhận diện",
+    "recognizing": "Đang nhận diện...",
+    "invalidOtpAuthInput": "Vui lòng nhập URI otpauth://totp/... hợp lệ hoặc mã bí mật Base32.",
+    "qrDecodeFailed": "Nhận diện QR thất bại. Vui lòng thử ảnh rõ hơn.",
+    "qrNotOtpAuth": "Đã nhận diện được nội dung, nhưng đó không phải URI otpauth://totp/... hợp lệ hoặc mã bí mật Base32.",
+    "editAccountName": "Chỉnh sửa tên tài khoản",
+    "saveAccountName": "Lưu tên tài khoản",
+    "cancelEditAccountName": "Hủy chỉnh sửa",
+    "accountNameRequired": "Tên tài khoản là bắt buộc.",
+    "copySecret": "Sao chép mã bí mật"
   }
 }

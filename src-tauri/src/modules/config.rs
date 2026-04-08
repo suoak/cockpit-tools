@@ -127,6 +127,21 @@ pub struct UserConfig {
     /// 悬浮卡片是否默认置顶
     #[serde(default = "default_floating_card_always_on_top")]
     pub floating_card_always_on_top: bool,
+    /// 是否启用应用开机自启动
+    #[serde(default = "default_app_auto_launch_enabled")]
+    pub app_auto_launch_enabled: bool,
+    /// 是否在应用启动后触发 Antigravity 唤醒
+    #[serde(default = "default_antigravity_startup_wakeup_enabled")]
+    pub antigravity_startup_wakeup_enabled: bool,
+    /// Antigravity 启动后唤醒延时（秒），0 表示立即
+    #[serde(default = "default_antigravity_startup_wakeup_delay_seconds")]
+    pub antigravity_startup_wakeup_delay_seconds: i32,
+    /// 是否在应用启动后触发 Codex 唤醒
+    #[serde(default = "default_codex_startup_wakeup_enabled")]
+    pub codex_startup_wakeup_enabled: bool,
+    /// Codex 启动后唤醒延时（秒），0 表示立即
+    #[serde(default = "default_codex_startup_wakeup_delay_seconds")]
+    pub codex_startup_wakeup_delay_seconds: i32,
     /// 关闭悬浮卡片前是否显示确认弹框
     #[serde(default = "default_floating_card_confirm_on_close")]
     pub floating_card_confirm_on_close: bool,
@@ -196,12 +211,27 @@ pub struct UserConfig {
     /// 切换 Codex 时是否自动启动/重启 Codex App
     #[serde(default = "default_codex_launch_on_switch")]
     pub codex_launch_on_switch: bool,
+    /// Antigravity 切号是否启用“本地落盘 + 扩展无感”且不重启
+    #[serde(default = "default_antigravity_dual_switch_no_restart_enabled")]
+    pub antigravity_dual_switch_no_restart_enabled: bool,
     /// 是否启用自动切号
     #[serde(default = "default_auto_switch_enabled")]
     pub auto_switch_enabled: bool,
     /// 自动切号阈值（百分比），任意模型配额低于此值触发
     #[serde(default = "default_auto_switch_threshold")]
     pub auto_switch_threshold: i32,
+    /// 自动切号触发模式：any_group | selected_groups
+    #[serde(default = "default_auto_switch_scope_mode")]
+    pub auto_switch_scope_mode: String,
+    /// 自动切号指定模型分组（分组 ID）
+    #[serde(default = "default_auto_switch_selected_group_ids")]
+    pub auto_switch_selected_group_ids: Vec<String>,
+    /// 自动切号账号范围模式：all_accounts | selected_accounts
+    #[serde(default = "default_auto_switch_account_scope_mode")]
+    pub auto_switch_account_scope_mode: String,
+    /// 自动切号指定账号（账号 ID）
+    #[serde(default = "default_auto_switch_selected_account_ids")]
+    pub auto_switch_selected_account_ids: Vec<String>,
     /// 是否启用 Codex 自动切号
     #[serde(default = "default_codex_auto_switch_enabled")]
     pub codex_auto_switch_enabled: bool,
@@ -211,6 +241,12 @@ pub struct UserConfig {
     /// Codex secondary_window 自动切号阈值（百分比）
     #[serde(default = "default_codex_auto_switch_secondary_threshold")]
     pub codex_auto_switch_secondary_threshold: i32,
+    /// Codex 自动切号账号范围模式：all_accounts | selected_accounts
+    #[serde(default = "default_codex_auto_switch_account_scope_mode")]
+    pub codex_auto_switch_account_scope_mode: String,
+    /// Codex 自动切号指定账号（账号 ID）
+    #[serde(default = "default_codex_auto_switch_selected_account_ids")]
+    pub codex_auto_switch_selected_account_ids: Vec<String>,
     /// 是否启用配额预警通知
     #[serde(default = "default_quota_alert_enabled")]
     pub quota_alert_enabled: bool,
@@ -418,6 +454,21 @@ fn default_floating_card_show_on_startup() -> bool {
 fn default_floating_card_always_on_top() -> bool {
     false
 }
+fn default_app_auto_launch_enabled() -> bool {
+    false
+}
+fn default_antigravity_startup_wakeup_enabled() -> bool {
+    false
+}
+fn default_antigravity_startup_wakeup_delay_seconds() -> i32 {
+    0
+}
+fn default_codex_startup_wakeup_enabled() -> bool {
+    false
+}
+fn default_codex_startup_wakeup_delay_seconds() -> i32 {
+    0
+}
 fn default_floating_card_confirm_on_close() -> bool {
     true
 }
@@ -461,10 +512,10 @@ fn default_workbuddy_app_path() -> String {
     String::new()
 }
 fn default_opencode_sync_on_switch() -> bool {
-    true
+    false
 }
 fn default_opencode_auth_overwrite_on_switch() -> bool {
-    true
+    false
 }
 fn default_ghcp_opencode_sync_on_switch() -> bool {
     false
@@ -481,11 +532,26 @@ fn default_openclaw_auth_overwrite_on_switch() -> bool {
 fn default_codex_launch_on_switch() -> bool {
     true
 }
+fn default_antigravity_dual_switch_no_restart_enabled() -> bool {
+    false
+}
 fn default_auto_switch_enabled() -> bool {
     false
 }
 fn default_auto_switch_threshold() -> i32 {
     5
+}
+fn default_auto_switch_scope_mode() -> String {
+    "any_group".to_string()
+}
+fn default_auto_switch_selected_group_ids() -> Vec<String> {
+    Vec::new()
+}
+fn default_auto_switch_account_scope_mode() -> String {
+    "all_accounts".to_string()
+}
+fn default_auto_switch_selected_account_ids() -> Vec<String> {
+    Vec::new()
 }
 fn default_codex_auto_switch_enabled() -> bool {
     false
@@ -495,6 +561,12 @@ fn default_codex_auto_switch_primary_threshold() -> i32 {
 }
 fn default_codex_auto_switch_secondary_threshold() -> i32 {
     20
+}
+fn default_codex_auto_switch_account_scope_mode() -> String {
+    "all_accounts".to_string()
+}
+fn default_codex_auto_switch_selected_account_ids() -> Vec<String> {
+    Vec::new()
 }
 fn default_quota_alert_enabled() -> bool {
     false
@@ -613,6 +685,12 @@ impl Default for UserConfig {
             hide_dock_icon: default_hide_dock_icon(),
             floating_card_show_on_startup: default_floating_card_show_on_startup(),
             floating_card_always_on_top: default_floating_card_always_on_top(),
+            app_auto_launch_enabled: default_app_auto_launch_enabled(),
+            antigravity_startup_wakeup_enabled: default_antigravity_startup_wakeup_enabled(),
+            antigravity_startup_wakeup_delay_seconds:
+                default_antigravity_startup_wakeup_delay_seconds(),
+            codex_startup_wakeup_enabled: default_codex_startup_wakeup_enabled(),
+            codex_startup_wakeup_delay_seconds: default_codex_startup_wakeup_delay_seconds(),
             floating_card_confirm_on_close: default_floating_card_confirm_on_close(),
             floating_card_position_x: None,
             floating_card_position_y: None,
@@ -637,11 +715,19 @@ impl Default for UserConfig {
             ghcp_launch_on_switch: default_ghcp_launch_on_switch(),
             openclaw_auth_overwrite_on_switch: default_openclaw_auth_overwrite_on_switch(),
             codex_launch_on_switch: default_codex_launch_on_switch(),
+            antigravity_dual_switch_no_restart_enabled:
+                default_antigravity_dual_switch_no_restart_enabled(),
             auto_switch_enabled: default_auto_switch_enabled(),
             auto_switch_threshold: default_auto_switch_threshold(),
+            auto_switch_scope_mode: default_auto_switch_scope_mode(),
+            auto_switch_selected_group_ids: default_auto_switch_selected_group_ids(),
+            auto_switch_account_scope_mode: default_auto_switch_account_scope_mode(),
+            auto_switch_selected_account_ids: default_auto_switch_selected_account_ids(),
             codex_auto_switch_enabled: default_codex_auto_switch_enabled(),
             codex_auto_switch_primary_threshold: default_codex_auto_switch_primary_threshold(),
             codex_auto_switch_secondary_threshold: default_codex_auto_switch_secondary_threshold(),
+            codex_auto_switch_account_scope_mode: default_codex_auto_switch_account_scope_mode(),
+            codex_auto_switch_selected_account_ids: default_codex_auto_switch_selected_account_ids(),
             quota_alert_enabled: default_quota_alert_enabled(),
             quota_alert_threshold: default_quota_alert_threshold(),
             codex_quota_alert_enabled: default_codex_quota_alert_enabled(),
@@ -959,6 +1045,41 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             );
         }
 
+        if !obj.contains_key("app_auto_launch_enabled") {
+            obj.insert(
+                "app_auto_launch_enabled".to_string(),
+                json!(default_app_auto_launch_enabled()),
+            );
+        }
+
+        if !obj.contains_key("antigravity_startup_wakeup_enabled") {
+            obj.insert(
+                "antigravity_startup_wakeup_enabled".to_string(),
+                json!(default_antigravity_startup_wakeup_enabled()),
+            );
+        }
+
+        if !obj.contains_key("antigravity_startup_wakeup_delay_seconds") {
+            obj.insert(
+                "antigravity_startup_wakeup_delay_seconds".to_string(),
+                json!(default_antigravity_startup_wakeup_delay_seconds()),
+            );
+        }
+
+        if !obj.contains_key("codex_startup_wakeup_enabled") {
+            obj.insert(
+                "codex_startup_wakeup_enabled".to_string(),
+                json!(default_codex_startup_wakeup_enabled()),
+            );
+        }
+
+        if !obj.contains_key("codex_startup_wakeup_delay_seconds") {
+            obj.insert(
+                "codex_startup_wakeup_delay_seconds".to_string(),
+                json!(default_codex_startup_wakeup_delay_seconds()),
+            );
+        }
+
         if !obj.contains_key("floating_card_confirm_on_close") {
             obj.insert(
                 "floating_card_confirm_on_close".to_string(),
@@ -1053,6 +1174,42 @@ pub fn load_user_config() -> Result<UserConfig, String> {
             obj.insert(
                 "codex_auto_switch_secondary_threshold".to_string(),
                 json!(legacy_auto_switch_threshold),
+            );
+        }
+        if !obj.contains_key("auto_switch_scope_mode") {
+            obj.insert(
+                "auto_switch_scope_mode".to_string(),
+                json!(default_auto_switch_scope_mode()),
+            );
+        }
+        if !obj.contains_key("auto_switch_selected_group_ids") {
+            obj.insert(
+                "auto_switch_selected_group_ids".to_string(),
+                json!(default_auto_switch_selected_group_ids()),
+            );
+        }
+        if !obj.contains_key("auto_switch_account_scope_mode") {
+            obj.insert(
+                "auto_switch_account_scope_mode".to_string(),
+                json!(default_auto_switch_account_scope_mode()),
+            );
+        }
+        if !obj.contains_key("auto_switch_selected_account_ids") {
+            obj.insert(
+                "auto_switch_selected_account_ids".to_string(),
+                json!(default_auto_switch_selected_account_ids()),
+            );
+        }
+        if !obj.contains_key("codex_auto_switch_account_scope_mode") {
+            obj.insert(
+                "codex_auto_switch_account_scope_mode".to_string(),
+                json!(default_codex_auto_switch_account_scope_mode()),
+            );
+        }
+        if !obj.contains_key("codex_auto_switch_selected_account_ids") {
+            obj.insert(
+                "codex_auto_switch_selected_account_ids".to_string(),
+                json!(default_codex_auto_switch_selected_account_ids()),
             );
         }
         let codex_legacy_threshold = obj
@@ -1303,8 +1460,8 @@ mod tests {
 
     #[test]
     fn openclaw_auth_overwrite_missing_field_falls_back_to_disabled() {
-        let cfg: UserConfig = serde_json::from_value(serde_json::json!({}))
-            .expect("反序列化默认配置应成功");
+        let cfg: UserConfig =
+            serde_json::from_value(serde_json::json!({})).expect("反序列化默认配置应成功");
         assert!(!cfg.openclaw_auth_overwrite_on_switch);
     }
 }
