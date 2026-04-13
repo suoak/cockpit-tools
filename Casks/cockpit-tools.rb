@@ -1,6 +1,6 @@
 cask "SC-cockpit-tools" do
   version "0.21.2"
-  sha256 "d0b710b215fed992e8334a185288641af24b17bd0b8b9d2a1c227b977b6f45f5"
+  sha256 "dc03e1365934201362846548220a96e1036aced95c30ba97e29d8adfdb4dcc83"
 
   url "https://github.com/suoak/cockpit-tools/releases/download/v#{version}/Cockpit.Tools_#{version}_universal.dmg",
       verified: "github.com/suoak/cockpit-tools/"
