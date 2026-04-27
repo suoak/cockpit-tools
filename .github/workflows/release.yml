@@ -193,7 +193,34 @@ jobs:
       - name: Build exe only (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
-        run: npx tauri build --no-bundle
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "[INFO] CWD = $(Get-Location)"
+          Write-Host "[INFO] Running: npx tauri build --no-bundle"
+          npx tauri build --no-bundle
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] tauri build --no-bundle failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
+          # Diagnostic: verify build output exists
+          Write-Host "[INFO] Build finished. Checking output..."
+          $releaseDir = "src-tauri\target\release"
+          if (Test-Path $releaseDir) {
+            Write-Host "[INFO] Contents of ${releaseDir}:"
+            Get-ChildItem -Path $releaseDir -Filter "*.exe" | ForEach-Object {
+              Write-Host "  $($_.Name)  ($($_.Length) bytes)"
+            }
+          } else {
+            Write-Host "[WARN] $releaseDir does not exist after build!"
+            Write-Host "[INFO] Listing src-tauri\target\:"
+            if (Test-Path "src-tauri\target") {
+              Get-ChildItem -Path "src-tauri\target" -Directory | ForEach-Object {
+                Write-Host "  $($_.Name)\"
+              }
+            } else {
+              Write-Host "[ERROR] src-tauri\target does not exist at all!"
+            }
+          }
 
       # Step 2: Strip exe metadata before MSI packaging
       - name: Strip exe metadata (Windows)
