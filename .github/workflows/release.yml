@@ -190,68 +190,20 @@ jobs:
 
       # Windows: Manual multi-step build with metadata stripping
       # Step 1: Build frontend + compile exe (no installer bundling)
+      # NOTE: Tauri CLI places target/ at the REPO ROOT (not src-tauri/target/)
       - name: Build exe only (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Write-Host "[INFO] CWD = $(Get-Location)"
-          Write-Host "[INFO] Running: npx tauri build --no-bundle"
-          npx tauri build --no-bundle
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "[ERROR] tauri build --no-bundle failed with exit code $LASTEXITCODE"
-            exit $LASTEXITCODE
-          }
-          # Diagnostic: verify build output exists
-          Write-Host "[INFO] Build finished. Checking output..."
-          $releaseDir = "src-tauri\target\release"
-          if (Test-Path $releaseDir) {
-            Write-Host "[INFO] Contents of ${releaseDir}:"
-            Get-ChildItem -Path $releaseDir -Filter "*.exe" | ForEach-Object {
-              Write-Host "  $($_.Name)  ($($_.Length) bytes)"
-            }
-          } else {
-            Write-Host "[WARN] $releaseDir does not exist after build!"
-            Write-Host "[INFO] Listing src-tauri\target\:"
-            if (Test-Path "src-tauri\target") {
-              Get-ChildItem -Path "src-tauri\target" -Directory | ForEach-Object {
-                Write-Host "  $($_.Name)\"
-              }
-            } else {
-              Write-Host "[ERROR] src-tauri\target does not exist at all!"
-            }
-          }
+        run: npx tauri build --no-bundle
 
       # Step 2: Strip exe metadata before MSI packaging
       - name: Strip exe metadata (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          # Detect the actual exe filename (Tauri may use Cargo package name or productName)
-          $releaseDir = "src-tauri\target\release"
-          $candidates = @(
-            "cockpit-tools.exe",
-            "sc-cockpit-tools.exe",
-            "SC-Cockpit Tools.exe",
-            "SC-Cockpit-Tools.exe"
-          )
-          $exePath = $null
-          foreach ($name in $candidates) {
-            $tryPath = Join-Path $releaseDir $name
-            if (Test-Path $tryPath) {
-              $exePath = $tryPath
-              Write-Host "[INFO] Found exe: $tryPath"
-              break
-            }
-          }
-          if (-not $exePath) {
-            Write-Host "[ERROR] No exe found in $releaseDir. Listing directory:"
-            Get-ChildItem -Path $releaseDir -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
-              Write-Host "  $($_.Name)  ($($_.Length) bytes)"
-            }
-            if (!(Test-Path $releaseDir)) {
-              Write-Host "[ERROR] Directory does not exist: $releaseDir"
-            }
+          $exePath = "target\release\cockpit-tools.exe"
+          if (!(Test-Path $exePath)) {
+            Write-Host "[ERROR] Exe not found: $exePath"
             exit 1
           }
           if (!(Test-Path $env:RESHACKER_PATH)) {
@@ -260,8 +212,6 @@ jobs:
           }
           $absExe = (Resolve-Path $exePath).Path
           $logFile = "$env:RUNNER_TEMP\reshacker_strip.log"
-          # Export for later steps
-          echo "STRIPPED_EXE_PATH=$exePath" >> $env:GITHUB_ENV
           Write-Host "[INFO] Stripping VERSIONINFO from exe: $absExe"
           # ResourceHacker is a GUI app; must use Start-Process -Wait to block and capture exit code
           $proc = Start-Process -FilePath $env:RESHACKER_PATH `
@@ -292,11 +242,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = $env:STRIPPED_EXE_PATH
-          if (-not $exePath -or !(Test-Path $exePath)) {
-            Write-Host "[ERROR] STRIPPED_EXE_PATH not set or file missing: $exePath"
-            exit 1
-          }
+          $exePath = "target\release\cockpit-tools.exe"
           $absExe = (Resolve-Path $exePath).Path
           $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
           if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
@@ -327,7 +273,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $msiDir = "src-tauri\target\release\bundle\msi"
+          $msiDir = "target\release\bundle\msi"
           $installers = Get-ChildItem -Path $msiDir -Filter "*.msi" -ErrorAction SilentlyContinue
           if (-not $installers) {
             Write-Host "[ERROR] No MSI installer found in $msiDir"
@@ -398,10 +344,10 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.exe.sig
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.sig
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.exe.sig
+            target/release/bundle/msi/*.msi
+            target/release/bundle/msi/*.msi.sig
 
   rebuild-latest-json:
     name: Rebuild merged latest.json
