@@ -200,9 +200,31 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = "src-tauri\target\release\cockpit-tools.exe"
-          if (!(Test-Path $exePath)) {
-            Write-Host "[ERROR] Exe not found: $exePath"
+          # Detect the actual exe filename (Tauri may use Cargo package name or productName)
+          $releaseDir = "src-tauri\target\release"
+          $candidates = @(
+            "cockpit-tools.exe",
+            "sc-cockpit-tools.exe",
+            "SC-Cockpit Tools.exe",
+            "SC-Cockpit-Tools.exe"
+          )
+          $exePath = $null
+          foreach ($name in $candidates) {
+            $tryPath = Join-Path $releaseDir $name
+            if (Test-Path $tryPath) {
+              $exePath = $tryPath
+              Write-Host "[INFO] Found exe: $tryPath"
+              break
+            }
+          }
+          if (-not $exePath) {
+            Write-Host "[ERROR] No exe found in $releaseDir. Listing directory:"
+            Get-ChildItem -Path $releaseDir -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "  $($_.Name)  ($($_.Length) bytes)"
+            }
+            if (!(Test-Path $releaseDir)) {
+              Write-Host "[ERROR] Directory does not exist: $releaseDir"
+            }
             exit 1
           }
           if (!(Test-Path $env:RESHACKER_PATH)) {
@@ -211,6 +233,8 @@ jobs:
           }
           $absExe = (Resolve-Path $exePath).Path
           $logFile = "$env:RUNNER_TEMP\reshacker_strip.log"
+          # Export for later steps
+          echo "STRIPPED_EXE_PATH=$exePath" >> $env:GITHUB_ENV
           Write-Host "[INFO] Stripping VERSIONINFO from exe: $absExe"
           # ResourceHacker is a GUI app; must use Start-Process -Wait to block and capture exit code
           $proc = Start-Process -FilePath $env:RESHACKER_PATH `
@@ -241,7 +265,11 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = "src-tauri\target\release\cockpit-tools.exe"
+          $exePath = $env:STRIPPED_EXE_PATH
+          if (-not $exePath -or !(Test-Path $exePath)) {
+            Write-Host "[ERROR] STRIPPED_EXE_PATH not set or file missing: $exePath"
+            exit 1
+          }
           $absExe = (Resolve-Path $exePath).Path
           $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($absExe)
           if ($vi.ProductName -or $vi.FileVersion -or $vi.CompanyName) {
