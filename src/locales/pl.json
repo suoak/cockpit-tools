@@ -227,14 +227,14 @@
     "title": "Układ platform",
     "sidebarSelected": "Wybrane na pasku bocznym {{count}}/{{max}}",
     "reset": "Przywróć domyślne",
-    "tip": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie dwie platformy. Jeśli wybrana jest tylko jedna, zostanie wyświetlona tylko jedna.",
+    "tip": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie trzy platformy. Jeśli wybrana jest tylko jedna, zostanie wyświetlona tylko jedna.",
     "sidebarToggle": "Pokaż na pasku bocznym",
     "dashboardToggle": "Pokaż na pulpicie",
     "trayToggle": "Pokaż w zasobniku",
     "hiddenBadge": "Ukryte",
     "openFromMore": "Zarządzaj układem platform",
     "dragHandleLabel": "Przeciągnij, aby zmienić kolejność",
-    "tipWithGroups": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie dwa wpisy. Elementy podrzędne grupy nie mają przełączników paska bocznego/pulpitu i służą tylko do paska menu oraz przełączania platformy domyślnej.",
+    "tipWithGroups": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie trzy wpisy. Elementy podrzędne grupy nie mają przełączników paska bocznego/pulpitu i służą tylko do paska menu oraz przełączania platformy domyślnej.",
     "addGroup": "Dodaj grupę",
     "editGroup": "Edytuj grupę",
     "deleteGroup": "Usuń grupę",
@@ -1545,6 +1545,7 @@
     "authorizing": "Oczekiwanie na autoryzację systemu...",
     "installFailed": "Instalacja systemowa nie powiodła się. Spróbuj ponownie później lub pobierz pakiet ręcznie.",
     "restartRequiredAfterInstall": "Aktualizacja jest zainstalowana. Uruchom aplikację ponownie ręcznie, aby dokończyć przełączenie.",
+    "stoppingApiService": "Zatrzymywanie usługi API...",
     "skipThisVersion": "Pomiń tę wersję",
     "skipFailed": "Nie udało się pominąć tej aktualizacji: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Format eksportu",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "Format sub2api",
-      "cpa": "Format cpa"
+      "cpa": "Format cpa",
+      "downloadAll": "Pobierz wszystko",
+      "cpaCardTitle": "Konto {{index}}",
+      "savedFolder": "Zapisany folder",
+      "savedPath": "Zapisana ścieżka"
     },
     "localAccess": {
       "title": "Usługa API",
@@ -1716,6 +1721,12 @@
       "clearStats": "Wyczyść statystyki",
       "clearStatsConfirm": "Wyczyścić wszystkie statystyki usługi API?",
       "clearStatsSuccess": "Statystyki usługi API zostały wyczyszczone",
+      "killPortAction": "Wyczyść port",
+      "killPortTitle": "Wyczyść port usługi API",
+      "killPortConfirmMessage": "Inne procesy używające lokalnego portu {{port}} zostaną wymuszenie zamknięte, a następnie usługa API zostanie uruchomiona ponownie. Kontynuować?",
+      "killPortSuccess": "Port wyczyszczony (zamknięto {{count}} procesów)",
+      "killPortSuccessNone": "Port sprawdzony. Nie używa go żaden proces zewnętrzny.",
+      "killPortSuccessUnknown": "Port usługi API został wyczyszczony",
       "refreshStats": "Odśwież statystyki",
       "refreshStatsSuccess": "Statystyki usługi API zostały odświeżone",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Włącz i przełącz",
       "apiPortUrl": "URL portu API",
       "modelId": "ID modelu",
-      "modelIdPlaceholder": "Wybierz ID modelu"
+      "modelIdPlaceholder": "Wybierz ID modelu",
+      "modelIdViewOnly": "Tylko podgląd"
     },
     "local": {
       "desc": "Importuj bieżące konto z ~/.codex/auth.json",
@@ -1800,7 +1812,8 @@
       "weekly": "Limit tygodniowy",
       "hourly": "Limit 5-godzinny",
       "weeklyReset": "Czas tygodniowego resetu",
-      "hourlyReset": "Czas resetu 5-godzinnego"
+      "hourlyReset": "Czas resetu 5-godzinnego",
+      "subscriptionExpiry": "Koniec subskrypcji"
     },
     "opencodeSwitch": "Przełącznik OpenCode",
     "opencodeSwitchDesc": "Synchronizuj przełączenie konta Codex w OpenCode",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "Klucz API nie może być taki sam jak bazowy URL."
       },
       "addAndSwitchSuccess": "Dodano i przełączono: {{email}}",
+      "showApiKey": "Pokaż API Key",
+      "hideApiKey": "Ukryj API Key",
+      "apiKeyHiddenHint": "API Key jest ukryty. Kliknij, aby pokazać.",
       "actions": {
         "addAndSwitch": "Dodaj i przełącz"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "Zapisuje model_context_window. Można edytować tylko w trybie niestandardowym.",
         "partialDetected": "Aktualnie ustawione jest tylko jedno pole zarządzane: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Zapisanie spowoduje przepisanie obu pól według aktualnego schematu.",
         "notSet": "Nie ustawiono"
-      }
+      },
+      "managePresets": "Presety modeli"
     },
     "quickSwitch": {
       "action": "Szybka zmiana dostawcy",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Dodaj do grupy"
+    },
+    "subscription": {
+      "label": "Koniec sub.",
+      "column": "Wygasa",
+      "unknown": "Autoryzuj ponownie",
+      "missingDetail": "Autoryzuj ponownie, aby pobrać",
+      "expired": "Wygasła",
+      "hoursLeft": "{{count}} godz.",
+      "daysLeft": "{{count}} dni",
+      "over99Days": "99+ dni",
+      "titleWithDate": "Subskrypcja wygasa: {{date}}",
+      "titleUnknown": "Autoryzuj ponownie, aby pobrać termin",
+      "filterLabel": "Filtr wygasania",
+      "filterAll": "Wszystkie ({{count}})",
+      "filterExpired": "Wygasłe ({{count}})",
+      "filterWithin24h": "24 godz. ({{count}})",
+      "filterWithin7d": "7 dni ({{count}})",
+      "filterWithin30d": "30 dni ({{count}})",
+      "filterMissing": "Nieznane ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "Wklej token dostępu GitHub Copilot lub wyeksportowane dane JSON."
     },
     "import": {
-      "localDesc": "Importuj konta GitHub Copilot z lokalnie zalogowanych sesji."
+      "localDesc": "Zaimportuj dane konta GitHub Copilot z lokalnego VS Code lub pliku JSON.",
+      "localClient": "Importuj z lokalnego VS Code"
     },
     "sort": {
       "weekly": "Limit tygodniowy",
@@ -2290,7 +2327,7 @@
       "desc": "Przełączanie konta wymaga odczytu lokalnego magazynu uwierzytelniania VS Code oraz użycia systemowej usługi poświadczeń do odszyfrowania i ponownego zapisu; dane są przetwarzane wyłącznie lokalnie.",
       "inject": "Przełączanie jednym kliknięciem: to narzędzie odczytuje lokalny materiał szyfrujący VS Code (DPAPI/Keychain/Secret Service), odszyfrowuje sesję uwierzytelniania w state.vscdb, podmienia token GitHub Copilot i ponownie szyfruje dane — wszystko lokalnie na Twoim urządzeniu.",
       "reason": "Zakres uprawnień: odczyt bazy uwierzytelniania VS Code (state.vscdb) oraz użycie szyfrowania systemowego (Windows DPAPI / macOS Keychain / Linux Secret Service) do odszyfrowania i ponownego zapisu.",
-      "storage": "Zakres odczytu: przetwarzane są tylko dane związane z sesją logowania GitHub; wszystkie procesy są wykonywane lokalnie."
+      "storage": "Zakres danych: import lokalny odczytuje sesje logowania GitHub w VS Code, a przełączanie aktualizuje te wpisy; OAuth, import tokena, weryfikacja importu lokalnego i odświeżanie limitów wywołują oficjalne API GitHub z wymaganymi polami uwierzytelniania. state.vscdb i klucze systemowe nie są przesyłane."
     }
   },
   "dashboard": {

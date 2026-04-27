@@ -343,8 +343,19 @@
 .codex-local-access-inline-error span,
 .codex-local-access-inline-success span,
 .codex-local-access-inline-info span {
+  flex: 1;
   min-width: 0;
   line-height: 1.55;
+}
+
+.codex-local-access-inline-error-with-action {
+  align-items: center;
+}
+
+.codex-local-access-inline-action {
+  flex-shrink: 0;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .codex-local-access-inline-error {
@@ -588,6 +599,18 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+.codex-local-access-view-only-badge {
+  margin-right: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .codex-local-access-modal .folder-icon-btn {

@@ -274,8 +274,8 @@
     "sidebarSelected": "Bilah sisi dipilih {{count}}/{{max}}",
     "sidebarSelectedUnlimited": "Bilah sisi dipilih {{count}}",
     "reset": "Atur ulang ke bawaan",
-    "tip": "Seret untuk mengurutkan ulang. Maksimal dua platform dapat ditampilkan di bilah sisi. Jika hanya satu yang dipilih, hanya satu yang ditampilkan.",
-    "tipWithGroups": "Seret untuk mengurutkan ulang. Maksimal dua entri dapat muncul di bilah sisi. Anak grup tidak memiliki toggle bilah sisi/dasbor dan hanya digunakan untuk visibilitas tray dan pengalihan platform bawaan.",
+    "tip": "Seret untuk mengurutkan ulang. Maksimal tiga platform dapat ditampilkan di bilah sisi. Jika hanya satu yang dipilih, hanya satu yang ditampilkan.",
+    "tipWithGroups": "Seret untuk mengurutkan ulang. Maksimal tiga entri dapat muncul di bilah sisi. Anak grup tidak memiliki toggle bilah sisi/dasbor dan hanya digunakan untuk visibilitas tray dan pengalihan platform bawaan.",
     "tipWithGroupsUnlimited": "Seret untuk mengurutkan ulang. Jumlah entri di bilah sisi tidak dibatasi. Anak grup tidak memiliki toggle bilah sisi/dasbor dan hanya digunakan untuk visibilitas tray dan pengalihan platform bawaan.",
     "addGroup": "Tambah grup",
     "editGroup": "Edit",
@@ -1592,7 +1592,8 @@
     "installing": "Memasang...",
     "authorizing": "Menunggu otorisasi sistem...",
     "installFailed": "Instalasi sistem gagal. Coba lagi nanti atau unduh secara manual.",
-    "restartRequiredAfterInstall": "Pembaruan terpasang. Mulai ulang aplikasi secara manual untuk menyelesaikan peralihan."
+    "restartRequiredAfterInstall": "Pembaruan terpasang. Mulai ulang aplikasi secara manual untuk menyelesaikan peralihan.",
+    "stoppingApiService": "Menghentikan layanan API..."
   },
   "closeDialog": {
     "title": "Tutup Jendela",
@@ -1678,7 +1679,11 @@
       "label": "Format ekspor",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "Format sub2api",
-      "cpa": "Format cpa"
+      "cpa": "Format cpa",
+      "downloadAll": "Unduh semua",
+      "cpaCardTitle": "Akun {{index}}",
+      "savedFolder": "Folder tersimpan",
+      "savedPath": "Path tersimpan"
     },
     "localAccess": {
       "title": "Layanan API",
@@ -1765,6 +1770,12 @@
       "clearStats": "Hapus Statistik",
       "clearStatsConfirm": "Hapus semua statistik layanan API?",
       "clearStatsSuccess": "Statistik layanan API telah dihapus",
+      "killPortAction": "Bersihkan Port",
+      "killPortTitle": "Bersihkan Port Layanan API",
+      "killPortConfirmMessage": "Proses lain yang memakai port lokal {{port}} akan dihentikan paksa, lalu layanan API dimulai ulang. Lanjutkan?",
+      "killPortSuccess": "Port dibersihkan ({{count}} proses dihentikan)",
+      "killPortSuccessNone": "Port diperiksa. Tidak ada proses eksternal yang memakainya.",
+      "killPortSuccessUnknown": "Port layanan API dibersihkan",
       "refreshStats": "Segarkan Statistik",
       "refreshStatsSuccess": "Statistik layanan API telah disegarkan",
       "routingStrategy": {
@@ -1801,7 +1812,8 @@
       "enableAndActivateAction": "Aktifkan dan alihkan",
       "apiPortUrl": "URL Port API",
       "modelId": "ID Model",
-      "modelIdPlaceholder": "Pilih ID model"
+      "modelIdPlaceholder": "Pilih ID model",
+      "modelIdViewOnly": "Hanya lihat"
     },
     "api": {
       "baseUrl": "URL Dasar",
@@ -1812,6 +1824,9 @@
         "apiKeyEqualsBaseUrl": "Kunci API tidak boleh sama dengan URL Dasar."
       },
       "addAndSwitchSuccess": "Berhasil ditambahkan dan dialihkan: {{email}}",
+      "showApiKey": "Tampilkan API Key",
+      "hideApiKey": "Sembunyikan API Key",
+      "apiKeyHiddenHint": "API Key disembunyikan. Klik untuk menampilkan.",
       "actions": {
         "addAndSwitch": "Tambah dan alihkan"
       },
@@ -1940,7 +1955,8 @@
       "weekly": "Kuota mingguan",
       "hourly": "Kuota 5 jam",
       "weeklyReset": "Waktu reset mingguan",
-      "hourlyReset": "5-hour reset time"
+      "hourlyReset": "5-hour reset time",
+      "subscriptionExpiry": "Akhir langganan"
     },
     "opencodeSwitch": "Sakelar OpenCode",
     "opencodeSwitchDesc": "Sinkronkan info akun Codex di OpenCode",
@@ -2268,7 +2284,8 @@
         "contextWindowHint": "Menulis model_context_window. Hanya dapat diedit dalam mode Kustom.",
         "partialDetected": "Hanya satu bidang terkelola yang saat ini disetel: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Menyimpan akan menulis ulang kedua bidang menggunakan skema saat ini.",
         "notSet": "Tidak disetel"
-      }
+      },
+      "managePresets": "Preset model"
     },
     "quickSwitch": {
       "action": "Alih cepat penyedia",
@@ -2289,6 +2306,25 @@
     },
     "groups": {
       "addToGroup": "Tambahkan ke Grup"
+    },
+    "subscription": {
+      "label": "Akhir langganan",
+      "column": "Berakhir",
+      "unknown": "Otorisasi ulang",
+      "missingDetail": "Otorisasi ulang untuk ambil",
+      "expired": "Kedaluwarsa",
+      "hoursLeft": "{{count}} jam",
+      "daysLeft": "{{count}} hr",
+      "over99Days": "99+ hr",
+      "titleWithDate": "Langganan berakhir: {{date}}",
+      "titleUnknown": "Otorisasi ulang untuk mengambil akhir langganan",
+      "filterLabel": "Filter akhir",
+      "filterAll": "Semua ({{count}})",
+      "filterExpired": "Kedaluwarsa ({{count}})",
+      "filterWithin24h": "24 jam ({{count}})",
+      "filterWithin7d": "7 hr ({{count}})",
+      "filterWithin30d": "30 hr ({{count}})",
+      "filterMissing": "Tidak diketahui ({{count}})"
     }
   },
   "codebuddy": {
@@ -2411,7 +2447,8 @@
       "desc": "Tempel token akses GitHub Copilot atau data JSON yang diekspor."
     },
     "import": {
-      "localDesc": "Impor data akun GitHub Copilot dari berkas JSON."
+      "localDesc": "Impor data akun GitHub Copilot dari VS Code lokal atau berkas JSON.",
+      "localClient": "Impor dari VS Code lokal"
     },
     "sort": {
       "weekly": "Berdasarkan penggunaan pesan Chat",
@@ -2436,7 +2473,7 @@
       "desc": "Switching accounts requires reading VS Code local auth storage and using the system credential service for decrypt/write-back. Data is processed locally only.",
       "inject": "One-click switching: This tool reads local VS Code encryption material (DPAPI/Keychain/Secret Service), decrypts the auth session in state.vscdb, replaces the GitHub Copilot token, and re-encrypts it Ã¢â‚¬â€ all locally on your machine.",
       "reason": "Permission scope: read VS Code auth database (state.vscdb) and call system credential capability (Windows DPAPI / macOS Keychain / Linux Secret Service) for decrypt/write-back.",
-      "storage": "Data scope: only GitHub auth-session related entries are read/updated; all processes run locally."
+      "storage": "Cakupan data: impor lokal membaca sesi masuk GitHub di VS Code, dan pergantian akun memperbarui entri yang sama; OAuth, impor token, validasi impor lokal, dan penyegaran kuota memanggil API resmi GitHub dengan bidang autentikasi yang diperlukan. state.vscdb dan kunci sistem tidak diunggah."
     }
   },
   "dashboard": {

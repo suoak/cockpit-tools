@@ -227,14 +227,14 @@
     "title": "Platform Düzeni",
     "sidebarSelected": "Kenar çubuğunda seçili {{count}}/{{max}}",
     "reset": "Varsayılana sıfırla",
-    "tip": "Sıralamayı değiştirmek için sürükleyin. Kenar çubuğunda en fazla iki platform gösterilebilir. Yalnızca bir platform seçilirse yalnızca bir platform gösterilir.",
+    "tip": "Sıralamayı değiştirmek için sürükleyin. Kenar çubuğunda en fazla üç platform gösterilebilir. Yalnızca bir platform seçilirse yalnızca bir platform gösterilir.",
     "sidebarToggle": "Kenar çubuğunda göster",
     "dashboardToggle": "Panoda göster",
     "trayToggle": "Tepside göster",
     "hiddenBadge": "Gizli",
     "openFromMore": "Platform düzenini yönet",
     "dragHandleLabel": "Sürükleyerek sırala",
-    "tipWithGroups": "Sürükleyerek sıralayın. Kenar çubuğunda en fazla iki giriş gösterilebilir. Grup alt platformlarında kenar çubuğu/pano anahtarı yoktur; yalnızca menü çubuğu görünürlüğü ve varsayılan platform geçişi için kullanılır.",
+    "tipWithGroups": "Sürükleyerek sıralayın. Kenar çubuğunda en fazla üç giriş gösterilebilir. Grup alt platformlarında kenar çubuğu/pano anahtarı yoktur; yalnızca menü çubuğu görünürlüğü ve varsayılan platform geçişi için kullanılır.",
     "addGroup": "Grup ekle",
     "editGroup": "Grubu düzenle",
     "deleteGroup": "Grubu sil",
@@ -1545,6 +1545,7 @@
     "authorizing": "Sistem yetkisi bekleniyor...",
     "installFailed": "Sistem kurulumu başarısız oldu. Daha sonra yeniden deneyin veya paketi manuel indirin.",
     "restartRequiredAfterInstall": "Güncelleme yüklendi. Geçişi tamamlamak için uygulamayı manuel olarak yeniden başlatın.",
+    "stoppingApiService": "API hizmeti durduruluyor...",
     "skipThisVersion": "Bu sürümü atla",
     "skipFailed": "Bu güncelleme atlanamadı: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Dışa aktarma biçimi",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api biçimi",
-      "cpa": "cpa biçimi"
+      "cpa": "cpa biçimi",
+      "downloadAll": "Tümünü indir",
+      "cpaCardTitle": "Hesap {{index}}",
+      "savedFolder": "Kaydedilen klasör",
+      "savedPath": "Kaydedilen yol"
     },
     "localAccess": {
       "title": "API Hizmeti",
@@ -1716,6 +1721,12 @@
       "clearStats": "İstatistikleri Temizle",
       "clearStatsConfirm": "API hizmeti istatistiklerinin tümü temizlensin mi?",
       "clearStatsSuccess": "API hizmeti istatistikleri temizlendi",
+      "killPortAction": "Portu temizle",
+      "killPortTitle": "API hizmeti portunu temizle",
+      "killPortConfirmMessage": "Yerel {{port}} portunu kullanan diğer işlemler zorla kapatılacak, ardından API hizmeti yeniden başlatılacak. Devam edilsin mi?",
+      "killPortSuccess": "Port temizlendi ({{count}} işlem kapatıldı)",
+      "killPortSuccessNone": "Port kontrol edildi. Harici bir işlem kullanmıyor.",
+      "killPortSuccessUnknown": "API hizmeti portu temizlendi",
       "refreshStats": "İstatistikleri Yenile",
       "refreshStatsSuccess": "API hizmeti istatistikleri yenilendi",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Etkinleştir ve geçiş yap",
       "apiPortUrl": "API Port URL",
       "modelId": "Model ID",
-      "modelIdPlaceholder": "Model ID seçin"
+      "modelIdPlaceholder": "Model ID seçin",
+      "modelIdViewOnly": "Yalnızca görüntüle"
     },
     "local": {
       "desc": "~/.codex/auth.json'dan mevcut hesabı içe aktar",
@@ -1800,7 +1812,8 @@
       "weekly": "Haftalık kota",
       "hourly": "5 saatlik kota",
       "weeklyReset": "Haftalık sıfırlama zamanı",
-      "hourlyReset": "5 saatlik sıfırlama zamanı"
+      "hourlyReset": "5 saatlik sıfırlama zamanı",
+      "subscriptionExpiry": "Abonelik bitişi"
     },
     "opencodeSwitch": "OpenCode geçiş anahtarı",
     "opencodeSwitchDesc": "OpenCode içinde Codex hesap geçişini senkronize et",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "API anahtarı temel URL ile aynı olamaz."
       },
       "addAndSwitchSuccess": "Eklendi ve geçiş yapıldı: {{email}}",
+      "showApiKey": "API Key’i göster",
+      "hideApiKey": "API Key’i gizle",
+      "apiKeyHiddenHint": "API Key gizli. Göstermek için tıklayın.",
       "actions": {
         "addAndSwitch": "Ekle ve geçiş yap"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "model_context_window yazar. Yalnızca Özel modda düzenlenebilir.",
         "partialDetected": "Şu anda yalnızca bir yönetilen alan ayarlanmıştır: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Kaydetme, mevcut şemayı kullanarak her iki alanı da yeniden yazacaktır.",
         "notSet": "Ayarlanmadı"
-      }
+      },
+      "managePresets": "Model ön ayarları"
     },
     "quickSwitch": {
       "action": "Sağlayıcıyı hızlı değiştir",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Gruba Ekle"
+    },
+    "subscription": {
+      "label": "Abonelik bitişi",
+      "column": "Bitiş",
+      "unknown": "Yeniden yetkilendir",
+      "missingDetail": "Almak icin yeniden yetkilendir",
+      "expired": "Süresi doldu",
+      "hoursLeft": "{{count}} sa",
+      "daysLeft": "{{count}} gün",
+      "over99Days": "99+ gün",
+      "titleWithDate": "Abonelik bitişi: {{date}}",
+      "titleUnknown": "Abonelik bitişini almak için yeniden yetkilendir",
+      "filterLabel": "Bitiş filtresi",
+      "filterAll": "Tümü ({{count}})",
+      "filterExpired": "Süresi dolan ({{count}})",
+      "filterWithin24h": "24 sa ({{count}})",
+      "filterWithin7d": "7 gün ({{count}})",
+      "filterWithin30d": "30 gün ({{count}})",
+      "filterMissing": "Bilinmiyor ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "GitHub Copilot erişim belirtecini veya dışa aktarılan JSON verisini yapıştırın."
     },
     "import": {
-      "localDesc": "Yerelde oturum açılmış oturumlardan GitHub Copilot hesaplarını içe aktar."
+      "localDesc": "GitHub Copilot hesap verilerini yerel VS Code'dan veya bir JSON dosyasından içe aktarın.",
+      "localClient": "Yerel VS Code'dan içe aktar"
     },
     "sort": {
       "weekly": "Haftalık kota",
@@ -2290,7 +2327,7 @@
       "desc": "Hesap değiştirme, VS Code yerel kimlik doğrulama deposunun okunmasını ve şifre çözme/geri yazma için sistem kimlik bilgisi hizmetinin kullanılmasını gerektirir; veriler yalnızca yerelde işlenir.",
       "inject": "Tek tıkla geçiş: Bu araç VS Code'un yerel şifreleme materyalini (DPAPI/Keychain/Secret Service) okur, state.vscdb içindeki kimlik doğrulama oturumunu çözer, GitHub Copilot belirtecini değiştirir ve yeniden şifreler — tüm işlem cihazınızda yerel olarak yapılır.",
       "reason": "İzin kapsamı: VS Code kimlik doğrulama veritabanını (state.vscdb) okumak ve şifre çözme/geri yazma için sistem şifreleme yeteneklerini (Windows DPAPI / macOS Keychain / Linux Secret Service) çağırmak.",
-      "storage": "Okuma kapsamı: yalnızca GitHub oturum açma oturumu ile ilgili veriler işlenir; tüm işlemler yerel olarak yürütülür."
+      "storage": "Veri kapsamı: yerel içe aktarma VS Code içindeki GitHub oturum açma oturumlarını okur, hesap değiştirme aynı kayıtları günceller; OAuth, token içe aktarma, yerel içe aktarma doğrulaması ve kota yenileme gerekli kimlik doğrulama alanlarıyla GitHub resmi API'lerini çağırır. state.vscdb ve sistem anahtarları yüklenmez."
     }
   },
   "dashboard": {

@@ -7,6 +7,33 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.22.12] - 2026-04-27
+
+### Fixed
+- **Codex Local API Service port conflicts are now recoverable in-app**: gateway restart stops the previous listener before rebinding, occupied-port failures show a clear cleanup action, and the configured local port can be cleared before restarting the service.
+
+### Added
+- **Codex account lists now surface subscription expiry**: OAuth accounts persist `chatgpt_subscription_active_until`, display expiry state in compact, card, and table views, support expiry filtering/sorting, and include subscription expiry metadata in `sub2api` exports.
+- **GitHub Copilot accounts can now import the current local VS Code session**: the import modal can read VS Code's selected Copilot GitHub login and matching GitHub auth session, validate it through official GitHub/Copilot APIs, and save it as a managed account.
+
+---
+## [0.22.11] - 2026-04-26
+
+### Changed
+- **Codex token management now uses Cockpit's account store as the single authority**: managed Codex workflows no longer auto-read unmanaged official `auth.json` or Keychain snapshots back into Cockpit before injection, preventing stale local credentials from overwriting refreshed account-center tokens.
+- **Codex managed CLI runs now preserve rotated refresh tokens more reliably**: account-scoped execution serializes token refresh, projection writes, official CLI execution, and post-run token sync from Cockpit-marked managed homes so a rotated `refresh_token` chain is written back before another managed consumer can reuse the old value.
+- **Codex API Key handling now masks secrets by default**: API Key account cards and credential inputs hide keys unless explicitly revealed, and reveal state resets when switching accounts or managed provider keys.
+- **Dashboard current-account cards now stay populated for account-management-only users**: when a platform has managed accounts but no resolved current account, the dashboard shows the first account from the account data instead of an empty current-account slot.
+- **Original sidebar layout now supports up to three platform entries**: Platform Layout can select up to three sidebar entries in the original layout, and the sidebar shows all three before moving remaining platforms under More Platforms.
+
+### Added
+- **Dashboard platform cards now include a quick hide action**: platform cards can be hidden directly from the dashboard while using the same dashboard visibility setting managed by Platform Layout.
+- **Codex model preset management is easier to reach from provider configuration**: the Codex model provider manager can open the preset editor directly, reducing the steps needed to maintain wake-up model presets.
+
+### Fixed
+- **Windows tray menu refresh no longer deadlocks after runtime updates**: tray rebuilds no longer wrap Tauri menu construction in an extra main-thread dispatch, so background account, quota, or layout refreshes keep menu clicks, navigation, and window restore actions responsive.
+
+---
 ## [0.22.10] - 2026-04-24
 
 ### Changed

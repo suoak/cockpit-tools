@@ -227,14 +227,14 @@
     "title": "플랫폼 레이아웃",
     "sidebarSelected": "사이드바 선택 {{count}}/{{max}}",
     "reset": "기본값으로 재설정",
-    "tip": "드래그하여 순서를 변경하세요. 사이드바에는 최대 2개 플랫폼만 표시할 수 있습니다. 1개만 선택하면 1개만 표시됩니다.",
+    "tip": "드래그하여 순서를 변경하세요. 사이드바에는 최대 3개 플랫폼만 표시할 수 있습니다. 1개만 선택하면 1개만 표시됩니다.",
     "sidebarToggle": "사이드바에 표시",
     "dashboardToggle": "대시보드에 표시",
     "trayToggle": "트레이에 표시",
     "hiddenBadge": "숨김",
     "openFromMore": "플랫폼 레이아웃 관리",
     "dragHandleLabel": "드래그하여 순서 변경",
-    "tipWithGroups": "드래그로 정렬할 수 있습니다. 사이드바에는 최대 2개의 항목만 표시할 수 있습니다. 그룹 하위 플랫폼은 사이드바/대시보드 토글을 제공하지 않으며 메뉴바 표시와 기본 플랫폼 전환에만 사용됩니다.",
+    "tipWithGroups": "드래그로 정렬할 수 있습니다. 사이드바에는 최대 3개의 항목만 표시할 수 있습니다. 그룹 하위 플랫폼은 사이드바/대시보드 토글을 제공하지 않으며 메뉴바 표시와 기본 플랫폼 전환에만 사용됩니다.",
     "addGroup": "그룹 추가",
     "editGroup": "그룹 편집",
     "deleteGroup": "그룹 삭제",
@@ -1545,6 +1545,7 @@
     "authorizing": "시스템 권한 승인을 기다리는 중...",
     "installFailed": "시스템 설치에 실패했습니다. 나중에 다시 시도하거나 수동으로 다운로드하세요.",
     "restartRequiredAfterInstall": "업데이트는 설치되었습니다. 전환을 완료하려면 앱을 수동으로 다시 시작하세요.",
+    "stoppingApiService": "API 서비스 중지 중...",
     "skipThisVersion": "이 버전 건너뛰기",
     "skipFailed": "이 업데이트를 건너뛰지 못했습니다: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "내보내기 형식",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api 형식",
-      "cpa": "cpa 형식"
+      "cpa": "cpa 형식",
+      "downloadAll": "모두 다운로드",
+      "cpaCardTitle": "계정 {{index}}",
+      "savedFolder": "저장 폴더",
+      "savedPath": "저장 경로"
     },
     "localAccess": {
       "title": "API 서비스",
@@ -1716,6 +1721,12 @@
       "clearStats": "통계 지우기",
       "clearStatsConfirm": "API 서비스 통계를 모두 지울까요?",
       "clearStatsSuccess": "API 서비스 통계를 지웠습니다",
+      "killPortAction": "포트 정리",
+      "killPortTitle": "API 서비스 포트 정리",
+      "killPortConfirmMessage": "로컬 포트 {{port}}를 사용하는 다른 프로세스를 강제로 종료한 뒤 API 서비스를 다시 시작합니다. 계속할까요?",
+      "killPortSuccess": "포트를 정리했습니다({{count}}개 프로세스 종료)",
+      "killPortSuccessNone": "포트를 확인했습니다. 외부 프로세스가 사용 중이지 않습니다.",
+      "killPortSuccessUnknown": "API 서비스 포트를 정리했습니다",
       "refreshStats": "통계 새로고침",
       "refreshStatsSuccess": "API 서비스 통계를 새로고침했습니다",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "활성화 후 전환",
       "apiPortUrl": "API 포트 URL",
       "modelId": "모델 ID",
-      "modelIdPlaceholder": "모델 ID 선택"
+      "modelIdPlaceholder": "모델 ID 선택",
+      "modelIdViewOnly": "보기 전용"
     },
     "local": {
       "desc": "~/.codex/auth.json에서 현재 로그인된 계정 가져오기",
@@ -1800,7 +1812,8 @@
       "weekly": "주간 할당량",
       "hourly": "5시간 할당량",
       "weeklyReset": "주간 할당량 재설정 시간",
-      "hourlyReset": "5시간 할당량 재설정 시간"
+      "hourlyReset": "5시간 할당량 재설정 시간",
+      "subscriptionExpiry": "구독 만료"
     },
     "opencodeSwitch": "OpenCode 전환 스위치",
     "opencodeSwitchDesc": "OpenCode에서 Codex 계정 정보를 동기화하여 전환",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "API 키는 기본 URL과 동일할 수 없습니다."
       },
       "addAndSwitchSuccess": "추가 후 전환됨: {{email}}",
+      "showApiKey": "API Key 표시",
+      "hideApiKey": "API Key 숨기기",
+      "apiKeyHiddenHint": "API Key가 숨겨져 있습니다. 클릭하면 표시됩니다.",
       "actions": {
         "addAndSwitch": "추가 후 전환"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "model_context_window를 작성합니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
         "partialDetected": "현재 하나의 관리 필드(model_context_window={{context}}, model_auto_compact_token_limit={{compact}})만 설정되어 있습니다. 저장하면 현재 구성표를 사용하여 두 필드가 모두 다시 작성됩니다.",
         "notSet": "설정되지 않음"
-      }
+      },
+      "managePresets": "모델 프리셋"
     },
     "quickSwitch": {
       "action": "공급자 빠른 전환",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "그룹에 추가"
+    },
+    "subscription": {
+      "label": "구독 만료",
+      "column": "만료",
+      "unknown": "재인증",
+      "missingDetail": "재인증 후 가져오기",
+      "expired": "만료됨",
+      "hoursLeft": "{{count}}시간",
+      "daysLeft": "{{count}}일",
+      "over99Days": "99일+",
+      "titleWithDate": "구독 만료: {{date}}",
+      "titleUnknown": "재인증 후 구독 만료 가져오기",
+      "filterLabel": "만료 필터",
+      "filterAll": "전체 ({{count}})",
+      "filterExpired": "만료됨 ({{count}})",
+      "filterWithin24h": "24시간 ({{count}})",
+      "filterWithin7d": "7일 ({{count}})",
+      "filterWithin30d": "30일 ({{count}})",
+      "filterMissing": "알 수 없음 ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "GitHub Copilot 액세스 토큰 또는 내보낸 JSON 데이터를 붙여넣으세요."
     },
     "import": {
-      "localDesc": "로컬에 로그인된 세션에서 GitHub Copilot 계정을 가져오기."
+      "localDesc": "로컬 VS Code 또는 JSON 파일에서 GitHub Copilot 계정 데이터를 가져옵니다.",
+      "localClient": "로컬 VS Code에서 가져오기"
     },
     "sort": {
       "weekly": "주간 할당량",
@@ -2290,7 +2327,7 @@
       "desc": "계정 전환 시 VS Code 로컬 인증 저장소를 읽고 시스템 자격 증명 서비스를 사용해 복호화 및 재기록이 필요하며, 데이터는 로컬에서만 처리됩니다.",
       "inject": "원클릭 전환: 이 도구는 로컬 VS Code 암호화 자료(DPAPI/Keychain/Secret Service)를 읽어 state.vscdb의 인증 세션을 복호화한 뒤 GitHub Copilot 토큰을 교체하고 다시 암호화합니다. 모든 처리는 로컬 장치에서만 수행됩니다.",
       "reason": "권한 범위: VS Code 인증 데이터베이스(state.vscdb)를 읽고 시스템 암호화 기능(Windows DPAPI / macOS Keychain / Linux Secret Service)을 호출해 복호화 및 재기록을 수행합니다.",
-      "storage": "읽기 범위: GitHub 로그인 세션 관련 데이터만 처리하며, 모든 과정은 로컬에서 실행됩니다."
+      "storage": "데이터 범위: 로컬 가져오기는 VS Code의 GitHub 로그인 세션을 읽고, 계정 전환은 같은 항목을 업데이트합니다. OAuth, 토큰 가져오기, 로컬 가져오기 검증, 할당량 새로고침은 필요한 인증 필드만 GitHub 공식 API로 전송합니다. state.vscdb와 시스템 키는 업로드하지 않습니다."
     }
   },
   "dashboard": {

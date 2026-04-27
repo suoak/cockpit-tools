@@ -227,14 +227,14 @@
     "title": "Layout piattaforme",
     "sidebarSelected": "Selezionate nella barra laterale {{count}}/{{max}}",
     "reset": "Ripristina predefiniti",
-    "tip": "Trascina per riordinare. Nella barra laterale possono essere mostrate al massimo due piattaforme. Se ne selezioni solo una, verrà mostrata solo una.",
+    "tip": "Trascina per riordinare. Nella barra laterale possono essere mostrate al massimo tre piattaforme. Se ne selezioni solo una, verrà mostrata solo una.",
     "sidebarToggle": "Mostra nella barra laterale",
     "dashboardToggle": "Mostra nella dashboard",
     "trayToggle": "Mostra nell'area di notifica",
     "hiddenBadge": "Nascosto",
     "openFromMore": "Gestisci layout piattaforme",
     "dragHandleLabel": "Trascina per riordinare",
-    "tipWithGroups": "Trascina per riordinare. Nella barra laterale possono essere mostrate al massimo due voci. I sotto-elementi del gruppo non hanno i toggle barra laterale/dashboard e servono solo per la barra dei menu e il cambio della piattaforma predefinita.",
+    "tipWithGroups": "Trascina per riordinare. Nella barra laterale possono essere mostrate al massimo tre voci. I sotto-elementi del gruppo non hanno i toggle barra laterale/dashboard e servono solo per la barra dei menu e il cambio della piattaforma predefinita.",
     "addGroup": "Aggiungi gruppo",
     "editGroup": "Modifica gruppo",
     "deleteGroup": "Elimina gruppo",
@@ -1545,6 +1545,7 @@
     "authorizing": "In attesa dell'autorizzazione di sistema...",
     "installFailed": "Installazione di sistema non riuscita. Riprova più tardi o scarica manualmente il pacchetto.",
     "restartRequiredAfterInstall": "L'aggiornamento è installato. Riavvia manualmente l'app per completare il passaggio.",
+    "stoppingApiService": "Arresto del servizio API...",
     "skipThisVersion": "Salta questa versione",
     "skipFailed": "Impossibile saltare questo aggiornamento: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Formato di esportazione",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "Formato sub2api",
-      "cpa": "Formato cpa"
+      "cpa": "Formato cpa",
+      "downloadAll": "Scarica tutto",
+      "cpaCardTitle": "Account {{index}}",
+      "savedFolder": "Cartella salvata",
+      "savedPath": "Percorso salvato"
     },
     "localAccess": {
       "title": "Servizio API",
@@ -1716,6 +1721,12 @@
       "clearStats": "Cancella statistiche",
       "clearStatsConfirm": "Cancellare tutte le statistiche del servizio API?",
       "clearStatsSuccess": "Le statistiche del servizio API sono state cancellate",
+      "killPortAction": "Pulisci porta",
+      "killPortTitle": "Pulisci porta del servizio API",
+      "killPortConfirmMessage": "Gli altri processi che usano la porta locale {{port}} verranno chiusi forzatamente, poi il servizio API verrà riavviato. Continuare?",
+      "killPortSuccess": "Porta pulita ({{count}} processo/i chiuso/i)",
+      "killPortSuccessNone": "Porta controllata. Nessun processo esterno la sta usando.",
+      "killPortSuccessUnknown": "Porta del servizio API pulita",
       "refreshStats": "Aggiorna statistiche",
       "refreshStatsSuccess": "Le statistiche del servizio API sono state aggiornate",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Abilita e cambia",
       "apiPortUrl": "URL porta API",
       "modelId": "ID modello",
-      "modelIdPlaceholder": "Seleziona ID modello"
+      "modelIdPlaceholder": "Seleziona ID modello",
+      "modelIdViewOnly": "Solo vista"
     },
     "local": {
       "desc": "Importa l'account attuale da ~/.codex/auth.json",
@@ -1800,7 +1812,8 @@
       "weekly": "Quota settimanale",
       "hourly": "Quota 5 ore",
       "weeklyReset": "Ora di reset settimanale",
-      "hourlyReset": "Ora di reset 5 ore"
+      "hourlyReset": "Ora di reset 5 ore",
+      "subscriptionExpiry": "Scadenza abbonamento"
     },
     "opencodeSwitch": "Interruttore OpenCode",
     "opencodeSwitchDesc": "Sincronizza il cambio dell'account Codex in OpenCode",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "La chiave API non può coincidere con l'URL di base."
       },
       "addAndSwitchSuccess": "Aggiunto e selezionato: {{email}}",
+      "showApiKey": "Mostra API Key",
+      "hideApiKey": "Nascondi API Key",
+      "apiKeyHiddenHint": "API Key nascosta. Fai clic per mostrarla.",
       "actions": {
         "addAndSwitch": "Aggiungi e passa"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "Scrive model_context_window. Modificabile solo in modalità personalizzata.",
         "partialDetected": "Attualmente è impostato un solo campo gestito: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio riscriverà entrambi i campi utilizzando lo schema corrente.",
         "notSet": "Non impostato"
-      }
+      },
+      "managePresets": "Preset modello"
     },
     "quickSwitch": {
       "action": "Cambio rapido provider",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Aggiungi al gruppo"
+    },
+    "subscription": {
+      "label": "Scadenza abbon.",
+      "column": "Scade",
+      "unknown": "Riautorizza",
+      "missingDetail": "Riautorizza per leggere",
+      "expired": "Scaduto",
+      "hoursLeft": "{{count}} h",
+      "daysLeft": "{{count}} g",
+      "over99Days": "99+ g",
+      "titleWithDate": "L'abbonamento scade: {{date}}",
+      "titleUnknown": "Riautorizza per leggere la scadenza",
+      "filterLabel": "Filtro scadenza",
+      "filterAll": "Tutti ({{count}})",
+      "filterExpired": "Scaduti ({{count}})",
+      "filterWithin24h": "24 h ({{count}})",
+      "filterWithin7d": "7 g ({{count}})",
+      "filterWithin30d": "30 g ({{count}})",
+      "filterMissing": "Sconosciuti ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "Incolla il token di accesso GitHub Copilot o i dati JSON esportati."
     },
     "import": {
-      "localDesc": "Importa account GitHub Copilot da sessioni locali con accesso."
+      "localDesc": "Importa i dati account GitHub Copilot da VS Code locale o da un file JSON.",
+      "localClient": "Importa da VS Code locale"
     },
     "sort": {
       "weekly": "Quota settimanale",
@@ -2290,7 +2327,7 @@
       "desc": "Il cambio account richiede la lettura dello storage di autenticazione locale di VS Code e l’uso del servizio credenziali di sistema per decifrare e riscrivere; i dati vengono elaborati solo in locale.",
       "inject": "Cambio con un clic: questo strumento legge il materiale di crittografia locale di VS Code (DPAPI/Keychain/Secret Service), decifra la sessione di autenticazione in state.vscdb, sostituisce il token GitHub Copilot e cifra di nuovo il tutto — interamente in locale sul tuo dispositivo.",
       "reason": "Ambito permessi: leggere il database di autenticazione di VS Code (state.vscdb) e usare la cifratura di sistema (Windows DPAPI / macOS Keychain / Linux Secret Service) per decifrare e riscrivere.",
-      "storage": "Ambito di lettura: vengono trattati solo i dati relativi alle sessioni di accesso GitHub; tutti i processi vengono eseguiti in locale."
+      "storage": "Ambito dati: l’importazione locale legge le sessioni di accesso GitHub in VS Code e il cambio account aggiorna gli stessi record; OAuth, importazione token, verifica dell’importazione locale e aggiornamento quota chiamano le API ufficiali GitHub con i campi di autenticazione necessari. state.vscdb e chiavi di sistema non vengono caricati."
     }
   },
   "dashboard": {

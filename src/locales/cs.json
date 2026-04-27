@@ -227,14 +227,14 @@
     "title": "Rozložení platforem",
     "sidebarSelected": "Vybráno v postranním panelu {{count}}/{{max}}",
     "reset": "Obnovit výchozí",
-    "tip": "Přetažením změňte pořadí. V postranním panelu lze zobrazit nejvýše dvě platformy. Pokud je vybrána jen jedna, zobrazí se pouze jedna.",
+    "tip": "Přetažením změňte pořadí. V postranním panelu lze zobrazit nejvýše tři platformy. Pokud je vybrána jen jedna, zobrazí se pouze jedna.",
     "sidebarToggle": "Zobrazit v postranním panelu",
     "dashboardToggle": "Zobrazit na nástěnce",
     "trayToggle": "Zobrazit v systémové liště",
     "hiddenBadge": "Skryto",
     "openFromMore": "Spravovat rozložení platforem",
     "dragHandleLabel": "Přetažením změnit pořadí",
-    "tipWithGroups": "Přetažením změňte pořadí. V postranním panelu mohou být nejvýše dvě položky. Podřízené platformy skupiny nelze zobrazit v postranním panelu/přehledu; slouží jen pro lištu a přepnutí výchozí platformy.",
+    "tipWithGroups": "Přetažením změňte pořadí. V postranním panelu mohou být nejvýše tři položky. Podřízené platformy skupiny nelze zobrazit v postranním panelu/přehledu; slouží jen pro lištu a přepnutí výchozí platformy.",
     "addGroup": "Přidat skupinu",
     "editGroup": "Upravit skupinu",
     "deleteGroup": "Smazat skupinu",
@@ -1545,6 +1545,7 @@
     "authorizing": "Čeká se na autorizaci systému...",
     "installFailed": "Instalace do systému selhala. Zkuste to později nebo stáhněte balíček ručně.",
     "restartRequiredAfterInstall": "Aktualizace je nainstalována. Dokončete přepnutí ručním restartem aplikace.",
+    "stoppingApiService": "Zastavuji službu API...",
     "skipThisVersion": "Přeskočit tuto verzi",
     "skipFailed": "Tuto aktualizaci se nepodařilo přeskočit: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Formát exportu",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api formát",
-      "cpa": "cpa formát"
+      "cpa": "cpa formát",
+      "downloadAll": "Stáhnout vše",
+      "cpaCardTitle": "Účet {{index}}",
+      "savedFolder": "Uložená složka",
+      "savedPath": "Uložená cesta"
     },
     "localAccess": {
       "title": "API služba",
@@ -1716,6 +1721,12 @@
       "clearStats": "Vymazat statistiky",
       "clearStatsConfirm": "Vymazat všechny statistiky služby API?",
       "clearStatsSuccess": "Statistiky služby API byly vymazány",
+      "killPortAction": "Vyčistit port",
+      "killPortTitle": "Vyčistit port služby API",
+      "killPortConfirmMessage": "Tím se vynuceně ukončí ostatní procesy používající místní port {{port}} a poté se služba API znovu spustí. Pokračovat?",
+      "killPortSuccess": "Port byl vyčištěn (ukončeno {{count}} procesů)",
+      "killPortSuccessNone": "Port byl zkontrolován. Nepoužívá ho žádný externí proces.",
+      "killPortSuccessUnknown": "Port služby API byl vyčištěn",
       "refreshStats": "Obnovit statistiky",
       "refreshStatsSuccess": "Statistiky služby API byly obnoveny",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Zapnout a přepnout",
       "apiPortUrl": "URL portu API",
       "modelId": "ID modelu",
-      "modelIdPlaceholder": "Vyberte ID modelu"
+      "modelIdPlaceholder": "Vyberte ID modelu",
+      "modelIdViewOnly": "Pouze zobrazení"
     },
     "local": {
       "desc": "Importovat aktuální účet z ~/.codex/auth.json",
@@ -1800,7 +1812,8 @@
       "weekly": "Týdenní kvóta",
       "hourly": "5hodinová kvóta",
       "weeklyReset": "Čas týdenního resetu",
-      "hourlyReset": "Čas resetu 5 hodin"
+      "hourlyReset": "Čas resetu 5 hodin",
+      "subscriptionExpiry": "Konec předplatného"
     },
     "opencodeSwitch": "Přepínač OpenCode",
     "opencodeSwitchDesc": "Synchronizovat přepnutí účtu Codex v OpenCode",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "Klíč API nemůže být stejný jako základní URL."
       },
       "addAndSwitchSuccess": "Přidáno a přepnuto: {{email}}",
+      "showApiKey": "Zobrazit API Key",
+      "hideApiKey": "Skrýt API Key",
+      "apiKeyHiddenHint": "API Key je skrytý. Kliknutím zobrazíte.",
       "actions": {
         "addAndSwitch": "Přidat a přepnout"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "Zapíše model_context_window. Upravitelné pouze v uživatelském režimu.",
         "partialDetected": "Aktuálně je nastaveno pouze jedno spravované pole: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Uložením se přepíší obě pole podle aktuálního schématu.",
         "notSet": "Nenastaveno"
-      }
+      },
+      "managePresets": "Předvolby modelů"
     },
     "quickSwitch": {
       "action": "Rychle přepnout poskytovatele",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Přidat do skupiny"
+    },
+    "subscription": {
+      "label": "Konec předpl.",
+      "column": "Konec",
+      "unknown": "Ověřit znovu",
+      "missingDetail": "Ověřit znovu pro načtení",
+      "expired": "Vypršelo",
+      "hoursLeft": "{{count}} h",
+      "daysLeft": "{{count}} d",
+      "over99Days": "99+ d",
+      "titleWithDate": "Předplatné končí: {{date}}",
+      "titleUnknown": "Ověřte znovu pro načtení konce předplatného",
+      "filterLabel": "Filtr konce",
+      "filterAll": "Vše ({{count}})",
+      "filterExpired": "Vypršela ({{count}})",
+      "filterWithin24h": "24 h ({{count}})",
+      "filterWithin7d": "7 d ({{count}})",
+      "filterWithin30d": "30 d ({{count}})",
+      "filterMissing": "Neznámé ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "Vložte access token GitHub Copilot nebo exportovaná data JSON."
     },
     "import": {
-      "localDesc": "Importovat účty GitHub Copilot z místně přihlášených relací."
+      "localDesc": "Importujte data účtu GitHub Copilot z místního VS Code nebo souboru JSON.",
+      "localClient": "Importovat z místního VS Code"
     },
     "sort": {
       "weekly": "Týdenní kvóta",
@@ -2290,7 +2327,7 @@
       "desc": "Přepnutí účtu vyžaduje čtení lokálního úložiště ověření ve VS Code a použití systémové služby přihlašovacích údajů pro dešifrování a zpětný zápis; data se zpracovávají pouze lokálně.",
       "inject": "Přepnutí jedním kliknutím: Tento nástroj načte lokální šifrovací materiál VS Code (DPAPI/Keychain/Secret Service), dešifruje autentizační relaci ve state.vscdb, nahradí token GitHub Copilot a znovu ji zašifruje — vše lokálně na vašem zařízení.",
       "reason": "Rozsah oprávnění: čtení databáze ověření VS Code (state.vscdb) a volání systémového šifrování (Windows DPAPI / macOS Keychain / Linux Secret Service) pro dešifrování a zpětný zápis.",
-      "storage": "Rozsah čtení: zpracovávají se pouze položky související s relací přihlášení GitHub a veškeré procesy probíhají lokálně."
+      "storage": "Rozsah dat: místní import čte relace přihlášení GitHub ve VS Code a přepnutí účtu aktualizuje stejné záznamy; OAuth, import tokenu, ověření místního importu a obnovení kvót volají oficiální API GitHub s nezbytnými autentizačními poli. state.vscdb ani systémové klíče se neodesílají."
     }
   },
   "dashboard": {

@@ -22,7 +22,7 @@ import {
   usePlatformLayoutStore,
 } from '../stores/usePlatformLayoutStore';
 import { Page } from '../types/navigation';
-import { Users, CheckCircle2, Sparkles, RotateCw, Play, Github, Tag, ChevronDown } from 'lucide-react';
+import { Users, CheckCircle2, Sparkles, RotateCw, Play, Github, Tag, ChevronDown, EyeOff } from 'lucide-react';
 import { TagEditModal } from '../components/TagEditModal';
 import { Account } from '../types/account';
 import {
@@ -111,32 +111,18 @@ function toFiniteNumber(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-type TimestampedAccount = {
-  id: string;
-  last_used?: number | null;
-  created_at?: number | null;
-};
-
-function resolveCurrentAccountById<T extends { id: string }>(
+function resolveDashboardCurrentAccount<T extends { id: string }>(
   accounts: T[],
   currentId: string | null | undefined,
+  currentAccount?: T | null,
 ): T | null {
-  if (!currentId) return null;
-  return accounts.find((account) => account.id === currentId) ?? null;
-}
-
-function resolveCurrentOrMostRecentAccount<T extends TimestampedAccount>(
-  accounts: T[],
-  currentId: string | null | undefined,
-): T | null {
-  if (accounts.length === 0) return null;
-  const current = resolveCurrentAccountById(accounts, currentId);
-  if (current) return current;
-  return accounts.reduce((prev, curr) => {
-    const prevScore = prev.last_used || prev.created_at || 0;
-    const currScore = curr.last_used || curr.created_at || 0;
-    return currScore > prevScore ? curr : prev;
-  });
+  const normalizedCurrentId = currentId?.trim();
+  if (normalizedCurrentId) {
+    const matched = accounts.find((account) => account.id === normalizedCurrentId);
+    if (matched) return matched;
+    if (currentAccount?.id === normalizedCurrentId) return currentAccount;
+  }
+  return accounts[0] ?? null;
 }
 
 function getZedRecommendationScore(account: ZedAccount): { remainingPercent: number; freshness: number } {
@@ -179,7 +165,7 @@ export function DashboardPage({
   topCenterBanner,
 }: DashboardPageProps) {
   const { t } = useTranslation();
-  
+
   const [tagModalState, setTagModalState] = React.useState<{ accountId: string; platform: PlatformId | 'codebuddy_cn'; tags: string[] } | null>(null);
   const [dashboardCardCollapse, setDashboardCardCollapse] = React.useState<DashboardCardCollapseState>({
     workbuddy: false,
@@ -243,7 +229,7 @@ export function DashboardPage({
     }
   };
 
-  const { orderedEntryIds, hiddenEntryIds, platformGroups } = usePlatformLayoutStore();
+  const { orderedEntryIds, hiddenEntryIds, platformGroups, setHiddenEntry } = usePlatformLayoutStore();
   const hiddenEntrySet = useMemo(() => new Set(hiddenEntryIds), [hiddenEntryIds]);
   const visibleEntryOrder = useMemo(
     () => orderedEntryIds.filter((entryId) => !hiddenEntrySet.has(entryId)),
@@ -286,10 +272,10 @@ export function DashboardPage({
     };
   }, []);
 
-  
+
   // Antigravity Data
-  const { 
-    accounts: agAccounts, 
+  const {
+    accounts: agAccounts,
     currentAccount: agCurrent,
     switchAccount: switchAgAccount,
     fetchAccounts: fetchAgAccounts,
@@ -297,8 +283,8 @@ export function DashboardPage({
   } = useAccountStore();
 
   // Codex Data
-  const { 
-    accounts: codexAccounts, 
+  const {
+    accounts: codexAccounts,
     currentAccount: codexCurrent,
     switchAccount: switchCodexAccount,
     fetchAccounts: fetchCodexAccounts,
@@ -391,13 +377,11 @@ export function DashboardPage({
   const codexCurrentId = codexCurrent?.id;
 
   const agCurrentAccount = useMemo(() => {
-    if (!agCurrentId) return null;
-    return agAccounts.find((account) => account.id === agCurrentId) ?? agCurrent ?? null;
+    return resolveDashboardCurrentAccount(agAccounts, agCurrentId, agCurrent);
   }, [agAccounts, agCurrent, agCurrentId]);
 
   const codexCurrentAccount = useMemo(() => {
-    if (!codexCurrentId) return null;
-    return codexAccounts.find((account) => account.id === codexCurrentId) ?? codexCurrent ?? null;
+    return resolveDashboardCurrentAccount(codexAccounts, codexCurrentId, codexCurrent);
   }, [codexAccounts, codexCurrent, codexCurrentId]);
 
   React.useEffect(() => {
@@ -706,7 +690,7 @@ export function DashboardPage({
   const handleRefreshAgCard = async () => {
     if (cardRefreshing.ag) return;
     setCardRefreshing(prev => ({ ...prev, ag: true }));
-    const idsToRefresh = [agCurrentId, agRecommended?.id].filter(Boolean) as string[];
+    const idsToRefresh = Array.from(new Set([agCurrentAccount?.id, agRecommended?.id].filter(Boolean))) as string[];
     try {
       for (const id of idsToRefresh) {
         await useAccountStore.getState().refreshQuota(id);
@@ -721,7 +705,7 @@ export function DashboardPage({
   const handleRefreshCodexCard = async () => {
     if (cardRefreshing.codex) return;
     setCardRefreshing(prev => ({ ...prev, codex: true }));
-    const idsToRefresh = [codexCurrentId, codexRecommended?.id].filter(Boolean) as string[];
+    const idsToRefresh = Array.from(new Set([codexCurrentAccount?.id, codexRecommended?.id].filter(Boolean))) as string[];
     try {
       for (const id of idsToRefresh) {
         await useCodexAccountStore.getState().refreshQuota(id);
@@ -736,7 +720,7 @@ export function DashboardPage({
   const handleRefreshZedCard = async () => {
     if (cardRefreshing.zed) return;
     setCardRefreshing((prev) => ({ ...prev, zed: true }));
-    const idsToRefresh = [zedCurrentId, zedRecommended?.id].filter(Boolean) as string[];
+    const idsToRefresh = [zedCurrent?.id, zedRecommended?.id].filter(Boolean) as string[];
     try {
       for (const id of idsToRefresh) {
         await useZedAccountStore.getState().refreshToken(id);
@@ -1157,10 +1141,11 @@ export function DashboardPage({
   // Antigravity Recommendation Logic
   const agRecommended = useMemo(() => {
     if (agAccounts.length <= 1) return null;
-    
+    const currentId = agCurrentAccount?.id;
+
     // Simple logic: find account with highest overall quota that isn't current
     const others = agAccounts.filter((a) => {
-      if (a.id === agCurrentId) return false;
+      if (a.id === currentId) return false;
       if (a.disabled) return false;
       if (a.quota?.is_forbidden) return false;
       if (!a.quota?.models || a.quota.models.length === 0) return false;
@@ -1176,17 +1161,18 @@ export function DashboardPage({
         const total = acc.quota.models.reduce((sum, m) => sum + m.percentage, 0);
         return total / acc.quota.models.length;
       };
-      
+
       return getScore(curr) > getScore(prev) ? curr : prev;
     });
-  }, [agAccounts, agCurrentId]);
+  }, [agAccounts, agCurrentAccount?.id]);
 
   // Codex Recommendation Logic
   const codexRecommended = useMemo(() => {
     if (codexAccounts.length <= 1) return null;
+    const currentId = codexCurrentAccount?.id;
 
     const others = codexAccounts.filter((a) => {
-      if (a.id === codexCurrentId) return false;
+      if (a.id === currentId) return false;
       if (!a.quota) return false;
       return true;
     });
@@ -1199,60 +1185,60 @@ export function DashboardPage({
       };
       return getScore(curr) > getScore(prev) ? curr : prev;
     });
-  }, [codexAccounts, codexCurrentId]);
+  }, [codexAccounts, codexCurrentAccount?.id]);
 
   const githubCopilotCurrent = useMemo(
-    () => resolveCurrentOrMostRecentAccount(githubCopilotAccounts, githubCopilotCurrentId),
+    () => resolveDashboardCurrentAccount(githubCopilotAccounts, githubCopilotCurrentId),
     [githubCopilotAccounts, githubCopilotCurrentId],
   );
 
   const windsurfCurrent = useMemo(
-    () => resolveCurrentAccountById(windsurfAccounts, windsurfCurrentId),
+    () => resolveDashboardCurrentAccount(windsurfAccounts, windsurfCurrentId),
     [windsurfAccounts, windsurfCurrentId],
   );
 
   const kiroCurrent = useMemo(
-    () => resolveCurrentAccountById(kiroAccounts, kiroCurrentId),
+    () => resolveDashboardCurrentAccount(kiroAccounts, kiroCurrentId),
     [kiroAccounts, kiroCurrentId],
   );
 
   const cursorCurrent = useMemo(
-    () => resolveCurrentAccountById(cursorAccounts, cursorCurrentId),
+    () => resolveDashboardCurrentAccount(cursorAccounts, cursorCurrentId),
     [cursorAccounts, cursorCurrentId],
   );
 
   const geminiCurrent = useMemo(
-    () => resolveCurrentAccountById(geminiAccounts, geminiCurrentId),
+    () => resolveDashboardCurrentAccount(geminiAccounts, geminiCurrentId),
     [geminiAccounts, geminiCurrentId],
   );
 
   const codebuddyCurrent = useMemo(
-    () => resolveCurrentAccountById(codebuddyAccounts, codebuddyCurrentId),
+    () => resolveDashboardCurrentAccount(codebuddyAccounts, codebuddyCurrentId),
     [codebuddyAccounts, codebuddyCurrentId],
   );
 
   const codebuddyCnCurrent = useMemo(
-    () => resolveCurrentAccountById(codebuddyCnAccounts, codebuddyCnCurrentId),
+    () => resolveDashboardCurrentAccount(codebuddyCnAccounts, codebuddyCnCurrentId),
     [codebuddyCnAccounts, codebuddyCnCurrentId],
   );
 
   const qoderCurrent = useMemo(
-    () => resolveCurrentAccountById(qoderAccounts, qoderCurrentId),
+    () => resolveDashboardCurrentAccount(qoderAccounts, qoderCurrentId),
     [qoderAccounts, qoderCurrentId],
   );
 
   const traeCurrent = useMemo(
-    () => resolveCurrentAccountById(traeAccounts, traeCurrentId),
+    () => resolveDashboardCurrentAccount(traeAccounts, traeCurrentId),
     [traeAccounts, traeCurrentId],
   );
 
   const workbuddyCurrent = useMemo(
-    () => resolveCurrentAccountById(workbuddyAccounts, workbuddyCurrentId),
+    () => resolveDashboardCurrentAccount(workbuddyAccounts, workbuddyCurrentId),
     [workbuddyAccounts, workbuddyCurrentId],
   );
 
   const zedCurrent = useMemo(
-    () => resolveCurrentAccountById(zedAccounts, zedCurrentId),
+    () => resolveDashboardCurrentAccount(zedAccounts, zedCurrentId),
     [zedAccounts, zedCurrentId],
   );
 
@@ -1351,9 +1337,9 @@ export function DashboardPage({
 
       const totalUsedPercent = toFiniteNumber(
         usage.totalPercentUsed ??
-          (hasPlanBudget && planUsed != null && planLimit != null && planLimit > 0
-            ? (planUsed / planLimit) * 100
-            : null),
+        (hasPlanBudget && planUsed != null && planLimit != null && planLimit > 0
+          ? (planUsed / planLimit) * 100
+          : null),
       );
       const usedPercentList = [
         totalUsedPercent,
@@ -1752,14 +1738,14 @@ export function DashboardPage({
     return (
       <div className="account-mini-card">
         <div className="account-mini-header">
-           <div className="account-info-row">
-             <span className="account-email" title={maskAccountText(presentation.displayName)}>
-               {maskAccountText(presentation.displayName)}
-             </span>
-             <span className={`tier-badge ${presentation.planClass}`}>{presentation.planLabel}</span>
-           </div>
+          <div className="account-info-row">
+            <span className="account-email" title={maskAccountText(presentation.displayName)}>
+              {maskAccountText(presentation.displayName)}
+            </span>
+            <span className={`tier-badge ${presentation.planClass}`}>{presentation.planLabel}</span>
+          </div>
         </div>
-        
+
         <div className="account-mini-quotas">
           {quotaDisplayItems.map((item) => (
             <div key={item.key} className="mini-quota-row-stacked">
@@ -1768,7 +1754,7 @@ export function DashboardPage({
                 <span className={`model-pct ${item.quotaClass}`}>{item.valueText}</span>
               </div>
               <div className="mini-progress-track">
-                <div 
+                <div
                   className={`mini-progress-bar ${item.quotaClass}`}
                   style={{ width: `${item.percentage}%` }}
                 />
@@ -1784,28 +1770,28 @@ export function DashboardPage({
         </div>
 
         <div className="account-mini-actions icon-only-row">
-           <button 
-             className="mini-icon-btn"
-             onClick={() => setTagModalState({ accountId: account.id, platform: 'antigravity', tags: account.tags || [] })}
-             title={t('accounts.editTags', '编辑标签')}
-           >
-             <Tag size={14} />
-           </button>
-           <button 
-             className="mini-icon-btn" 
-             onClick={() => handleRefreshAg(account.id)}
-             title={t('common.refresh', '刷新')}
-             disabled={refreshing.has(account.id)}
-           >
-             <RotateCw size={14} className={refreshing.has(account.id) ? 'loading-spinner' : ''} />
-           </button>
-           <button 
-             className="mini-icon-btn"
-             onClick={() => switchAgAccount(account.id)}
-             title={t('dashboard.switch', '切换')}
-           >
-             <Play size={14} />
-           </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => setTagModalState({ accountId: account.id, platform: 'antigravity', tags: account.tags || [] })}
+            title={t('accounts.editTags', '编辑标签')}
+          >
+            <Tag size={14} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => handleRefreshAg(account.id)}
+            title={t('common.refresh', '刷新')}
+            disabled={refreshing.has(account.id)}
+          >
+            <RotateCw size={14} className={refreshing.has(account.id) ? 'loading-spinner' : ''} />
+          </button>
+          <button
+            className="mini-icon-btn"
+            onClick={() => switchAgAccount(account.id)}
+            title={t('dashboard.switch', '切换')}
+          >
+            <Play size={14} />
+          </button>
         </div>
       </div>
     );
@@ -2060,6 +2046,27 @@ export function DashboardPage({
     return rows;
   }, [visibleCardPlatformIds]);
 
+  const handleHidePlatformCard = useCallback((platformId: PlatformId) => {
+    const entryId = orderedEntryIds.find(
+      (candidate) => resolveEntryDefaultPlatformId(candidate, platformGroups) === platformId,
+    );
+    if (!entryId) {
+      return;
+    }
+    setHiddenEntry(entryId, true);
+  }, [orderedEntryIds, platformGroups, setHiddenEntry]);
+
+  const renderHideCardButton = (platformId: PlatformId) => (
+    <button
+      className="header-action-btn header-icon-btn"
+      onClick={() => handleHidePlatformCard(platformId)}
+      title={t('accounts.compact.hide', '隐藏')}
+      aria-label={t('accounts.compact.hide', '隐藏')}
+    >
+      <EyeOff size={14} />
+    </button>
+  );
+
   const renderPlatformCard = (platformId: PlatformId) => {
     if (platformId === 'antigravity') {
       return (
@@ -2069,15 +2076,18 @@ export function DashboardPage({
               <RobotIcon className="" style={{ width: 18, height: 18 }} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshAgCard}
-              disabled={cardRefreshing.ag}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.ag ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshAgCard}
+                disabled={cardRefreshing.ag}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.ag ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2113,15 +2123,18 @@ export function DashboardPage({
               <CodexIcon size={18} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshCodexCard}
-              disabled={cardRefreshing.codex}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.codex ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshCodexCard}
+                disabled={cardRefreshing.codex}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.codex ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2157,15 +2170,18 @@ export function DashboardPage({
               {renderPlatformIcon(platformId, 18)}
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshZedCard}
-              disabled={cardRefreshing.zed}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.zed ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshZedCard}
+                disabled={cardRefreshing.zed}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.zed ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2201,15 +2217,18 @@ export function DashboardPage({
               <Github size={18} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshGitHubCopilotCard}
-              disabled={cardRefreshing.githubCopilot}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.githubCopilot ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshGitHubCopilotCard}
+                disabled={cardRefreshing.githubCopilot}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.githubCopilot ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2245,15 +2264,18 @@ export function DashboardPage({
               <WindsurfIcon className="" style={{ width: 18, height: 18 }} />
               <h3>Windsurf</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshWindsurfCard}
-              disabled={cardRefreshing.windsurf}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.windsurf ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshWindsurfCard}
+                disabled={cardRefreshing.windsurf}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.windsurf ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2289,15 +2311,18 @@ export function DashboardPage({
               <KiroIcon style={{ width: 18, height: 18 }} />
               <h3>Kiro</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshKiroCard}
-              disabled={cardRefreshing.kiro}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.kiro ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshKiroCard}
+                disabled={cardRefreshing.kiro}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.kiro ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2333,15 +2358,18 @@ export function DashboardPage({
               <CursorIcon style={{ width: 18, height: 18 }} />
               <h3>Cursor</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshCursorCard}
-              disabled={cardRefreshing.cursor}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.cursor ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshCursorCard}
+                disabled={cardRefreshing.cursor}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.cursor ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2377,15 +2405,18 @@ export function DashboardPage({
               <GeminiIcon style={{ width: 18, height: 18 }} />
               <h3>Gemini Cli</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshGeminiCard}
-              disabled={cardRefreshing.gemini}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.gemini ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshGeminiCard}
+                disabled={cardRefreshing.gemini}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.gemini ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2421,15 +2452,18 @@ export function DashboardPage({
               <CodebuddyIcon style={{ width: 18, height: 18 }} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshCodebuddyCard}
-              disabled={cardRefreshing.codebuddy}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.codebuddy ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshCodebuddyCard}
+                disabled={cardRefreshing.codebuddy}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.codebuddy ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2465,15 +2499,18 @@ export function DashboardPage({
               <CodebuddyIcon style={{ width: 18, height: 18 }} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshCodebuddyCnCard}
-              disabled={cardRefreshing.codebuddyCn}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.codebuddyCn ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshCodebuddyCnCard}
+                disabled={cardRefreshing.codebuddyCn}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.codebuddyCn ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2509,15 +2546,18 @@ export function DashboardPage({
               <QoderIcon style={{ width: 18, height: 18 }} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshQoderCard}
-              disabled={cardRefreshing.qoder}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.qoder ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshQoderCard}
+                disabled={cardRefreshing.qoder}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.qoder ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2553,15 +2593,18 @@ export function DashboardPage({
               <TraeIcon style={{ width: 18, height: 18 }} />
               <h3>{getPlatformLabel(platformId, t)}</h3>
             </div>
-            <button
-              className="header-action-btn"
-              onClick={handleRefreshTraeCard}
-              disabled={cardRefreshing.trae}
-              title={t('common.refresh', '刷新')}
-            >
-              <RotateCw size={14} className={cardRefreshing.trae ? 'loading-spinner' : ''} />
-              <span>{t('common.refresh', '刷新')}</span>
-            </button>
+            <div className="header-action-group">
+              <button
+                className="header-action-btn"
+                onClick={handleRefreshTraeCard}
+                disabled={cardRefreshing.trae}
+                title={t('common.refresh', '刷新')}
+              >
+                <RotateCw size={14} className={cardRefreshing.trae ? 'loading-spinner' : ''} />
+                <span>{t('common.refresh', '刷新')}</span>
+              </button>
+              {renderHideCardButton(platformId)}
+            </div>
           </div>
 
           <div className="split-content">
@@ -2611,6 +2654,7 @@ export function DashboardPage({
                 <RotateCw size={14} className={cardRefreshing.workbuddy ? 'loading-spinner' : ''} />
                 <span>{t('common.refresh', '刷新')}</span>
               </button>
+              {renderHideCardButton(platformId)}
               <button
                 className="header-action-btn header-collapse-btn"
                 onClick={() => toggleDashboardCardCollapse('workbuddy')}
@@ -2655,6 +2699,9 @@ export function DashboardPage({
             {renderPlatformIcon(platformId, 18)}
             <h3>{getPlatformLabel(platformId, t)}</h3>
           </div>
+          <div className="header-action-group">
+            {renderHideCardButton(platformId)}
+          </div>
         </div>
 
         <div className="split-content">
@@ -2681,17 +2728,17 @@ export function DashboardPage({
   return (
     <main className="main-content dashboard-page fade-in">
       <div className="page-tabs-row" style={{ minHeight: '60px' }}>
-         <div className="page-tabs-label dashboard-title-label">
-           <span>{t('nav.dashboard', '仪表盘')}</span>
-           <ManualHelpIconButton className="header-action-btn dashboard-manual-btn dashboard-title-manual-btn" />
-         </div>
-         {topCenterBanner}
-         <div className="dashboard-top-actions">
-           <button className="header-action-btn" onClick={onOpenPlatformLayout}>
-             <span>{t('platformLayout.title', '平台布局')}</span>
-           </button>
-           <AnnouncementCenter onNavigate={onNavigate} variant="inline" trigger="button" />
-         </div>
+        <div className="page-tabs-label dashboard-title-label">
+          <span>{t('nav.dashboard', '仪表盘')}</span>
+          <ManualHelpIconButton className="header-action-btn dashboard-manual-btn dashboard-title-manual-btn" />
+        </div>
+        {topCenterBanner}
+        <div className="dashboard-top-actions">
+          <button className="header-action-btn" onClick={onOpenPlatformLayout}>
+            <span>{t('platformLayout.title', '平台布局')}</span>
+          </button>
+          <AnnouncementCenter onNavigate={onNavigate} variant="inline" trigger="button" />
+        </div>
       </div>
 
       {/* Top Stats */}
@@ -2713,8 +2760,8 @@ export function DashboardPage({
           const group = groupId ? platformGroups.find((item) => item.id === groupId) : null;
           const groupChildLabels = group
             ? group.platformIds.map((childPlatformId) =>
-                resolveGroupChildName(group, childPlatformId, getPlatformLabel(childPlatformId, t)),
-              )
+              resolveGroupChildName(group, childPlatformId, getPlatformLabel(childPlatformId, t)),
+            )
             : [];
           const groupExtraCount = Math.max(groupChildLabels.length - 1, 0);
           const groupTooltip = groupChildLabels.join(', ');
@@ -2725,18 +2772,18 @@ export function DashboardPage({
             platformId === 'antigravity'
               ? 'success'
               : platformId === 'codex'
-              ? 'info'
-              : platformId === 'zed'
                 ? 'info'
-              : platformId === 'github-copilot'
-              ? 'github'
-              : platformId === 'kiro'
-                ? 'github'
-              : platformId === 'cursor'
-                ? 'info'
-              : platformId === 'gemini'
-                ? 'info'
-              : 'windsurf';
+                : platformId === 'zed'
+                  ? 'info'
+                  : platformId === 'github-copilot'
+                    ? 'github'
+                    : platformId === 'kiro'
+                      ? 'github'
+                      : platformId === 'cursor'
+                        ? 'info'
+                        : platformId === 'gemini'
+                          ? 'info'
+                          : 'windsurf';
           return (
             <button
               className="stat-card stat-card-button"

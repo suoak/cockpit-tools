@@ -273,14 +273,14 @@
     "title": "تخطيط المنصات",
     "sidebarSelected": "المحدد في الشريط الجانبي {{count}}/{{max}}",
     "reset": "إعادة إلى الافتراضي",
-    "tip": "اسحب لإعادة الترتيب. يمكن عرض منصتين كحد أقصى في الشريط الجانبي. إذا تم اختيار منصة واحدة فقط، فستُعرض منصة واحدة فقط.",
+    "tip": "اسحب لإعادة الترتيب. يمكن عرض ثلاث منصات كحد أقصى في الشريط الجانبي. إذا تم اختيار منصة واحدة فقط، فستُعرض منصة واحدة فقط.",
     "sidebarToggle": "إظهار في الشريط الجانبي",
     "dashboardToggle": "إظهار في لوحة المعلومات",
     "trayToggle": "إظهار في شريط النظام",
     "hiddenBadge": "مخفي",
     "openFromMore": "إدارة تخطيط المنصات",
     "dragHandleLabel": "اسحب لإعادة الترتيب",
-    "tipWithGroups": "اسحب لإعادة الترتيب. يمكن عرض مدخلين كحد أقصى في الشريط الجانبي. عناصر المجموعة الفرعية لا تدعم تبديل الشريط الجانبي/لوحة المعلومات وتُستخدم فقط لعرض شريط القوائم وتبديل المنصة الافتراضية.",
+    "tipWithGroups": "اسحب لإعادة الترتيب. يمكن عرض ثلاثة مداخل كحد أقصى في الشريط الجانبي. عناصر المجموعة الفرعية لا تدعم تبديل الشريط الجانبي/لوحة المعلومات وتُستخدم فقط لعرض شريط القوائم وتبديل المنصة الافتراضية.",
     "addGroup": "إضافة مجموعة",
     "editGroup": "تحرير المجموعة",
     "deleteGroup": "حذف المجموعة",
@@ -1591,6 +1591,7 @@
     "authorizing": "بانتظار تفويض النظام...",
     "installFailed": "فشل التثبيت على النظام. حاول لاحقًا أو نزّل الحزمة يدويًا.",
     "restartRequiredAfterInstall": "تم تثبيت التحديث. أعد تشغيل التطبيق يدويًا لإكمال التبديل.",
+    "stoppingApiService": "جارٍ إيقاف خدمة API...",
     "skipThisVersion": "تخطي هذا الإصدار",
     "skipFailed": "تعذر تخطي هذا التحديث: {{error}}"
   },
@@ -1675,7 +1676,11 @@
       "label": "تنسيق التصدير",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "تنسيق sub2api",
-      "cpa": "تنسيق cpa"
+      "cpa": "تنسيق cpa",
+      "downloadAll": "تنزيل الكل",
+      "cpaCardTitle": "الحساب {{index}}",
+      "savedFolder": "مجلد الحفظ",
+      "savedPath": "مسار الحفظ"
     },
     "localAccess": {
       "title": "خدمة API",
@@ -1762,6 +1767,12 @@
       "clearStats": "مسح الإحصاءات",
       "clearStatsConfirm": "هل تريد مسح كل إحصاءات خدمة API؟",
       "clearStatsSuccess": "تم مسح إحصاءات خدمة API",
+      "killPortAction": "تنظيف المنفذ",
+      "killPortTitle": "تنظيف منفذ خدمة API",
+      "killPortConfirmMessage": "سيتم إنهاء العمليات الأخرى التي تستخدم المنفذ المحلي {{port}} بالقوة، ثم إعادة تشغيل خدمة API. هل تريد المتابعة؟",
+      "killPortSuccess": "تم تنظيف المنفذ (تم إنهاء {{count}} عملية)",
+      "killPortSuccessNone": "تم فحص المنفذ. لا توجد عملية خارجية تستخدمه.",
+      "killPortSuccessUnknown": "تم تنظيف منفذ خدمة API",
       "refreshStats": "تحديث الإحصاءات",
       "refreshStatsSuccess": "تم تحديث إحصاءات خدمة API",
       "routingStrategy": {
@@ -1798,7 +1809,8 @@
       "enableAndActivateAction": "تفعيل والتبديل",
       "apiPortUrl": "عنوان منفذ API",
       "modelId": "معرّف النموذج",
-      "modelIdPlaceholder": "اختر معرّف النموذج"
+      "modelIdPlaceholder": "اختر معرّف النموذج",
+      "modelIdViewOnly": "عرض فقط"
     },
     "local": {
       "desc": "استيراد الحساب الحالي من ~/.codex/auth.json",
@@ -1846,7 +1858,8 @@
       "weekly": "الحصة الأسبوعية",
       "hourly": "حصة 5 ساعات",
       "weeklyReset": "وقت إعادة الضبط الأسبوعي",
-      "hourlyReset": "وقت إعادة الضبط لمدة 5 ساعات"
+      "hourlyReset": "وقت إعادة الضبط لمدة 5 ساعات",
+      "subscriptionExpiry": "انتهاء الاشتراك"
     },
     "opencodeSwitch": "مفتاح تبديل OpenCode",
     "opencodeSwitchDesc": "مزامنة تبديل معلومات حساب Codex في OpenCode",
@@ -2100,6 +2113,9 @@
         "apiKeyEqualsBaseUrl": "لا يمكن أن يكون مفتاح API مطابقًا لـ Base URL."
       },
       "addAndSwitchSuccess": "تمت الإضافة والتبديل: {{email}}",
+      "showApiKey": "إظهار API Key",
+      "hideApiKey": "إخفاء API Key",
+      "apiKeyHiddenHint": "تم إخفاء API Key. انقر للإظهار.",
       "actions": {
         "addAndSwitch": "إضافة وتبديل"
       },
@@ -2268,7 +2284,8 @@
         "contextWindowHint": "يكتب model_context_window. قابل للتحرير فقط في الوضع المخصص.",
         "partialDetected": "تم حاليًا تعيين حقل مُدار واحد فقط: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى إعادة كتابة كلا الحقلين باستخدام المخطط الحالي.",
         "notSet": "لم يتم ضبطه"
-      }
+      },
+      "managePresets": "النماذج المسبقة"
     },
     "quickSwitch": {
       "action": "تبديل المزوّد سريعًا",
@@ -2289,6 +2306,25 @@
     },
     "groups": {
       "addToGroup": "إضافة إلى المجموعة"
+    },
+    "subscription": {
+      "label": "انتهاء الاشتراك",
+      "column": "ينتهي",
+      "unknown": "أعد التفويض",
+      "missingDetail": "أعد التفويض للجلب",
+      "expired": "منتهي",
+      "hoursLeft": "{{count}}س",
+      "daysLeft": "{{count}}ي",
+      "over99Days": "99+ي",
+      "titleWithDate": "ينتهي الاشتراك: {{date}}",
+      "titleUnknown": "أعد التفويض لجلب انتهاء الاشتراك",
+      "filterLabel": "تصفية الانتهاء",
+      "filterAll": "كلها ({{count}})",
+      "filterExpired": "منتهية ({{count}})",
+      "filterWithin24h": "24س ({{count}})",
+      "filterWithin7d": "7أيام ({{count}})",
+      "filterWithin30d": "30يوم ({{count}})",
+      "filterMissing": "غير معروف ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2311,7 +2347,8 @@
       "desc": "الصق رمز وصول GitHub Copilot أو بيانات JSON المصدّرة."
     },
     "import": {
-      "localDesc": "استيراد بيانات حسابات GitHub Copilot من ملف JSON."
+      "localDesc": "استيراد بيانات حساب GitHub Copilot من VS Code المحلي أو ملف JSON.",
+      "localClient": "استيراد من VS Code المحلي"
     },
     "sort": {
       "weekly": "حسب استخدام رسائل الدردشة",
@@ -2336,7 +2373,7 @@
       "desc": "يتطلب تبديل الحساب قراءة مخزن المصادقة المحلي في VS Code واستخدام خدمة بيانات الاعتماد في النظام لفك التشفير وإعادة الكتابة؛ وتتم معالجة البيانات محليًا فقط.",
       "inject": "تبديل بنقرة واحدة: تقرأ هذه الأداة مواد التشفير المحلية في VS Code (DPAPI/Keychain/Secret Service)، وتفك تشفير جلسة المصادقة في state.vscdb، وتستبدل رمز GitHub Copilot ثم تعيد التشفير — وكل ذلك محليًا على جهازك.",
       "reason": "نطاق الأذونات: قراءة قاعدة بيانات مصادقة VS Code ‏(state.vscdb) واستدعاء قدرات التشفير في النظام (Windows DPAPI / macOS Keychain / Linux Secret Service) لفك التشفير وإعادة الكتابة.",
-      "storage": "نطاق القراءة: تتم معالجة بيانات جلسات تسجيل الدخول المرتبطة بـ GitHub فقط، وجميع العمليات تُنفّذ محليًا."
+      "storage": "نطاق البيانات: يقرأ الاستيراد المحلي جلسات تسجيل الدخول إلى GitHub في VS Code، ويحدّث تبديل الحساب الإدخالات نفسها؛ تستدعي OAuth واستيراد الرمز والتحقق من الاستيراد المحلي وتحديث الحصص واجهات GitHub الرسمية مع حقول المصادقة اللازمة فقط. لا يتم رفع state.vscdb أو مفاتيح النظام."
     }
   },
   "dashboard": {

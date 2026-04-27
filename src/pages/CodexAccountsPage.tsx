@@ -45,6 +45,7 @@ import {
   ChevronRight,
   LogOut,
   Server,
+  Wrench,
 } from 'lucide-react';
 import { useCodexAccountStore } from '../stores/useCodexAccountStore';
 import * as codexService from '../services/codexService';
@@ -68,6 +69,8 @@ import {
   hasCodexAccountStructure,
   formatCodexLoginProvider,
   getCodexAuthMetadata,
+  getCodexSubscriptionExpiryBucket,
+  getCodexSubscriptionPresentation,
   hasCodexAccountName,
   isCodexApiKeyAccount,
   isCodexExplicitFreePlanType,
@@ -192,8 +195,18 @@ const CODEX_LOCAL_ACCESS_FALLBACK_BASE_URL = `http://127.0.0.1:${CODEX_LOCAL_ACC
 const CODEX_LOCAL_ACCESS_FALLBACK_API_KEY_MASK = 'agt_codex_••••••••••••';
 const CODEX_FILTER_PERSISTENCE_SCOPE = normalizeAccountsOverviewScope('Codex');
 const FILTER_TYPES_FIELD = 'filter_types';
+const EXPIRY_FILTER_FIELD = 'expiry_filter';
 const GROUP_FILTER_FIELD = 'group_filter';
 const ACTIVE_GROUP_ID_FIELD = 'active_group_id';
+const CODEX_EXPIRY_FILTER_VALUES = [
+  'expired',
+  'within_24h',
+  'within_7d',
+  'within_30d',
+  'missing',
+] as const;
+
+type CodexExpiryFilterValue = 'all' | (typeof CODEX_EXPIRY_FILTER_VALUES)[number];
 
 type CodexOverviewLayoutMode = 'compact' | 'list' | 'grid';
 
@@ -253,14 +266,36 @@ function joinFilePath(directory: string, fileName: string): string {
     : `${directory}${separator}${fileName}`;
 }
 
+function maskCodexApiKey(value: string): string {
+  const raw = value.trim();
+  if (!raw) return raw;
+  if (raw.startsWith('sk-')) return 'sk-••••••••••••••••';
+  return '••••••••••••••••';
+}
+
 export function CodexAccountsPage() {
   const [activeTab, setActiveTab] = useState<CodexTab>('overview');
+  const [wakeupPresetManagerSignal, setWakeupPresetManagerSignal] = useState(0);
   const untaggedKey = '__untagged__';
   const [filterTypes, setFilterTypes] = useState<string[]>(() =>
     readAccountsOverviewFilterPersistenceEnabled(CODEX_FILTER_PERSISTENCE_SCOPE)
       ? readAccountsOverviewFilterStringArray(CODEX_FILTER_PERSISTENCE_SCOPE, FILTER_TYPES_FIELD)
       : [],
   );
+  const [expiryFilter, setExpiryFilter] = useState<CodexExpiryFilterValue>(() => {
+    if (!readAccountsOverviewFilterPersistenceEnabled(CODEX_FILTER_PERSISTENCE_SCOPE)) {
+      return 'all';
+    }
+    const saved = readAccountsOverviewFilterField<string | null>(
+      CODEX_FILTER_PERSISTENCE_SCOPE,
+      EXPIRY_FILTER_FIELD,
+      null,
+    );
+    const isSavedExpiryFilter =
+      saved === 'all' ||
+      CODEX_EXPIRY_FILTER_VALUES.includes(saved as (typeof CODEX_EXPIRY_FILTER_VALUES)[number]);
+    return isSavedExpiryFilter ? (saved as CodexExpiryFilterValue) : 'all';
+  });
   const [exportFormat, setExportFormat] = useState<CodexExportFormat>('cockpit_tools');
   const [exportFileNameBase, setExportFileNameBase] = useState('codex_accounts');
   const [formattedExportJsonCopied, setFormattedExportJsonCopied] = useState(false);
@@ -316,6 +351,7 @@ export function CodexAccountsPage() {
   const [localAccessTesting, setLocalAccessTesting] = useState(false);
   const [localAccessStarting, setLocalAccessStarting] = useState(false);
   const [localAccessRefreshing, setLocalAccessRefreshing] = useState(false);
+  const [localAccessPortKilling, setLocalAccessPortKilling] = useState(false);
   const [showLocalAccessHideConfirm, setShowLocalAccessHideConfirm] = useState(false);
   const [localAccessHideSubmitting, setLocalAccessHideSubmitting] = useState(false);
   const [localAccessRiskNoticeAction, setLocalAccessRiskNoticeAction] =
@@ -449,6 +485,14 @@ export function CodexAccountsPage() {
     }
     writeAccountsOverviewFilterField(filterPersistenceScope, FILTER_TYPES_FIELD, filterTypes);
   }, [filterPersistenceEnabled, filterPersistenceScope, filterTypes]);
+
+  useEffect(() => {
+    if (!filterPersistenceEnabled) {
+      removeAccountsOverviewFilterField(filterPersistenceScope, EXPIRY_FILTER_FIELD);
+      return;
+    }
+    writeAccountsOverviewFilterField(filterPersistenceScope, EXPIRY_FILTER_FIELD, expiryFilter);
+  }, [expiryFilter, filterPersistenceEnabled, filterPersistenceScope]);
 
   useEffect(() => {
     if (!filterPersistenceEnabled) {
@@ -1001,6 +1045,7 @@ export function CodexAccountsPage() {
   const [oauthTokenExchangeRetryVisible, setOauthTokenExchangeRetryVisible] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyInputVisible, setApiKeyInputVisible] = useState(false);
   const [apiBaseUrlInput, setApiBaseUrlInput] = useState('');
   const [apiProviderPresetId, setApiProviderPresetId] = useState(
     DEFAULT_CODEX_API_PROVIDER_ID,
@@ -1015,6 +1060,7 @@ export function CodexAccountsPage() {
   const [savingApiKeyNameId, setSavingApiKeyNameId] = useState<string | null>(null);
   const [editingApiKeyCredentialsId, setEditingApiKeyCredentialsId] = useState<string | null>(null);
   const [editingApiKeyCredentialsValue, setEditingApiKeyCredentialsValue] = useState('');
+  const [editingApiKeyCredentialsVisible, setEditingApiKeyCredentialsVisible] = useState(false);
   const [editingApiBaseUrlCredentialsValue, setEditingApiBaseUrlCredentialsValue] = useState('');
   const [editingApiProviderPresetId, setEditingApiProviderPresetId] = useState(
     DEFAULT_CODEX_API_PROVIDER_ID,
@@ -1028,6 +1074,9 @@ export function CodexAccountsPage() {
   const [quickSwitchApiKeyId, setQuickSwitchApiKeyId] = useState<string>('');
   const [quickSwitchSubmitting, setQuickSwitchSubmitting] = useState(false);
   const [quickSwitchError, setQuickSwitchError] = useState<string | null>(null);
+  const [visibleApiKeyAccountIds, setVisibleApiKeyAccountIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [showCodeReviewQuota, setShowCodeReviewQuota] = useState<boolean>(
     isCodexCodeReviewQuotaVisibleByDefault,
   );
@@ -1158,12 +1207,29 @@ export function CodexAccountsPage() {
   }, [fetchAccounts, fetchCurrentAccount]);
 
   useEffect(() => {
+    const accountIds = new Set(accounts.map((account) => account.id));
+    setVisibleApiKeyAccountIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((accountId) => {
+        if (accountIds.has(accountId)) {
+          next.add(accountId);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [accounts]);
+
+  useEffect(() => {
     void reloadManagedProviders();
   }, [reloadManagedProviders]);
 
   useEffect(() => {
     if (!showAddModal) {
       setApiKeyInput('');
+      setApiKeyInputVisible(false);
       setApiBaseUrlInput('');
       setApiProviderPresetId(DEFAULT_CODEX_API_PROVIDER_ID);
       setManagedProviderId('');
@@ -1171,6 +1237,12 @@ export function CodexAccountsPage() {
       setNewManagedProviderNameInput('');
     }
   }, [showAddModal]);
+
+  useEffect(() => {
+    if (showAddModal && addTab === 'apikey') {
+      setApiKeyInputVisible(false);
+    }
+  }, [addTab, showAddModal]);
 
   useEffect(() => {
     if (apiProviderPresetId === OPENAI_OFFICIAL_PRESET_ID) {
@@ -1193,6 +1265,7 @@ export function CodexAccountsPage() {
   useEffect(() => {
     if (!selectedManagedProviderApiKey) return;
     setApiKeyInput(selectedManagedProviderApiKey.apiKey);
+    setApiKeyInputVisible(false);
   }, [managedProviderApiKeyId, selectedManagedProviderApiKey]);
 
   useEffect(() => {
@@ -1219,6 +1292,7 @@ export function CodexAccountsPage() {
   useEffect(() => {
     if (!selectedEditingManagedProviderApiKey) return;
     setEditingApiKeyCredentialsValue(selectedEditingManagedProviderApiKey.apiKey);
+    setEditingApiKeyCredentialsVisible(false);
   }, [editingManagedProviderApiKeyId, selectedEditingManagedProviderApiKey]);
 
   useEffect(() => {
@@ -1677,6 +1751,7 @@ export function CodexAccountsPage() {
       if (firstKey) {
         setManagedProviderApiKeyId(firstKey.id);
         setApiKeyInput(firstKey.apiKey);
+        setApiKeyInputVisible(false);
       } else {
         setManagedProviderApiKeyId('');
       }
@@ -1691,6 +1766,7 @@ export function CodexAccountsPage() {
       const key = selectedManagedProvider?.apiKeys.find((item) => item.id === apiKeyId);
       if (key) {
         setApiKeyInput(key.apiKey);
+        setApiKeyInputVisible(false);
       }
     },
     [selectedManagedProvider],
@@ -1714,6 +1790,7 @@ export function CodexAccountsPage() {
       if (firstKey) {
         setEditingManagedProviderApiKeyId(firstKey.id);
         setEditingApiKeyCredentialsValue(firstKey.apiKey);
+        setEditingApiKeyCredentialsVisible(false);
       } else {
         setEditingManagedProviderApiKeyId('');
       }
@@ -1728,6 +1805,7 @@ export function CodexAccountsPage() {
       const key = selectedEditingManagedProvider?.apiKeys.find((item) => item.id === apiKeyId);
       if (key) {
         setEditingApiKeyCredentialsValue(key.apiKey);
+        setEditingApiKeyCredentialsVisible(false);
       }
     },
     [selectedEditingManagedProvider],
@@ -2004,9 +2082,50 @@ export function CodexAccountsPage() {
     ],
   );
 
+  const toggleAccountApiKeyVisible = useCallback((accountId: string) => {
+    setVisibleApiKeyAccountIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(accountId)) {
+        next.delete(accountId);
+      } else {
+        next.add(accountId);
+      }
+      return next;
+    });
+  }, []);
+
   const resolveApiKeyDisplayText = useCallback(
-    (account: CodexAccount) => (account.openai_api_key || '').trim() || t('common.none', '暂无'),
+    (account: CodexAccount, visible: boolean) => {
+      const apiKey = (account.openai_api_key || '').trim();
+      if (!apiKey) return t('common.none', '暂无');
+      return visible ? apiKey : maskCodexApiKey(apiKey);
+    },
     [t],
+  );
+
+  const renderApiKeyRevealLine = useCallback(
+    (account: CodexAccount): ReactElement => {
+      const visible = visibleApiKeyAccountIds.has(account.id);
+      const label = t('codex.addModal.token', 'API Key');
+      const value = resolveApiKeyDisplayText(account, visible);
+      const line = `${label}：${value}`;
+      const actionLabel = visible
+        ? t('codex.api.hideApiKey', '隐藏 API Key')
+        : t('codex.api.showApiKey', '显示 API Key');
+      return (
+        <button
+          type="button"
+          className="codex-api-key-reveal-line"
+          onClick={() => toggleAccountApiKeyVisible(account.id)}
+          title={visible ? line : t('codex.api.apiKeyHiddenHint', 'API Key 已隐藏，点击显示')}
+          aria-label={actionLabel}
+        >
+          <span className="codex-login-subline">{line}</span>
+          {visible ? <EyeOff size={12} /> : <Eye size={12} />}
+        </button>
+      );
+    },
+    [resolveApiKeyDisplayText, t, toggleAccountApiKeyVisible, visibleApiKeyAccountIds],
   );
 
   const resolveApiProviderDisplayName = useCallback(
@@ -2035,6 +2154,7 @@ export function CodexAccountsPage() {
     if (savingApiKeyCredentials) return;
     setEditingApiKeyCredentialsId(null);
     setEditingApiKeyCredentialsValue('');
+    setEditingApiKeyCredentialsVisible(false);
     setEditingApiBaseUrlCredentialsValue('');
     setEditingApiProviderPresetId(DEFAULT_CODEX_API_PROVIDER_ID);
     setEditingManagedProviderId('');
@@ -2056,6 +2176,7 @@ export function CodexAccountsPage() {
 
     setEditingApiKeyCredentialsId(account.id);
     setEditingApiKeyCredentialsValue(initialApiKey);
+    setEditingApiKeyCredentialsVisible(false);
     setEditingApiBaseUrlCredentialsValue(initialBaseUrl);
     setEditingApiProviderPresetId(
       providerMode === 'openai_builtin'
@@ -2117,6 +2238,7 @@ export function CodexAccountsPage() {
       setMessage({ text: t('instances.messages.updated', '实例已更新') });
       setEditingApiKeyCredentialsId(null);
       setEditingApiKeyCredentialsValue('');
+      setEditingApiKeyCredentialsVisible(false);
       setEditingApiBaseUrlCredentialsValue('');
       setEditingApiProviderPresetId(DEFAULT_CODEX_API_PROVIDER_ID);
       setEditingManagedProviderId('');
@@ -2198,6 +2320,12 @@ export function CodexAccountsPage() {
   const resolvePresentation = useCallback(
     (account: CodexAccount) => accountPresentations.get(account.id) ?? buildCodexAccountPresentation(account, t),
     [accountPresentations, t],
+  );
+
+  const resolveSubscriptionPresentation = useCallback(
+    (account: CodexAccount) =>
+      getCodexSubscriptionPresentation(account.subscription_active_until, t),
+    [t],
   );
 
   const resolveSingleExportBaseName = useCallback(
@@ -2309,7 +2437,11 @@ export function CodexAccountsPage() {
   );
   const overviewAccounts = accounts;
   const localAccessBusy =
-    localAccessSaving || localAccessTesting || localAccessStarting || localAccessRefreshing;
+    localAccessSaving ||
+    localAccessTesting ||
+    localAccessStarting ||
+    localAccessRefreshing ||
+    localAccessPortKilling;
 
   const resolveLocalAccessBaseUrl = useCallback(() => {
     if (!localAccessCollection) return localAccessState?.baseUrl || CODEX_LOCAL_ACCESS_FALLBACK_BASE_URL;
@@ -2458,6 +2590,53 @@ export function CodexAccountsPage() {
     { value: 'ERROR', label: `ERROR (${tierCounts.ERROR})` },
     buildValidAccountsFilterOption(t, tierCounts.VALID),
   ], [t, tierCounts]);
+
+  const expiryCounts = useMemo(() => {
+    const counts: Record<CodexExpiryFilterValue, number> = {
+      all: 0,
+      expired: 0,
+      within_24h: 0,
+      within_7d: 0,
+      within_30d: 0,
+      missing: 0,
+    };
+    overviewAccounts.forEach((account) => {
+      if (isCodexApiKeyAccount(account)) return;
+      counts.all += 1;
+      const bucket = getCodexSubscriptionExpiryBucket(account.subscription_active_until);
+      if (bucket in counts) {
+        counts[bucket as CodexExpiryFilterValue] += 1;
+      }
+    });
+    return counts;
+  }, [overviewAccounts]);
+
+  const expiryFilterOptions = useMemo<SingleSelectFilterOption[]>(() => [
+    {
+      value: 'all',
+      label: t('codex.subscription.filterAll', { count: expiryCounts.all }),
+    },
+    {
+      value: 'expired',
+      label: t('codex.subscription.filterExpired', { count: expiryCounts.expired }),
+    },
+    {
+      value: 'within_24h',
+      label: t('codex.subscription.filterWithin24h', { count: expiryCounts.within_24h }),
+    },
+    {
+      value: 'within_7d',
+      label: t('codex.subscription.filterWithin7d', { count: expiryCounts.within_7d }),
+    },
+    {
+      value: 'within_30d',
+      label: t('codex.subscription.filterWithin30d', { count: expiryCounts.within_30d }),
+    },
+    {
+      value: 'missing',
+      label: t('codex.subscription.filterMissing', { count: expiryCounts.missing }),
+    },
+  ], [expiryCounts, t]);
 
   const activeGroup = useMemo(() => {
     if (!activeGroupId) return null;
@@ -2630,6 +2809,48 @@ export function CodexAccountsPage() {
       setLocalAccessSaving(false);
     }
   }, [setMessage, t]);
+
+  const handleKillLocalAccessPort = useCallback(async () => {
+    if (!localAccessCollection) return;
+    const confirmed = await confirmDialog(
+      t('codex.localAccess.killPortConfirmMessage', {
+        port: localAccessCollection.port,
+        defaultValue:
+          '将强制结束占用本机 {{port}} 端口的其他进程，然后重新启动 API 服务。确认继续吗？',
+      }),
+      {
+        title: t('codex.localAccess.killPortTitle', '清理 API 服务端口'),
+        kind: 'warning',
+        okLabel: t('codex.localAccess.killPortAction', '清理端口'),
+        cancelLabel: t('common.cancel', '取消'),
+      },
+    );
+    if (!confirmed) return;
+
+    setLocalAccessPortKilling(true);
+    try {
+      const result = await codexLocalAccessService.killCodexLocalAccessPort();
+      setLocalAccessState(result.state);
+      setMessage({
+        text:
+          result.killedCount > 0
+            ? t('codex.localAccess.killPortSuccess', {
+                count: result.killedCount,
+                defaultValue: '端口已清理（结束 {{count}} 个进程）',
+              })
+            : t(
+                'codex.localAccess.killPortSuccessNone',
+                '端口已检查，未发现外部占用进程',
+              ),
+      });
+      return result.state;
+    } catch (error) {
+      console.error('Failed to kill local access port:', error);
+      throw new Error(String(error).replace(/^Error:\s*/, ''));
+    } finally {
+      setLocalAccessPortKilling(false);
+    }
+  }, [localAccessCollection, setMessage, t]);
 
   const handleUpdateLocalAccessPort = useCallback(async (port: number) => {
     setLocalAccessSaving(true);
@@ -2891,10 +3112,18 @@ export function CodexAccountsPage() {
       if (bR == null) return -1;
       return sortDirection === 'desc' ? bR - aR : aR - bR;
     }
+    if (sortBy === 'subscription_expiry') {
+      const aR = isCodexApiKeyAccount(a) ? null : resolveSubscriptionPresentation(a).timestampMs;
+      const bR = isCodexApiKeyAccount(b) ? null : resolveSubscriptionPresentation(b).timestampMs;
+      if (aR == null && bR == null) return 0;
+      if (aR == null) return 1;
+      if (bR == null) return -1;
+      return sortDirection === 'desc' ? bR - aR : aR - bR;
+    }
     const aV = sortBy === 'weekly' ? a.quota?.weekly_percentage ?? -1 : a.quota?.hourly_percentage ?? -1;
     const bV = sortBy === 'weekly' ? b.quota?.weekly_percentage ?? -1 : b.quota?.hourly_percentage ?? -1;
     return sortDirection === 'desc' ? bV - aV : aV - bV;
-  }, [currentAccount?.id, sortBy, sortDirection]);
+  }, [currentAccount?.id, resolveSubscriptionPresentation, sortBy, sortDirection]);
 
   const sortedAccountsForInstances = useMemo(
     () => [...accounts].sort(compareAccountsBySort),
@@ -2920,6 +3149,12 @@ export function CodexAccountsPage() {
           return selectedTypes.has(resolvePlanKey(a));
         });
       }
+    }
+    if (expiryFilter !== 'all') {
+      result = result.filter((account) => {
+        if (isCodexApiKeyAccount(account)) return false;
+        return getCodexSubscriptionExpiryBucket(account.subscription_active_until) === expiryFilter;
+      });
     }
     if (tagFilter.length > 0) {
       const selectedTags = new Set(tagFilter.map(normalizeTag));
@@ -2950,7 +3185,7 @@ export function CodexAccountsPage() {
     }
     result.sort(compareAccountsBySort);
     return result;
-  }, [activeGroupId, codexGroups, compareAccountsBySort, filterTypes, groupFilter, isAbnormalAccount, normalizeTag, overviewAccounts, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
+  }, [activeGroupId, codexGroups, compareAccountsBySort, expiryFilter, filterTypes, groupFilter, isAbnormalAccount, normalizeTag, overviewAccounts, resolvePlanKey, resolvePresentation, searchQuery, tagFilter]);
 
   const filteredIds = useMemo(() => filteredAccounts.map((account) => account.id), [filteredAccounts]);
   const exportSelectionCount = getScopedSelectedCount(filteredIds);
@@ -3043,7 +3278,11 @@ export function CodexAccountsPage() {
       const presentation = resolvePresentation(account);
       const isCurrent = currentAccount?.id === account.id;
       const isSelected = selected.has(account.id);
+      const isApiKeyAccount = isCodexApiKeyAccount(account);
       const compactQuotaItems = resolveCompactQuotaItems(presentation);
+      const subscriptionInfo = resolveSubscriptionPresentation(account);
+      const showCompactExpiry =
+        !isApiKeyAccount && subscriptionInfo.bucket !== 'active';
       return (
         <div
           key={groupKey ? `${groupKey}-${account.id}` : account.id}
@@ -3072,6 +3311,14 @@ export function CodexAccountsPage() {
                 <span className={`codex-compact-quota-value ${item.quotaClass}`}>{item.valueText}</span>
               </span>
             ))}
+            {showCompactExpiry && (
+              <span
+                className={`codex-compact-expiry ${subscriptionInfo.tone}`}
+                title={subscriptionInfo.titleText}
+              >
+                {subscriptionInfo.valueText}
+              </span>
+            )}
           </div>
           <button
             className={`codex-compact-switch-btn ${!isCurrent ? 'success' : ''}`}
@@ -3113,8 +3360,6 @@ export function CodexAccountsPage() {
           ? meta.chatgptAccountId
           : meta.userId;
       const signInLine = `${meta.signedInWithText} | ${accountIdLabel}: ${accountIdText}`;
-      const apiKeyText = resolveApiKeyDisplayText(account);
-      const apiKeyLine = `${t('codex.addModal.token', 'API Key')}：${apiKeyText}`;
       const apiProviderName = resolveApiProviderDisplayName(account);
       const apiProviderLine = `${t('codex.api.provider.label', '供应商')}：${apiProviderName}`;
       const apiBaseUrlText = (account.api_base_url || '').trim() || '-';
@@ -3123,6 +3368,7 @@ export function CodexAccountsPage() {
       const visibleTags = accountTags.slice(0, 2);
       const moreTagCount = Math.max(0, accountTags.length - visibleTags.length);
       const isInLocalAccess = localAccessAccountIdSet.has(account.id);
+      const subscriptionInfo = resolveSubscriptionPresentation(account);
       return (
         <div key={groupKey ? `${groupKey}-${account.id}` : account.id} className={`codex-account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}`}>
           <div className="card-top">
@@ -3181,9 +3427,7 @@ export function CodexAccountsPage() {
           {isApiKeyAccount && (
             <>
               <div className="account-sub-line">
-                <span className="codex-login-subline" title={apiKeyLine}>
-                  {apiKeyLine}
-                </span>
+                {renderApiKeyRevealLine(account)}
               </div>
               <div className="account-sub-line codex-provider-inline-line">
                 <span className="codex-login-subline codex-provider-inline-text" title={apiProviderLine}>
@@ -3241,6 +3485,18 @@ export function CodexAccountsPage() {
               </>
             )}
           </div>
+          {!isApiKeyAccount && (
+            <div className={`codex-subscription-footer ${subscriptionInfo.tone}`} title={subscriptionInfo.titleText}>
+              <div className="codex-subscription-footer-main">
+                <Calendar size={14} />
+                <span>{t('codex.subscription.label', '到期')}</span>
+                <strong>{subscriptionInfo.valueText}</strong>
+              </div>
+              {subscriptionInfo.timestampMs != null && (
+                <span className="codex-subscription-footer-date">{subscriptionInfo.detailText}</span>
+              )}
+            </div>
+          )}
           <div className="card-footer">
             <span className="card-date">{formatDate(account.created_at)}</span>
             <div className="card-actions">
@@ -3523,6 +3779,20 @@ export function CodexAccountsPage() {
               <div className="quota-error-inline">
                 <CircleAlert size={14} />
                 <span>{localAccessState.lastError}</span>
+                <button
+                  type="button"
+                  className="folder-icon-btn codex-local-access-error-action"
+                  onClick={() => void handleKillLocalAccessPort()}
+                  title={t('codex.localAccess.killPortAction', '清理端口')}
+                  aria-label={t('codex.localAccess.killPortAction', '清理端口')}
+                  disabled={localAccessBusy || !localAccessCollection}
+                >
+                  {localAccessPortKilling ? (
+                    <RefreshCw size={14} className="loading-spinner" />
+                  ) : (
+                    <Wrench size={14} />
+                  )}
+                </button>
               </div>
             )}
 
@@ -3715,13 +3985,12 @@ export function CodexAccountsPage() {
           ? meta.chatgptAccountId
           : meta.userId;
       const signInLine = `${meta.signedInWithText} | ${accountIdLabel}: ${accountIdText}`;
-      const apiKeyText = resolveApiKeyDisplayText(account);
-      const apiKeyLine = `${t('codex.addModal.token', 'API Key')}：${apiKeyText}`;
       const apiProviderName = resolveApiProviderDisplayName(account);
       const apiProviderLine = `${t('codex.api.provider.label', '供应商')}：${apiProviderName}`;
       const apiBaseUrlText = (account.api_base_url || '').trim() || '-';
       const apiBaseUrlLine = `${t('codex.api.baseUrl', 'Base URL')}：${apiBaseUrlText}`;
       const isInLocalAccess = localAccessAccountIdSet.has(account.id);
+      const subscriptionInfo = resolveSubscriptionPresentation(account);
       return (
         <tr key={groupKey ? `${groupKey}-${account.id}` : account.id} className={isCurrent ? 'current' : ''}>
           <td><input type="checkbox" checked={selected.has(account.id)} onChange={() => toggleSelect(account.id)} /></td>
@@ -3776,9 +4045,7 @@ export function CodexAccountsPage() {
             {isApiKeyAccount && (
               <>
                 <div className="account-sub-line codex-account-meta-inline">
-                  <span className="codex-login-subline" title={apiKeyLine}>
-                    {apiKeyLine}
-                  </span>
+                  {renderApiKeyRevealLine(account)}
                 </div>
                 <div className="account-sub-line codex-account-meta-inline codex-provider-inline-line">
                   <span className="codex-login-subline codex-provider-inline-text" title={apiProviderLine}>
@@ -3802,6 +4069,20 @@ export function CodexAccountsPage() {
             )}
             {hasQuotaError && (<div className="account-sub-line"><span className="codex-status-pill quota-error" title={quotaErrorMeta.rawMessage}><CircleAlert size={12} />{quotaErrorMeta.statusCode || t('codex.quotaError.badge', '配额异常')}</span></div>)}</div></td>
           <td><span className={`tier-badge ${planClass}`}>{presentation.planLabel}</span></td>
+          <td>
+            {isApiKeyAccount ? (
+              <span className="codex-subscription-table-empty">-</span>
+            ) : (
+              <div className="codex-subscription-table-cell" title={subscriptionInfo.titleText}>
+                <span className={`codex-subscription-badge ${subscriptionInfo.tone}`}>
+                  {subscriptionInfo.valueText}
+                </span>
+                {subscriptionInfo.timestampMs != null && (
+                  <span className="codex-subscription-date">{subscriptionInfo.detailText}</span>
+                )}
+              </div>
+            )}
+          </td>
           <td>
             {isApiKeyAccount ? (
               <button className="btn btn-secondary btn-sm" onClick={() => void handleOpenCodexUsage()}>
@@ -3896,7 +4177,7 @@ export function CodexAccountsPage() {
           onClick={() => handleEnterGroup(group.id)}
         >
           <td />
-          <td colSpan={3}>
+          <td colSpan={4}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <FolderOpen size={16} style={{ color: 'var(--primary)' }} />
               <strong>{group.name}</strong>
@@ -4026,6 +4307,13 @@ export function CodexAccountsPage() {
               onToggleValue={toggleFilterTypeValue}
               onClear={clearFilterTypes}
             />
+            <SingleSelectFilterDropdown
+              value={expiryFilter}
+              options={expiryFilterOptions}
+              ariaLabel={t('codex.subscription.filterLabel', '到期筛选')}
+              icon={<Calendar size={14} />}
+              onChange={(value) => setExpiryFilter(value as CodexExpiryFilterValue)}
+            />
             <div className="tag-filter" ref={tagFilterRef}>
               <button type="button" className={`tag-filter-btn ${tagFilter.length > 0 ? 'active' : ''}`} onClick={() => setShowTagFilter((prev) => !prev)} aria-label={t('accounts.filterTags', '标签筛选')}>
                 <Tag size={14} />{tagFilter.length > 0 ? `${t('accounts.filterTagsCount', '标签')}(${tagFilter.length})` : t('accounts.filterTags', '标签筛选')}
@@ -4053,6 +4341,7 @@ export function CodexAccountsPage() {
                 { value: 'hourly', label: t('codex.sort.hourly', '按5小时配额') },
                 { value: 'weekly_reset', label: t('codex.sort.weeklyReset', '按周配额重置时间') },
                 { value: 'hourly_reset', label: t('codex.sort.hourlyReset', '按5小时配额重置时间') },
+                { value: 'subscription_expiry', label: t('codex.sort.subscriptionExpiry', '按订阅到期') },
               ]}
               ariaLabel={t('common.shared.sortLabel', '排序')}
               icon={<ArrowDownWideNarrow size={14} />}
@@ -4172,8 +4461,9 @@ export function CodexAccountsPage() {
                 <div className="account-table-container grouped"><table className="account-table"><thead><tr>
                   <th style={{ width: 40 }}><input type="checkbox" checked={isAllPaginatedSelected} onChange={() => toggleSelectAll(paginatedIds)} /></th>
                   <th style={{ width: 260 }}>{t('common.shared.columns.email', '账号')}</th><th style={{ width: 140 }}>{t('common.shared.columns.plan', '订阅')}</th>
+                  <th style={{ width: 150 }}>{t('codex.subscription.column', '订阅到期')}</th>
                   <th>{t('accounts.columns.quota', '配额状态')}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
-                  <tbody>{paginatedGroupedAccounts.map(({ groupKey, items, totalCount }) => (<Fragment key={groupKey}><tr className="tag-group-row"><td colSpan={5}><div className="tag-group-header"><span className="tag-group-title">{resolveGroupLabel(groupKey)}</span><span className="tag-group-count">{totalCount}</span></div></td></tr>
+                  <tbody>{paginatedGroupedAccounts.map(({ groupKey, items, totalCount }) => (<Fragment key={groupKey}><tr className="tag-group-row"><td colSpan={6}><div className="tag-group-header"><span className="tag-group-title">{resolveGroupLabel(groupKey)}</span><span className="tag-group-count">{totalCount}</span></div></td></tr>
                     {renderTableRows(items, groupKey)}</Fragment>))}</tbody></table></div>
               </>
             ) : (
@@ -4186,6 +4476,7 @@ export function CodexAccountsPage() {
                 <div className="account-table-container"><table className="account-table"><thead><tr>
                   <th style={{ width: 40 }}>{showOverviewSelectionBar ? null : <input type="checkbox" checked={isAllPaginatedSelected} onChange={() => toggleSelectAll(paginatedIds)} />}</th>
                   <th style={{ width: 260 }}>{t('common.shared.columns.email', '账号')}</th><th style={{ width: 140 }}>{t('common.shared.columns.plan', '订阅')}</th>
+                  <th style={{ width: 150 }}>{t('codex.subscription.column', '订阅到期')}</th>
                   <th>{t('accounts.columns.quota', '配额状态')}</th><th className="sticky-action-header table-action-header">{t('common.shared.columns.actions', '操作')}</th></tr></thead>
                   <tbody>{renderGroupTableRows()}{renderTableRows(paginatedAccounts)}</tbody></table></div>
               </>
@@ -4374,12 +4665,31 @@ export function CodexAccountsPage() {
               )}
               <div className="oauth-link">
                 <label>{t('codex.addModal.token', 'API Key')}</label>
-                <div className="oauth-url-box oauth-manual-input">
+                <div className="oauth-url-box oauth-manual-input codex-secret-input">
                   <input
-                    type="text"
+                    type={apiKeyInputVisible ? 'text' : 'password'}
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
                   />
+                  <button
+                    type="button"
+                    className="codex-secret-toggle-btn"
+                    onClick={() => setApiKeyInputVisible((visible) => !visible)}
+                    title={
+                      apiKeyInputVisible
+                        ? t('codex.api.hideApiKey', '隐藏 API Key')
+                        : t('codex.api.showApiKey', '显示 API Key')
+                    }
+                    aria-label={
+                      apiKeyInputVisible
+                        ? t('codex.api.hideApiKey', '隐藏 API Key')
+                        : t('codex.api.showApiKey', '显示 API Key')
+                    }
+                  >
+                    {apiKeyInputVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
               <div className="oauth-link">
@@ -4715,13 +5025,33 @@ export function CodexAccountsPage() {
                   )}
                   <div className="oauth-link">
                     <label>{t('codex.addModal.token', 'API Key')}</label>
-                    <div className="oauth-url-box oauth-manual-input">
+                    <div className="oauth-url-box oauth-manual-input codex-secret-input">
                       <input
-                        type="text"
+                        type={editingApiKeyCredentialsVisible ? 'text' : 'password'}
                         value={editingApiKeyCredentialsValue}
                         onChange={(e) => setEditingApiKeyCredentialsValue(e.target.value)}
                         disabled={savingApiKeyCredentials}
+                        autoComplete="off"
+                        spellCheck={false}
                       />
+                      <button
+                        type="button"
+                        className="codex-secret-toggle-btn"
+                        onClick={() => setEditingApiKeyCredentialsVisible((visible) => !visible)}
+                        disabled={savingApiKeyCredentials}
+                        title={
+                          editingApiKeyCredentialsVisible
+                            ? t('codex.api.hideApiKey', '隐藏 API Key')
+                            : t('codex.api.showApiKey', '显示 API Key')
+                        }
+                        aria-label={
+                          editingApiKeyCredentialsVisible
+                            ? t('codex.api.hideApiKey', '隐藏 API Key')
+                            : t('codex.api.showApiKey', '显示 API Key')
+                        }
+                      >
+                        {editingApiKeyCredentialsVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                     </div>
                   </div>
                   <div className="oauth-link">
@@ -5021,11 +5351,13 @@ export function CodexAccountsPage() {
           onUpdatePort={handleUpdateLocalAccessPort}
           onUpdateRoutingStrategy={handleUpdateLocalAccessRoutingStrategy}
           onRotateApiKey={handleRotateLocalAccessApiKey}
+          onKillPort={handleKillLocalAccessPort}
           onToggleEnabled={handleToggleLocalAccessEnabled}
           onTest={handleTestLocalAccess}
           saving={localAccessSaving}
           testing={localAccessTesting}
           starting={localAccessStarting}
+          portCleanupBusy={localAccessPortKilling}
         />
 
         {/* Codex 分组管理弹窗 */}
@@ -5060,12 +5392,17 @@ export function CodexAccountsPage() {
         <CodexModelProviderManager
           accounts={accounts}
           onProvidersChanged={setManagedProviders}
+          onManageModelPresets={() => {
+            setActiveTab('wakeup');
+            setWakeupPresetManagerSignal((value) => value + 1);
+          }}
         />
       )}
 
       {activeTab === 'wakeup' && (
         <CodexWakeupContent
           accounts={accounts}
+          openPresetManagerSignal={wakeupPresetManagerSignal}
           onRefreshAccounts={async () => {
             await fetchAccounts();
             await fetchCurrentAccount();

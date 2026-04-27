@@ -227,14 +227,14 @@
     "title": "Bố cục nền tảng",
     "sidebarSelected": "Đã chọn trên thanh bên {{count}}/{{max}}",
     "reset": "Đặt lại mặc định",
-    "tip": "Kéo để sắp xếp lại. Thanh bên chỉ hiển thị tối đa hai nền tảng. Nếu chỉ chọn một, chỉ một nền tảng sẽ được hiển thị.",
+    "tip": "Kéo để sắp xếp lại. Thanh bên chỉ hiển thị tối đa ba nền tảng. Nếu chỉ chọn một, chỉ một nền tảng sẽ được hiển thị.",
     "sidebarToggle": "Hiển thị ở thanh bên",
     "dashboardToggle": "Hiển thị trên bảng điều khiển",
     "trayToggle": "Hiển thị trên khay hệ thống",
     "hiddenBadge": "Ẩn",
     "openFromMore": "Quản lý bố cục nền tảng",
     "dragHandleLabel": "Kéo để sắp xếp lại",
-    "tipWithGroups": "Kéo để sắp xếp lại. Tối đa chỉ hiển thị 2 mục ở thanh bên. Nền tảng con trong nhóm không có công tắc thanh bên/bảng điều khiển và chỉ dùng cho thanh menu cùng chuyển nền tảng mặc định.",
+    "tipWithGroups": "Kéo để sắp xếp lại. Tối đa chỉ hiển thị 3 mục ở thanh bên. Nền tảng con trong nhóm không có công tắc thanh bên/bảng điều khiển và chỉ dùng cho thanh menu cùng chuyển nền tảng mặc định.",
     "addGroup": "Thêm nhóm",
     "editGroup": "Sửa nhóm",
     "deleteGroup": "Xóa nhóm",
@@ -1545,6 +1545,7 @@
     "authorizing": "Đang chờ cấp quyền hệ thống...",
     "installFailed": "Cài đặt hệ thống thất bại. Hãy thử lại sau hoặc tải gói về thủ công.",
     "restartRequiredAfterInstall": "Bản cập nhật đã được cài. Hãy khởi động lại ứng dụng thủ công để hoàn tất chuyển đổi.",
+    "stoppingApiService": "Đang dừng dịch vụ API...",
     "skipThisVersion": "Bỏ qua phiên bản này",
     "skipFailed": "Không thể bỏ qua bản cập nhật này: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Định dạng xuất",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "Định dạng sub2api",
-      "cpa": "Định dạng cpa"
+      "cpa": "Định dạng cpa",
+      "downloadAll": "Tải xuống tất cả",
+      "cpaCardTitle": "Tài khoản {{index}}",
+      "savedFolder": "Thư mục đã lưu",
+      "savedPath": "Đường dẫn đã lưu"
     },
     "localAccess": {
       "title": "Dịch vụ API",
@@ -1716,6 +1721,12 @@
       "clearStats": "Xóa thống kê",
       "clearStatsConfirm": "Xóa toàn bộ thống kê dịch vụ API?",
       "clearStatsSuccess": "Đã xóa thống kê dịch vụ API",
+      "killPortAction": "Dọn cổng",
+      "killPortTitle": "Dọn cổng dịch vụ API",
+      "killPortConfirmMessage": "Các tiến trình khác đang dùng cổng cục bộ {{port}} sẽ bị buộc đóng, sau đó dịch vụ API sẽ khởi động lại. Tiếp tục?",
+      "killPortSuccess": "Đã dọn cổng (đã đóng {{count}} tiến trình)",
+      "killPortSuccessNone": "Đã kiểm tra cổng. Không có tiến trình bên ngoài nào đang dùng.",
+      "killPortSuccessUnknown": "Đã dọn cổng dịch vụ API",
       "refreshStats": "Làm mới thống kê",
       "refreshStatsSuccess": "Đã làm mới thống kê dịch vụ API",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Bật và chuyển",
       "apiPortUrl": "URL cổng API",
       "modelId": "ID mô hình",
-      "modelIdPlaceholder": "Chọn ID mô hình"
+      "modelIdPlaceholder": "Chọn ID mô hình",
+      "modelIdViewOnly": "Chỉ xem"
     },
     "local": {
       "desc": "Nhập tài khoản hiện tại từ ~/.codex/auth.json",
@@ -1800,7 +1812,8 @@
       "weekly": "Hạn mức tuần",
       "hourly": "Hạn mức 5 giờ",
       "weeklyReset": "Thời gian đặt lại theo tuần",
-      "hourlyReset": "Thời gian đặt lại 5 giờ"
+      "hourlyReset": "Thời gian đặt lại 5 giờ",
+      "subscriptionExpiry": "Hạn gói"
     },
     "opencodeSwitch": "Công tắc OpenCode",
     "opencodeSwitchDesc": "Đồng bộ chuyển đổi tài khoản Codex trong OpenCode",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "API key không được trùng với Base URL."
       },
       "addAndSwitchSuccess": "Đã thêm và chuyển sang: {{email}}",
+      "showApiKey": "Hiện API Key",
+      "hideApiKey": "Ẩn API Key",
+      "apiKeyHiddenHint": "API Key đã bị ẩn. Nhấp để hiển thị.",
       "actions": {
         "addAndSwitch": "Thêm và chuyển"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "Viết model_context_window. Chỉ có thể chỉnh sửa ở chế độ Tùy chỉnh.",
         "partialDetected": "Hiện chỉ có một trường được quản lý được đặt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Việc lưu sẽ ghi lại cả hai trường bằng cách sử dụng lược đồ hiện tại.",
         "notSet": "Chưa đặt"
-      }
+      },
+      "managePresets": "Mẫu mô hình"
     },
     "quickSwitch": {
       "action": "Chuyển nhanh nhà cung cấp",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Thêm vào nhóm"
+    },
+    "subscription": {
+      "label": "Hết hạn gói",
+      "column": "Hết hạn",
+      "unknown": "Ủy quyền lại",
+      "missingDetail": "Ủy quyền lại để lấy",
+      "expired": "Đã hết hạn",
+      "hoursLeft": "{{count}} giờ",
+      "daysLeft": "{{count}} ngày",
+      "over99Days": "99+ ngày",
+      "titleWithDate": "Gói hết hạn: {{date}}",
+      "titleUnknown": "Ủy quyền lại để lấy hạn gói",
+      "filterLabel": "Lọc hạn",
+      "filterAll": "Tất cả ({{count}})",
+      "filterExpired": "Đã hết hạn ({{count}})",
+      "filterWithin24h": "24 giờ ({{count}})",
+      "filterWithin7d": "7 ngày ({{count}})",
+      "filterWithin30d": "30 ngày ({{count}})",
+      "filterMissing": "Không rõ ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "Dán token truy cập GitHub Copilot hoặc dữ liệu JSON đã xuất."
     },
     "import": {
-      "localDesc": "Nhập tài khoản GitHub Copilot từ các phiên đăng nhập cục bộ."
+      "localDesc": "Nhập dữ liệu tài khoản GitHub Copilot từ VS Code cục bộ hoặc tệp JSON.",
+      "localClient": "Nhập từ VS Code cục bộ"
     },
     "sort": {
       "weekly": "Hạn mức tuần",
@@ -2290,7 +2327,7 @@
       "desc": "Việc chuyển tài khoản yêu cầu đọc kho xác thực cục bộ của VS Code và dùng dịch vụ thông tin xác thực hệ thống để giải mã/ghi lại; dữ liệu chỉ được xử lý trên máy cục bộ.",
       "inject": "Chuyển đổi một lần nhấp: công cụ này đọc dữ liệu mã hóa cục bộ của VS Code (DPAPI/Keychain/Secret Service), giải mã phiên xác thực trong state.vscdb, thay thế token GitHub Copilot rồi mã hóa lại — mọi thao tác đều diễn ra cục bộ trên máy của bạn.",
       "reason": "Phạm vi quyền: đọc cơ sở dữ liệu xác thực VS Code (state.vscdb) và gọi khả năng mã hóa hệ thống (Windows DPAPI / macOS Keychain / Linux Secret Service) để giải mã/ghi lại.",
-      "storage": "Phạm vi đọc: chỉ xử lý dữ liệu liên quan đến phiên đăng nhập GitHub; mọi quy trình đều được thực thi cục bộ."
+      "storage": "Phạm vi dữ liệu: nhập cục bộ đọc các phiên đăng nhập GitHub trong VS Code, còn chuyển tài khoản cập nhật các mục này; OAuth, nhập token, xác minh nhập cục bộ và làm mới hạn mức gọi API chính thức của GitHub với các trường xác thực cần thiết. Không tải lên state.vscdb hoặc khóa hệ thống."
     }
   },
   "dashboard": {

@@ -1,7 +1,9 @@
 use crate::models::codex::{
     CodexAccount, CodexApiProviderMode, CodexQuickConfig, CodexQuota, CodexTokens,
 };
-use crate::models::codex_local_access::{CodexLocalAccessRoutingStrategy, CodexLocalAccessState};
+use crate::models::codex_local_access::{
+    CodexLocalAccessPortCleanupResult, CodexLocalAccessRoutingStrategy, CodexLocalAccessState,
+};
 use crate::modules::{
     codex_account, codex_local_access, codex_oauth, codex_quota, codex_wakeup,
     codex_wakeup_scheduler, config, logger, openclaw_auth, opencode_auth, process,
@@ -90,7 +92,6 @@ pub async fn switch_codex_account(
     app: AppHandle,
     account_id: String,
 ) -> Result<CodexAccount, String> {
-    let _ = codex_account::prepare_account_for_injection(&account_id).await?;
     let codex_home = codex_account::get_codex_home();
     let provider_before =
         crate::modules::codex_session_visibility::read_history_visibility_provider_for_dir(
@@ -106,7 +107,7 @@ pub async fn switch_codex_account(
         });
 
     // 切换账号（写入 auth.json）
-    let account = codex_account::switch_account(&account_id)?;
+    let account = codex_account::switch_account_managed(&account_id).await?;
 
     // 同步更新 Codex 默认实例的绑定账号（不同步到 Antigravity，因为账号体系不同）
     if let Err(e) = crate::modules::codex_instance::update_default_settings(
@@ -575,11 +576,13 @@ pub fn codex_wakeup_save_state(
     enabled: bool,
     tasks: Vec<codex_wakeup::CodexWakeupTask>,
     model_presets: Vec<codex_wakeup::CodexWakeupModelPreset>,
+    model_preset_migrations: Vec<String>,
 ) -> Result<codex_wakeup::CodexWakeupState, String> {
     codex_wakeup::save_state(&codex_wakeup::CodexWakeupState {
         enabled,
         tasks,
         model_presets,
+        model_preset_migrations,
     })
 }
 
@@ -734,6 +737,16 @@ pub async fn codex_local_access_rotate_api_key() -> Result<CodexLocalAccessState
 #[tauri::command]
 pub async fn codex_local_access_clear_stats() -> Result<CodexLocalAccessState, String> {
     codex_local_access::clear_local_access_stats().await
+}
+
+#[tauri::command]
+pub async fn codex_local_access_prepare_restart() -> Result<CodexLocalAccessState, String> {
+    codex_local_access::prepare_local_access_gateway_for_restart().await
+}
+
+#[tauri::command]
+pub async fn codex_local_access_kill_port() -> Result<CodexLocalAccessPortCleanupResult, String> {
+    codex_local_access::kill_local_access_port_processes().await
 }
 
 #[tauri::command]

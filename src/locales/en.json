@@ -274,8 +274,8 @@
     "sidebarSelected": "Sidebar selected {{count}}/{{max}}",
     "sidebarSelectedUnlimited": "Sidebar selected {{count}}",
     "reset": "Reset to default",
-    "tip": "Drag to reorder. Up to two platforms can be shown in the sidebar. If only one is selected, only one is shown.",
-    "tipWithGroups": "Drag to reorder. Up to two entries can appear in the sidebar. Group children do not have sidebar/dashboard toggles and are only used for tray visibility and default-platform switching.",
+    "tip": "Drag to reorder. Up to three platforms can be shown in the sidebar. If only one is selected, only one is shown.",
+    "tipWithGroups": "Drag to reorder. Up to three entries can appear in the sidebar. Group children do not have sidebar/dashboard toggles and are only used for tray visibility and default-platform switching.",
     "tipWithGroupsUnlimited": "Drag to reorder. Any number of entries can appear in the sidebar. Group children do not have sidebar/dashboard toggles and are only used for tray visibility and default-platform switching.",
     "addGroup": "Add group",
     "editGroup": "Edit",
@@ -1592,7 +1592,8 @@
     "installing": "Installing...",
     "authorizing": "Waiting for system authorization...",
     "installFailed": "System installation failed. Try again later or download manually.",
-    "restartRequiredAfterInstall": "The update is installed. Restart the app manually to finish switching."
+    "restartRequiredAfterInstall": "The update is installed. Restart the app manually to finish switching.",
+    "stoppingApiService": "Stopping API service..."
   },
   "closeDialog": {
     "title": "Close Window",
@@ -1694,6 +1695,7 @@
       "apiPortUrl": "API Port URL",
       "apiKey": "API Key",
       "modelId": "Model ID",
+      "modelIdViewOnly": "View only, no switching",
       "modelIdPlaceholder": "Select model ID",
       "statusRunning": "Running",
       "statusStopped": "Stopped",
@@ -1742,6 +1744,12 @@
       "clearStats": "Clear Stats",
       "clearStatsConfirm": "Clear all API service stats?",
       "clearStatsSuccess": "API service stats have been cleared",
+      "killPortAction": "Clear Port",
+      "killPortTitle": "Clear API Service Port",
+      "killPortConfirmMessage": "This will force-close other processes using local port {{port}}, then restart the API service. Continue?",
+      "killPortSuccess": "Port cleared (closed {{count}} process(es))",
+      "killPortSuccessNone": "Port checked. No external process was using it.",
+      "killPortSuccessUnknown": "API service port cleared",
       "refreshStats": "Refresh Stats",
       "refreshStatsSuccess": "API service stats have been refreshed",
       "accountStatsTitle": "By Account",
@@ -1811,6 +1819,9 @@
       "baseUrl": "Base URL",
       "baseUrlPlaceholder": "Leave blank to use official default",
       "addAndSwitchSuccess": "Added and switched: {{email}}",
+      "showApiKey": "Show API Key",
+      "hideApiKey": "Hide API Key",
+      "apiKeyHiddenHint": "API Key hidden. Click to show.",
       "actions": {
         "addAndSwitch": "Add and Switch"
       },
@@ -1894,6 +1905,7 @@
       "tab": "Model Providers",
       "desc": "Manage model providers and multiple API keys in one place, then reuse them directly when adding Codex API-key accounts.",
       "add": "Add Provider",
+      "managePresets": "Model Presets",
       "loadFailed": "Failed to load model providers: {{error}}",
       "emptyTitle": "No model providers yet",
       "emptyDesc": "Click \"Add Provider\" in the top right to start.",
@@ -2046,6 +2058,25 @@
       "tomorrow": "Tomorrow {{time}}",
       "dateTime": "{{date}} {{time}}"
     },
+    "subscription": {
+      "label": "Subscription expiry",
+      "column": "Expires",
+      "unknown": "Reauthorize",
+      "missingDetail": "Reauthorize to fetch",
+      "expired": "Expired",
+      "hoursLeft": "{{count}}h",
+      "daysLeft": "{{count}}d",
+      "over99Days": "99+d",
+      "titleWithDate": "Subscription expires: {{date}}",
+      "titleUnknown": "Reauthorize to fetch subscription expiry",
+      "filterLabel": "Expiry filter",
+      "filterAll": "Expiry All ({{count}})",
+      "filterExpired": "Expired ({{count}})",
+      "filterWithin24h": "24h ({{count}})",
+      "filterWithin7d": "7d ({{count}})",
+      "filterWithin30d": "30d ({{count}})",
+      "filterMissing": "Unknown ({{count}})"
+    },
     "view": {
       "compact": "Compact view"
     },
@@ -2057,7 +2088,8 @@
       "weekly": "Weekly quota",
       "hourly": "5-hour quota",
       "weeklyReset": "Weekly reset time",
-      "hourlyReset": "5-hour reset time"
+      "hourlyReset": "5-hour reset time",
+      "subscriptionExpiry": "Subscription expiry"
     },
     "opencodeSwitch": "OpenCode switch toggle",
     "opencodeSwitchDesc": "Sync Codex account info in OpenCode",
@@ -2415,7 +2447,8 @@
       "desc": "Paste your GitHub Copilot access token or exported JSON data."
     },
     "import": {
-      "localDesc": "Import GitHub Copilot account data from a JSON file."
+      "localDesc": "Import GitHub Copilot account data from local VS Code or a JSON file.",
+      "localClient": "Import from local VS Code"
     },
     "sort": {
       "weekly": "By Chat messages usage",
@@ -2440,7 +2473,7 @@
       "desc": "Switching accounts requires reading VS Code local auth storage and using the system credential service for decrypt/write-back. Data is processed locally only.",
       "inject": "One-click switching: This tool reads local VS Code encryption material (DPAPI/Keychain/Secret Service), decrypts the auth session in state.vscdb, replaces the GitHub Copilot token, and re-encrypts it — all locally on your machine.",
       "reason": "Permission scope: read VS Code auth database (state.vscdb) and call system credential capability (Windows DPAPI / macOS Keychain / Linux Secret Service) for decrypt/write-back.",
-      "storage": "Data scope: only GitHub auth-session related entries are read/updated; all processes run locally."
+      "storage": "Data scope: local import reads GitHub auth sessions from VS Code, and switching updates the same entries; OAuth, token import, local-import validation, and quota refresh call GitHub official APIs with required auth fields. state.vscdb and system keys are not uploaded."
     }
   },
   "dashboard": {

@@ -227,14 +227,14 @@
     "title": "Plattformlayout",
     "sidebarSelected": "In der Seitenleiste ausgewählt {{count}}/{{max}}",
     "reset": "Auf Standard zurücksetzen",
-    "tip": "Zum Neuanordnen ziehen. In der Seitenleiste können maximal zwei Plattformen angezeigt werden. Wenn nur eine ausgewählt ist, wird nur eine angezeigt.",
+    "tip": "Zum Neuanordnen ziehen. In der Seitenleiste können maximal drei Plattformen angezeigt werden. Wenn nur eine ausgewählt ist, wird nur eine angezeigt.",
     "sidebarToggle": "In Seitenleiste anzeigen",
     "dashboardToggle": "Im Dashboard anzeigen",
     "trayToggle": "Im Tray anzeigen",
     "hiddenBadge": "Ausgeblendet",
     "openFromMore": "Plattformlayout verwalten",
     "dragHandleLabel": "Zum Neuanordnen ziehen",
-    "tipWithGroups": "Zum Sortieren ziehen. In der Seitenleiste können höchstens zwei Einträge angezeigt werden. Unterplattformen einer Gruppe haben keine Seitenleisten-/Dashboard-Schalter und dienen nur für Menüleiste und Standardplattform-Wechsel.",
+    "tipWithGroups": "Zum Sortieren ziehen. In der Seitenleiste können höchstens drei Einträge angezeigt werden. Unterplattformen einer Gruppe haben keine Seitenleisten-/Dashboard-Schalter und dienen nur für Menüleiste und Standardplattform-Wechsel.",
     "addGroup": "Gruppe hinzufügen",
     "editGroup": "Gruppe bearbeiten",
     "deleteGroup": "Gruppe löschen",
@@ -1545,6 +1545,7 @@
     "authorizing": "Warten auf Systemautorisierung...",
     "installFailed": "Die Systeminstallation ist fehlgeschlagen. Versuchen Sie es später erneut oder laden Sie das Paket manuell herunter.",
     "restartRequiredAfterInstall": "Das Update ist installiert. Starten Sie die App manuell neu, um den Wechsel abzuschließen.",
+    "stoppingApiService": "API-Dienst wird gestoppt...",
     "skipThisVersion": "Diese Version überspringen",
     "skipFailed": "Dieses Update konnte nicht übersprungen werden: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "Exportformat",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api-Format",
-      "cpa": "cpa-Format"
+      "cpa": "cpa-Format",
+      "downloadAll": "Alle herunterladen",
+      "cpaCardTitle": "Konto {{index}}",
+      "savedFolder": "Gespeicherter Ordner",
+      "savedPath": "Gespeicherter Pfad"
     },
     "localAccess": {
       "title": "API-Dienst",
@@ -1716,6 +1721,12 @@
       "clearStats": "Statistik löschen",
       "clearStatsConfirm": "Alle API-Service-Statistiken löschen?",
       "clearStatsSuccess": "API-Service-Statistiken wurden gelöscht",
+      "killPortAction": "Port bereinigen",
+      "killPortTitle": "API-Dienstport bereinigen",
+      "killPortConfirmMessage": "Andere Prozesse, die den lokalen Port {{port}} verwenden, werden zwangsweise beendet. Danach wird der API-Dienst neu gestartet. Fortfahren?",
+      "killPortSuccess": "Port bereinigt ({{count}} Prozess(e) beendet)",
+      "killPortSuccessNone": "Port geprüft. Kein externer Prozess verwendet ihn.",
+      "killPortSuccessUnknown": "API-Dienstport bereinigt",
       "refreshStats": "Statistik aktualisieren",
       "refreshStatsSuccess": "API-Service-Statistiken wurden aktualisiert",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "Aktivieren und wechseln",
       "apiPortUrl": "API-Port-URL",
       "modelId": "Modell-ID",
-      "modelIdPlaceholder": "Modell-ID wählen"
+      "modelIdPlaceholder": "Modell-ID wählen",
+      "modelIdViewOnly": "Nur Ansicht"
     },
     "local": {
       "desc": "Aktuell eingeloggtes Konto aus ~/.codex/auth.json importieren",
@@ -1800,7 +1812,8 @@
       "weekly": "Wöchentliches Kontingent",
       "hourly": "5-Stunden-Kontingent",
       "weeklyReset": "Wöchentliche Reset-Zeit",
-      "hourlyReset": "5-Stunden-Reset-Zeit"
+      "hourlyReset": "5-Stunden-Reset-Zeit",
+      "subscriptionExpiry": "Abo-Ablauf"
     },
     "opencodeSwitch": "OpenCode-Schalter",
     "opencodeSwitchDesc": "Wechsel des Codex-Kontos in OpenCode synchronisieren",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "Der API-Schlüssel darf nicht mit der Basis-URL identisch sein."
       },
       "addAndSwitchSuccess": "Hinzugefügt und gewechselt: {{email}}",
+      "showApiKey": "API Key anzeigen",
+      "hideApiKey": "API Key ausblenden",
+      "apiKeyHiddenHint": "API Key ist ausgeblendet. Zum Anzeigen klicken.",
       "actions": {
         "addAndSwitch": "Hinzufügen und wechseln"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "Schreibt model_context_window. Nur im benutzerdefinierten Modus bearbeitbar.",
         "partialDetected": "Derzeit ist nur ein verwaltetes Feld festgelegt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Beim Speichern werden beide Felder mit dem aktuellen Schema neu geschrieben.",
         "notSet": "Nicht festgelegt"
-      }
+      },
+      "managePresets": "Modellvorgaben"
     },
     "quickSwitch": {
       "action": "Anbieter schnell wechseln",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "Zur Gruppe hinzufügen"
+    },
+    "subscription": {
+      "label": "Abo-Ablauf",
+      "column": "Ablauf",
+      "unknown": "Neu autorisieren",
+      "missingDetail": "Zum Abrufen neu autorisieren",
+      "expired": "Abgelaufen",
+      "hoursLeft": "{{count}} h",
+      "daysLeft": "{{count}} T.",
+      "over99Days": "99+ T.",
+      "titleWithDate": "Abo endet: {{date}}",
+      "titleUnknown": "Neu autorisieren, um den Abo-Ablauf abzurufen",
+      "filterLabel": "Ablauffilter",
+      "filterAll": "Alle ({{count}})",
+      "filterExpired": "Abgelaufen ({{count}})",
+      "filterWithin24h": "24 h ({{count}})",
+      "filterWithin7d": "7 T. ({{count}})",
+      "filterWithin30d": "30 T. ({{count}})",
+      "filterMissing": "Unbekannt ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "Fügen Sie Ihr GitHub-Copilot-Access-Token oder exportierte JSON-Daten ein."
     },
     "import": {
-      "localDesc": "GitHub Copilot-Konten aus lokal angemeldeten Sitzungen importieren."
+      "localDesc": "GitHub Copilot-Kontodaten aus lokalem VS Code oder einer JSON-Datei importieren.",
+      "localClient": "Aus lokalem VS Code importieren"
     },
     "sort": {
       "weekly": "Wöchentliches Kontingent",
@@ -2290,7 +2327,7 @@
       "desc": "Für den Kontowechsel muss der lokale VS-Code-Auth-Speicher gelesen und der System-Anmeldedienst zum Entschlüsseln und Zurückschreiben verwendet werden; die Datenverarbeitung erfolgt nur lokal.",
       "inject": "Ein-Klick-Wechsel: Dieses Tool liest das lokale Verschlüsselungsmaterial von VS Code (DPAPI/Keychain/Secret Service), entschlüsselt die Auth-Sitzung in state.vscdb, ersetzt das GitHub-Copilot-Token und verschlüsselt sie erneut – alles lokal auf deinem Gerät.",
       "reason": "Berechtigungsumfang: Lesen der VS-Code-Auth-Datenbank (state.vscdb) und Aufruf der System-Verschlüsselung (Windows DPAPI / macOS Keychain / Linux Secret Service) zum Entschlüsseln und Zurückschreiben.",
-      "storage": "Lesebereich: Es werden nur GitHub-Login-Sitzungsdaten verarbeitet; alle Prozesse werden lokal ausgeführt."
+      "storage": "Datenumfang: Der lokale Import liest GitHub-Anmeldesitzungen aus VS Code, der Wechsel aktualisiert dieselben Einträge; OAuth, Token-Import, lokale Importprüfung und Quotenaktualisierung rufen offizielle GitHub-APIs mit den erforderlichen Auth-Feldern auf. state.vscdb und Systemschlüssel werden nicht hochgeladen."
     }
   },
   "dashboard": {

@@ -227,14 +227,14 @@
     "title": "平台佈局",
     "sidebarSelected": "側邊欄已選擇 {{count}}/{{max}}",
     "reset": "恢復預設",
-    "tip": "拖曳可排序；側邊欄最多可顯示兩個平台。若只選擇一個，側邊欄只顯示一個。",
+    "tip": "拖曳可排序；側邊欄最多可顯示三個平台。若只選擇一個，側邊欄只顯示一個。",
     "sidebarToggle": "側邊欄顯示",
     "dashboardToggle": "儀表板顯示",
     "trayToggle": "選單列顯示",
     "hiddenBadge": "已隱藏",
     "openFromMore": "管理平台佈局",
     "dragHandleLabel": "拖曳排序",
-    "tipWithGroups": "可拖曳排序；側邊欄最多顯示兩個入口。分組子項不參與側邊欄/儀表板開關，僅用於選單列顯示與預設平台切換。",
+    "tipWithGroups": "可拖曳排序；側邊欄最多顯示三個入口。分組子項不參與側邊欄/儀表板開關，僅用於選單列顯示與預設平台切換。",
     "addGroup": "新增分組",
     "editGroup": "編輯分組",
     "deleteGroup": "刪除分組",
@@ -1545,6 +1545,7 @@
     "authorizing": "等待系統授權安裝...",
     "installFailed": "系統安裝失敗，請稍後重試或手動下載安裝。",
     "restartRequiredAfterInstall": "更新已安裝，請手動重新啟動應用程式完成切換。",
+    "stoppingApiService": "正在關閉 API 服務...",
     "skipThisVersion": "跳過此版本",
     "skipFailed": "跳過此更新失敗：{{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "匯出格式",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api 格式",
-      "cpa": "cpa 格式"
+      "cpa": "cpa 格式",
+      "downloadAll": "一鍵下載全部",
+      "cpaCardTitle": "帳號 {{index}}",
+      "savedFolder": "儲存目錄",
+      "savedPath": "儲存路徑"
     },
     "localAccess": {
       "title": "API 服務",
@@ -1716,6 +1721,12 @@
       "clearStats": "清除統計",
       "clearStatsConfirm": "確定要清空 API 服務統計嗎？",
       "clearStatsSuccess": "API 服務統計已清空",
+      "killPortAction": "清理連接埠",
+      "killPortTitle": "清理 API 服務連接埠",
+      "killPortConfirmMessage": "將強制結束占用本機 {{port}} 連接埠的其他處理程序，然後重新啟動 API 服務。確認繼續嗎？",
+      "killPortSuccess": "連接埠已清理（已結束 {{count}} 個處理程序）",
+      "killPortSuccessNone": "連接埠已檢查，未發現外部占用程序",
+      "killPortSuccessUnknown": "API 服務連接埠已清理",
       "refreshStats": "刷新統計",
       "refreshStatsSuccess": "API 服務統計已刷新",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "啟用並切號",
       "apiPortUrl": "API 連接埠 URL",
       "modelId": "模型 ID",
-      "modelIdPlaceholder": "選擇模型 ID"
+      "modelIdPlaceholder": "選擇模型 ID",
+      "modelIdViewOnly": "僅查看，無切換"
     },
     "api": {
       "baseUrl": "基礎網址",
@@ -1763,6 +1775,9 @@
         "apiKeyEqualsBaseUrl": "API Key 不能與 Base URL 相同"
       },
       "addAndSwitchSuccess": "已新增並切換：{{email}}",
+      "showApiKey": "顯示 API Key",
+      "hideApiKey": "隱藏 API Key",
+      "apiKeyHiddenHint": "API Key 已隱藏，點擊顯示",
       "actions": {
         "addAndSwitch": "新增並切換"
       },
@@ -1883,7 +1898,8 @@
       "weekly": "按週配額",
       "hourly": "按5小時配額",
       "weeklyReset": "按週配額重置時間",
-      "hourlyReset": "按5小時配額重置時間"
+      "hourlyReset": "按5小時配額重置時間",
+      "subscriptionExpiry": "按訂閱到期"
     },
     "opencodeSwitch": "OpenCode 切換開關",
     "opencodeSwitchDesc": "同步切換 OpenCode 裡的 Codex 帳號資訊",
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "寫入 model_context_window。僅在「自訂」模式可編輯。",
         "partialDetected": "偵測到目前兩個欄位並不完整：model_context_window={{context}}，model_auto_compact_token_limit={{compact}}。儲存後會依照目前方案改寫。",
         "notSet": "未設定"
-      }
+      },
+      "managePresets": "模型預設"
     },
     "quickSwitch": {
       "action": "快速切換供應商",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "加入群組"
+    },
+    "subscription": {
+      "label": "訂閱到期",
+      "column": "訂閱到期",
+      "unknown": "重新授權",
+      "missingDetail": "重新授權後取得",
+      "expired": "已到期",
+      "hoursLeft": "{{count}} 小時",
+      "daysLeft": "{{count}} 天",
+      "over99Days": "99+ 天",
+      "titleWithDate": "訂閱到期：{{date}}",
+      "titleUnknown": "重新授權以取得訂閱到期時間",
+      "filterLabel": "到期篩選",
+      "filterAll": "全部到期 ({{count}})",
+      "filterExpired": "已到期 ({{count}})",
+      "filterWithin24h": "24 小時 ({{count}})",
+      "filterWithin7d": "7 天 ({{count}})",
+      "filterWithin30d": "30 天 ({{count}})",
+      "filterMissing": "未知 ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "貼上 GitHub Copilot 存取權杖或匯出的 JSON 資料。"
     },
     "import": {
-      "localDesc": "從本機已登入的會話匯入 GitHub Copilot 帳號。"
+      "localDesc": "支援從本機 VS Code 或 JSON 檔案匯入 GitHub Copilot 帳號資料。",
+      "localClient": "從本機 VS Code 匯入"
     },
     "sort": {
       "weekly": "按週配額",
@@ -2290,7 +2327,7 @@
       "desc": "切換帳號時需要讀取 VS Code 本機認證儲存，並呼叫系統憑證服務完成解密與回寫；資料僅在本機處理。",
       "inject": "一鍵切換：本工具會讀取本機 VS Code 加密材料（DPAPI/Keychain/Secret Service），解密 state.vscdb 中的驗證工作階段，替換 GitHub Copilot 權杖後再加密，全部流程都在本機完成。",
       "reason": "權限需求：讀取 VS Code 認證資料庫（state.vscdb），並呼叫系統加密能力（Windows DPAPI / macOS Keychain / Linux Secret Service）進行解密與寫回。",
-      "storage": "讀取範圍：僅處理 GitHub 登入工作階段相關資料，所有流程均在本機執行。"
+      "storage": "資料範圍：本機匯入會讀取 VS Code 中的 GitHub 登入會話，切換帳號會更新同類會話；OAuth、Token 匯入、本機匯入校驗與配額刷新會呼叫 GitHub 官方 API，只傳送必要認證欄位，不會上傳 state.vscdb 或系統金鑰。"
     }
   },
   "dashboard": {

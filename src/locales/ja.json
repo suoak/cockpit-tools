@@ -227,14 +227,14 @@
     "title": "プラットフォームレイアウト",
     "sidebarSelected": "サイドバーで選択済み {{count}}/{{max}}",
     "reset": "デフォルトにリセット",
-    "tip": "ドラッグして並び替え。サイドバーには最大2つまで表示できます。1つだけ選択した場合は1つだけ表示されます。",
+    "tip": "ドラッグして並び替え。サイドバーには最大3つまで表示できます。1つだけ選択した場合は1つだけ表示されます。",
     "sidebarToggle": "サイドバーに表示",
     "dashboardToggle": "ダッシュボードに表示",
     "trayToggle": "トレイに表示",
     "hiddenBadge": "非表示",
     "openFromMore": "プラットフォームレイアウトを管理",
     "dragHandleLabel": "ドラッグして並び替え",
-    "tipWithGroups": "ドラッグで並び替えできます。サイドバーに表示できるのは最大2エントリです。グループ子項目にはサイドバー/ダッシュボード表示の切り替えはなく、メニューバー表示と既定プラットフォーム切替のみに使用されます。",
+    "tipWithGroups": "ドラッグで並び替えできます。サイドバーに表示できるのは最大3エントリです。グループ子項目にはサイドバー/ダッシュボード表示の切り替えはなく、メニューバー表示と既定プラットフォーム切替のみに使用されます。",
     "addGroup": "グループを追加",
     "editGroup": "グループを編集",
     "deleteGroup": "グループを削除",
@@ -1545,6 +1545,7 @@
     "authorizing": "システム認証を待っています...",
     "installFailed": "システムへのインストールに失敗しました。後でもう一度試すか、手動でダウンロードしてください。",
     "restartRequiredAfterInstall": "更新はインストール済みです。切り替えを完了するにはアプリを手動で再起動してください。",
+    "stoppingApiService": "API サービスを停止中...",
     "skipThisVersion": "このバージョンをスキップ",
     "skipFailed": "この更新をスキップできませんでした: {{error}}"
   },
@@ -1629,7 +1630,11 @@
       "label": "エクスポート形式",
       "cockpitTools": "Cockpit Tools",
       "sub2api": "sub2api 形式",
-      "cpa": "cpa 形式"
+      "cpa": "cpa 形式",
+      "downloadAll": "すべてダウンロード",
+      "cpaCardTitle": "アカウント {{index}}",
+      "savedFolder": "保存フォルダー",
+      "savedPath": "保存パス"
     },
     "localAccess": {
       "title": "API サービス",
@@ -1716,6 +1721,12 @@
       "clearStats": "統計をクリア",
       "clearStatsConfirm": "API サービスの統計をすべてクリアしますか？",
       "clearStatsSuccess": "API サービスの統計をクリアしました",
+      "killPortAction": "ポートをクリア",
+      "killPortTitle": "API サービスのポートをクリア",
+      "killPortConfirmMessage": "ローカルポート {{port}} を使用している他のプロセスを強制終了し、API サービスを再起動します。続行しますか？",
+      "killPortSuccess": "ポートをクリアしました（{{count}} 個のプロセスを終了）",
+      "killPortSuccessNone": "ポートを確認しました。外部プロセスは使用していません。",
+      "killPortSuccessUnknown": "API サービスのポートをクリアしました",
       "refreshStats": "統計を更新",
       "refreshStatsSuccess": "API サービスの統計を更新しました",
       "routingStrategy": {
@@ -1752,7 +1763,8 @@
       "enableAndActivateAction": "有効化して切り替え",
       "apiPortUrl": "APIポートURL",
       "modelId": "モデル ID",
-      "modelIdPlaceholder": "モデル ID を選択"
+      "modelIdPlaceholder": "モデル ID を選択",
+      "modelIdViewOnly": "表示のみ"
     },
     "local": {
       "desc": "~/.codex/auth.json から現在ログイン中のアカウントをインポート",
@@ -1800,7 +1812,8 @@
       "weekly": "週間クォータ",
       "hourly": "5時間クォータ",
       "weeklyReset": "週間クォータのリセット時間",
-      "hourlyReset": "5時間クォータのリセット時間"
+      "hourlyReset": "5時間クォータのリセット時間",
+      "subscriptionExpiry": "契約期限"
     },
     "opencodeSwitch": "OpenCode 切り替えスイッチ",
     "opencodeSwitchDesc": "OpenCode 内の Codex アカウント情報を同期して切り替え",
@@ -2054,6 +2067,9 @@
         "apiKeyEqualsBaseUrl": "API キーをベース URL と同じ値にはできません。"
       },
       "addAndSwitchSuccess": "追加して切り替えました: {{email}}",
+      "showApiKey": "API Keyを表示",
+      "hideApiKey": "API Keyを非表示",
+      "apiKeyHiddenHint": "API Keyは非表示です。クリックすると表示します。",
       "actions": {
         "addAndSwitch": "追加して切り替える"
       },
@@ -2222,7 +2238,8 @@
         "contextWindowHint": "model_context_window を書き込みます。カスタムモードでのみ編集可能です。",
         "partialDetected": "現在設定されている管理フィールドは、model_context_window={{context}}、model_auto_compact_token_limit={{compact}} の 1 つだけです。保存すると、現在のスキームを使用して両方のフィールドが書き換えられます。",
         "notSet": "未設定"
-      }
+      },
+      "managePresets": "モデルプリセット"
     },
     "quickSwitch": {
       "action": "プロバイダーをクイック切り替え",
@@ -2243,6 +2260,25 @@
     },
     "groups": {
       "addToGroup": "グループに追加"
+    },
+    "subscription": {
+      "label": "契約期限",
+      "column": "期限",
+      "unknown": "再認証",
+      "missingDetail": "再認証して取得",
+      "expired": "期限切れ",
+      "hoursLeft": "{{count}}時間",
+      "daysLeft": "{{count}}日",
+      "over99Days": "99日超",
+      "titleWithDate": "契約期限: {{date}}",
+      "titleUnknown": "再認証して契約期限を取得",
+      "filterLabel": "期限フィルター",
+      "filterAll": "すべて ({{count}})",
+      "filterExpired": "期限切れ ({{count}})",
+      "filterWithin24h": "24時間 ({{count}})",
+      "filterWithin7d": "7日 ({{count}})",
+      "filterWithin30d": "30日 ({{count}})",
+      "filterMissing": "不明 ({{count}})"
     }
   },
   "githubCopilot": {
@@ -2265,7 +2301,8 @@
       "desc": "GitHub Copilot のアクセストークン、またはエクスポートした JSON データを貼り付けてください。"
     },
     "import": {
-      "localDesc": "ローカルでログイン済みのセッションから GitHub Copilot アカウントをインポート。"
+      "localDesc": "ローカル VS Code または JSON ファイルから GitHub Copilot アカウントデータをインポートします。",
+      "localClient": "ローカル VS Code からインポート"
     },
     "sort": {
       "weekly": "週間クォータ",
@@ -2290,7 +2327,7 @@
       "desc": "アカウント切り替えでは、VS Code のローカル認証ストレージを読み取り、システムの資格情報サービスを使って復号・再書き込みを行う必要があります。データは端末内のみで処理されます。",
       "inject": "ワンクリック切り替え: このツールはローカルの VS Code 暗号化情報（DPAPI/Keychain/Secret Service）を読み取り、state.vscdb 内の認証セッションを復号して GitHub Copilot トークンを置き換え、再暗号化します。処理はすべて端末内で完結します。",
       "reason": "必要な権限: VS Code 認証データベース（state.vscdb）を読み取り、システム暗号化機能（Windows DPAPI / macOS Keychain / Linux Secret Service）を呼び出して復号・再書き込みを行います。",
-      "storage": "読み取り範囲: GitHub ログインセッション関連データのみを処理し、すべての処理はローカルで実行されます。"
+      "storage": "データ範囲: ローカルインポートは VS Code の GitHub ログインセッションを読み取り、切り替えは同じ種類のセッションを更新します。OAuth、トークンインポート、ローカルインポート検証、クォータ更新では GitHub 公式 API に必要な認証フィールドのみを送信し、state.vscdb やシステムキーはアップロードしません。"
     }
   },
   "dashboard": {
