@@ -182,9 +182,10 @@ type AppPathMissingDetail = {
     | { kind: 'switchAccount'; accountId?: string };
 };
 
-  const WAKEUP_ENABLED_KEY = 'agtools.wakeup.enabled';
+const WAKEUP_ENABLED_KEY = 'agtools.wakeup.enabled';
 const TASKS_STORAGE_KEY = 'agtools.wakeup.tasks';
 const WAKEUP_FORCE_DISABLE_MIGRATION_KEY = 'agtools.wakeup.migration.force_disable_0_8_14';
+const TOP_RIGHT_AD_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 type WakeupHistoryRecord = {
   id: string;
@@ -387,6 +388,36 @@ function getQuotaAlertQuickSettingsType(platform: QuotaAlertPlatform): QuickSett
   }
 }
 
+function isElementVisible(element: HTMLElement): boolean {
+  return element.getClientRects().length > 0;
+}
+
+function triggerPageRefreshButton(): boolean {
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('button.btn.btn-secondary.icon-only:not(:disabled)'),
+  );
+
+  const target = buttons.find((button) => {
+    if (!isElementVisible(button)) {
+      return false;
+    }
+    return !!button.querySelector('svg.lucide-refresh-cw');
+  });
+
+  if (!target) {
+    return false;
+  }
+
+  target.click();
+  return true;
+}
+
+function isWindowsPlatform(): boolean {
+  const navWithUAData = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = navWithUAData.userAgentData?.platform || navigator.platform || '';
+  return platform.toLowerCase().includes('win');
+}
+
 function MainApp() {
   const { t } = useTranslation();
   const sideNavLayoutMode = useSideNavLayoutStore((state) => state.mode);
@@ -462,10 +493,22 @@ function MainApp() {
     setShowBreakout(true);
   }, []);
   const handleExternalProviderImportRawPayload = useCallback((rawPayload: unknown) => {
+    console.info('[ExternalImport][App] 收到原始 payload:', rawPayload)
     const normalized = normalizeExternalProviderImportPayload(rawPayload);
-    if (!normalized) return;
+    if (!normalized) {
+      console.warn('[ExternalImport][App] payload 归一化失败，已忽略');
+      return;
+    }
+    console.info('[ExternalImport][App] payload 归一化成功:', {
+      providerId: normalized.providerId,
+      page: normalized.page,
+      autoImport: normalized.autoImport,
+      tokenLength: normalized.token.length,
+      source: normalized.source ?? null,
+    });
     setPage(normalized.page);
     window.setTimeout(() => {
+      console.info('[ExternalImport][App] 分发前端外部导入事件');
       dispatchExternalProviderImportEvent(normalized);
     }, 0);
   }, []);
@@ -480,6 +523,7 @@ function MainApp() {
     if (!hasBreakoutSession) return;
     setShowBreakout(true);
   }, [hasBreakoutSession]);
+
   const {
     count: easterEggClickCount,
     registerClick: handleEasterEggTriggerClick,
@@ -502,7 +546,37 @@ function MainApp() {
   useAutoRefresh();
 
   useEffect(() => {
+    const handleRefreshShortcut = (event: KeyboardEvent) => {
+      const isRefreshKey = event.key.toLowerCase() === 'r';
+      const isWindowsF5 = isWindowsPlatform() && event.key === 'F5';
+      const hasMainModifier = event.metaKey || event.ctrlKey;
+      const matchMainRefresh = isRefreshKey && hasMainModifier && !event.altKey && !event.shiftKey;
+      const matchWindowsRefresh = isWindowsF5 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+      if ((!matchMainRefresh && !matchWindowsRefresh) || event.repeat) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      triggerPageRefreshButton();
+    };
+
+    window.addEventListener('keydown', handleRefreshShortcut, true);
+    return () => {
+      window.removeEventListener('keydown', handleRefreshShortcut, true);
+    };
+  }, []);
+
+  useEffect(() => {
     void fetchTopRightAdState();
+  }, [fetchTopRightAdState]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void fetchTopRightAdState();
+    }, TOP_RIGHT_AD_REFRESH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [fetchTopRightAdState]);
 
   useEffect(() => {
@@ -1342,7 +1416,9 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
+    const AUTO_BACKUP_STARTUP_DELAY_MS = 5 * 60 * 1000;
     const AUTO_BACKUP_POLL_INTERVAL_MS = 60 * 60 * 1000;
+    let startupTimerId: number | undefined;
     let intervalId: number | undefined;
     let inFlight = false;
 
@@ -1360,12 +1436,17 @@ function MainApp() {
       }
     };
 
-    void checkAutoBackup();
-    intervalId = window.setInterval(() => {
+    startupTimerId = window.setTimeout(() => {
       void checkAutoBackup();
-    }, AUTO_BACKUP_POLL_INTERVAL_MS);
+      intervalId = window.setInterval(() => {
+        void checkAutoBackup();
+      }, AUTO_BACKUP_POLL_INTERVAL_MS);
+    }, AUTO_BACKUP_STARTUP_DELAY_MS);
 
     return () => {
+      if (startupTimerId !== undefined) {
+        window.clearTimeout(startupTimerId);
+      }
       if (intervalId !== undefined) {
         window.clearInterval(intervalId);
       }
@@ -2513,6 +2594,7 @@ function MainApp() {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
     listen('external:provider-import', (event) => {
+      console.info('[ExternalImport][App] 收到 Tauri 事件 external:provider-import');
       handleExternalProviderImportRawPayload(event.payload);
     }).then((fn) => {
       unlisten = fn;
@@ -2529,7 +2611,12 @@ function MainApp() {
     let canceled = false;
     void invoke<unknown>('external_import_take_pending')
       .then((payload) => {
-        if (canceled || !payload) return;
+        if (canceled) return;
+        if (!payload) {
+          console.info('[ExternalImport][App] 启动时无待处理导入 payload');
+          return;
+        }
+        console.info('[ExternalImport][App] 启动时读取到待处理导入 payload');
         handleExternalProviderImportRawPayload(payload);
       })
       .catch((error) => {

@@ -379,7 +379,34 @@
       "launchModeCli": "Modalità CLI",
       "workingDir": "Directory di lavoro",
       "workingDirPlaceholder": "Per default usa il percorso corrente",
-      "workingDirDesc": "All'avvio passerà prima a questa directory"
+      "workingDirDesc": "All'avvio passerà prima a questa directory",
+      "codexQuickConfig": {
+        "title": "Contesto e limiti compatti",
+        "presetLabel": "Preimpostazione di configurazione",
+        "presetHint": "Scegli un'impostazione predefinita (Predefinita / 516K / 1M) oppure passa a Personalizzata e compila entrambi i campi manualmente.",
+        "presetDefaultShort": "Predefinito",
+        "presetDefaultDesc": "Rimuovi entrambi i campi e utilizza le impostazioni predefinite ufficiali",
+        "preset516kShort": "Preimpostato 516K",
+        "preset516kDesc": "contesto=516000 / compatto=460000",
+        "preset1mShort": "Preimpostato 1M",
+        "preset1mDesc": "contesto=1000000 / compatto=900000",
+        "presetCustomShort": "Costume",
+        "presetCustomDesc": "Imposta manualmente il contesto e i valori compatti",
+        "contextWindow": "Finestra di contesto",
+        "contextWindowHint": "Scrive model_context_window. Modificabile solo in modalità personalizzata.",
+        "autoCompactLimit": "Limite di compattazione automatica",
+        "autoCompactLimitHint": "Scrive model_auto_compact_token_limit. Modificabile solo in modalità personalizzata.",
+        "customDetected": "Sono stati rilevati valori personalizzati in config.toml: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio li sovrascriverà con il preset selezionato.",
+        "partialDetected": "Attualmente è impostato un solo campo gestito: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio riscriverà entrambi i campi utilizzando lo schema corrente.",
+        "notSet": "Non impostato",
+        "loadFailed": "Impossibile caricare la configurazione corrente del Codex: {{error}}",
+        "openConfig": "Apri config.toml",
+        "openFailed": "Impossibile aprire config.toml: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "La finestra di contesto deve essere un numero intero maggiore di 0.",
+          "autoCompactInvalid": "Il limite di compattazione automatica deve essere un numero intero maggiore di 0."
+        }
+      }
     },
     "quota": {
       "unbound": "Account non collegato",
@@ -666,7 +693,18 @@
       "qoderAutoRefreshDesc": "Frequenza di aggiornamento automatico in background",
       "qoderPathSelect": "Seleziona",
       "workbuddyAutoRefresh": "Aggiornamento automatico quota WorkBuddy",
-      "workbuddyAutoRefreshDesc": "Frequenza di aggiornamento automatico in background"
+      "workbuddyAutoRefreshDesc": "Frequenza di aggiornamento automatico in background",
+      "codexLocalAccessEntryVisible": "Mostra voce del servizio API",
+      "codexLocalAccessEntryVisibleDesc": "Controlla solo se la voce del servizio API viene mostrata nella panoramica Codex. Non arresta il servizio API locale; puoi riattivarla qui o nelle Impostazioni rapide.",
+      "codexLocalAccessEnabled": "Abilita servizio API",
+      "codexLocalAccessEnabledDesc": "Controlla se il servizio API locale di Codex è effettivamente in esecuzione.",
+      "codexLocalAccessEnabledRequiresCollection": "Aggiungi prima gli account alla raccolta del servizio API prima di abilitare o disabilitare il servizio.",
+      "codexRestartSpecifiedAppOnSwitch": "Riavvia l'app specificata al cambio Codex",
+      "codexRestartSpecifiedAppOnSwitchDesc": "Se attivo, riavvia l'app nel percorso seguente (per flussi con host plugin).",
+      "codexSpecifiedAppPath": "Percorso app specificata",
+      "codexSpecifiedAppPathDesc": "Percorso dell'app da riavviare insieme al cambio Codex.",
+      "codexSpecifiedAppPathPlaceholder": "Ad esempio /Applications/Host.app",
+      "codexSpecifiedAppPathClear": "Cancella"
     },
     "network": {
       "apiTitle": "API della cabina di pilotaggio antigravità",
@@ -725,7 +763,17 @@
       "upToDate": "Aggiornato",
       "newVersion": "v{{version}} disponibile",
       "download": "Scarica",
-      "checkFailed": "Controllo fallito"
+      "checkFailed": "Controllo fallito",
+      "viewReleaseHistory": "Note sulla versione",
+      "releaseHistoryTitle": "Note sulla versione",
+      "releaseHistoryLoading": "Caricamento delle note sulla versione...",
+      "releaseHistoryEmpty": "Nessuna nota di rilascio ancora",
+      "releaseHistoryLoadFailed": "Impossibile caricare: {{error}}",
+      "releaseHistorySectionAdded": "Aggiunto",
+      "releaseHistorySectionChanged": "Cambiato",
+      "releaseHistorySectionFixed": "Fisso",
+      "releaseHistorySectionRemoved": "RIMOSSO",
+      "downloadThisVersion": "Scaricamento"
     },
     "saveSettings": "Salva Impostazioni",
     "transfer": {
@@ -1016,11 +1064,13 @@
       "originPlugin": "Estensione",
       "originUnknown": "Sconosciuto",
       "autoReasonLabel": "Motivo automatico: {{reason}}",
-      "autoReason": "Regola: {{rule}}; soglia: {{threshold}}%; ambito: {{scope}}; gruppi monitorati: {{selectedGroups}}; gruppi colpiti: {{hitGroups}}; candidati: {{candidates}}",
+      "autoReason": "Regola: {{rule}}; soglia quota: {{quotaThreshold}}%; soglia crediti: {{creditsThreshold}}; ambito: {{scope}}; gruppi monitorati: {{selectedGroups}}; gruppi colpiti: {{hitGroups}}; crediti attuali: {{currentCredits}}; account candidati: {{candidates}}",
       "autoReasonUnknown": "È stato attivato il cambio automatico, ma non è stato registrato un motivo dettagliato",
       "autoReasonRuleCurrentDisabled": "L’account corrente è disabilitato",
       "autoReasonRuleQuotaForbidden": "La quota dell’account corrente è limitata",
+      "autoReasonRuleGroupAndCreditsBelowThreshold": "Gruppo modelli e crediti entrambi sotto soglia",
       "autoReasonRuleGroupBelowThreshold": "Gruppo di modelli sotto soglia",
+      "autoReasonRuleCreditsBelowThreshold": "Crediti rimanenti sotto soglia",
       "autoReasonScopeAnyGroup": "Qualsiasi gruppo di modelli",
       "autoReasonScopeSelectedGroups": "Gruppi di modelli selezionati",
       "stageResult": "Locale: {{local}} / Fluido: {{seamless}}",
@@ -1575,6 +1625,135 @@
       "desc": "Incolla il contenuto di auth.json o i dati JSON dell'account",
       "placeholder": "Esempio: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
+    "exportFormat": {
+      "label": "Formato di esportazione",
+      "cockpitTools": "Cockpit Tools",
+      "sub2api": "Formato sub2api",
+      "cpa": "Formato cpa"
+    },
+    "localAccess": {
+      "title": "Servizio API",
+      "accountCount": "{{count}} account",
+      "baseUrl": "Indirizzo",
+      "apiKey": "Chiave",
+      "statusRunning": "In esecuzione",
+      "statusStopped": "Arrestato",
+      "statusDisabled": "Disattivato",
+      "emptyMembers": "Nessun account nella raccolta",
+      "footerHint": "Ascolta solo su 127.0.0.1",
+      "manageAccounts": "Gestisci account",
+      "rotateKey": "Ruota chiave",
+      "rotateConfirmMessage": "Dopo il reset, la chiave attuale del servizio API smetterà subito di funzionare e le richieste in corso potrebbero non essere più disponibili. Continuare?",
+      "disableService": "Disattiva servizio",
+      "enableService": "Attiva servizio",
+      "saveSuccess": "Raccolta del servizio API aggiornata",
+      "removeSuccess": "Account rimosso dal servizio API",
+      "rotateSuccess": "Chiave del servizio API reimpostata",
+      "enabledSuccess": "Servizio API abilitato",
+      "disabledSuccess": "Servizio API disabilitato",
+      "removeMember": "Rimuovi dal servizio API",
+      "toggleService": "Attiva/disattiva servizio API",
+      "showKey": "Mostra chiave",
+      "hideKey": "Nascondi chiave",
+      "modal": {
+        "title": "Aggiungi al servizio API",
+        "desc": "Scegli gli account OAuth da includere nella raccolta del servizio API. Gli account aggiunti verranno nascosti dalla panoramica normale e gestiti solo dalla scheda del servizio API.",
+        "empty": "Nessun account OAuth disponibile",
+        "selected": "Nel servizio API",
+        "available": "Panoramica normale",
+        "save": "Salva raccolta",
+        "freeNotice": "Gli account gratuiti non sono ancora supportati. Non è possibile selezionare account gratuiti.",
+        "freeUnsupported": "Gli account gratuiti non sono ancora supportati",
+        "restrictFreeToggle": "Limita account Free",
+        "freeNoticeRestricted": "Gli account Free sono limitati. Disattiva questa opzione per selezionarli.",
+        "freeNoticeUnstable": "Il proxy degli account Free può essere instabile. Usalo con cautela.",
+        "restrictFreeDisableConfirmTitle": "Consenti account Free",
+        "restrictFreeDisableConfirmMessage": "Il proxy degli account Free può essere instabile. Vuoi usarli davvero?"
+      },
+      "entryAction": "Aggiungi al servizio API",
+      "testAction": "Testa il servizio API",
+      "testSuccess": "Test del servizio API riuscito ({{count}} modelli)",
+      "testTimeout": "Test scaduto. Verifica che il servizio locale sia in esecuzione.",
+      "testUnavailable": "L’URL corrente del servizio API non è disponibile",
+      "activateAction": "Avvia servizio API",
+      "activateSuccess": "Passato al servizio API",
+      "dashboardAction": "Pannello servizio",
+      "manageDesc": "Gestisci in un solo posto statistiche del servizio API, membri, porta, chiave e test di connettività.",
+      "memberOnlyLocal": "Solo Codex",
+      "configTitle": "Config servizio",
+      "configEmpty": "Salva prima almeno un account nella raccolta del servizio API per generare URL, chiave e porta.",
+      "portLabel": "Porta servizio",
+      "portSave": "Salva porta",
+      "portSaveSuccess": "La porta del servizio API è stata aggiornata",
+      "portInvalid": "Inserisci una porta tra 1 e 65535",
+      "statsTitle": "Totali",
+      "accountStatsTitle": "Per account",
+      "statsEmpty": "Nessuna statistica ancora",
+      "summaryMeta": "{{count}} account · Solo Codex",
+      "summaryMetaUnconfigured": "Non configurato · Solo Codex",
+      "memberTitle": "Membri della raccolta",
+      "stats": {
+        "requests": "Richieste",
+        "requestsDetail": "Successi {{success}} / Errori {{failed}}",
+        "tokens": "Token",
+        "tokensDetail": "Input {{input}} / Output {{output}}",
+        "specialTokens": "Cache / Ragionamento",
+        "specialTokensDetail": "Cache {{cached}} / Ragionamento {{reasoning}}",
+        "avgLatency": "Latenza media",
+        "successRate": "Tasso di successo {{rate}}%",
+        "accountRequests": "{{count}} richieste",
+        "accountTokens": "{{count}} token",
+        "accountResult": "Successi {{success}} / Errori {{failed}}",
+        "accountTokensCompact": "{{value}}"
+      },
+      "routingLabel": "Instradamento",
+      "routingSaveSuccess": "Instradamento del servizio API aggiornato",
+      "routingDescriptionAuto": "Dà priorità agli account con piano più alto e quota residua maggiore, poi ruota nello stesso livello.",
+      "routingDescriptionQuotaHighFirst": "Dà priorità agli account con più quota residua.",
+      "routingDescriptionQuotaLowFirst": "Dà priorità agli account con meno quota residua.",
+      "routingDescriptionPlanHighFirst": "Dà priorità agli account con livelli di abbonamento più alti.",
+      "routingDescriptionPlanLowFirst": "Dà priorità agli account con livelli di abbonamento più bassi.",
+      "clearStats": "Cancella statistiche",
+      "clearStatsConfirm": "Cancellare tutte le statistiche del servizio API?",
+      "clearStatsSuccess": "Le statistiche del servizio API sono state cancellate",
+      "refreshStats": "Aggiorna statistiche",
+      "refreshStatsSuccess": "Le statistiche del servizio API sono state aggiornate",
+      "routingStrategy": {
+        "auto": "Automatico (consigliato)",
+        "quotaHighFirst": "Quota alta prima",
+        "quotaLowFirst": "Quota bassa prima",
+        "planHighFirst": "Piano alto prima",
+        "planLowFirst": "Piano basso prima"
+      },
+      "statusUnconfigured": "Non configurato",
+      "expandDetails": "Espandi dettagli",
+      "collapseDetails": "Comprimi dettagli",
+      "hideEntryAction": "Nascondi voce del servizio API",
+      "hideEntryConfirm": "Questa azione nasconderà la voce del servizio API dalla panoramica e disattiverà anche il servizio API attuale. Potrai riattivarla più tardi nelle Impostazioni Codex o nelle Impostazioni rapide.",
+      "hideEntryEffectHide": "Nascondi la voce del servizio API dalla panoramica",
+      "hideEntryEffectDisable": "Disattiva il servizio API attuale",
+      "hideEntryEffectRestore": "Potrai riattivarla nelle Impostazioni Codex o nelle Impostazioni rapide",
+      "riskNotice": {
+        "title": "Avviso di rischio",
+        "message": "Le attuali funzionalità relative al servizio Codex API si basano, di fatto, su un uso tramite proxy inverso. Al momento il servizio ufficiale non limita esplicitamente questo comportamento, ma politiche, regole o disponibilità potrebbero cambiare in futuro. Continuando a usare questa funzione, riconosci la situazione e accetti di assumerti personalmente i rischi correlati.",
+        "remember": "Ho capito, non mostrare più",
+        "acknowledge": "Ho capito",
+        "continueStart": "Continua",
+        "continueSwitch": "Continua"
+      },
+      "statsRange": {
+        "label": "Intervallo statistiche",
+        "daily": "Giorno",
+        "weekly": "Settimana",
+        "monthly": "Mese"
+      },
+      "enableBeforeActivateTitle": "Servizio non abilitato",
+      "enableBeforeActivateMessage": "Il servizio API è attualmente disattivato e deve essere prima abilitato. Abilitare e cambiare ora?",
+      "enableAndActivateAction": "Abilita e cambia",
+      "apiPortUrl": "URL porta API",
+      "modelId": "ID modello",
+      "modelIdPlaceholder": "Seleziona ID modello"
+    },
     "local": {
       "desc": "Importa l'account attuale da ~/.codex/auth.json",
       "import": "Ottieni account locale"
@@ -1832,7 +2011,8 @@
         "expand": "Espandi",
         "collapse": "Comprimi",
         "repairVisibility": "Ripara visibilità",
-        "restoreSessions": "Ripristina sessioni"
+        "restoreSessions": "Ripristina sessioni",
+        "copySessionId": "Copia ID sessione"
       },
       "confirm": {
         "title": "Sposta nel cestino",
@@ -1851,6 +2031,10 @@
       },
       "groupCount": "{{count}} sessioni",
       "updatedAt": "Aggiornato",
+      "labels": {
+        "sessionId": "ID sessione",
+        "tokenUsage": "Utilizzo token"
+      },
       "locationRunning": " (in esecuzione)",
       "untitled": "Sessione senza titolo",
       "restoreModal": {
@@ -2017,8 +2201,27 @@
         "customDetected": "È stato rilevato un model_context_window = {{context}} personalizzato in config.toml. Il salvataggio lo riscriverà usando l'impostazione rapida qui sotto.",
         "compactMissingDetected": "Il contesto 1M è già attivo, ma manca il limite di auto-compact. Il salvataggio scriverà il valore predefinito {{limit}}.",
         "validation": {
-          "autoCompactInvalid": "Il limite di auto-compact deve essere un numero intero maggiore di 0."
-        }
+          "autoCompactInvalid": "Il limite di auto-compact deve essere un numero intero maggiore di 0.",
+          "contextWindowInvalid": "La finestra di contesto deve essere un numero intero maggiore di 0."
+        },
+        "presetLabel": "Preimpostazione di configurazione",
+        "presetHint": "Scegli un'impostazione predefinita (Predefinita / 516K / 1M) oppure passa a Personalizzata e compila entrambi i campi manualmente.",
+        "presetDefaultShort": "Predefinito",
+        "presetDefaultDesc": "Rimuovi entrambi i campi e utilizza le impostazioni predefinite ufficiali",
+        "preset516kShort": "Preimpostato 516K",
+        "preset516kDesc": "contesto=516000 / compatto=460000",
+        "preset1mShort": "Preimpostato 1M",
+        "preset1mDesc": "contesto=1000000 / compatto=900000",
+        "presetCustomShort": "Costume",
+        "presetCustomDesc": "Imposta manualmente il contesto e i valori compatti",
+        "presetDefault": "Predefinito (rimuovi model_context_window / model_auto_compact_token_limit)",
+        "preset516k": "Preimpostato 516K (model_context_window = 516000, auto_compact = 460000)",
+        "preset1m": "Preimpostazione 1M (model_context_window = 1000000, auto_compact = 900000)",
+        "presetCustom": "Costume",
+        "contextWindow": "Finestra di contesto",
+        "contextWindowHint": "Scrive model_context_window. Modificabile solo in modalità personalizzata.",
+        "partialDetected": "Attualmente è impostato un solo campo gestito: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio riscriverà entrambi i campi utilizzando lo schema corrente.",
+        "notSet": "Non impostato"
       }
     },
     "quickSwitch": {
@@ -2162,7 +2365,35 @@
       "appPath": "Percorso app",
       "configToml": "File di configurazione di Codex",
       "openConfigToml": "Apri file",
-      "openConfigHint": "Apri rapidamente il file config.toml attivo di Codex."
+      "openConfigHint": "Apri rapidamente il file config.toml attivo di Codex.",
+      "localAccessEntryVisible": "Mostra voce del servizio API",
+      "quickConfig": {
+        "title": "Contesto e limiti compatti",
+        "presetLabel": "Preimpostazione di configurazione",
+        "presetHint": "Scegli un'impostazione predefinita (Predefinita / 516K / 1M) oppure passa a Personalizzata e compila entrambi i campi manualmente.",
+        "presetDefaultShort": "Predefinito",
+        "presetDefaultDesc": "Rimuovi entrambi i campi e utilizza le impostazioni predefinite ufficiali",
+        "preset516kShort": "Preimpostato 516K",
+        "preset516kDesc": "contesto=516000 / compatto=460000",
+        "preset1mShort": "Preimpostato 1M",
+        "preset1mDesc": "contesto=1000000 / compatto=900000",
+        "presetCustomShort": "Costume",
+        "presetCustomDesc": "Imposta manualmente il contesto e i valori compatti",
+        "contextWindow": "Finestra di contesto",
+        "contextWindowHint": "Scrive model_context_window. Modificabile solo in modalità personalizzata.",
+        "autoCompactLimit": "Limite di compattazione automatica",
+        "autoCompactLimitHint": "Scrive model_auto_compact_token_limit. Modificabile solo in modalità personalizzata.",
+        "customDetected": "Sono stati rilevati valori personalizzati in config.toml: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio li sovrascriverà con il preset selezionato.",
+        "partialDetected": "Attualmente è impostato un solo campo gestito: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Il salvataggio riscriverà entrambi i campi utilizzando lo schema corrente.",
+        "notSet": "Non impostato",
+        "loadFailed": "Impossibile caricare la configurazione corrente del Codex: {{error}}",
+        "saveSuccess": "Configurazione corrente del Codex salvata.",
+        "saveFailed": "Impossibile salvare la configurazione corrente del Codex: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "La finestra di contesto deve essere un numero intero maggiore di 0.",
+          "autoCompactInvalid": "Il limite di compattazione automatica deve essere un numero intero maggiore di 0."
+        }
+      }
     },
     "githubCopilot": {
       "title": "Impostazioni GitHub Copilot",
@@ -2176,7 +2407,10 @@
       "enable": "Cambio automatico",
       "threshold": "Soglia di cambio",
       "thresholdDesc": "Il cambio automatico si attiva quando i gruppi di modelli monitorati raggiungono questa soglia percentuale",
-      "hint": "Passa automaticamente all’account con quota più alta quando i gruppi di modelli monitorati raggiungono la soglia.",
+      "hint": "Passa automaticamente quando i gruppi di modelli monitorati raggiungono la soglia; con il monitoraggio crediti attivo si attiva anche quando i crediti rimanenti scendono sotto la soglia.",
+      "creditsEnable": "Monitora crediti",
+      "creditsThreshold": "Soglia crediti",
+      "creditsThresholdDesc": "Attiva anche il cambio automatico quando i crediti rimanenti sono pari o inferiori a questo valore",
       "triggerModel": "Modello di attivazione",
       "scopeAnyGroup": "Qualsiasi gruppo di modelli",
       "scopeSelectedGroups": "Gruppi di modelli selezionati",
@@ -2194,6 +2428,7 @@
     "apply": "Applica",
     "inputMinutes": "Inserire i minuti",
     "inputPercent": "Inserire la percentuale",
+    "inputCredits": "Inserire i crediti",
     "windsurf": {
       "title": "Impostazioni Windsurf",
       "appPath": "Percorso Windsurf"
@@ -2243,6 +2478,11 @@
     "zed": {
       "title": "Impostazioni Zed",
       "appPath": "Percorso Zed"
+    },
+    "filterPersistence": {
+      "title": "Memoria filtri",
+      "enable": "Ricorda i filtri della panoramica account (esclusa la ricerca)",
+      "hint": "Disattivato per impostazione predefinita. Se attivato, ogni piattaforma mantiene filtri, tag e ordinamento."
     }
   },
   "quotaAlert": {
@@ -2279,7 +2519,55 @@
       "description": "Fai clic su \"Aggiungi account\" per iniziare"
     },
     "addModal": {
-      "title": "Aggiungi account Windsurf"
+      "title": "Aggiungi account Windsurf",
+      "password": "Accesso e-mail"
+    },
+    "password": {
+      "desc": "Accedi con l’e-mail e la password del tuo account Windsurf per recuperare automaticamente API key e dati account.",
+      "emailPlaceholder": "Indirizzo e-mail",
+      "passwordPlaceholder": "Password",
+      "empty": "Inserisci e-mail e password",
+      "login": "Accedi",
+      "logging": "Accesso in corso...",
+      "success": "Accesso riuscito: {{login}}",
+      "failed": "Accesso non riuscito: {{error}}",
+      "modeLabel": "Modalità",
+      "modeSingle": "Singolo",
+      "modeBatch": "Batch",
+      "batchDesc": "L’importazione batch supporta JSON o testo con un account per riga. In modalità testo è necessario specificare un delimitatore.",
+      "batchInputModeLabel": "Formato",
+      "batchInputModeJson": "Formato JSON",
+      "batchInputModeText": "Testo",
+      "batchDelimiterLabel": "Delimitatore",
+      "batchDelimiterTab": "Tabulazione",
+      "batchDelimiterSpace": "Spazio",
+      "batchDelimiterComma": "Virgola",
+      "batchDelimiterPipe": "Barra verticale",
+      "batchDelimiterDash": "----",
+      "batchDelimiterCustom": "Personalizzato",
+      "batchJsonDesc": "Incolla un array JSON in cui ogni elemento contiene email e password.",
+      "batchTextDesc": "Inserisci un account per riga; il parsing segue rigorosamente il delimitatore selezionato.",
+      "batchExampleTitle": "Esempio di formato (clic per espandere)",
+      "batchExampleJsonLabel": "Esempio JSON",
+      "batchExampleTextLabel": "Esempio testo",
+      "batchCustomDelimiterPlaceholder": "Inserisci un delimitatore personalizzato",
+      "batchCustomDelimiterEmpty": "Inserisci un delimitatore personalizzato",
+      "batchPlaceholderJson": "Incolla un array JSON con email e password",
+      "batchPlaceholderText": "Un account per riga con il delimitatore scelto",
+      "batchEmpty": "Inserisci prima il contenuto dell’importazione batch",
+      "batchJsonInvalid": "JSON non valido: {{error}}",
+      "batchJsonArrayRequired": "La radice JSON deve essere un array",
+      "batchJsonItemInvalid": "L’elemento {{line}} deve includere email e password",
+      "batchTextLineInvalid": "La riga {{line}} non è valida. Controlla il delimitatore selezionato.",
+      "batchImport": "Importa batch",
+      "batchImporting": "Importazione di {{count}} account...",
+      "batchImportingShort": "Importazione...",
+      "batchSuccess": "{{count}} account importati",
+      "batchPartial": "{{success}} importati, {{failed}} non riusciti",
+      "batchFailed": "Importazione batch non riuscita per {{failed}} account",
+      "batchFailureEntryWithLine": "Elemento {{line}} ({{email}}): {{error}}",
+      "batchFailureEntry": "{{email}}: {{error}}",
+      "batchFailureMore": "{{count}} altri non riusciti"
     },
     "oauth": {
       "desc": "Fai clic qui sotto e completa l'autorizzazione di Windsurf nel browser."
@@ -3045,11 +3333,11 @@
       "status": "Stato check-in",
       "checkedIn": "Check-in effettuato",
       "notCheckedIn": "Non effettuato",
-      "button": "Effettua check-in",
+      "button": {},
       "button.loading": "Check-in in corso...",
       "done": "Fatto",
       "success": "Check-in riuscito! Serie di {{days}} giorni",
-      "failure": "Check-in non riuscito: {{message}}",
+      "failure": {},
       "failure.network": "Errore di rete, riprova più tardi",
       "lastCheckin": "Ultimo check-in: {{time}}",
       "streak": "Serie di {{days}} giorni",
@@ -3372,5 +3660,16 @@
     "cancelEditAccountName": "Annulla modifica",
     "accountNameRequired": "Il nome account è obbligatorio.",
     "copySecret": "Copia segreto"
+  },
+  "logViewer": {
+    "fileLabel": "File di log",
+    "levelLabel": "Livello",
+    "noMatches": "Nessun log corrisponde al filtro corrente",
+    "levels": {
+      "all": "Tutti",
+      "info": "Info",
+      "warn": "Avviso",
+      "error": "Errore"
+    }
   }
 }

@@ -927,8 +927,7 @@ async fn refresh_account_token_once(account_id: &str) -> Result<WindsurfAccount,
         account.quota_query_last_error_at = None;
         account.usage_updated_at = Some(refreshed_at);
     } else {
-        account.quota_query_last_error =
-            Some("未获取到有效配额快照，已保留旧配额缓存".to_string());
+        account.quota_query_last_error = Some("未获取到有效配额快照，已保留旧配额缓存".to_string());
         account.quota_query_last_error_at = Some(chrono::Utc::now().timestamp_millis());
     }
     account.last_used = refreshed_at;
@@ -946,9 +945,11 @@ async fn refresh_account_token_once(account_id: &str) -> Result<WindsurfAccount,
 }
 
 pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, String> {
-    let result = crate::modules::refresh_retry::retry_once_with_delay("Windsurf Refresh", account_id, || async {
-        refresh_account_token_once(account_id).await
-    })
+    let result = crate::modules::refresh_retry::retry_once_with_delay(
+        "Windsurf Refresh",
+        account_id,
+        || async { refresh_account_token_once(account_id).await },
+    )
     .await;
     if let Err(err) = &result {
         persist_quota_query_error(account_id, err);
@@ -1250,62 +1251,10 @@ fn average_quota_percentage(metrics: &[(String, i32)]) -> f64 {
 }
 
 pub(crate) fn resolve_current_account_id(accounts: &[WindsurfAccount]) -> Option<String> {
-    if let Ok(Some(local_auth_status)) = read_local_auth_status() {
-        let local_api_key =
-            pick_string_from_object(Some(&local_auth_status), &["apiKey", "api_key"])
-                .and_then(|value| normalize_non_empty(Some(value.as_str())));
-        let local_email = pick_string_from_object(Some(&local_auth_status), &["email"])
-            .and_then(|value| normalize_email(Some(value.as_str())));
-        let local_login_hint = read_local_login_hint()
-            .and_then(|value| normalize_non_empty(Some(value.as_str())))
-            .map(|value| value.to_lowercase());
-
-        if let Some(account_id) = accounts
-            .iter()
-            .find(|account| {
-                if let (Some(existing), Some(incoming)) = (
-                    resolve_account_api_key(account).as_ref(),
-                    local_api_key.as_ref(),
-                ) {
-                    if existing == incoming {
-                        return true;
-                    }
-                }
-
-                if let (Some(existing), Some(incoming)) = (
-                    resolve_account_email(account).as_ref(),
-                    local_email.as_ref(),
-                ) {
-                    if existing == incoming {
-                        return true;
-                    }
-                }
-
-                if let Some(incoming) = local_login_hint.as_ref() {
-                    return account.github_login.eq_ignore_ascii_case(incoming);
-                }
-
-                false
-            })
-            .map(|account| account.id.clone())
-        {
-            return Some(account_id);
-        }
-    }
-
-    if let Ok(settings) = crate::modules::windsurf_instance::load_default_settings() {
-        if let Some(bind_id) = settings.bind_account_id {
-            let trimmed = bind_id.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_string());
-            }
-        }
-    }
-
-    accounts
-        .iter()
-        .max_by_key(|account| account.last_used)
-        .map(|account| account.id.clone())
+    crate::modules::provider_current_state::resolve_existing_current_account_id(
+        "windsurf",
+        accounts.iter().map(|account| account.id.as_str()),
+    )
 }
 
 fn display_email(account: &WindsurfAccount) -> String {

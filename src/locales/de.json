@@ -379,7 +379,34 @@
       "launchModeCli": "CLI-Modus",
       "workingDir": "Arbeitsverzeichnis",
       "workingDirPlaceholder": "Standardmäßig aktueller Pfad",
-      "workingDirDesc": "Beim Start wird zuerst in dieses Verzeichnis gewechselt"
+      "workingDirDesc": "Beim Start wird zuerst in dieses Verzeichnis gewechselt",
+      "codexQuickConfig": {
+        "title": "Kontext- und Kompaktgrenzen",
+        "presetLabel": "Konfigurationsvoreinstellung",
+        "presetHint": "Wählen Sie eine Voreinstellung (Standard / 516K / 1M) oder wechseln Sie zu „Benutzerdefiniert“ und füllen Sie beide Felder manuell aus.",
+        "presetDefaultShort": "Standard",
+        "presetDefaultDesc": "Entfernen Sie beide Felder und verwenden Sie die offiziellen Standardwerte",
+        "preset516kShort": "Voreingestellt 516K",
+        "preset516kDesc": "context=516000 / kompakt=460000",
+        "preset1mShort": "Voreingestellt 1M",
+        "preset1mDesc": "Kontext=1000000 / kompakt=900000",
+        "presetCustomShort": "Brauch",
+        "presetCustomDesc": "Legen Sie Kontext- und Kompaktwerte manuell fest",
+        "contextWindow": "Kontextfenster",
+        "contextWindowHint": "Schreibt model_context_window. Nur im benutzerdefinierten Modus bearbeitbar.",
+        "autoCompactLimit": "Grenzwert für automatische Komprimierung",
+        "autoCompactLimitHint": "Schreibt model_auto_compact_token_limit. Nur im benutzerdefinierten Modus bearbeitbar.",
+        "customDetected": "Benutzerdefinierte Werte wurden in config.toml erkannt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Durch das Speichern werden sie mit der von Ihnen ausgewählten Voreinstellung überschrieben.",
+        "partialDetected": "Derzeit ist nur ein verwaltetes Feld festgelegt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Beim Speichern werden beide Felder mit dem aktuellen Schema neu geschrieben.",
+        "notSet": "Nicht festgelegt",
+        "loadFailed": "Die aktuelle Codex-Konfiguration konnte nicht geladen werden: {{error}}",
+        "openConfig": "Öffnen Sie config.toml",
+        "openFailed": "config.toml konnte nicht geöffnet werden: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "Das Kontextfenster muss eine Ganzzahl größer als 0 sein.",
+          "autoCompactInvalid": "Der Grenzwert für die automatische Komprimierung muss eine Ganzzahl größer als 0 sein."
+        }
+      }
     },
     "quota": {
       "unbound": "Nicht gekoppelt",
@@ -666,7 +693,18 @@
       "qoderAutoRefreshDesc": "Häufigkeit der automatischen Aktualisierung im Hintergrund",
       "qoderPathSelect": "Auswählen",
       "workbuddyAutoRefresh": "WorkBuddy Auto-Aktualisierung",
-      "workbuddyAutoRefreshDesc": "Häufigkeit der automatischen Aktualisierung im Hintergrund"
+      "workbuddyAutoRefreshDesc": "Häufigkeit der automatischen Aktualisierung im Hintergrund",
+      "codexLocalAccessEntryVisible": "API-Service-Eintrag anzeigen",
+      "codexLocalAccessEntryVisibleDesc": "Steuert nur, ob der API-Service-Eintrag in der Codex-Übersicht angezeigt wird. Der lokale API-Service wird dadurch nicht gestoppt; du kannst ihn hier oder in den Schnelleinstellungen wieder einblenden.",
+      "codexLocalAccessEnabled": "API-Service aktivieren",
+      "codexLocalAccessEnabledDesc": "Steuert, ob der lokale Codex-API-Service tatsächlich läuft.",
+      "codexLocalAccessEnabledRequiresCollection": "Füge zuerst Konten zur API-Service-Sammlung hinzu, bevor du den Service aktivierst oder deaktivierst.",
+      "codexRestartSpecifiedAppOnSwitch": "Beim Wechsel von Codex angegebene App neu starten",
+      "codexRestartSpecifiedAppOnSwitchDesc": "Wenn aktiviert, wird die App unter dem folgenden Pfad neu gestartet (für Plugin-Host-Workflows).",
+      "codexSpecifiedAppPath": "Pfad der angegebenen App",
+      "codexSpecifiedAppPathDesc": "Pfad der App, die beim Codex-Wechsel mit neu gestartet wird.",
+      "codexSpecifiedAppPathPlaceholder": "z. B. /Applications/Host.app",
+      "codexSpecifiedAppPathClear": "Leeren"
     },
     "network": {
       "apiTitle": "Antigravity-Cockpit-API",
@@ -725,7 +763,17 @@
       "upToDate": "Aktuell",
       "newVersion": "v{{version}} verfügbar",
       "download": "Herunterladen",
-      "checkFailed": "Fehler bei der Update-Suche"
+      "checkFailed": "Fehler bei der Update-Suche",
+      "viewReleaseHistory": "Versionshinweise",
+      "releaseHistoryTitle": "Versionshinweise",
+      "releaseHistoryLoading": "Versionshinweise werden geladen...",
+      "releaseHistoryEmpty": "Noch keine Versionshinweise",
+      "releaseHistoryLoadFailed": "Fehler beim Laden: {{error}}",
+      "releaseHistorySectionAdded": "Hinzugefügt",
+      "releaseHistorySectionChanged": "Geändert",
+      "releaseHistorySectionFixed": "Behoben",
+      "releaseHistorySectionRemoved": "ENTFERNT",
+      "downloadThisVersion": "Herunterladen"
     },
     "saveSettings": "Einstellungen speichern",
     "transfer": {
@@ -1016,11 +1064,13 @@
       "originPlugin": "Erweiterung",
       "originUnknown": "Unbekannt",
       "autoReasonLabel": "Automatischer Grund: {{reason}}",
-      "autoReason": "Regel: {{rule}}; Schwelle: {{threshold}}%; Bereich: {{scope}}; Überwachte Gruppen: {{selectedGroups}}; Treffergruppen: {{hitGroups}}; Kandidaten: {{candidates}}",
+      "autoReason": "Regel: {{rule}}; Quota-Schwelle: {{quotaThreshold}}%; Credits-Schwelle: {{creditsThreshold}}; Bereich: {{scope}}; überwachte Gruppen: {{selectedGroups}}; Treffergruppen: {{hitGroups}}; aktuelle Credits: {{currentCredits}}; Kandidaten: {{candidates}}",
       "autoReasonUnknown": "Automatischer Wechsel wurde ausgelöst, aber es wurde kein detaillierter Grund aufgezeichnet",
       "autoReasonRuleCurrentDisabled": "Aktuelles Konto ist deaktiviert",
       "autoReasonRuleQuotaForbidden": "Kontingent des aktuellen Kontos ist gesperrt",
+      "autoReasonRuleGroupAndCreditsBelowThreshold": "Modellgruppe und Credits liegen beide unter dem Schwellenwert",
       "autoReasonRuleGroupBelowThreshold": "Modellgruppe unter Schwellenwert",
+      "autoReasonRuleCreditsBelowThreshold": "Verbleibende Credits liegen unter dem Schwellenwert",
       "autoReasonScopeAnyGroup": "Beliebige Modellgruppe",
       "autoReasonScopeSelectedGroups": "Ausgewählte Modellgruppen",
       "stageResult": "Lokal: {{local}} / Nahtlos: {{seamless}}",
@@ -1575,6 +1625,135 @@
       "desc": "auth.json-Inhalt oder Konto-JSON einfügen",
       "placeholder": "Beispiel: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
+    "exportFormat": {
+      "label": "Exportformat",
+      "cockpitTools": "Cockpit Tools",
+      "sub2api": "sub2api-Format",
+      "cpa": "cpa-Format"
+    },
+    "localAccess": {
+      "title": "API-Dienst",
+      "accountCount": "{{count}} Konten",
+      "baseUrl": "Adresse",
+      "apiKey": "Schlüssel",
+      "statusRunning": "Aktiv",
+      "statusStopped": "Gestoppt",
+      "statusDisabled": "Deaktiviert",
+      "emptyMembers": "Diese Sammlung enthält noch keine Konten",
+      "footerHint": "Hört nur auf 127.0.0.1",
+      "manageAccounts": "Konten verwalten",
+      "rotateKey": "Schlüssel erneuern",
+      "rotateConfirmMessage": "Nach dem Zurücksetzen wird der aktuelle API-Service-Schlüssel sofort ungültig. Laufende Anfragen könnten dadurch nicht mehr verfügbar sein. Fortfahren?",
+      "disableService": "Dienst deaktivieren",
+      "enableService": "Dienst aktivieren",
+      "saveSuccess": "API-Dienst-Sammlung aktualisiert",
+      "removeSuccess": "Konto aus dem API-Dienst entfernt",
+      "rotateSuccess": "API-Dienst-Schlüssel erneuert",
+      "enabledSuccess": "API-Dienst aktiviert",
+      "disabledSuccess": "API-Dienst deaktiviert",
+      "removeMember": "Aus API-Dienst entfernen",
+      "toggleService": "API-Dienst umschalten",
+      "showKey": "Schlüssel anzeigen",
+      "hideKey": "Schlüssel ausblenden",
+      "modal": {
+        "title": "Zum API-Dienst hinzufügen",
+        "desc": "Wählen Sie die OAuth-Konten aus, die in die API-Dienst-Sammlung aufgenommen werden sollen. Hinzugefügte Konten werden aus der normalen Übersicht ausgeblendet und nur noch über die API-Dienst-Karte verwaltet.",
+        "empty": "Keine OAuth-Konten verfügbar",
+        "selected": "Im API-Dienst",
+        "available": "Normale Übersicht",
+        "save": "Sammlung speichern",
+        "freeNotice": "Kostenlose Konten werden noch nicht unterstützt. Kostenlose Konten können nicht ausgewählt werden.",
+        "freeUnsupported": "Kostenlose Konten werden noch nicht unterstützt",
+        "restrictFreeToggle": "Free-Konten begrenzen",
+        "freeNoticeRestricted": "Free-Konten sind eingeschränkt. Deaktiviere dies, um sie auszuwählen.",
+        "freeNoticeUnstable": "Proxy für Free-Konten kann instabil sein. Vorsichtig verwenden.",
+        "restrictFreeDisableConfirmTitle": "Free-Konten zulassen",
+        "restrictFreeDisableConfirmMessage": "Proxy für Free-Konten kann instabil sein. Wirklich verwenden?"
+      },
+      "entryAction": "Zum API-Dienst hinzufügen",
+      "testAction": "API-Dienst testen",
+      "testSuccess": "API-Dienst-Test erfolgreich ({{count}} Modelle)",
+      "testTimeout": "Zeitüberschreitung beim Test. Prüfen Sie, ob der lokale Dienst läuft.",
+      "testUnavailable": "Die aktuelle API-Dienst-URL ist nicht erreichbar",
+      "activateAction": "API-Dienst starten",
+      "activateSuccess": "Zum API-Dienst gewechselt",
+      "dashboardAction": "Service-Panel",
+      "manageDesc": "Verwalten Sie API-Service-Statistiken, Mitglieder, Port, Schlüssel und Verbindungstest an einem Ort.",
+      "memberOnlyLocal": "Nur Codex",
+      "configTitle": "Service-Konfig",
+      "configEmpty": "Speichern Sie zuerst mindestens ein Konto in der API-Service-Sammlung, danach werden URL, Schlüssel und Port erzeugt.",
+      "portLabel": "Service-Port",
+      "portSave": "Port speichern",
+      "portSaveSuccess": "Der API-Service-Port wurde aktualisiert",
+      "portInvalid": "Geben Sie einen Port zwischen 1 und 65535 ein",
+      "statsTitle": "Gesamt",
+      "accountStatsTitle": "Nach Konto",
+      "statsEmpty": "Noch keine Statistiken",
+      "summaryMeta": "{{count}} Konten · Nur Codex",
+      "summaryMetaUnconfigured": "Nicht konfiguriert · Nur Codex",
+      "memberTitle": "Sammlungsmitglieder",
+      "stats": {
+        "requests": "Anfragen",
+        "requestsDetail": "Erfolg {{success}} / Fehler {{failed}}",
+        "tokens": "Token",
+        "tokensDetail": "Eingabe {{input}} / Ausgabe {{output}}",
+        "specialTokens": "Cache / Denken",
+        "specialTokensDetail": "Cache {{cached}} / Denken {{reasoning}}",
+        "avgLatency": "Durchschn. Latenz",
+        "successRate": "Erfolgsquote {{rate}}%",
+        "accountRequests": "{{count}} Anfragen",
+        "accountTokens": "{{count}} Token",
+        "accountResult": "Erfolg {{success}} / Fehler {{failed}}",
+        "accountTokensCompact": "{{value}}"
+      },
+      "routingLabel": "Routing",
+      "routingSaveSuccess": "API-Service-Routing wurde aktualisiert",
+      "routingDescriptionAuto": "Bevorzugt Konten mit höherem Tarif und mehr Restkontingent, rotiert dann innerhalb derselben Tarifstufe.",
+      "routingDescriptionQuotaHighFirst": "Bevorzugt Konten mit mehr verbleibendem Kontingent.",
+      "routingDescriptionQuotaLowFirst": "Bevorzugt Konten mit weniger verbleibendem Kontingent.",
+      "routingDescriptionPlanHighFirst": "Bevorzugt Konten mit höherer Abostufe.",
+      "routingDescriptionPlanLowFirst": "Bevorzugt Konten mit niedrigerer Abostufe.",
+      "clearStats": "Statistik löschen",
+      "clearStatsConfirm": "Alle API-Service-Statistiken löschen?",
+      "clearStatsSuccess": "API-Service-Statistiken wurden gelöscht",
+      "refreshStats": "Statistik aktualisieren",
+      "refreshStatsSuccess": "API-Service-Statistiken wurden aktualisiert",
+      "routingStrategy": {
+        "auto": "Automatisch (empfohlen)",
+        "quotaHighFirst": "Hohe Quote zuerst",
+        "quotaLowFirst": "Niedrige Quote zuerst",
+        "planHighFirst": "Hohes Abo zuerst",
+        "planLowFirst": "Niedriges Abo zuerst"
+      },
+      "statusUnconfigured": "Nicht konfiguriert",
+      "expandDetails": "Details aufklappen",
+      "collapseDetails": "Details einklappen",
+      "hideEntryAction": "API-Service-Eintrag ausblenden",
+      "hideEntryConfirm": "Dadurch wird der API-Service-Eintrag in der Übersicht ausgeblendet und der aktuelle API-Service deaktiviert. Du kannst ihn später in den Codex-Einstellungen oder den Schnelleinstellungen wieder einschalten.",
+      "hideEntryEffectHide": "API-Service-Eintrag in der Übersicht ausblenden",
+      "hideEntryEffectDisable": "Aktuellen API-Service deaktivieren",
+      "hideEntryEffectRestore": "Später in den Codex-Einstellungen oder Schnelleinstellungen wieder einschalten",
+      "riskNotice": {
+        "title": "Risikohinweis",
+        "message": "Die aktuellen Codex-API-Funktionen basieren im Kern auf einer Proxy-/Weiterleitungsnutzung. Der offizielle Dienst unterbindet dieses Verhalten derzeit nicht ausdrücklich, aber künftige Richtlinien, Regeln oder die Verfügbarkeit können sich ändern. Wenn du diese Funktion weiter nutzt, bestätigst du, dass du dies zur Kenntnis genommen hast und die damit verbundenen Risiken selbst trägst.",
+        "remember": "Verstanden, nicht erneut anzeigen",
+        "acknowledge": "Verstanden",
+        "continueStart": "Weiter",
+        "continueSwitch": "Weiter"
+      },
+      "statsRange": {
+        "label": "Zeitraum",
+        "daily": "Tag",
+        "weekly": "Woche",
+        "monthly": "Monat"
+      },
+      "enableBeforeActivateTitle": "Dienst nicht aktiviert",
+      "enableBeforeActivateMessage": "Der API-Dienst ist derzeit deaktiviert und muss zuerst aktiviert werden. Jetzt aktivieren und wechseln?",
+      "enableAndActivateAction": "Aktivieren und wechseln",
+      "apiPortUrl": "API-Port-URL",
+      "modelId": "Modell-ID",
+      "modelIdPlaceholder": "Modell-ID wählen"
+    },
     "local": {
       "desc": "Aktuell eingeloggtes Konto aus ~/.codex/auth.json importieren",
       "import": "Lokales Konto abrufen"
@@ -1832,7 +2011,8 @@
         "expand": "Erweitern",
         "collapse": "Einklappen",
         "repairVisibility": "Sichtbarkeit reparieren",
-        "restoreSessions": "Sitzungen wiederherstellen"
+        "restoreSessions": "Sitzungen wiederherstellen",
+        "copySessionId": "Sitzungs-ID kopieren"
       },
       "confirm": {
         "title": "In den Papierkorb verschieben",
@@ -1851,6 +2031,10 @@
       },
       "groupCount": "{{count}} Sitzungen",
       "updatedAt": "Aktualisiert",
+      "labels": {
+        "sessionId": "Sitzungs-ID",
+        "tokenUsage": "Token-Nutzung"
+      },
       "locationRunning": " (wird ausgeführt)",
       "untitled": "Unbenannte Sitzung",
       "restoreModal": {
@@ -2017,8 +2201,27 @@
         "customDetected": "In config.toml wurde ein benutzerdefiniertes model_context_window = {{context}} erkannt. Beim Speichern wird es durch die folgende Schnelleinstellung überschrieben.",
         "compactMissingDetected": "1M-Kontext ist bereits aktiviert, aber das Auto-Compact-Limit fehlt. Beim Speichern wird der Standardwert {{limit}} geschrieben.",
         "validation": {
-          "autoCompactInvalid": "Das Auto-Compact-Limit muss eine ganze Zahl größer als 0 sein."
-        }
+          "autoCompactInvalid": "Das Auto-Compact-Limit muss eine ganze Zahl größer als 0 sein.",
+          "contextWindowInvalid": "Das Kontextfenster muss eine Ganzzahl größer als 0 sein."
+        },
+        "presetLabel": "Konfigurationsvoreinstellung",
+        "presetHint": "Wählen Sie eine Voreinstellung (Standard / 516K / 1M) oder wechseln Sie zu „Benutzerdefiniert“ und füllen Sie beide Felder manuell aus.",
+        "presetDefaultShort": "Standard",
+        "presetDefaultDesc": "Entfernen Sie beide Felder und verwenden Sie die offiziellen Standardwerte",
+        "preset516kShort": "Voreingestellt 516K",
+        "preset516kDesc": "context=516000 / kompakt=460000",
+        "preset1mShort": "Voreingestellt 1M",
+        "preset1mDesc": "Kontext=1000000 / kompakt=900000",
+        "presetCustomShort": "Brauch",
+        "presetCustomDesc": "Legen Sie Kontext- und Kompaktwerte manuell fest",
+        "presetDefault": "Standard (model_context_window / model_auto_compact_token_limit entfernen)",
+        "preset516k": "Voreinstellung 516K (model_context_window = 516000, auto_compact = 460000)",
+        "preset1m": "Voreinstellung 1M (model_context_window = 1000000, auto_compact = 900000)",
+        "presetCustom": "Brauch",
+        "contextWindow": "Kontextfenster",
+        "contextWindowHint": "Schreibt model_context_window. Nur im benutzerdefinierten Modus bearbeitbar.",
+        "partialDetected": "Derzeit ist nur ein verwaltetes Feld festgelegt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Beim Speichern werden beide Felder mit dem aktuellen Schema neu geschrieben.",
+        "notSet": "Nicht festgelegt"
       }
     },
     "quickSwitch": {
@@ -2162,7 +2365,35 @@
       "appPath": "App-Pfad",
       "configToml": "Codex-Konfigurationsdatei",
       "openConfigToml": "Datei öffnen",
-      "openConfigHint": "Öffnet schnell die aktive Codex-config.toml."
+      "openConfigHint": "Öffnet schnell die aktive Codex-config.toml.",
+      "localAccessEntryVisible": "API-Service-Eintrag anzeigen",
+      "quickConfig": {
+        "title": "Kontext- und Kompaktgrenzen",
+        "presetLabel": "Konfigurationsvoreinstellung",
+        "presetHint": "Wählen Sie eine Voreinstellung (Standard / 516K / 1M) oder wechseln Sie zu „Benutzerdefiniert“ und füllen Sie beide Felder manuell aus.",
+        "presetDefaultShort": "Standard",
+        "presetDefaultDesc": "Entfernen Sie beide Felder und verwenden Sie die offiziellen Standardwerte",
+        "preset516kShort": "Voreingestellt 516K",
+        "preset516kDesc": "context=516000 / kompakt=460000",
+        "preset1mShort": "Voreingestellt 1M",
+        "preset1mDesc": "Kontext=1000000 / kompakt=900000",
+        "presetCustomShort": "Brauch",
+        "presetCustomDesc": "Legen Sie Kontext- und Kompaktwerte manuell fest",
+        "contextWindow": "Kontextfenster",
+        "contextWindowHint": "Schreibt model_context_window. Nur im benutzerdefinierten Modus bearbeitbar.",
+        "autoCompactLimit": "Grenzwert für automatische Komprimierung",
+        "autoCompactLimitHint": "Schreibt model_auto_compact_token_limit. Nur im benutzerdefinierten Modus bearbeitbar.",
+        "customDetected": "Benutzerdefinierte Werte wurden in config.toml erkannt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Durch das Speichern werden sie mit der von Ihnen ausgewählten Voreinstellung überschrieben.",
+        "partialDetected": "Derzeit ist nur ein verwaltetes Feld festgelegt: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. Beim Speichern werden beide Felder mit dem aktuellen Schema neu geschrieben.",
+        "notSet": "Nicht festgelegt",
+        "loadFailed": "Die aktuelle Codex-Konfiguration konnte nicht geladen werden: {{error}}",
+        "saveSuccess": "Aktuelle Codex-Konfiguration gespeichert.",
+        "saveFailed": "Die aktuelle Codex-Konfiguration konnte nicht gespeichert werden: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "Das Kontextfenster muss eine Ganzzahl größer als 0 sein.",
+          "autoCompactInvalid": "Der Grenzwert für die automatische Komprimierung muss eine Ganzzahl größer als 0 sein."
+        }
+      }
     },
     "githubCopilot": {
       "title": "GitHub Copilot-Einstellungen",
@@ -2176,7 +2407,10 @@
       "enable": "Automatisch wechseln",
       "threshold": "Wechselschwelle",
       "thresholdDesc": "Automatischer Wechsel wird ausgelöst, wenn überwachte Modellgruppen diesen Prozentsatz erreichen",
-      "hint": "Wechselt automatisch zum Konto mit dem höchsten Kontingent, wenn überwachte Modellgruppen den Schwellenwert erreichen.",
+      "hint": "Es wird automatisch gewechselt, wenn überwachte Modellgruppen den Schwellenwert erreichen; bei aktivierter Credits-Überwachung auch dann, wenn die verbleibenden Credits unter den Schwellenwert fallen.",
+      "creditsEnable": "Credits überwachen",
+      "creditsThreshold": "Credits-Schwelle",
+      "creditsThresholdDesc": "Auch automatisch wechseln, wenn die verbleibenden Credits diesen Wert oder weniger erreichen",
       "triggerModel": "Auslösemodell",
       "scopeAnyGroup": "Beliebige Modellgruppe",
       "scopeSelectedGroups": "Ausgewählte Modellgruppen",
@@ -2194,6 +2428,7 @@
     "apply": "Anwenden",
     "inputMinutes": "Minuten eingeben",
     "inputPercent": "Prozentsatz eingeben",
+    "inputCredits": "Credits eingeben",
     "windsurf": {
       "title": "Windsurf-Einstellungen",
       "appPath": "Windsurf-Pfad"
@@ -2243,6 +2478,11 @@
     "zed": {
       "title": "Zed-Einstellungen",
       "appPath": "Zed-Pfad"
+    },
+    "filterPersistence": {
+      "title": "Filter-Merker",
+      "enable": "Filter in der Kontoübersicht merken (ohne Suche)",
+      "hint": "Standardmäßig aus. Wenn aktiviert, werden Filter, Tags und Sortierung pro Plattform gespeichert."
     }
   },
   "quotaAlert": {
@@ -2279,7 +2519,55 @@
       "description": "Klicke auf \"Konto hinzufügen\", um zu starten"
     },
     "addModal": {
-      "title": "Windsurf-Konto hinzufügen"
+      "title": "Windsurf-Konto hinzufügen",
+      "password": "E-Mail-Anmeldung"
+    },
+    "password": {
+      "desc": "Melden Sie sich mit der E-Mail-Adresse und dem Passwort Ihres Windsurf-Kontos an, um API-Key und Kontodaten automatisch zu laden.",
+      "emailPlaceholder": "E-Mail-Adresse",
+      "passwordPlaceholder": "Passwort",
+      "empty": "E-Mail-Adresse und Passwort eingeben",
+      "login": "Anmelden",
+      "logging": "Anmeldung läuft...",
+      "success": "Angemeldet: {{login}}",
+      "failed": "Anmeldung fehlgeschlagen: {{error}}",
+      "modeLabel": "Modus",
+      "modeSingle": "Einzeln",
+      "modeBatch": "Stapel",
+      "batchDesc": "Der Stapelimport unterstützt JSON oder Text mit einem Konto pro Zeile. Im Textmodus ist ein explizites Trennzeichen erforderlich.",
+      "batchInputModeLabel": "Importformat",
+      "batchInputModeJson": "JSON-Format",
+      "batchInputModeText": "Textformat",
+      "batchDelimiterLabel": "Trennzeichen",
+      "batchDelimiterTab": "Tabulator",
+      "batchDelimiterSpace": "Leerzeichen",
+      "batchDelimiterComma": "Komma",
+      "batchDelimiterPipe": "Senkrechter Strich",
+      "batchDelimiterDash": "----",
+      "batchDelimiterCustom": "Benutzerdefiniert",
+      "batchJsonDesc": "Fügen Sie ein JSON-Array ein, bei dem jeder Eintrag email und password enthält.",
+      "batchTextDesc": "Geben Sie pro Zeile ein Konto ein; geparst wird strikt nach dem gewählten Trennzeichen.",
+      "batchExampleTitle": "Formatbeispiel (zum Aufklappen klicken)",
+      "batchExampleJsonLabel": "JSON-Beispiel",
+      "batchExampleTextLabel": "Textbeispiel",
+      "batchCustomDelimiterPlaceholder": "Benutzerdefiniertes Trennzeichen eingeben",
+      "batchCustomDelimiterEmpty": "Benutzerdefiniertes Trennzeichen eingeben",
+      "batchPlaceholderJson": "JSON-Array mit email und password einfügen",
+      "batchPlaceholderText": "Ein Konto pro Zeile mit dem gewählten Trennzeichen",
+      "batchEmpty": "Bitte zuerst Inhalt für den Stapelimport eingeben",
+      "batchJsonInvalid": "Ungültiges JSON: {{error}}",
+      "batchJsonArrayRequired": "Die JSON-Wurzel muss ein Array sein",
+      "batchJsonItemInvalid": "Eintrag {{line}} muss email und password enthalten",
+      "batchTextLineInvalid": "Zeile {{line}} ist ungültig. Prüfen Sie das gewählte Trennzeichen.",
+      "batchImport": "Stapelimport",
+      "batchImporting": "{{count}} Konto/Konten werden importiert...",
+      "batchImportingShort": "Import läuft...",
+      "batchSuccess": "{{count}} Konto/Konten importiert",
+      "batchPartial": "{{success}} importiert, {{failed}} fehlgeschlagen",
+      "batchFailed": "Stapelimport für {{failed}} Konto/Konten fehlgeschlagen",
+      "batchFailureEntryWithLine": "Eintrag {{line}} ({{email}}): {{error}}",
+      "batchFailureEntry": "{{email}}: {{error}}",
+      "batchFailureMore": "{{count}} weitere fehlgeschlagen"
     },
     "oauth": {
       "desc": "Klicke unten und schließe die Windsurf-Windsurf-Autorisierung im Browser ab."
@@ -3045,11 +3333,11 @@
       "status": "Check-in-Status",
       "checkedIn": "Eingecheckt",
       "notCheckedIn": "Nicht eingecheckt",
-      "button": "Einchecken",
+      "button": {},
       "button.loading": "Check-in läuft...",
       "done": "Fertig",
       "success": "Check-in erfolgreich! {{days}} Tage Serie",
-      "failure": "Check-in fehlgeschlagen: {{message}}",
+      "failure": {},
       "failure.network": "Netzwerkfehler, bitte später erneut versuchen",
       "lastCheckin": "Letzter Check-in: {{time}}",
       "streak": "{{days}}-Tage-Serie",
@@ -3372,5 +3660,16 @@
     "cancelEditAccountName": "Bearbeiten abbrechen",
     "accountNameRequired": "Kontoname ist erforderlich.",
     "copySecret": "Secret kopieren"
+  },
+  "logViewer": {
+    "fileLabel": "Logdatei",
+    "levelLabel": "Stufe",
+    "noMatches": "Keine Protokolle entsprechen dem aktuellen Filter",
+    "levels": {
+      "all": "Alle",
+      "info": "Info",
+      "warn": "Warnung",
+      "error": "Fehler"
+    }
   }
 }

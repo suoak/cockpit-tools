@@ -379,7 +379,34 @@
       "launchModeCli": "CLI 모드",
       "workingDir": "작업 디렉터리",
       "workingDirPlaceholder": "기본값은 현재 경로",
-      "workingDirDesc": "시작 시 먼저 이 디렉터리로 이동합니다"
+      "workingDirDesc": "시작 시 먼저 이 디렉터리로 이동합니다",
+      "codexQuickConfig": {
+        "title": "컨텍스트 및 압축 제한",
+        "presetLabel": "구성 사전 설정",
+        "presetHint": "사전 설정(기본값/516K/1M)을 선택하거나 사용자 정의로 전환하고 두 필드를 수동으로 입력합니다.",
+        "presetDefaultShort": "기본",
+        "presetDefaultDesc": "두 필드를 모두 제거하고 공식 기본값을 사용하십시오.",
+        "preset516kShort": "사전 설정 516K",
+        "preset516kDesc": "컨텍스트=516000 / 컴팩트=460000",
+        "preset1mShort": "100만",
+        "preset1mDesc": "컨텍스트=1000000 / 컴팩트=900000",
+        "presetCustomShort": "관습",
+        "presetCustomDesc": "컨텍스트 및 압축 값을 수동으로 설정",
+        "contextWindow": "컨텍스트 창",
+        "contextWindowHint": "model_context_window를 작성합니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
+        "autoCompactLimit": "자동 압축 제한",
+        "autoCompactLimitHint": "model_auto_compact_token_limit를 씁니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
+        "customDetected": "config.toml에서 사용자 정의 값이 감지되었습니다: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. 저장하면 선택한 사전 설정으로 덮어쓰게 됩니다.",
+        "partialDetected": "현재 하나의 관리 필드(model_context_window={{context}}, model_auto_compact_token_limit={{compact}})만 설정되어 있습니다. 저장하면 현재 구성표를 사용하여 두 필드가 모두 다시 작성됩니다.",
+        "notSet": "설정되지 않음",
+        "loadFailed": "현재 Codex 구성을 로드하지 못했습니다: {{error}}",
+        "openConfig": "config.toml 열기",
+        "openFailed": "config.toml을 열지 못했습니다: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "컨텍스트 창은 0보다 큰 정수여야 합니다.",
+          "autoCompactInvalid": "자동 압축 한도는 0보다 큰 정수여야 합니다."
+        }
+      }
     },
     "quota": {
       "unbound": "연결된 계정 없음",
@@ -666,7 +693,18 @@
       "qoderAutoRefreshDesc": "백그라운드 자동 갱신 빈도",
       "qoderPathSelect": "선택",
       "workbuddyAutoRefresh": "WorkBuddy 자동 할당량 갱신",
-      "workbuddyAutoRefreshDesc": "백그라운드 자동 갱신 빈도"
+      "workbuddyAutoRefreshDesc": "백그라운드 자동 갱신 빈도",
+      "codexLocalAccessEntryVisible": "API 서비스 항목 표시",
+      "codexLocalAccessEntryVisibleDesc": "Codex 개요에서 API 서비스 항목을 표시할지만 제어합니다. 로컬 API 서비스 자체를 중지하지 않으며, 여기나 빠른 설정에서 다시 켤 수 있습니다.",
+      "codexLocalAccessEnabled": "API 서비스 사용",
+      "codexLocalAccessEnabledDesc": "로컬 Codex API 서비스가 실제로 실행될지 제어합니다.",
+      "codexLocalAccessEnabledRequiresCollection": "서비스를 켜거나 끄기 전에 먼저 API 서비스 컬렉션에 계정을 추가하세요.",
+      "codexRestartSpecifiedAppOnSwitch": "Codex 전환 시 지정 앱 재시작",
+      "codexRestartSpecifiedAppOnSwitchDesc": "활성화하면 아래 경로의 앱을 재시작합니다(플러그인 호스트 워크플로우용).",
+      "codexSpecifiedAppPath": "지정 앱 경로",
+      "codexSpecifiedAppPathDesc": "Codex 전환 시 함께 재시작할 앱 경로",
+      "codexSpecifiedAppPathPlaceholder": "예: /Applications/Host.app",
+      "codexSpecifiedAppPathClear": "지우기"
     },
     "network": {
       "apiTitle": "반중력 조종석 API",
@@ -725,7 +763,17 @@
       "upToDate": "최신 버전입니다",
       "newVersion": "v{{version}} 사용 가능",
       "download": "다운로드",
-      "checkFailed": "업데이트 확인에 실패했습니다. 나중에 다시 시도해 주세요."
+      "checkFailed": "업데이트 확인에 실패했습니다. 나중에 다시 시도해 주세요.",
+      "viewReleaseHistory": "릴리스 노트",
+      "releaseHistoryTitle": "릴리스 노트",
+      "releaseHistoryLoading": "출시 노트 로드 중...",
+      "releaseHistoryEmpty": "아직 출시 노트가 없습니다.",
+      "releaseHistoryLoadFailed": "로드 실패: {{error}}",
+      "releaseHistorySectionAdded": "추가됨",
+      "releaseHistorySectionChanged": "변경됨",
+      "releaseHistorySectionFixed": "결정된",
+      "releaseHistorySectionRemoved": "제거됨",
+      "downloadThisVersion": "다운로드"
     },
     "saveSettings": "설정 저장",
     "transfer": {
@@ -1016,11 +1064,13 @@
       "originPlugin": "확장 프로그램",
       "originUnknown": "알 수 없음",
       "autoReasonLabel": "자동 사유: {{reason}}",
-      "autoReason": "규칙: {{rule}}; 임계값: {{threshold}}%; 범위: {{scope}}; 모니터링 그룹: {{selectedGroups}}; 적중 그룹: {{hitGroups}}; 후보 계정: {{candidates}}",
+      "autoReason": "규칙: {{rule}}; 쿼터 임계값: {{quotaThreshold}}%; 크레딧 임계값: {{creditsThreshold}}; 범위: {{scope}}; 모니터링 그룹: {{selectedGroups}}; 적중 그룹: {{hitGroups}}; 현재 크레딧: {{currentCredits}}; 후보 계정: {{candidates}}",
       "autoReasonUnknown": "자동 전환이 실행되었지만 상세 사유가 기록되지 않았습니다",
       "autoReasonRuleCurrentDisabled": "현재 계정이 비활성화됨",
       "autoReasonRuleQuotaForbidden": "현재 계정의 할당량이 제한됨",
+      "autoReasonRuleGroupAndCreditsBelowThreshold": "모델 그룹과 크레딧이 모두 임계값 아래",
       "autoReasonRuleGroupBelowThreshold": "모델 그룹이 임계값 미만",
+      "autoReasonRuleCreditsBelowThreshold": "남은 크레딧이 임계값 아래",
       "autoReasonScopeAnyGroup": "임의 모델 그룹",
       "autoReasonScopeSelectedGroups": "선택한 모델 그룹",
       "stageResult": "로컬: {{local}} / 원활 전환: {{seamless}}",
@@ -1575,6 +1625,135 @@
       "desc": "auth.json 내용 또는 계정 JSON 데이터를 붙여넣으세요",
       "placeholder": "예시: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
+    "exportFormat": {
+      "label": "내보내기 형식",
+      "cockpitTools": "Cockpit Tools",
+      "sub2api": "sub2api 형식",
+      "cpa": "cpa 형식"
+    },
+    "localAccess": {
+      "title": "API 서비스",
+      "accountCount": "{{count}}개 계정",
+      "baseUrl": "주소",
+      "apiKey": "키",
+      "statusRunning": "실행 중",
+      "statusStopped": "중지됨",
+      "statusDisabled": "비활성화됨",
+      "emptyMembers": "컬렉션에 계정이 없습니다",
+      "footerHint": "127.0.0.1 에서만 수신합니다",
+      "manageAccounts": "계정 관리",
+      "rotateKey": "키 재발급",
+      "rotateConfirmMessage": "재설정하면 현재 API 서비스 키가 즉시 무효화되며, 진행 중인 요청이 더 이상 사용되지 않을 수 있습니다. 계속할까요?",
+      "disableService": "서비스 끄기",
+      "enableService": "서비스 켜기",
+      "saveSuccess": "API 서비스 모음을 업데이트했습니다",
+      "removeSuccess": "계정을 API 서비스에서 제거했습니다",
+      "rotateSuccess": "API 서비스 키를 재설정했습니다",
+      "enabledSuccess": "API 서비스를 활성화했습니다",
+      "disabledSuccess": "API 서비스를 비활성화했습니다",
+      "removeMember": "API 서비스에서 제거",
+      "toggleService": "API 서비스 전환",
+      "showKey": "키 표시",
+      "hideKey": "키 숨기기",
+      "modal": {
+        "title": "API 서비스에 추가",
+        "desc": "API 서비스 모음에 포함할 OAuth 계정을 선택하세요. 추가된 계정은 일반 개요에서 숨겨지고 API 서비스 카드에서만 관리됩니다.",
+        "empty": "사용 가능한 OAuth 계정이 없습니다",
+        "selected": "API 서비스에 포함됨",
+        "available": "일반 개요",
+        "save": "모음 저장",
+        "freeNotice": "무료 계정은 아직 지원되지 않습니다. 무료 계정은 선택할 수 없습니다.",
+        "freeUnsupported": "무료 계정은 아직 지원되지 않습니다",
+        "restrictFreeToggle": "Free 계정 제한",
+        "freeNoticeRestricted": "Free 계정은 제한됩니다. 선택하려면 이 옵션을 끄세요.",
+        "freeNoticeUnstable": "Free 계정 프록시는 불안정할 수 있습니다. 주의해서 사용하세요.",
+        "restrictFreeDisableConfirmTitle": "Free 계정 허용",
+        "restrictFreeDisableConfirmMessage": "Free 계정 프록시는 불안정할 수 있습니다. 정말 사용하시겠습니까?"
+      },
+      "entryAction": "API 서비스에 추가",
+      "testAction": "API 서비스 테스트",
+      "testSuccess": "API 서비스 테스트 성공 ({{count}}개 모델)",
+      "testTimeout": "테스트 시간이 초과되었습니다. 로컬 서비스가 실행 중인지 확인하세요.",
+      "testUnavailable": "현재 API 서비스 URL을 사용할 수 없습니다",
+      "activateAction": "API 서비스 시작",
+      "activateSuccess": "API 서비스로 전환했습니다",
+      "dashboardAction": "서비스 패널",
+      "manageDesc": "API 서비스 통계, 멤버, 포트, 키, 연결 테스트를 한곳에서 관리합니다.",
+      "memberOnlyLocal": "Codex 전용",
+      "configTitle": "서비스 설정",
+      "configEmpty": "URL, 키, 포트를 생성하려면 먼저 하나 이상의 계정을 API 서비스 컬렉션에 저장하세요.",
+      "portLabel": "서비스 포트",
+      "portSave": "포트 저장",
+      "portSaveSuccess": "API 서비스 포트가 업데이트되었습니다",
+      "portInvalid": "1에서 65535 사이의 포트를 입력하세요",
+      "statsTitle": "전체",
+      "accountStatsTitle": "계정별",
+      "statsEmpty": "아직 통계가 없습니다",
+      "summaryMeta": "{{count}}개 계정 · Codex 전용",
+      "summaryMetaUnconfigured": "미설정 · Codex 전용",
+      "memberTitle": "컬렉션 멤버",
+      "stats": {
+        "requests": "요청",
+        "requestsDetail": "성공 {{success}} / 실패 {{failed}}",
+        "tokens": "토큰",
+        "tokensDetail": "입력 {{input}} / 출력 {{output}}",
+        "specialTokens": "캐시 / 추론",
+        "specialTokensDetail": "캐시 {{cached}} / 추론 {{reasoning}}",
+        "avgLatency": "평균 지연",
+        "successRate": "성공률 {{rate}}%",
+        "accountRequests": "{{count}}건 요청",
+        "accountTokens": "{{count}} 토큰",
+        "accountResult": "성공 {{success}} / 실패 {{failed}}",
+        "accountTokensCompact": "{{value}}"
+      },
+      "routingLabel": "라우팅",
+      "routingSaveSuccess": "API 서비스 라우팅을 업데이트했습니다",
+      "routingDescriptionAuto": "상위 요금제이면서 남은 할당량이 많은 계정을 우선하고, 같은 요금제 내에서 순환합니다.",
+      "routingDescriptionQuotaHighFirst": "남은 할당량이 많은 계정을 우선합니다.",
+      "routingDescriptionQuotaLowFirst": "남은 할당량이 적은 계정을 우선합니다.",
+      "routingDescriptionPlanHighFirst": "상위 구독 요금제 계정을 우선합니다.",
+      "routingDescriptionPlanLowFirst": "하위 구독 요금제 계정을 우선합니다.",
+      "clearStats": "통계 지우기",
+      "clearStatsConfirm": "API 서비스 통계를 모두 지울까요?",
+      "clearStatsSuccess": "API 서비스 통계를 지웠습니다",
+      "refreshStats": "통계 새로고침",
+      "refreshStatsSuccess": "API 서비스 통계를 새로고침했습니다",
+      "routingStrategy": {
+        "auto": "자동(권장)",
+        "quotaHighFirst": "높은 할당량 우선",
+        "quotaLowFirst": "낮은 할당량 우선",
+        "planHighFirst": "상위 요금제 우선",
+        "planLowFirst": "하위 요금제 우선"
+      },
+      "statusUnconfigured": "미설정",
+      "expandDetails": "세부 정보 펼치기",
+      "collapseDetails": "세부 정보 접기",
+      "hideEntryAction": "API 서비스 항목 숨기기",
+      "hideEntryConfirm": "이 작업을 하면 개요에서 API 서비스 항목이 숨겨지고 현재 API 서비스도 비활성화됩니다. 나중에 Codex 설정이나 빠른 설정에서 다시 켤 수 있습니다.",
+      "hideEntryEffectHide": "개요에서 API 서비스 항목 숨기기",
+      "hideEntryEffectDisable": "현재 API 서비스 비활성화",
+      "hideEntryEffectRestore": "Codex 설정이나 빠른 설정에서 다시 켤 수 있습니다",
+      "riskNotice": {
+        "title": "위험 안내",
+        "message": "현재 Codex API 서비스 관련 기능은 본질적으로 리버스 프록시 방식에 해당합니다. 현재까지 공식 측이 이 동작을 명확히 제한하고 있지는 않지만, 향후 정책, 규정 또는 사용 가능 여부는 달라질 수 있습니다. 이 기능을 계속 사용하면 해당 상황을 이해했으며 관련 위험을 스스로 부담하는 것으로 간주됩니다.",
+        "remember": "이해했으며 다시 표시하지 않기",
+        "acknowledge": "이해했습니다",
+        "continueStart": "계속",
+        "continueSwitch": "전환 계속"
+      },
+      "statsRange": {
+        "label": "통계 범위",
+        "daily": "일",
+        "weekly": "주",
+        "monthly": "월"
+      },
+      "enableBeforeActivateTitle": "서비스가 비활성화됨",
+      "enableBeforeActivateMessage": "API 서비스가 현재 비활성화되어 있어 먼저 활성화해야 합니다. 활성화하고 전환하시겠습니까?",
+      "enableAndActivateAction": "활성화 후 전환",
+      "apiPortUrl": "API 포트 URL",
+      "modelId": "모델 ID",
+      "modelIdPlaceholder": "모델 ID 선택"
+    },
     "local": {
       "desc": "~/.codex/auth.json에서 현재 로그인된 계정 가져오기",
       "import": "로컬 계정 가져오기"
@@ -1832,7 +2011,8 @@
         "expand": "펼치기",
         "collapse": "접기",
         "repairVisibility": "표시 정보 복구",
-        "restoreSessions": "세션 복원"
+        "restoreSessions": "세션 복원",
+        "copySessionId": "세션 ID 복사"
       },
       "confirm": {
         "title": "휴지통으로 이동",
@@ -1851,6 +2031,10 @@
       },
       "groupCount": "{{count}}개 세션",
       "updatedAt": "업데이트됨",
+      "labels": {
+        "sessionId": "세션 ID",
+        "tokenUsage": "토큰 사용량"
+      },
       "locationRunning": " (실행 중)",
       "untitled": "제목 없는 세션",
       "restoreModal": {
@@ -2017,8 +2201,27 @@
         "customDetected": "config.toml에서 사용자 지정 model_context_window = {{context}}가 감지되었습니다. 저장하면 아래 빠른 설정 값으로 다시 기록됩니다.",
         "compactMissingDetected": "1M 컨텍스트는 이미 활성화되어 있지만 자동 압축 한도가 없습니다. 저장하면 기본값 {{limit}}를 기록합니다.",
         "validation": {
-          "autoCompactInvalid": "자동 압축 한도는 0보다 큰 정수여야 합니다."
-        }
+          "autoCompactInvalid": "자동 압축 한도는 0보다 큰 정수여야 합니다.",
+          "contextWindowInvalid": "컨텍스트 창은 0보다 큰 정수여야 합니다."
+        },
+        "presetLabel": "구성 사전 설정",
+        "presetHint": "사전 설정(기본값/516K/1M)을 선택하거나 사용자 정의로 전환하고 두 필드를 수동으로 입력합니다.",
+        "presetDefaultShort": "기본",
+        "presetDefaultDesc": "두 필드를 모두 제거하고 공식 기본값을 사용하십시오.",
+        "preset516kShort": "사전 설정 516K",
+        "preset516kDesc": "컨텍스트=516000 / 컴팩트=460000",
+        "preset1mShort": "100만",
+        "preset1mDesc": "컨텍스트=1000000 / 컴팩트=900000",
+        "presetCustomShort": "관습",
+        "presetCustomDesc": "컨텍스트 및 압축 값을 수동으로 설정",
+        "presetDefault": "기본값(model_context_window / model_auto_compact_token_limit 제거)",
+        "preset516k": "516K(model_context_window = 516000, auto_compact = 460000)",
+        "preset1m": "1M(model_context_window = 1000000, auto_compact = 900000)",
+        "presetCustom": "관습",
+        "contextWindow": "컨텍스트 창",
+        "contextWindowHint": "model_context_window를 작성합니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
+        "partialDetected": "현재 하나의 관리 필드(model_context_window={{context}}, model_auto_compact_token_limit={{compact}})만 설정되어 있습니다. 저장하면 현재 구성표를 사용하여 두 필드가 모두 다시 작성됩니다.",
+        "notSet": "설정되지 않음"
       }
     },
     "quickSwitch": {
@@ -2162,7 +2365,35 @@
       "appPath": "앱 경로",
       "configToml": "Codex 구성 파일",
       "openConfigToml": "파일 열기",
-      "openConfigHint": "현재 활성화된 Codex config.toml 파일을 빠르게 엽니다."
+      "openConfigHint": "현재 활성화된 Codex config.toml 파일을 빠르게 엽니다.",
+      "localAccessEntryVisible": "API 서비스 항목 표시",
+      "quickConfig": {
+        "title": "컨텍스트 및 압축 제한",
+        "presetLabel": "구성 사전 설정",
+        "presetHint": "사전 설정(기본값/516K/1M)을 선택하거나 사용자 정의로 전환하고 두 필드를 수동으로 입력합니다.",
+        "presetDefaultShort": "기본",
+        "presetDefaultDesc": "두 필드를 모두 제거하고 공식 기본값을 사용하십시오.",
+        "preset516kShort": "사전 설정 516K",
+        "preset516kDesc": "컨텍스트=516000 / 컴팩트=460000",
+        "preset1mShort": "100만",
+        "preset1mDesc": "컨텍스트=1000000 / 컴팩트=900000",
+        "presetCustomShort": "관습",
+        "presetCustomDesc": "컨텍스트 및 압축 값을 수동으로 설정",
+        "contextWindow": "컨텍스트 창",
+        "contextWindowHint": "model_context_window를 작성합니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
+        "autoCompactLimit": "자동 압축 제한",
+        "autoCompactLimitHint": "model_auto_compact_token_limit를 씁니다. 사용자 정의 모드에서만 편집할 수 있습니다.",
+        "customDetected": "config.toml에서 사용자 정의 값이 감지되었습니다: model_context_window={{context}}, model_auto_compact_token_limit={{compact}}. 저장하면 선택한 사전 설정으로 덮어쓰게 됩니다.",
+        "partialDetected": "현재 하나의 관리 필드(model_context_window={{context}}, model_auto_compact_token_limit={{compact}})만 설정되어 있습니다. 저장하면 현재 구성표를 사용하여 두 필드가 모두 다시 작성됩니다.",
+        "notSet": "설정되지 않음",
+        "loadFailed": "현재 Codex 구성을 로드하지 못했습니다: {{error}}",
+        "saveSuccess": "현재 Codex 구성이 저장되었습니다.",
+        "saveFailed": "현재 Codex 구성을 저장하지 못했습니다: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "컨텍스트 창은 0보다 큰 정수여야 합니다.",
+          "autoCompactInvalid": "자동 압축 한도는 0보다 큰 정수여야 합니다."
+        }
+      }
     },
     "githubCopilot": {
       "title": "GitHub Copilot 설정",
@@ -2176,7 +2407,10 @@
       "enable": "자동 전환",
       "threshold": "전환 임계값",
       "thresholdDesc": "모니터링 중인 모델 그룹이 이 비율 임계값에 도달하면 자동 전환이 실행됩니다",
-      "hint": "모니터링 중인 모델 그룹이 임계값에 도달하면 할당량이 가장 높은 계정으로 자동 전환합니다.",
+      "hint": "모니터링 중인 모델 그룹이 임계값에 도달하면 자동 전환합니다. 크레딧 모니터링을 켜면 남은 크레딧이 임계값 아래로 내려가도 전환합니다.",
+      "creditsEnable": "크레딧 모니터링",
+      "creditsThreshold": "크레딧 임계값",
+      "creditsThresholdDesc": "남은 크레딧이 이 값 이하일 때도 자동 전환",
       "triggerModel": "트리거 모델",
       "scopeAnyGroup": "임의 모델 그룹",
       "scopeSelectedGroups": "선택한 모델 그룹",
@@ -2194,6 +2428,7 @@
     "apply": "적용",
     "inputMinutes": "분 입력",
     "inputPercent": "백분율 입력",
+    "inputCredits": "크레딧 입력",
     "windsurf": {
       "title": "Windsurf 설정",
       "appPath": "Windsurf 경로"
@@ -2243,6 +2478,11 @@
     "zed": {
       "title": "Zed 설정",
       "appPath": "Zed 경로"
+    },
+    "filterPersistence": {
+      "title": "필터 기억",
+      "enable": "계정 개요 필터 기억(검색 제외)",
+      "hint": "기본값은 꺼짐입니다. 켜면 플랫폼별로 필터, 태그, 정렬이 유지됩니다."
     }
   },
   "quotaAlert": {
@@ -2279,7 +2519,55 @@
       "description": "\"계정 추가\"를 눌러 Windsurf 계정을 관리하세요"
     },
     "addModal": {
-      "title": "Windsurf 계정 추가"
+      "title": "Windsurf 계정 추가",
+      "password": "이메일 로그인"
+    },
+    "password": {
+      "desc": "Windsurf 계정의 이메일과 비밀번호로 로그인해 API Key와 계정 데이터를 자동으로 가져옵니다.",
+      "emailPlaceholder": "이메일 주소",
+      "passwordPlaceholder": "비밀번호",
+      "empty": "이메일과 비밀번호를 입력하세요",
+      "login": "로그인",
+      "logging": "로그인 중...",
+      "success": "로그인 성공: {{login}}",
+      "failed": "로그인 실패: {{error}}",
+      "modeLabel": "방식",
+      "modeSingle": "단건",
+      "modeBatch": "일괄",
+      "batchDesc": "일괄 가져오기는 JSON 또는 한 줄당 한 계정 텍스트를 지원합니다. 텍스트 모드에서는 구분자를 명시해야 합니다.",
+      "batchInputModeLabel": "형식",
+      "batchInputModeJson": "JSON 형식",
+      "batchInputModeText": "텍스트",
+      "batchDelimiterLabel": "구분자",
+      "batchDelimiterTab": "탭",
+      "batchDelimiterSpace": "공백",
+      "batchDelimiterComma": "쉼표",
+      "batchDelimiterPipe": "파이프",
+      "batchDelimiterDash": "----",
+      "batchDelimiterCustom": "사용자 지정",
+      "batchJsonDesc": "각 항목에 email 과 password 가 들어 있는 JSON 배열을 붙여넣으세요.",
+      "batchTextDesc": "한 줄에 한 계정씩 입력하고 선택한 구분자로 엄격히 파싱합니다.",
+      "batchExampleTitle": "형식 예시(클릭하여 펼치기)",
+      "batchExampleJsonLabel": "JSON 예시",
+      "batchExampleTextLabel": "텍스트 예시",
+      "batchCustomDelimiterPlaceholder": "사용자 지정 구분자를 입력하세요",
+      "batchCustomDelimiterEmpty": "사용자 지정 구분자를 입력하세요",
+      "batchPlaceholderJson": "email 과 password 가 포함된 JSON 배열 붙여넣기",
+      "batchPlaceholderText": "한 줄에 한 계정씩, 선택한 구분자로 입력",
+      "batchEmpty": "먼저 일괄 가져오기 내용을 입력하세요",
+      "batchJsonInvalid": "JSON 형식이 올바르지 않습니다: {{error}}",
+      "batchJsonArrayRequired": "JSON 최상위는 배열이어야 합니다",
+      "batchJsonItemInvalid": "{{line}}번째 항목에는 email 과 password 가 필요합니다",
+      "batchTextLineInvalid": "{{line}}번째 줄 형식이 올바르지 않습니다. 선택한 구분자를 확인하세요.",
+      "batchImport": "일괄 가져오기",
+      "batchImporting": "{{count}}개 계정 가져오는 중...",
+      "batchImportingShort": "가져오는 중...",
+      "batchSuccess": "{{count}}개 계정을 가져왔습니다",
+      "batchPartial": "성공 {{success}}개, 실패 {{failed}}개",
+      "batchFailed": "{{failed}}개 계정 일괄 가져오기 실패",
+      "batchFailureEntryWithLine": "{{line}}번째 항목 ({{email}}): {{error}}",
+      "batchFailureEntry": "{{email}}: {{error}}",
+      "batchFailureMore": "{{count}}개 추가 실패"
     },
     "oauth": {
       "desc": "아래 버튼을 클릭해 브라우저에서 Windsurf 인증을 완료하세요."
@@ -3045,11 +3333,11 @@
       "status": "체크인 상태",
       "checkedIn": "체크인 완료",
       "notCheckedIn": "미체크인",
-      "button": "체크인",
+      "button": {},
       "button.loading": "체크인 중...",
       "done": "완료",
       "success": "체크인 성공! {{days}}일 연속",
-      "failure": "체크인 실패: {{message}}",
+      "failure": {},
       "failure.network": "네트워크 오류입니다. 잠시 후 다시 시도해 주세요",
       "lastCheckin": "마지막 체크인: {{time}}",
       "streak": "{{days}}일 연속",
@@ -3372,5 +3660,16 @@
     "cancelEditAccountName": "편집 취소",
     "accountNameRequired": "계정 이름은 필수입니다.",
     "copySecret": "시크릿 복사"
+  },
+  "logViewer": {
+    "fileLabel": "로그 파일",
+    "levelLabel": "레벨",
+    "noMatches": "현재 필터와 일치하는 로그가 없습니다",
+    "levels": {
+      "all": "전체",
+      "info": "정보",
+      "warn": "경고",
+      "error": "오류"
+    }
   }
 }

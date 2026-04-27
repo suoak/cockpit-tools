@@ -425,7 +425,34 @@
       "launchModeCli": "وضع CLI",
       "workingDir": "دليل العمل",
       "workingDirPlaceholder": "افتراضيًا المسار الحالي",
-      "workingDirDesc": "سيتم التبديل إلى هذا الدليل أولًا عند التشغيل"
+      "workingDirDesc": "سيتم التبديل إلى هذا الدليل أولًا عند التشغيل",
+      "codexQuickConfig": {
+        "title": "السياق والحدود المدمجة",
+        "presetLabel": "التكوين المسبق",
+        "presetHint": "اختر إعدادًا مسبقًا (افتراضي / 516 كيلو بايت / 1 ميجا)، أو قم بالتبديل إلى مخصص واملأ كلا الحقلين يدويًا.",
+        "presetDefaultShort": "تقصير",
+        "presetDefaultDesc": "قم بإزالة كلا الحقلين واستخدم الإعدادات الافتراضية الرسمية",
+        "preset516kShort": "516 ك",
+        "preset516kDesc": "السياق = 516000 / المضغوط = 460000",
+        "preset1mShort": "1 م",
+        "preset1mDesc": "السياق = 1000000 / المضغوط = 900000",
+        "presetCustomShort": "مخصص",
+        "presetCustomDesc": "قم بتعيين السياق والقيم المضغوطة يدويًا",
+        "contextWindow": "نافذة السياق",
+        "contextWindowHint": "يكتب model_context_window. قابل للتحرير فقط في الوضع المخصص.",
+        "autoCompactLimit": "حد الضغط التلقائي",
+        "autoCompactLimitHint": "يكتب model_auto_compact_token_limit. قابل للتحرير فقط في الوضع المخصص.",
+        "customDetected": "تم اكتشاف القيم المخصصة في config.toml: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى استبدالها بالإعداد المسبق الذي حددته.",
+        "partialDetected": "تم حاليًا تعيين حقل مُدار واحد فقط: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى إعادة كتابة كلا الحقلين باستخدام المخطط الحالي.",
+        "notSet": "لم يتم ضبطه",
+        "loadFailed": "فشل تحميل تكوين Codex الحالي: {{error}}",
+        "openConfig": "افتح الملف config.toml",
+        "openFailed": "فشل في فتح ملف config.toml: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "يجب أن تكون نافذة السياق عددًا صحيحًا أكبر من 0.",
+          "autoCompactInvalid": "يجب أن يكون حد الضغط التلقائي عددًا صحيحًا أكبر من 0."
+        }
+      }
     },
     "quota": {
       "unbound": "حساب غير مرتبط",
@@ -712,7 +739,18 @@
       "qoderAutoRefreshDesc": "تكرار التحديث التلقائي في الخلفية",
       "qoderPathSelect": "اختر",
       "workbuddyAutoRefresh": "تحديث تلقائي لحصة WorkBuddy",
-      "workbuddyAutoRefreshDesc": "تكرار التحديث التلقائي في الخلفية"
+      "workbuddyAutoRefreshDesc": "تكرار التحديث التلقائي في الخلفية",
+      "codexLocalAccessEntryVisible": "إظهار مدخل خدمة API",
+      "codexLocalAccessEntryVisibleDesc": "يتحكم هذا فقط في ظهور مدخل خدمة API ضمن نظرة Codex العامة. لن يوقف خدمة API المحلية؛ ويمكنك إعادة إظهاره هنا أو من الإعدادات السريعة.",
+      "codexLocalAccessEnabled": "تفعيل خدمة API",
+      "codexLocalAccessEnabledDesc": "يتحكم في ما إذا كانت خدمة Codex API المحلية تعمل فعليًا.",
+      "codexLocalAccessEnabledRequiresCollection": "أضف الحسابات إلى مجموعة خدمة API أولاً قبل تفعيل الخدمة أو إيقافها.",
+      "codexRestartSpecifiedAppOnSwitch": "إعادة تشغيل التطبيق المحدد عند تبديل Codex",
+      "codexRestartSpecifiedAppOnSwitchDesc": "عند التفعيل، يُعاد تشغيل التطبيق في المسار أدناه (لسيناريوهات مضيف الإضافات).",
+      "codexSpecifiedAppPath": "مسار التطبيق المحدد",
+      "codexSpecifiedAppPathDesc": "مسار التطبيق الذي سيُعاد تشغيله مع تبديل Codex.",
+      "codexSpecifiedAppPathPlaceholder": "مثال /Applications/Host.app",
+      "codexSpecifiedAppPathClear": "مسح"
     },
     "network": {
       "apiTitle": "واجهة برمجة تطبيقات قمرة القيادة المضادة للجاذبية",
@@ -771,7 +809,17 @@
       "upToDate": "محدث",
       "newVersion": "v{{version}} متاح",
       "download": "تنزيل",
-      "checkFailed": "فشل التحقق من التحديثات"
+      "checkFailed": "فشل التحقق من التحديثات",
+      "viewReleaseHistory": "ملاحظات الإصدار",
+      "releaseHistoryTitle": "ملاحظات الإصدار",
+      "releaseHistoryLoading": "جارٍ تحميل ملاحظات الإصدار...",
+      "releaseHistoryEmpty": "لا توجد ملاحظات الإصدار حتى الآن",
+      "releaseHistoryLoadFailed": "فشل التحميل: {{error}}",
+      "releaseHistorySectionAdded": "تمت الإضافة",
+      "releaseHistorySectionChanged": "تغيرت",
+      "releaseHistorySectionFixed": "مُثَبَّت",
+      "releaseHistorySectionRemoved": "تمت الإزالة",
+      "downloadThisVersion": "تحميل"
     },
     "saveSettings": "حفظ الإعدادات",
     "transfer": {
@@ -1062,11 +1110,13 @@
       "originPlugin": "الإضافة",
       "originUnknown": "غير معروف",
       "autoReasonLabel": "سبب التبديل التلقائي: {{reason}}",
-      "autoReason": "القاعدة: {{rule}}؛ العتبة: {{threshold}}%؛ النطاق: {{scope}}؛ المجموعات المراقبة: {{selectedGroups}}؛ المجموعات المطابِقة: {{hitGroups}}؛ الحسابات المرشحة: {{candidates}}",
+      "autoReason": "القاعدة: {{rule}}؛ حد الحصة: {{quotaThreshold}}%؛ حد الرصيد: {{creditsThreshold}}؛ النطاق: {{scope}}؛ المجموعات المراقبة: {{selectedGroups}}؛ المجموعات المطابِقة: {{hitGroups}}؛ الرصيد الحالي: {{currentCredits}}؛ الحسابات المرشحة: {{candidates}}",
       "autoReasonUnknown": "تم تشغيل التبديل التلقائي، لكن لم يتم تسجيل سبب مفصل",
       "autoReasonRuleCurrentDisabled": "الحساب الحالي معطّل",
       "autoReasonRuleQuotaForbidden": "حصة الحساب الحالي مقيّدة",
+      "autoReasonRuleGroupAndCreditsBelowThreshold": "مجموعة النماذج والرصيد كلاهما دون الحد",
       "autoReasonRuleGroupBelowThreshold": "مجموعة النماذج أقل من العتبة",
+      "autoReasonRuleCreditsBelowThreshold": "الرصيد المتبقي دون الحد",
       "autoReasonScopeAnyGroup": "أي مجموعة نماذج",
       "autoReasonScopeSelectedGroups": "مجموعات نماذج محددة",
       "stageResult": "محلي: {{local}} / سلس: {{seamless}}",
@@ -1621,6 +1671,135 @@
       "desc": "الصق محتوى auth.json أو بيانات JSON للحساب",
       "placeholder": "مثال: {\"tokens\":{\"id_token\":\"eyJ...\",\"access_token\":\"eyJ...\"}}"
     },
+    "exportFormat": {
+      "label": "تنسيق التصدير",
+      "cockpitTools": "Cockpit Tools",
+      "sub2api": "تنسيق sub2api",
+      "cpa": "تنسيق cpa"
+    },
+    "localAccess": {
+      "title": "خدمة API",
+      "accountCount": "{{count}} حسابات",
+      "baseUrl": "العنوان",
+      "apiKey": "المفتاح",
+      "statusRunning": "قيد التشغيل",
+      "statusStopped": "متوقف",
+      "statusDisabled": "معطل",
+      "emptyMembers": "لا توجد حسابات في المجموعة",
+      "footerHint": "يستمع فقط على 127.0.0.1",
+      "manageAccounts": "إدارة الحسابات",
+      "rotateKey": "تبديل المفتاح",
+      "rotateConfirmMessage": "بعد إعادة التعيين سيتوقف مفتاح خدمة API الحالي عن العمل فورًا، وقد تصبح الطلبات الجارية غير متاحة. هل تريد المتابعة؟",
+      "disableService": "تعطيل الخدمة",
+      "enableService": "تمكين الخدمة",
+      "saveSuccess": "تم تحديث مجموعة خدمة API",
+      "removeSuccess": "تمت إزالة الحساب من خدمة API",
+      "rotateSuccess": "تمت إعادة تعيين مفتاح خدمة API",
+      "enabledSuccess": "تم تمكين خدمة API",
+      "disabledSuccess": "تم تعطيل خدمة API",
+      "removeMember": "إزالة من خدمة API",
+      "toggleService": "تبديل خدمة API",
+      "showKey": "إظهار المفتاح",
+      "hideKey": "إخفاء المفتاح",
+      "modal": {
+        "title": "إضافة إلى خدمة API",
+        "desc": "اختر حسابات OAuth التي تريد إضافتها إلى مجموعة خدمة API. ستُخفى الحسابات المضافة من اللوحة العادية وتُدار فقط من بطاقة خدمة API.",
+        "empty": "لا توجد حسابات OAuth متاحة",
+        "selected": "ضمن خدمة API",
+        "available": "اللوحة العادية",
+        "save": "حفظ المجموعة",
+        "freeNotice": "الحسابات المجانية غير مدعومة بعد. لا يمكن تحديد الحسابات المجانية.",
+        "freeUnsupported": "الحسابات المجانية غير مدعومة بعد",
+        "restrictFreeToggle": "تقييد الحسابات المجانية",
+        "freeNoticeRestricted": "الحسابات المجانية مقيّدة. عطّل هذا الخيار لتحديدها.",
+        "freeNoticeUnstable": "قد يكون وكيل الحسابات المجانية غير مستقر. استخدمه بحذر.",
+        "restrictFreeDisableConfirmTitle": "السماح بالحسابات المجانية",
+        "restrictFreeDisableConfirmMessage": "قد يكون وكيل الحسابات المجانية غير مستقر. هل تريد المتابعة؟"
+      },
+      "entryAction": "إضافة إلى خدمة API",
+      "testAction": "اختبار خدمة API",
+      "testSuccess": "نجح اختبار خدمة API ({{count}} نموذجًا)",
+      "testTimeout": "انتهت مهلة الاختبار. تأكد من تشغيل الخدمة المحلية.",
+      "testUnavailable": "عنوان خدمة API الحالي غير متاح",
+      "activateAction": "تشغيل خدمة API",
+      "activateSuccess": "تم التبديل إلى خدمة API",
+      "dashboardAction": "لوحة الخدمة",
+      "manageDesc": "أدر إحصاءات خدمة API والأعضاء والمنفذ والمفتاح واختبار الاتصال من مكان واحد.",
+      "memberOnlyLocal": "Codex فقط",
+      "configTitle": "إعدادات الخدمة",
+      "configEmpty": "احفظ حساباً واحداً على الأقل في مجموعة خدمة API ليتم إنشاء العنوان والمفتاح والمنفذ.",
+      "portLabel": "منفذ الخدمة",
+      "portSave": "حفظ المنفذ",
+      "portSaveSuccess": "تم تحديث منفذ خدمة API",
+      "portInvalid": "أدخل منفذاً بين 1 و65535",
+      "statsTitle": "الإجمالي",
+      "accountStatsTitle": "حسب الحساب",
+      "statsEmpty": "لا توجد إحصاءات بعد",
+      "summaryMeta": "{{count}} حسابًا · Codex فقط",
+      "summaryMetaUnconfigured": "غير مُعدّ · Codex فقط",
+      "memberTitle": "أعضاء المجموعة",
+      "stats": {
+        "requests": "الطلبات",
+        "requestsDetail": "نجاح {{success}} / فشل {{failed}}",
+        "tokens": "الرموز",
+        "tokensDetail": "إدخال {{input}} / إخراج {{output}}",
+        "specialTokens": "الذاكرة / التفكير",
+        "specialTokensDetail": "الذاكرة {{cached}} / التفكير {{reasoning}}",
+        "avgLatency": "متوسط التأخير",
+        "successRate": "نسبة النجاح {{rate}}%",
+        "accountRequests": "{{count}} طلب",
+        "accountTokens": "{{count}} رمز",
+        "accountResult": "نجاح {{success}} / فشل {{failed}}",
+        "accountTokensCompact": "{{value}}"
+      },
+      "routingLabel": "توجيه",
+      "routingSaveSuccess": "تم تحديث توجيه خدمة API",
+      "routingDescriptionAuto": "يفضّل الحسابات الأعلى اشتراكًا والأعلى رصيدًا، ثم يوزّع بالتناوب داخل نفس المستوى.",
+      "routingDescriptionQuotaHighFirst": "يفضّل الحسابات ذات الحصة المتبقية الأعلى.",
+      "routingDescriptionQuotaLowFirst": "يفضّل الحسابات ذات الحصة المتبقية الأقل.",
+      "routingDescriptionPlanHighFirst": "يفضّل الحسابات ذات باقات الاشتراك الأعلى.",
+      "routingDescriptionPlanLowFirst": "يفضّل الحسابات ذات باقات الاشتراك الأقل.",
+      "clearStats": "مسح الإحصاءات",
+      "clearStatsConfirm": "هل تريد مسح كل إحصاءات خدمة API؟",
+      "clearStatsSuccess": "تم مسح إحصاءات خدمة API",
+      "refreshStats": "تحديث الإحصاءات",
+      "refreshStatsSuccess": "تم تحديث إحصاءات خدمة API",
+      "routingStrategy": {
+        "auto": "تلقائي (موصى به)",
+        "quotaHighFirst": "الأعلى حصة أولاً",
+        "quotaLowFirst": "الأقل حصة أولاً",
+        "planHighFirst": "الأعلى باقة أولاً",
+        "planLowFirst": "الأقل باقة أولاً"
+      },
+      "statusUnconfigured": "غير مُعدّ",
+      "expandDetails": "توسيع التفاصيل",
+      "collapseDetails": "طيّ التفاصيل",
+      "hideEntryAction": "إخفاء مدخل خدمة API",
+      "hideEntryConfirm": "سيؤدي ذلك إلى إخفاء مدخل خدمة API من النظرة العامة وتعطيل خدمة API الحالية أيضًا. يمكنك إعادة تفعيله لاحقًا من إعدادات Codex أو الإعدادات السريعة.",
+      "hideEntryEffectHide": "إخفاء مدخل خدمة API من النظرة العامة",
+      "hideEntryEffectDisable": "تعطيل خدمة API الحالية",
+      "hideEntryEffectRestore": "يمكنك إعادة تفعيله من إعدادات Codex أو الإعدادات السريعة",
+      "riskNotice": {
+        "title": "تنبيه بالمخاطر",
+        "message": "إن وظائف خدمة Codex API الحالية تعتمد في جوهرها على أسلوب إعادة التوجيه عبر وكيل. وحتى الآن لا تفرض الجهة الرسمية قيودًا واضحة على هذا السلوك، لكن السياسات أو القواعد أو الإتاحة قد تتغير لاحقًا. وبالاستمرار في استخدام هذه الميزة، فأنت تقر بذلك وتتحمل المخاطر المرتبطة بها بنفسك.",
+        "remember": "أفهم ذلك، ولا تُظهره مجددًا",
+        "acknowledge": "أفهم",
+        "continueStart": "متابعة",
+        "continueSwitch": "متابعة التبديل"
+      },
+      "statsRange": {
+        "label": "نطاق الإحصاءات",
+        "daily": "يوم",
+        "weekly": "أسبوع",
+        "monthly": "شهر"
+      },
+      "enableBeforeActivateTitle": "الخدمة غير مفعلة",
+      "enableBeforeActivateMessage": "خدمة API غير مفعلة حاليًا، ويجب تفعيلها أولًا. هل تريد التفعيل والتبديل الآن؟",
+      "enableAndActivateAction": "تفعيل والتبديل",
+      "apiPortUrl": "عنوان منفذ API",
+      "modelId": "معرّف النموذج",
+      "modelIdPlaceholder": "اختر معرّف النموذج"
+    },
     "local": {
       "desc": "استيراد الحساب الحالي من ~/.codex/auth.json",
       "import": "جلب الحساب المحلي"
@@ -1878,7 +2057,8 @@
         "expand": "توسيع",
         "collapse": "طي",
         "repairVisibility": "إصلاح الظهور",
-        "restoreSessions": "استعادة الجلسات"
+        "restoreSessions": "استعادة الجلسات",
+        "copySessionId": "نسخ معرّف الجلسة"
       },
       "confirm": {
         "title": "نقل إلى المهملات",
@@ -1897,6 +2077,10 @@
       },
       "groupCount": "{{count}} جلسة",
       "updatedAt": "تم التحديث",
+      "labels": {
+        "sessionId": "معرّف الجلسة",
+        "tokenUsage": "استخدام الرموز"
+      },
       "locationRunning": " (قيد التشغيل)",
       "untitled": "جلسة بدون عنوان",
       "restoreModal": {
@@ -2063,8 +2247,27 @@
         "customDetected": "تم اكتشاف model_context_window = {{context}} مخصص في config.toml. سيؤدي الحفظ إلى إعادة كتابته باستخدام الإعداد السريع أدناه.",
         "compactMissingDetected": "تم تفعيل سياق 1M بالفعل، لكن حد الضغط التلقائي مفقود. سيكتب الحفظ القيمة الافتراضية {{limit}}.",
         "validation": {
-          "autoCompactInvalid": "يجب أن يكون حد الضغط التلقائي عددًا صحيحًا أكبر من 0."
-        }
+          "autoCompactInvalid": "يجب أن يكون حد الضغط التلقائي عددًا صحيحًا أكبر من 0.",
+          "contextWindowInvalid": "يجب أن تكون نافذة السياق عددًا صحيحًا أكبر من 0."
+        },
+        "presetLabel": "التكوين المسبق",
+        "presetHint": "اختر إعدادًا مسبقًا (افتراضي / 516 كيلو بايت / 1 ميجا)، أو قم بالتبديل إلى مخصص واملأ كلا الحقلين يدويًا.",
+        "presetDefaultShort": "تقصير",
+        "presetDefaultDesc": "قم بإزالة كلا الحقلين واستخدم الإعدادات الافتراضية الرسمية",
+        "preset516kShort": "516 ك",
+        "preset516kDesc": "السياق = 516000 / المضغوط = 460000",
+        "preset1mShort": "1 م",
+        "preset1mDesc": "السياق = 1000000 / المضغوط = 900000",
+        "presetCustomShort": "مخصص",
+        "presetCustomDesc": "قم بتعيين السياق والقيم المضغوطة يدويًا",
+        "presetDefault": "الافتراضي (إزالة model_context_window / model_auto_compact_token_limit)",
+        "preset516k": "516 كيلو بايت (model_context_window = 516000، ضغط تلقائي = 460000)",
+        "preset1m": "1M (model_context_window = 1000000، الضغط التلقائي = 900000)",
+        "presetCustom": "مخصص",
+        "contextWindow": "نافذة السياق",
+        "contextWindowHint": "يكتب model_context_window. قابل للتحرير فقط في الوضع المخصص.",
+        "partialDetected": "تم حاليًا تعيين حقل مُدار واحد فقط: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى إعادة كتابة كلا الحقلين باستخدام المخطط الحالي.",
+        "notSet": "لم يتم ضبطه"
       }
     },
     "quickSwitch": {
@@ -2208,7 +2411,35 @@
       "appPath": "مسار التطبيق",
       "configToml": "ملف إعدادات Codex",
       "openConfigToml": "فتح الملف",
-      "openConfigHint": "افتح بسرعة ملف config.toml النشط الخاص بـ Codex."
+      "openConfigHint": "افتح بسرعة ملف config.toml النشط الخاص بـ Codex.",
+      "localAccessEntryVisible": "إظهار مدخل خدمة API",
+      "quickConfig": {
+        "title": "السياق والحدود المدمجة",
+        "presetLabel": "التكوين المسبق",
+        "presetHint": "اختر إعدادًا مسبقًا (افتراضي / 516 كيلو بايت / 1 ميجا)، أو قم بالتبديل إلى مخصص واملأ كلا الحقلين يدويًا.",
+        "presetDefaultShort": "تقصير",
+        "presetDefaultDesc": "قم بإزالة كلا الحقلين واستخدم الإعدادات الافتراضية الرسمية",
+        "preset516kShort": "516 ك",
+        "preset516kDesc": "السياق = 516000 / المضغوط = 460000",
+        "preset1mShort": "1 م",
+        "preset1mDesc": "السياق = 1000000 / المضغوط = 900000",
+        "presetCustomShort": "مخصص",
+        "presetCustomDesc": "قم بتعيين السياق والقيم المضغوطة يدويًا",
+        "contextWindow": "نافذة السياق",
+        "contextWindowHint": "يكتب model_context_window. قابل للتحرير فقط في الوضع المخصص.",
+        "autoCompactLimit": "حد الضغط التلقائي",
+        "autoCompactLimitHint": "يكتب model_auto_compact_token_limit. قابل للتحرير فقط في الوضع المخصص.",
+        "customDetected": "تم اكتشاف القيم المخصصة في config.toml: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى استبدالها بالإعداد المسبق الذي حددته.",
+        "partialDetected": "تم حاليًا تعيين حقل مُدار واحد فقط: model_context_window={{context}}، model_auto_compact_token_limit={{compact}}. سيؤدي الحفظ إلى إعادة كتابة كلا الحقلين باستخدام المخطط الحالي.",
+        "notSet": "لم يتم ضبطه",
+        "loadFailed": "فشل تحميل تكوين Codex الحالي: {{error}}",
+        "saveSuccess": "تم حفظ تكوين Codex الحالي.",
+        "saveFailed": "فشل حفظ تكوين Codex الحالي: {{error}}",
+        "validation": {
+          "contextWindowInvalid": "يجب أن تكون نافذة السياق عددًا صحيحًا أكبر من 0.",
+          "autoCompactInvalid": "يجب أن يكون حد الضغط التلقائي عددًا صحيحًا أكبر من 0."
+        }
+      }
     },
     "githubCopilot": {
       "title": "إعدادات GitHub Copilot",
@@ -2222,7 +2453,10 @@
       "enable": "التبديل التلقائي",
       "threshold": "عتبة التبديل",
       "thresholdDesc": "يتم تشغيل التبديل التلقائي عندما تصل مجموعات النماذج المُراقبة إلى هذه العتبة المئوية",
-      "hint": "يتم التبديل تلقائيًا إلى الحساب صاحب أعلى حصة عندما تصل مجموعات النماذج المُراقبة إلى العتبة.",
+      "hint": "يتم التبديل تلقائيًا عند وصول مجموعات النماذج المُراقبة إلى العتبة؛ وإذا فُعّل مراقبة الرصيد فسيتم التبديل أيضًا عند انخفاض الرصيد المتبقي دون العتبة.",
+      "creditsEnable": "مراقبة الرصيد",
+      "creditsThreshold": "حد الرصيد",
+      "creditsThresholdDesc": "بدّل تلقائيًا أيضًا عندما يصبح الرصيد المتبقي عند هذه القيمة أو أقل",
       "triggerModel": "نموذج التفعيل",
       "scopeAnyGroup": "أي مجموعة نماذج",
       "scopeSelectedGroups": "مجموعات نماذج محددة",
@@ -2240,6 +2474,7 @@
     "apply": "تطبيق",
     "inputMinutes": "أدخل الدقائق",
     "inputPercent": "أدخل النسبة المئوية",
+    "inputCredits": "أدخل الرصيد",
     "windsurf": {
       "title": "إعدادات Windsurf",
       "appPath": "مسار Windsurf"
@@ -2289,6 +2524,11 @@
     "zed": {
       "title": "إعدادات Zed",
       "appPath": "مسار Zed"
+    },
+    "filterPersistence": {
+      "title": "تذكّر الفلاتر",
+      "enable": "تذكّر فلاتر نظرة الحسابات (بدون البحث)",
+      "hint": "مغلق افتراضيًا. عند التفعيل تُحفَظ التصفية والوسوم والترتيب لكل منصة."
     }
   },
   "quotaAlert": {
@@ -2325,7 +2565,55 @@
       "description": "انقر على \"إضافة حساب\" لبدء إدارة حسابات Windsurf"
     },
     "addModal": {
-      "title": "إضافة حساب Windsurf"
+      "title": "إضافة حساب Windsurf",
+      "password": "تسجيل البريد الإلكتروني"
+    },
+    "password": {
+      "desc": "سجّل الدخول ببريد حساب Windsurf الإلكتروني وكلمة المرور لجلب مفتاح API وبيانات الحساب تلقائيًا.",
+      "emailPlaceholder": "عنوان البريد الإلكتروني",
+      "passwordPlaceholder": "كلمة المرور",
+      "empty": "أدخل البريد الإلكتروني وكلمة المرور",
+      "login": "تسجيل الدخول",
+      "logging": "جارٍ تسجيل الدخول...",
+      "success": "تم تسجيل الدخول: {{login}}",
+      "failed": "فشل تسجيل الدخول: {{error}}",
+      "modeLabel": "الوضع",
+      "modeSingle": "فردي",
+      "modeBatch": "دفعة",
+      "batchDesc": "يدعم الاستيراد الدفعي JSON أو نصًا بحساب واحد في كل سطر. يتطلب وضع النص محددًا صريحًا.",
+      "batchInputModeLabel": "التنسيق",
+      "batchInputModeJson": "صيغة JSON",
+      "batchInputModeText": "نص",
+      "batchDelimiterLabel": "الفاصل",
+      "batchDelimiterTab": "تبويب",
+      "batchDelimiterSpace": "مسافة",
+      "batchDelimiterComma": "فاصلة",
+      "batchDelimiterPipe": "خط عمودي",
+      "batchDelimiterDash": "----",
+      "batchDelimiterCustom": "مخصص",
+      "batchJsonDesc": "ألصق مصفوفة JSON تحتوي كل خانة فيها على email و password.",
+      "batchTextDesc": "أدخل حسابًا واحدًا في كل سطر وسيجري التحليل بدقة حسب الفاصل المحدد.",
+      "batchExampleTitle": "مثال التنسيق (انقر للتوسيع)",
+      "batchExampleJsonLabel": "مثال JSON",
+      "batchExampleTextLabel": "مثال نصي",
+      "batchCustomDelimiterPlaceholder": "أدخل فاصلًا مخصصًا",
+      "batchCustomDelimiterEmpty": "أدخل فاصلًا مخصصًا",
+      "batchPlaceholderJson": "ألصق مصفوفة JSON تحتوي على email و password",
+      "batchPlaceholderText": "حساب واحد في كل سطر باستخدام الفاصل المحدد",
+      "batchEmpty": "أدخل محتوى الاستيراد الدفعي أولًا",
+      "batchJsonInvalid": "JSON غير صالح: {{error}}",
+      "batchJsonArrayRequired": "يجب أن يكون جذر JSON مصفوفة",
+      "batchJsonItemInvalid": "يجب أن يحتوي العنصر {{line}} على حقلي email و password",
+      "batchTextLineInvalid": "السطر {{line}} غير صالح. تحقّق من الفاصل المحدد.",
+      "batchImport": "استيراد دفعي",
+      "batchImporting": "جارٍ استيراد {{count}} حسابًا...",
+      "batchImportingShort": "جارٍ الاستيراد...",
+      "batchSuccess": "تم استيراد {{count}} حسابًا",
+      "batchPartial": "تم بنجاح {{success}} وفشل {{failed}}",
+      "batchFailed": "فشل الاستيراد الدفعي لـ {{failed}} حسابًا",
+      "batchFailureEntryWithLine": "العنصر {{line}} ({{email}}): {{error}}",
+      "batchFailureEntry": "{{email}}: {{error}}",
+      "batchFailureMore": "فشل {{count}} أخرى"
     },
     "oauth": {
       "desc": "انقر الزر أدناه وأكمل تفويض Windsurf في المتصفح."
@@ -3091,11 +3379,11 @@
       "status": "حالة التسجيل",
       "checkedIn": "تم التسجيل",
       "notCheckedIn": "لم يتم التسجيل",
-      "button": "تسجيل",
+      "button": {},
       "button.loading": "جاري التسجيل...",
       "done": "تم",
       "success": "تم التسجيل بنجاح! {{days}} يوم متتالي",
-      "failure": "فشل التسجيل: {{message}}",
+      "failure": {},
       "failure.network": "خطأ في الشبكة، يرجى المحاولة لاحقًا",
       "lastCheckin": "آخر تسجيل: {{time}}",
       "streak": "{{days}} يوم متتالي",
@@ -3372,5 +3660,16 @@
     "cancelEditAccountName": "إلغاء التعديل",
     "accountNameRequired": "اسم الحساب مطلوب.",
     "copySecret": "نسخ السر"
+  },
+  "logViewer": {
+    "fileLabel": "ملف السجل",
+    "levelLabel": "المستوى",
+    "noMatches": "لا توجد سجلات مطابقة للتصفية الحالية",
+    "levels": {
+      "all": "الكل",
+      "info": "معلومات",
+      "warn": "تحذير",
+      "error": "خطأ"
+    }
   }
 }

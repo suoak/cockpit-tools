@@ -1,17 +1,22 @@
 import { Check, Copy, Download, Eye, EyeOff, FolderOpen, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ModalErrorMessage } from './ModalErrorMessage';
 
 interface ExportJsonModalProps {
   isOpen: boolean;
   title: string;
   jsonContent: string;
+  customContent?: ReactNode;
+  errorMessage?: string | null;
+  errorScrollKey?: string | number;
   hidden: boolean;
   copied: boolean;
   saving: boolean;
   savedPath: string | null;
   canOpenSavedDirectory: boolean;
   pathCopied: boolean;
+  toolbarContent?: ReactNode;
   onClose: () => void;
   onToggleHidden: () => void;
   onCopyJson: () => Promise<void>;
@@ -49,17 +54,32 @@ function maskJsonValues(value: unknown): unknown {
   return value;
 }
 
+export function maskJsonPreviewContent(jsonContent: string): string {
+  if (!jsonContent) return '';
+  try {
+    const parsed = JSON.parse(jsonContent) as unknown;
+    const masked = maskJsonValues(parsed);
+    return JSON.stringify(masked, null, 2);
+  } catch {
+    return jsonContent.replace(/[^\s]/g, '*');
+  }
+}
+
 export function ExportJsonModal(props: ExportJsonModalProps) {
   const {
     isOpen,
     title,
     jsonContent,
+    customContent,
+    errorMessage,
+    errorScrollKey,
     hidden,
     copied,
     saving,
     savedPath,
     canOpenSavedDirectory,
     pathCopied,
+    toolbarContent,
     onClose,
     onToggleHidden,
     onCopyJson,
@@ -70,14 +90,7 @@ export function ExportJsonModal(props: ExportJsonModalProps) {
   const { t } = useTranslation();
 
   const maskedContent = useMemo(() => {
-    if (!jsonContent) return '';
-    try {
-      const parsed = JSON.parse(jsonContent) as unknown;
-      const masked = maskJsonValues(parsed);
-      return JSON.stringify(masked, null, 2);
-    } catch {
-      return jsonContent.replace(/[^\s]/g, '*');
-    }
+    return maskJsonPreviewContent(jsonContent);
   }, [jsonContent]);
 
   if (!isOpen) return null;
@@ -93,47 +106,59 @@ export function ExportJsonModal(props: ExportJsonModalProps) {
         </div>
 
         <div className="modal-body export-json-modal-body">
-          <div className="export-json-actions">
-            <button className="btn btn-secondary btn-sm" onClick={onToggleHidden}>
-              {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
-              {hidden ? t('common.preview', '预览') : t('common.close', '关闭')}
-            </button>
-            <button className="btn btn-secondary btn-sm" onClick={onCopyJson}>
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? t('common.success', '成功') : t('common.copy', '复制')}
-            </button>
-            <button className="btn btn-primary btn-sm" onClick={onSaveJson} disabled={saving}>
-              <Download size={14} />
-              {saving ? t('common.loading', '加载中...') : t('settings.about.download', 'Download')}
-            </button>
-          </div>
-
-          <textarea
-            className="export-json-textarea"
-            readOnly
-            spellCheck={false}
-            value={hidden ? maskedContent : jsonContent}
-          />
-
-          {savedPath && (
-            <div className="export-json-path-box">
-              <div className="export-json-path-title">{t('instances.labels.path', '目录')}</div>
-              <div className="export-json-path-value">{savedPath}</div>
-              <div className="export-json-path-actions">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={onOpenSavedDirectory}
-                  disabled={!canOpenSavedDirectory}
-                >
-                  <FolderOpen size={14} />
-                  {t('instances.actions.openFolder', '打开文件夹')}
+          {toolbarContent ? (
+            <div className="export-json-toolbar">
+              {toolbarContent}
+            </div>
+          ) : null}
+          <ModalErrorMessage message={errorMessage} scrollKey={errorScrollKey} />
+          {customContent ? (
+            customContent
+          ) : (
+            <>
+              <div className="export-json-actions">
+                <button className="btn btn-secondary btn-sm" onClick={onToggleHidden}>
+                  {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                  {hidden ? t('common.preview', '预览') : t('common.close', '关闭')}
                 </button>
-                <button className="btn btn-secondary btn-sm" onClick={onCopySavedPath}>
-                  {pathCopied ? <Check size={14} /> : <Copy size={14} />}
-                  {pathCopied ? t('common.success', '成功') : t('common.copy', '复制')}
+                <button className="btn btn-secondary btn-sm" onClick={onCopyJson}>
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? t('common.success', '成功') : t('common.copy', '复制')}
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={onSaveJson} disabled={saving}>
+                  <Download size={14} />
+                  {saving ? t('common.loading', '加载中...') : t('settings.about.download', 'Download')}
                 </button>
               </div>
-            </div>
+
+              <textarea
+                className="export-json-textarea"
+                readOnly
+                spellCheck={false}
+                value={hidden ? maskedContent : jsonContent}
+              />
+
+              {savedPath && (
+                <div className="export-json-path-box">
+                  <div className="export-json-path-title">{t('instances.labels.path', '目录')}</div>
+                  <div className="export-json-path-value">{savedPath}</div>
+                  <div className="export-json-path-actions">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={onOpenSavedDirectory}
+                      disabled={!canOpenSavedDirectory}
+                    >
+                      <FolderOpen size={14} />
+                      {t('instances.actions.openFolder', '打开文件夹')}
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={onCopySavedPath}>
+                      {pathCopied ? <Check size={14} /> : <Copy size={14} />}
+                      {pathCopied ? t('common.success', '成功') : t('common.copy', '复制')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

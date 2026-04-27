@@ -112,6 +112,8 @@ pub struct GeneralConfig {
     pub antigravity_app_path: String,
     /// Codex 启动路径（为空则使用默认路径）
     pub codex_app_path: String,
+    /// 切换 Codex 后需联动重启的指定应用路径
+    pub codex_specified_app_path: String,
     /// Zed 启动路径（为空则使用默认路径）
     pub zed_app_path: String,
     /// VS Code 启动路径（为空则使用默认路径）
@@ -146,12 +148,20 @@ pub struct GeneralConfig {
     pub openclaw_auth_overwrite_on_switch: bool,
     /// 切换 Codex 时是否自动启动/重启 Codex App
     pub codex_launch_on_switch: bool,
+    /// 切换 Codex 时是否自动重启指定应用
+    pub codex_restart_specified_app_on_switch: bool,
+    /// 是否在 Codex 总览中显示 API 服务入口
+    pub codex_local_access_entry_visible: bool,
     /// Antigravity 切号是否启用“本地落盘 + 扩展无感”且不重启
     pub antigravity_dual_switch_no_restart_enabled: bool,
     /// 是否启用自动切号
     pub auto_switch_enabled: bool,
     /// 自动切号阈值（百分比）
     pub auto_switch_threshold: i32,
+    /// 是否启用 Credits 阈值自动切号
+    pub auto_switch_credits_enabled: bool,
+    /// Credits 自动切号阈值（剩余值）
+    pub auto_switch_credits_threshold: i32,
     /// 自动切号触发模式：any_group | selected_groups
     pub auto_switch_scope_mode: String,
     /// 自动切号指定模型分组（分组 ID）
@@ -455,7 +465,9 @@ pub fn save_auto_backup_settings(
 }
 
 #[tauri::command]
-pub fn update_auto_backup_last_run(last_backup_at: Option<String>) -> Result<AutoBackupSettings, String> {
+pub fn update_auto_backup_last_run(
+    last_backup_at: Option<String>,
+) -> Result<AutoBackupSettings, String> {
     let current = config::get_user_config();
     let normalized_last_backup_at = last_backup_at.and_then(|value| {
         let trimmed = value.trim().to_string();
@@ -508,7 +520,8 @@ pub fn list_auto_backup_files() -> Result<Vec<AutoBackupFileEntry>, String> {
             Some(name) if name.ends_with(".json") => name.to_string(),
             _ => continue,
         };
-        let metadata = fs::metadata(&path).map_err(|err| format!("读取备份文件信息失败: {}", err))?;
+        let metadata =
+            fs::metadata(&path).map_err(|err| format!("读取备份文件信息失败: {}", err))?;
         files.push(AutoBackupFileEntry {
             file_name,
             path: path.to_string_lossy().to_string(),
@@ -547,7 +560,9 @@ pub fn cleanup_auto_backup_files(retention_days: i32) -> Result<Vec<String>, Str
     let normalized_retention_days = config::sanitize_auto_backup_retention_days(retention_days);
     let now = SystemTime::now();
     let cutoff = now
-        .checked_sub(Duration::from_secs(normalized_retention_days as u64 * 24 * 60 * 60))
+        .checked_sub(Duration::from_secs(
+            normalized_retention_days as u64 * 24 * 60 * 60,
+        ))
         .unwrap_or(now);
 
     let mut deleted = Vec::new();
@@ -562,7 +577,8 @@ pub fn cleanup_auto_backup_files(retention_days: i32) -> Result<Vec<String>, Str
             Some(name) if name.ends_with(".json") => name.to_string(),
             _ => continue,
         };
-        let metadata = fs::metadata(&path).map_err(|err| format!("读取备份文件信息失败: {}", err))?;
+        let metadata =
+            fs::metadata(&path).map_err(|err| format!("读取备份文件信息失败: {}", err))?;
         let modified = match metadata.modified() {
             Ok(value) => value,
             Err(_) => continue,
@@ -691,12 +707,14 @@ pub fn save_network_config(
         auto_backup_include_accounts: current.auto_backup_include_accounts,
         auto_backup_include_config: current.auto_backup_include_config,
         auto_backup_retention_days: current.auto_backup_retention_days,
+        auto_backup_retention_days_migrated: current.auto_backup_retention_days_migrated,
         auto_backup_last_backup_at: current.auto_backup_last_backup_at,
         floating_card_position_x: current.floating_card_position_x,
         floating_card_position_y: current.floating_card_position_y,
         opencode_app_path: current.opencode_app_path,
         antigravity_app_path: current.antigravity_app_path,
         codex_app_path: current.codex_app_path,
+        codex_specified_app_path: current.codex_specified_app_path,
         zed_app_path: current.zed_app_path,
         vscode_app_path: current.vscode_app_path,
         windsurf_app_path: current.windsurf_app_path,
@@ -714,10 +732,14 @@ pub fn save_network_config(
         ghcp_launch_on_switch: current.ghcp_launch_on_switch,
         openclaw_auth_overwrite_on_switch: current.openclaw_auth_overwrite_on_switch,
         codex_launch_on_switch: current.codex_launch_on_switch,
+        codex_restart_specified_app_on_switch: current.codex_restart_specified_app_on_switch,
+        codex_local_access_entry_visible: current.codex_local_access_entry_visible,
         antigravity_dual_switch_no_restart_enabled: current
             .antigravity_dual_switch_no_restart_enabled,
         auto_switch_enabled: current.auto_switch_enabled,
         auto_switch_threshold: current.auto_switch_threshold,
+        auto_switch_credits_enabled: current.auto_switch_credits_enabled,
+        auto_switch_credits_threshold: current.auto_switch_credits_threshold,
         auto_switch_scope_mode: current.auto_switch_scope_mode,
         auto_switch_selected_group_ids: current.auto_switch_selected_group_ids,
         auto_switch_account_scope_mode: current.auto_switch_account_scope_mode,
@@ -952,6 +974,7 @@ pub fn get_general_config(app: tauri::AppHandle) -> Result<GeneralConfig, String
         opencode_app_path: user_config.opencode_app_path,
         antigravity_app_path: user_config.antigravity_app_path,
         codex_app_path: user_config.codex_app_path,
+        codex_specified_app_path: user_config.codex_specified_app_path,
         zed_app_path: user_config.zed_app_path,
         vscode_app_path: user_config.vscode_app_path,
         windsurf_app_path: user_config.windsurf_app_path,
@@ -969,10 +992,14 @@ pub fn get_general_config(app: tauri::AppHandle) -> Result<GeneralConfig, String
         ghcp_launch_on_switch: user_config.ghcp_launch_on_switch,
         openclaw_auth_overwrite_on_switch: user_config.openclaw_auth_overwrite_on_switch,
         codex_launch_on_switch: user_config.codex_launch_on_switch,
+        codex_restart_specified_app_on_switch: user_config.codex_restart_specified_app_on_switch,
+        codex_local_access_entry_visible: user_config.codex_local_access_entry_visible,
         antigravity_dual_switch_no_restart_enabled: user_config
             .antigravity_dual_switch_no_restart_enabled,
         auto_switch_enabled: user_config.auto_switch_enabled,
         auto_switch_threshold: user_config.auto_switch_threshold,
+        auto_switch_credits_enabled: user_config.auto_switch_credits_enabled,
+        auto_switch_credits_threshold: user_config.auto_switch_credits_threshold,
         auto_switch_scope_mode: user_config.auto_switch_scope_mode,
         auto_switch_selected_group_ids: user_config.auto_switch_selected_group_ids,
         auto_switch_account_scope_mode: user_config.auto_switch_account_scope_mode,
@@ -1069,6 +1096,7 @@ pub fn save_general_config(
     opencode_app_path: String,
     antigravity_app_path: String,
     codex_app_path: String,
+    codex_specified_app_path: Option<String>,
     zed_app_path: Option<String>,
     vscode_app_path: String,
     windsurf_app_path: Option<String>,
@@ -1086,9 +1114,13 @@ pub fn save_general_config(
     ghcp_launch_on_switch: Option<bool>,
     openclaw_auth_overwrite_on_switch: Option<bool>,
     codex_launch_on_switch: bool,
+    codex_restart_specified_app_on_switch: Option<bool>,
+    codex_local_access_entry_visible: Option<bool>,
     antigravity_dual_switch_no_restart_enabled: Option<bool>,
     auto_switch_enabled: Option<bool>,
     auto_switch_threshold: Option<i32>,
+    auto_switch_credits_enabled: Option<bool>,
+    auto_switch_credits_threshold: Option<i32>,
     auto_switch_scope_mode: Option<String>,
     auto_switch_selected_group_ids: Option<Vec<String>>,
     auto_switch_account_scope_mode: Option<String>,
@@ -1131,6 +1163,9 @@ pub fn save_general_config(
     let normalized_opencode_path = opencode_app_path.trim().to_string();
     let normalized_antigravity_path = antigravity_app_path.trim().to_string();
     let normalized_codex_path = codex_app_path.trim().to_string();
+    let normalized_codex_specified_app_path = codex_specified_app_path
+        .map(|value| value.trim().to_string())
+        .unwrap_or_else(|| current.codex_specified_app_path.clone());
     let normalized_zed_path = zed_app_path
         .map(|value| value.trim().to_string())
         .unwrap_or_else(|| current.zed_app_path.clone());
@@ -1271,6 +1306,7 @@ pub fn save_general_config(
         opencode_app_path: normalized_opencode_path,
         antigravity_app_path: normalized_antigravity_path,
         codex_app_path: normalized_codex_path,
+        codex_specified_app_path: normalized_codex_specified_app_path,
         zed_app_path: normalized_zed_path,
         vscode_app_path: normalized_vscode_path,
         windsurf_app_path: normalized_windsurf_path,
@@ -1289,10 +1325,18 @@ pub fn save_general_config(
         openclaw_auth_overwrite_on_switch: openclaw_auth_overwrite_on_switch
             .unwrap_or(current.openclaw_auth_overwrite_on_switch),
         codex_launch_on_switch,
+        codex_restart_specified_app_on_switch: codex_restart_specified_app_on_switch
+            .unwrap_or(current.codex_restart_specified_app_on_switch),
+        codex_local_access_entry_visible: codex_local_access_entry_visible
+            .unwrap_or(current.codex_local_access_entry_visible),
         antigravity_dual_switch_no_restart_enabled: antigravity_dual_switch_no_restart_enabled
             .unwrap_or(current.antigravity_dual_switch_no_restart_enabled),
         auto_switch_enabled: auto_switch_enabled.unwrap_or(current.auto_switch_enabled),
         auto_switch_threshold: auto_switch_threshold.unwrap_or(current.auto_switch_threshold),
+        auto_switch_credits_enabled: auto_switch_credits_enabled
+            .unwrap_or(current.auto_switch_credits_enabled),
+        auto_switch_credits_threshold: auto_switch_credits_threshold
+            .unwrap_or(current.auto_switch_credits_threshold),
         auto_switch_scope_mode: auto_switch_scope_mode
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
@@ -1381,6 +1425,7 @@ pub fn save_general_config(
         auto_backup_include_accounts: current.auto_backup_include_accounts,
         auto_backup_include_config: current.auto_backup_include_config,
         auto_backup_retention_days: current.auto_backup_retention_days,
+        auto_backup_retention_days_migrated: current.auto_backup_retention_days_migrated,
         auto_backup_last_backup_at: current.auto_backup_last_backup_at,
     };
 
@@ -1473,6 +1518,19 @@ pub fn set_codex_launch_on_switch(enabled: bool) -> Result<(), String> {
     }
     let new_config = UserConfig {
         codex_launch_on_switch: enabled,
+        ..current
+    };
+    config::save_user_config(&new_config)
+}
+
+#[tauri::command]
+pub fn set_codex_local_access_entry_visible(enabled: bool) -> Result<(), String> {
+    let current = config::get_user_config();
+    if current.codex_local_access_entry_visible == enabled {
+        return Ok(());
+    }
+    let new_config = UserConfig {
+        codex_local_access_entry_visible: enabled,
         ..current
     };
     config::save_user_config(&new_config)
