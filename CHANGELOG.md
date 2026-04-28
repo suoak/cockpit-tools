@@ -7,6 +7,26 @@ All notable changes to SC-Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.22.14] - 2026-04-28
+
+### Added
+- **Codex Local API Service routing can now prioritize accounts whose subscriptions expire sooner**: account pool routing adds an `Expiry Soon First` strategy that reads saved subscription expiry metadata and then falls back to plan tier and remaining quota ordering.
+
+### Changed
+- **Codex account overview no longer keeps a separate subscription-expiry filter**: the accounts page removes the expiry filter control and clears its persisted filter state while keeping subscription metadata available in account details.
+- **Codex Plus accounts now use a distinct badge treatment**: account lists, Local API Service member views, dashboard cards, floating cards, and instance badges can style Plus separately from other plan badges.
+
+---
+## [0.22.13] - 2026-04-27
+
+### Fixed
+- **Codex quota refresh no longer forces OAuth token rotation only because `id_token` expired**: quota refresh again uses the `access_token` validity and only refreshes tokens when the access token is expired or the quota API reports token invalidation, avoiding unnecessary refreshes that could lead to 401 responses.
+
+### Changed
+- **Codex subscription metadata now uses neutral missing-information wording**: subscription columns, filters, cards, and tooltips now say subscription info or term, and missing subscription metadata is shown as unavailable instead of asking the user to reauthorize.
+- **Codex PRO Lite and PRO Max accounts now keep PRO filtering while using distinct badges**: account lists, local API access, dashboard cards, floating cards, and instance badges can style `pro_lite` and `pro_max` separately without moving them out of the PRO filter group.
+
+---
 ## [0.22.12] - 2026-04-27
 
 ### Fixed
