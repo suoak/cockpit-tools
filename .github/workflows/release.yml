@@ -429,10 +429,28 @@ jobs:
             .platforms["darwin-x86_64"] and
             .platforms["windows-x86_64"] and
             .platforms["windows-x86_64-msi"] and
-            .platforms["windows-x86_64-nsis"] and
-            .platforms["linux-x86_64-appimage"] and
-            .platforms["linux-aarch64-appimage"]
+            .platforms["windows-x86_64-nsis"]
           ' latest.json > /dev/null
+
+          if ls release-assets/*_amd64.AppImage >/dev/null 2>&1; then
+            jq -e '.platforms["linux-x86_64-appimage"]' latest.json > /dev/null
+          fi
+          if ls release-assets/*_aarch64.AppImage >/dev/null 2>&1; then
+            jq -e '.platforms["linux-aarch64-appimage"]' latest.json > /dev/null
+          fi
+          if ls release-assets/*_amd64.deb >/dev/null 2>&1; then
+            jq -e '.platforms["linux-x86_64-deb"]' latest.json > /dev/null
+          fi
+          if ls release-assets/*_arm64.deb >/dev/null 2>&1; then
+            jq -e '.platforms["linux-aarch64-deb"]' latest.json > /dev/null
+          fi
+          if ls release-assets/*-1.x86_64.rpm >/dev/null 2>&1; then
+            jq -e '.platforms["linux-x86_64-rpm"]' latest.json > /dev/null
+          fi
+          if ls release-assets/*-1.aarch64.rpm >/dev/null 2>&1; then
+            jq -e '.platforms["linux-aarch64-rpm"]' latest.json > /dev/null
+          fi
+
           jq -r '.platforms | keys[]' latest.json
 
       - name: Upload merged latest.json
