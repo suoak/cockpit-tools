@@ -392,6 +392,12 @@ body.floating-card-overlay-root,
   color: #76d9ff;
 }
 
+.floating-card-plan--pro-plus {
+  border-color: rgba(255, 184, 76, 0.28);
+  background: rgba(255, 184, 76, 0.12);
+  color: #ffc565;
+}
+
 .floating-card-plan.codex-plus {
   border-color: rgba(45, 212, 191, 0.34);
   background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(167, 243, 208, 0.9) 52%, rgba(94, 234, 212, 0.88) 100%);

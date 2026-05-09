@@ -111,23 +111,11 @@ function main() {
   const darwinX64Tar = findAsset(assets, /_x64\.app\.tar\.gz$/, 'darwin-x86_64');
   const windowsMsi = findAsset(assets, /_x64_en-US\.msi$/, 'windows-x86_64-msi');
   const windowsNsis = findAsset(assets, /_x64-setup\.exe$/, 'windows-x86_64-nsis');
-  const linuxX64AppImage = findAsset(assets, /_amd64\.AppImage$/, 'linux-x86_64-appimage');
-  const linuxArmAppImage = findAsset(assets, /_aarch64\.AppImage$/, 'linux-aarch64-appimage');
-  const linuxX64Deb = findAsset(assets, /_amd64\.deb$/, 'linux-x86_64-deb');
-  const linuxArmDeb = findAsset(assets, /_arm64\.deb$/, 'linux-aarch64-deb');
-  const linuxX64Rpm = findAsset(assets, /-1\.x86_64\.rpm$/, 'linux-x86_64-rpm');
-  const linuxArmRpm = findAsset(assets, /-1\.aarch64\.rpm$/, 'linux-aarch64-rpm');
 
   const darwinAarch64Entry = buildPlatformEntry(darwinAarch64Tar, signatures, repo, version);
   const darwinX64Entry = buildPlatformEntry(darwinX64Tar, signatures, repo, version);
   const windowsMsiEntry = buildPlatformEntry(windowsMsi, signatures, repo, version);
   const windowsNsisEntry = buildPlatformEntry(windowsNsis, signatures, repo, version);
-  const linuxX64AppImageEntry = buildPlatformEntry(linuxX64AppImage, signatures, repo, version);
-  const linuxArmAppImageEntry = buildPlatformEntry(linuxArmAppImage, signatures, repo, version);
-  const linuxX64DebEntry = buildPlatformEntry(linuxX64Deb, signatures, repo, version);
-  const linuxArmDebEntry = buildPlatformEntry(linuxArmDeb, signatures, repo, version);
-  const linuxX64RpmEntry = buildPlatformEntry(linuxX64Rpm, signatures, repo, version);
-  const linuxArmRpmEntry = buildPlatformEntry(linuxArmRpm, signatures, repo, version);
 
   const latest = {
     version,
@@ -138,10 +126,10 @@ function main() {
       'darwin-aarch64-app': cloneEntry(darwinAarch64Entry),
       'darwin-x86_64': darwinX64Entry,
       'darwin-x86_64-app': cloneEntry(darwinX64Entry),
-      // Use MSI as default Windows installer
+      // Keep Windows fallback aligned to NSIS so updater fallback does not switch installer type.
       'windows-x86_64': windowsNsisEntry,
       'windows-x86_64-nsis': cloneEntry(windowsNsisEntry),
-      'windows-x86_64-msi': windowsMsiEntry,
+      'windows-x86_64-msi': cloneEntry(windowsMsiEntry),
       'linux-x86_64': linuxX64AppImageEntry,
       'linux-x86_64-appimage': cloneEntry(linuxX64AppImageEntry),
       'linux-x86_64-deb': linuxX64DebEntry,

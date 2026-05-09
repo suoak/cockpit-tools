@@ -41,7 +41,7 @@ import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
 import { MultiSelectFilterDropdown, type MultiSelectFilterOption } from '../components/MultiSelectFilterDropdown';
 import { SingleSelectFilterDropdown } from '../components/SingleSelectFilterDropdown';
 import type { GitHubCopilotAccount } from '../types/githubCopilot';
-import { hasGitHubCopilotQuotaData } from '../types/githubCopilot';
+import { getGitHubCopilotPlanBadge, hasGitHubCopilotQuotaData } from '../types/githubCopilot';
 import { compareCurrentAccountFirst } from '../utils/currentAccountSort';
 import {
   buildValidAccountsFilterOption,
@@ -206,8 +206,8 @@ export function GitHubCopilotAccountsPage() {
   );
 
   const resolvePlanKey = useCallback(
-    (account: GitHubCopilotAccount) => resolvePresentation(account).planClass.toUpperCase(),
-    [resolvePresentation],
+    (account: GitHubCopilotAccount) => getGitHubCopilotPlanBadge(account),
+    [],
   );
 
   const resolveUsageMetric = useCallback(
@@ -245,8 +245,10 @@ export function GitHubCopilotAccountsPage() {
       VALID: 0,
       FREE: 0,
       PRO: 0,
+      PRO_PLUS: 0,
       BUSINESS: 0,
       ENTERPRISE: 0,
+      UNKNOWN: 0,
     };
     accounts.forEach((account) => {
       const tier = resolvePlanKey(account);
@@ -263,8 +265,10 @@ export function GitHubCopilotAccountsPage() {
   const tierFilterOptions = useMemo<MultiSelectFilterOption[]>(() => [
     { value: 'FREE', label: `FREE (${tierCounts.FREE})` },
     { value: 'PRO', label: `PRO (${tierCounts.PRO})` },
+    { value: 'PRO_PLUS', label: `PRO+ (${tierCounts.PRO_PLUS})` },
     { value: 'BUSINESS', label: `BUSINESS (${tierCounts.BUSINESS})` },
     { value: 'ENTERPRISE', label: `ENTERPRISE (${tierCounts.ENTERPRISE})` },
+    { value: 'UNKNOWN', label: `UNKNOWN (${tierCounts.UNKNOWN})` },
     buildValidAccountsFilterOption(t, tierCounts.VALID),
   ], [t, tierCounts]);
 
