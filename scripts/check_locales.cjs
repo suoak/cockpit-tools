@@ -163,8 +163,10 @@ function isAllowedEnglishReuse(key, value) {
     'OAuth',
     'Token / JSON',
     // 品牌名 / 产品名允许跨语言保持英文原文
-    'SC-Cockpit Tools',
+    'Cockpit Tools',
+    'Cockpit Api',
     'Antigravity',
+    'Antigravity IDE',
     'Codex',
     'GitHub Copilot',
     'Kiro',
@@ -221,7 +223,7 @@ function isAllowedEnglishReuse(key, value) {
   if (/restartStrategy\.force\.command(Mac|Win)$/.test(key)) {
     return true;
   }
-  if (/pkill|--user-data-dir/.test(normalized)) {
+  if (/pkill|CODEX_HOME|--user-data-dir/.test(normalized)) {
     return true;
   }
 
