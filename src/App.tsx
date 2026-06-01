@@ -45,6 +45,7 @@ import type { UpdateCheckResult, UpdateInfo } from './components/UpdateNotificat
 import type { Update as UpdaterUpdate } from '@tauri-apps/plugin-updater';
 import { parseUpdaterReleaseNotes, resolveUpdaterDownloadUrl } from './utils/updaterReleaseNotes';
 import { FloatingCardWindow } from './pages/FloatingCardWindow';
+import { initWakeupNotificationListener } from './utils/wakeupNotificationListener';
 import {
   createUpdaterCanceledError,
   isRetryableUpdaterError,
@@ -71,6 +72,9 @@ const AccountsPage = lazy(() =>
 );
 const CodexAccountsPage = lazy(() =>
   import('./pages/CodexAccountsPage').then((module) => ({ default: module.CodexAccountsPage })),
+);
+const CodexApiServicePage = lazy(() =>
+  import('./pages/CodexApiServicePage').then((module) => ({ default: module.CodexApiServicePage })),
 );
 const GitHubCopilotAccountsPage = lazy(() =>
   import('./pages/GitHubCopilotAccountsPage').then((module) => ({
@@ -674,6 +678,11 @@ function MainApp() {
   
   // 启用自动刷新 hook
   useAutoRefresh();
+
+  // 初始化唤醒通知监听器
+  useEffect(() => {
+    initWakeupNotificationListener();
+  }, []);
 
   useEffect(() => {
     const handleRefreshShortcut = (event: KeyboardEvent) => {
@@ -2773,6 +2782,7 @@ function MainApp() {
           switch (target) {
             case 'overview':
             case 'codex':
+            case 'codex-api-service':
             case 'github-copilot':
             case 'windsurf':
             case 'kiro':
@@ -3198,6 +3208,7 @@ function MainApp() {
           )}
           {page === 'overview' && <AccountsPage onNavigate={setPage} />}
           {page === 'codex' && <CodexAccountsPage />}
+          {page === 'codex-api-service' && <CodexApiServicePage />}
           {page === 'github-copilot' && <GitHubCopilotAccountsPage />}
           {page === 'windsurf' && <WindsurfAccountsPage />}
           {page === 'kiro' && <KiroAccountsPage />}
