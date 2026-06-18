@@ -4,6 +4,7 @@ import {
   CodexApiProviderMode,
   CodexAppSpeed,
   CodexAppSpeedConfig,
+  CodexProviderWireApi,
   CodexQuickConfig,
   CodexQuota,
 } from '../types/codex';
@@ -80,8 +81,24 @@ export async function refreshCodexAccountProfile(accountId: string): Promise<Cod
 }
 
 /** 切换 Codex 账号 */
-export async function switchCodexAccount(accountId: string): Promise<CodexAccount> {
-  return await invoke('switch_codex_account', { accountId });
+export async function switchCodexAccount(
+  accountId: string,
+): Promise<CodexAccount> {
+  const startedAt = performance.now();
+  console.info('[Codex Switch][Service] invoke switch_codex_account started', {
+    accountId,
+  });
+  try {
+    return await invoke('switch_codex_account', {
+      accountId,
+      autoRepairMode: null,
+    });
+  } finally {
+    console.info('[Codex Switch][Service] invoke switch_codex_account finished', {
+      accountId,
+      elapsedMs: Math.round(performance.now() - startedAt),
+    });
+  }
 }
 
 /** 删除 Codex 账号 */
@@ -117,6 +134,81 @@ export interface CodexFileImportResult {
 /** 从本地文件导入 Codex 账号 */
 export async function importCodexFromFiles(filePaths: string[]): Promise<CodexFileImportResult> {
   return await invoke('import_codex_from_files', { filePaths });
+}
+
+export interface CodexBatchImportStartResult {
+  sessionId: string;
+}
+
+export interface CodexBatchImportProgress {
+  sessionId: string;
+  phase: string;
+  checkQuota: boolean;
+  current: number;
+  total: number;
+  success: number;
+  failed: number;
+  quotaFailed: number;
+  existing: number;
+  currentLabel?: string | null;
+}
+
+export interface CodexBatchImportItem {
+  itemId: string;
+  source: string;
+  label: string;
+  accountId?: string | null;
+  email?: string | null;
+  accountType: string;
+  provider?: string | null;
+  quotaStatus: string;
+  quotaError?: string | null;
+  status: string;
+  error?: string | null;
+  defaultSelected: boolean;
+  selectable: boolean;
+  existing: boolean;
+}
+
+export interface CodexBatchImportPreview {
+  sessionId: string;
+  status: string;
+  checkQuota: boolean;
+  total: number;
+  items: CodexBatchImportItem[];
+}
+
+export interface CodexBatchImportConfirmResult {
+  imported: CodexAccount[];
+  failed: { email: string; error: string }[];
+}
+
+export async function startCodexBatchImportFromFiles(
+  filePaths: string[],
+  checkQuota = false,
+): Promise<CodexBatchImportStartResult> {
+  return await invoke('start_codex_batch_import_from_files', { filePaths, checkQuota });
+}
+
+export async function cancelCodexBatchImport(sessionId: string): Promise<void> {
+  return await invoke('cancel_codex_batch_import', { sessionId });
+}
+
+export async function resumeCodexBatchImport(sessionId: string): Promise<void> {
+  return await invoke('resume_codex_batch_import', { sessionId });
+}
+
+export async function getCodexBatchImportPreview(
+  sessionId: string,
+): Promise<CodexBatchImportPreview> {
+  return await invoke('get_codex_batch_import_preview', { sessionId });
+}
+
+export async function confirmCodexBatchImport(
+  sessionId: string,
+  itemIds: string[],
+): Promise<CodexBatchImportConfirmResult> {
+  return await invoke('confirm_codex_batch_import', { sessionId, itemIds });
 }
 
 /** 刷新单个账号配额 */
@@ -177,6 +269,12 @@ export async function addCodexAccountWithApiKey(
   apiProviderMode?: CodexApiProviderMode,
   apiProviderId?: string,
   apiProviderName?: string,
+  apiModelCatalog?: string[],
+  apiSupportsVision?: boolean,
+  apiModelVisionSupport?: Record<string, boolean>,
+  apiVisionRoutingModel?: string,
+  accountName?: string,
+  apiWireApi?: CodexProviderWireApi,
 ): Promise<CodexAccount> {
   return await invoke('add_codex_account_with_api_key', {
     apiKey,
@@ -184,6 +282,12 @@ export async function addCodexAccountWithApiKey(
     apiProviderMode: apiProviderMode ?? null,
     apiProviderId: apiProviderId ?? null,
     apiProviderName: apiProviderName ?? null,
+    apiModelCatalog: apiModelCatalog ?? null,
+    apiWireApi: apiWireApi ?? null,
+    apiSupportsVision: apiSupportsVision ?? false,
+    apiModelVisionSupport: apiModelVisionSupport ?? {},
+    apiVisionRoutingModel: apiVisionRoutingModel ?? null,
+    accountName: accountName ?? null,
   });
 }
 
@@ -198,6 +302,11 @@ export async function updateCodexApiKeyCredentials(
   apiProviderMode?: CodexApiProviderMode,
   apiProviderId?: string,
   apiProviderName?: string,
+  apiModelCatalog?: string[],
+  apiSupportsVision?: boolean,
+  apiModelVisionSupport?: Record<string, boolean>,
+  apiVisionRoutingModel?: string,
+  apiWireApi?: CodexProviderWireApi,
 ): Promise<CodexAccount> {
   return await invoke('update_codex_api_key_credentials', {
     accountId,
@@ -206,6 +315,11 @@ export async function updateCodexApiKeyCredentials(
     apiProviderMode: apiProviderMode ?? null,
     apiProviderId: apiProviderId ?? null,
     apiProviderName: apiProviderName ?? null,
+    apiModelCatalog: apiModelCatalog ?? null,
+    apiWireApi: apiWireApi ?? null,
+    apiSupportsVision: apiSupportsVision ?? false,
+    apiModelVisionSupport: apiModelVisionSupport ?? {},
+    apiVisionRoutingModel: apiVisionRoutingModel ?? null,
   });
 }
 

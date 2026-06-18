@@ -1,8 +1,7 @@
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlarmClock, Fingerprint, Layers, ShieldCheck } from 'lucide-react';
+import { AlarmClock, Layers, ShieldCheck } from 'lucide-react';
 import { Page } from '../types/navigation';
-import { RobotIcon } from './icons/RobotIcon';
 import { ManualHelpIconButton } from './ManualHelpIconButton';
 import { TopCenterPromoBanner } from './TopCenterPromoBanner';
 import { AntigravityInstalledVersionBadge } from './AntigravityInstalledVersionBadge';
@@ -12,7 +11,7 @@ import {
   resolveGroupChildName,
   usePlatformLayoutStore,
 } from '../stores/usePlatformLayoutStore';
-import { getPlatformLabel } from '../utils/platformMeta';
+import { getPlatformLabel, renderPlatformIcon } from '../utils/platformMeta';
 import { PlatformGroupSwitcher } from './platform/PlatformGroupSwitcher';
 import { useAntigravityRuntimeTarget } from '../hooks/useAntigravityRuntimeTarget';
 
@@ -70,17 +69,12 @@ export function OverviewTabsHeader({
     {
       key: 'overview',
       label: t('overview.title'),
-      icon: <RobotIcon className="tab-icon" />,
+      icon: <span className="tab-icon">{renderPlatformIcon(currentPlatformId, 16)}</span>,
     },
     {
       key: 'instances',
       label: t('instances.title', '多开实例'),
       icon: <Layers className="tab-icon" />,
-    },
-    {
-      key: 'fingerprints',
-      label: t('fingerprints.title'),
-      icon: <Fingerprint className="tab-icon" />,
     },
     {
       key: 'wakeup',

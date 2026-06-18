@@ -3,6 +3,7 @@ import {
   CodexAccount,
   CodexApiProviderMode,
   CodexAppSpeed,
+  CodexProviderWireApi,
   CodexQuota,
   hasCodexAccountStructure,
   hasCodexAccountName,
@@ -70,6 +71,19 @@ const shouldHydrateCodexProfile = (account: CodexAccount): boolean =>
 
 const CODEX_STALE_ACCOUNT_ERROR = 'CODEX_STALE_ACCOUNT';
 
+const mergeCodexAccountIntoList = (
+  accounts: CodexAccount[],
+  account: CodexAccount,
+): CodexAccount[] => {
+  const index = accounts.findIndex((item) => item.id === account.id);
+  if (index < 0) {
+    return [account, ...accounts];
+  }
+  const next = [...accounts];
+  next[index] = account;
+  return next;
+};
+
 interface CodexAccountState {
   accounts: CodexAccount[];
   currentAccount: CodexAccount | null;
@@ -96,6 +110,11 @@ interface CodexAccountState {
     apiProviderMode?: CodexApiProviderMode,
     apiProviderId?: string,
     apiProviderName?: string,
+    apiModelCatalog?: string[],
+    apiSupportsVision?: boolean,
+    apiModelVisionSupport?: Record<string, boolean>,
+    apiVisionRoutingModel?: string,
+    apiWireApi?: CodexProviderWireApi,
   ) => Promise<CodexAccount>;
   updateApiKeyBoundOAuthAccount: (
     accountId: string,
@@ -159,7 +178,15 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
   },
   
   switchAccount: async (accountId: string) => {
+    const flowStartedAt = performance.now();
+    console.info('[Codex Switch][Store] switchAccount started', {
+      accountId,
+    });
     const accounts = await codexService.listCodexAccounts();
+    console.info('[Codex Switch][Store] listCodexAccounts finished', {
+      accountId,
+      elapsedMs: Math.round(performance.now() - flowStartedAt),
+    });
     allowNextEmptyCodexAccountList = false;
     set({ accounts, loading: false, error: null });
     persistCodexAccountsCache(accounts);
@@ -174,28 +201,57 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
     }
 
     const account = await codexService.switchCodexAccount(accountId);
-    set({ currentAccount: account });
-    await get().fetchAccounts();
+    console.info('[Codex Switch][Store] switchCodexAccount finished', {
+      accountId,
+      elapsedMs: Math.round(performance.now() - flowStartedAt),
+    });
+    set((state) => {
+      const nextAccounts = mergeCodexAccountIntoList(state.accounts, account);
+      persistCodexAccountsCache(nextAccounts);
+      persistCodexCurrentAccountCache(account);
+      return {
+        accounts: nextAccounts,
+        currentAccount: account,
+        loading: false,
+        error: null,
+      };
+    });
+    void get()
+      .fetchAccounts()
+      .then(() => {
+        console.info('[Codex Switch][Store] background fetchAccounts after switch finished', {
+          accountId,
+          elapsedMs: Math.round(performance.now() - flowStartedAt),
+        });
+      });
     await emitCurrentAccountChanged({
       platformId: 'codex',
       accountId: account.id,
       reason: 'switch',
+    });
+    console.info('[Codex Switch][Store] switchAccount finished', {
+      accountId,
+      elapsedMs: Math.round(performance.now() - flowStartedAt),
     });
     return account;
   },
   
   deleteAccount: async (accountId: string) => {
     const previousCurrentAccountId = get().currentAccount?.id ?? null;
-    allowNextEmptyCodexAccountList = get().accounts.length <= 1;
-    allowNextEmptyCodexCurrentAccount = previousCurrentAccountId === accountId;
-    try {
-      await codexService.deleteCodexAccount(accountId);
-      await get().fetchAccounts();
-      await get().fetchCurrentAccount();
-    } finally {
-      allowNextEmptyCodexAccountList = false;
-      allowNextEmptyCodexCurrentAccount = false;
-    }
+    await codexService.deleteCodexAccount(accountId);
+    set((state) => {
+      const nextAccounts = state.accounts.filter((account) => account.id !== accountId);
+      const nextCurrentAccount =
+        state.currentAccount?.id === accountId ? null : state.currentAccount;
+      persistCodexAccountsCache(nextAccounts);
+      persistCodexCurrentAccountCache(nextCurrentAccount);
+      return {
+        accounts: nextAccounts,
+        currentAccount: nextCurrentAccount,
+        loading: false,
+        error: null,
+      };
+    });
     await emitAccountsChanged({
       platformId: 'codex',
       reason: 'delete',
@@ -213,20 +269,22 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
   deleteAccounts: async (accountIds: string[]) => {
     const previousCurrentAccountId = get().currentAccount?.id ?? null;
     const deleteIdSet = new Set(accountIds);
-    allowNextEmptyCodexAccountList = get().accounts.every((account) =>
-      deleteIdSet.has(account.id),
-    );
-    allowNextEmptyCodexCurrentAccount = previousCurrentAccountId
-      ? deleteIdSet.has(previousCurrentAccountId)
-      : false;
-    try {
-      await codexService.deleteCodexAccounts(accountIds);
-      await get().fetchAccounts();
-      await get().fetchCurrentAccount();
-    } finally {
-      allowNextEmptyCodexAccountList = false;
-      allowNextEmptyCodexCurrentAccount = false;
-    }
+    await codexService.deleteCodexAccounts(accountIds);
+    set((state) => {
+      const nextAccounts = state.accounts.filter((account) => !deleteIdSet.has(account.id));
+      const nextCurrentAccount =
+        state.currentAccount && deleteIdSet.has(state.currentAccount.id)
+          ? null
+          : state.currentAccount;
+      persistCodexAccountsCache(nextAccounts);
+      persistCodexCurrentAccountCache(nextCurrentAccount);
+      return {
+        accounts: nextAccounts,
+        currentAccount: nextCurrentAccount,
+        loading: false,
+        error: null,
+      };
+    });
     await emitAccountsChanged({
       platformId: 'codex',
       reason: 'delete',
@@ -242,10 +300,12 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
   },
   
   refreshQuota: async (accountId: string) => {
-    const quota = await codexService.refreshCodexQuota(accountId);
-    await get().fetchAccounts();
-    await get().fetchCurrentAccount();
-    return quota;
+    try {
+      return await codexService.refreshCodexQuota(accountId);
+    } finally {
+      await get().fetchAccounts();
+      await get().fetchCurrentAccount();
+    }
   },
 
   refreshSubscriptionInfo: async (accountId: string) => {
@@ -338,6 +398,11 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
     apiProviderMode?: CodexApiProviderMode,
     apiProviderId?: string,
     apiProviderName?: string,
+    apiModelCatalog?: string[],
+    apiSupportsVision?: boolean,
+    apiModelVisionSupport?: Record<string, boolean>,
+    apiVisionRoutingModel?: string,
+    apiWireApi?: CodexProviderWireApi,
   ) => {
     const account = await codexService.updateCodexApiKeyCredentials(
       accountId,
@@ -346,6 +411,11 @@ export const useCodexAccountStore = create<CodexAccountState>((set, get) => ({
       apiProviderMode,
       apiProviderId,
       apiProviderName,
+      apiModelCatalog,
+      apiSupportsVision,
+      apiModelVisionSupport,
+      apiVisionRoutingModel,
+      apiWireApi,
     );
     await get().fetchAccounts();
     await get().fetchCurrentAccount();
