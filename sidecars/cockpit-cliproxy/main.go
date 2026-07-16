@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -18,11 +19,12 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	goruntime "runtime"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -30,6 +32,7 @@ import (
 	internallogging "github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	internalregistry "github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	responsesconverter "github.com/router-for-me/CLIProxyAPI/v7/internal/translator/openai/openai/responses"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/watcher/synthesizer"
 	sdkopenai "github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers/openai"
 	sdkauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
@@ -46,15 +49,20 @@ import (
 type contextKey string
 
 const (
-	clientAPIKeyContextKey contextKey = "cockpitClientAPIKey"
-	requestKindContextKey  contextKey = "cockpitRequestKind"
-	requestModelContextKey contextKey = "cockpitRequestModel"
+	clientAPIKeyContextKey      contextKey = "cockpitClientAPIKey"
+	requestKindContextKey       contextKey = "cockpitRequestKind"
+	requestModelContextKey      contextKey = "cockpitRequestModel"
+	clientInstanceIDContextKey  contextKey = "cockpitClientInstanceId"
+	clientInstanceIDHeaderName  = "X-Cockpit-Instance-Id"
 )
 
 const ginUserAPIKeyKey = "userApiKey"
 
 const defaultStreamKeepAliveSeconds = 15
+const quotaReserveMaxSnapshotAge = 3 * time.Minute
 const codexAutoReviewModel = "codex-auto-review"
+const codexSparkModel = "gpt-5.3-codex-spark"
+const codexSparkCatalogTemplateModel = "gpt-5.3-codex"
 const defaultImagesMainModel = "gpt-5.4-mini"
 const defaultImagesToolModel = "gpt-image-2"
 const imagesGenerationsPath = "/v1/images/generations"
@@ -85,12 +93,15 @@ type manifest struct {
 	ExcludedModels     []string            `json:"excludedModels"`
 	RoutingStrategy    string              `json:"routingStrategy"`
 	CustomRoutingRules []customRoutingRule `json:"customRoutingRules"`
+	ImmediateSSEResponse bool              `json:"immediateSseResponse"`
 	DebugLogs          *bool               `json:"debugLogs,omitempty"`
 
 	apiKeyByValue     map[string]*apiKeySpec
 	accountByID       map[string]*accountSpec
 	accountByAuthID   map[string]*accountSpec
 	accountByAPIKey   map[string]*accountSpec
+	accountByChatGPT  map[string]*accountSpec
+	accountByEmail    map[string]*accountSpec
 	aliasToSource     map[string]string
 	originalIndexByID map[string]int
 }
@@ -100,10 +111,102 @@ type apiKeySpec struct {
 	Label           string               `json:"label"`
 	Key             string               `json:"key"`
 	ProviderGateway *providerGatewaySpec `json:"providerGateway,omitempty"`
+	AccountIDs      []string             `json:"accountIds"`
 	ModelPrefix     string               `json:"modelPrefix,omitempty"`
 	AllowedModels   []string             `json:"allowedModels"`
 	ExcludedModels  []string             `json:"excludedModels"`
 	Enabled         bool                 `json:"enabled"`
+}
+
+type apiKeyPriorityState struct {
+	PriorityAccountIDs  map[string][]string `json:"priorityAccountIds"`
+	PreferredAccountIDs map[string]string   `json:"preferredAccountIds"`
+}
+
+type apiKeyPriorityStateStore struct {
+	path            string
+	mu              sync.RWMutex
+	lastModUnixNano int64
+	priorities      map[string][]string
+}
+
+func newAPIKeyPriorityStateStore(manifestPath string) *apiKeyPriorityStateStore {
+	store := &apiKeyPriorityStateStore{
+		path:       filepath.Join(filepath.Dir(manifestPath), "api-key-priorities.json"),
+		priorities: make(map[string][]string),
+	}
+	store.reloadIfChanged()
+	return store
+}
+
+func (s *apiKeyPriorityStateStore) priorityAccountIDs(apiKeyID string) []string {
+	if s == nil {
+		return nil
+	}
+	s.reloadIfChanged()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]string(nil), s.priorities[strings.TrimSpace(apiKeyID)]...)
+}
+
+func (s *apiKeyPriorityStateStore) reloadIfChanged() {
+	if s == nil || strings.TrimSpace(s.path) == "" {
+		return
+	}
+	info, err := os.Stat(s.path)
+	if err != nil {
+		return
+	}
+	modifiedAt := info.ModTime().UnixNano()
+	s.mu.RLock()
+	unchanged := modifiedAt == s.lastModUnixNano
+	s.mu.RUnlock()
+	if unchanged {
+		return
+	}
+
+	data, err := os.ReadFile(s.path)
+	if err != nil {
+		return
+	}
+	var state apiKeyPriorityState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return
+	}
+	next := make(map[string][]string, len(state.PriorityAccountIDs))
+	for apiKeyID, accountIDs := range state.PriorityAccountIDs {
+		apiKeyID = strings.TrimSpace(apiKeyID)
+		if apiKeyID == "" {
+			continue
+		}
+		seen := make(map[string]struct{}, len(accountIDs))
+		priorities := make([]string, 0, len(accountIDs))
+		for _, accountID := range accountIDs {
+			accountID = strings.TrimSpace(accountID)
+			if accountID == "" {
+				continue
+			}
+			if _, exists := seen[accountID]; exists {
+				continue
+			}
+			seen[accountID] = struct{}{}
+			priorities = append(priorities, accountID)
+		}
+		if len(priorities) > 0 {
+			next[apiKeyID] = priorities
+		}
+	}
+	for apiKeyID, accountID := range state.PreferredAccountIDs {
+		apiKeyID = strings.TrimSpace(apiKeyID)
+		accountID = strings.TrimSpace(accountID)
+		if apiKeyID != "" && accountID != "" && len(next[apiKeyID]) == 0 {
+			next[apiKeyID] = []string{accountID}
+		}
+	}
+	s.mu.Lock()
+	s.lastModUnixNano = modifiedAt
+	s.priorities = next
+	s.mu.Unlock()
 }
 
 type providerGatewaySpec struct {
@@ -122,13 +225,47 @@ type providerGatewayModelCapability struct {
 }
 
 type accountSpec struct {
-	ID                   string `json:"id"`
-	Email                string `json:"email"`
-	AuthID               string `json:"authId,omitempty"`
-	UpstreamAPIKey       string `json:"upstreamApiKey,omitempty"`
-	PlanRank             *int   `json:"planRank,omitempty"`
-	RemainingQuota       *int   `json:"remainingQuota,omitempty"`
-	SubscriptionExpiryMS *int64 `json:"subscriptionExpiryMs,omitempty"`
+	ID                   string            `json:"id"`
+	Email                string            `json:"email"`
+	AuthID               string            `json:"authId,omitempty"`
+	AuthKind             string            `json:"authKind,omitempty"`
+	AccessTokenOnly      bool              `json:"accessTokenOnly,omitempty"`
+	ChatGPTAccountID     string            `json:"chatgptAccountId,omitempty"`
+	UpstreamAPIKey       string            `json:"upstreamApiKey,omitempty"`
+	PlanRank             *int              `json:"planRank,omitempty"`
+	RemainingQuota       *int              `json:"remainingQuota,omitempty"`
+	SubscriptionExpiryMS *int64            `json:"subscriptionExpiryMs,omitempty"`
+	QuotaReserve         *quotaReserveSpec `json:"quotaReserve,omitempty"`
+}
+
+type quotaReserveSpec struct {
+	HourlyThresholdPercent       *int   `json:"hourlyThresholdPercent,omitempty"`
+	WeeklyThresholdPercent       *int   `json:"weeklyThresholdPercent,omitempty"`
+	SnapshotUpdatedAtUnixSeconds *int64 `json:"snapshotUpdatedAtUnixSeconds,omitempty"`
+	HourlyRemainingPercent       *int   `json:"hourlyRemainingPercent,omitempty"`
+	WeeklyRemainingPercent       *int   `json:"weeklyRemainingPercent,omitempty"`
+	HourlyWindowPresent          *bool  `json:"hourlyWindowPresent,omitempty"`
+	WeeklyWindowPresent          *bool  `json:"weeklyWindowPresent,omitempty"`
+}
+
+type quotaReserveSnapshot struct {
+	SnapshotUpdatedAtUnixSeconds *int64 `json:"snapshotUpdatedAtUnixSeconds,omitempty"`
+	HourlyRemainingPercent       *int   `json:"hourlyRemainingPercent,omitempty"`
+	WeeklyRemainingPercent       *int   `json:"weeklyRemainingPercent,omitempty"`
+	HourlyWindowPresent          *bool  `json:"hourlyWindowPresent,omitempty"`
+	WeeklyWindowPresent          *bool  `json:"weeklyWindowPresent,omitempty"`
+}
+
+type quotaReserveStateFile struct {
+	Accounts map[string]quotaReserveSnapshot `json:"accounts"`
+}
+
+type quotaReserveStateStore struct {
+	path     string
+	snapshot atomic.Value
+	mu       sync.Mutex
+	lastHash [sha256.Size]byte
+	hasHash  bool
 }
 
 type modelAliasSpec struct {
@@ -141,27 +278,30 @@ type customRoutingRule struct {
 	AccountID string `json:"accountId"`
 	Priority  int    `json:"priority"`
 	Weight    int    `json:"weight"`
+	IsBackup  bool   `json:"isBackup"`
 }
 
 type usagePayload struct {
-	Type          string       `json:"type"`
-	RequestID     string       `json:"requestId,omitempty"`
-	Provider      string       `json:"provider,omitempty"`
-	Model         string       `json:"model,omitempty"`
-	Alias         string       `json:"alias,omitempty"`
-	AccountID     string       `json:"accountId,omitempty"`
-	AccountEmail  string       `json:"accountEmail,omitempty"`
-	AuthID        string       `json:"authId,omitempty"`
-	APIKeyID      string       `json:"apiKeyId,omitempty"`
-	APIKeyLabel   string       `json:"apiKeyLabel,omitempty"`
-	RequestKind   string       `json:"requestKind,omitempty"`
-	Success       bool         `json:"success"`
-	Status        int          `json:"status,omitempty"`
-	ErrorCategory string       `json:"errorCategory,omitempty"`
-	ErrorMessage  string       `json:"errorMessage,omitempty"`
-	LatencyMS     int64        `json:"latencyMs,omitempty"`
-	Usage         usageDetails `json:"usage"`
-	RequestedAtMS int64        `json:"requestedAtMs,omitempty"`
+	Type             string       `json:"type"`
+	RequestID        string       `json:"requestId,omitempty"`
+	Provider         string       `json:"provider,omitempty"`
+	Model            string       `json:"model,omitempty"`
+	Alias            string       `json:"alias,omitempty"`
+	AccountID        string       `json:"accountId,omitempty"`
+	AccountEmail     string       `json:"accountEmail,omitempty"`
+	AuthID           string       `json:"authId,omitempty"`
+	APIKeyID         string       `json:"apiKeyId,omitempty"`
+	APIKeyLabel      string       `json:"apiKeyLabel,omitempty"`
+	ClientInstanceID string       `json:"clientInstanceId,omitempty"`
+	RequestKind      string       `json:"requestKind,omitempty"`
+	ServiceTier      string       `json:"serviceTier,omitempty"`
+	Success          bool         `json:"success"`
+	Status           int          `json:"status,omitempty"`
+	ErrorCategory    string       `json:"errorCategory,omitempty"`
+	ErrorMessage     string       `json:"errorMessage,omitempty"`
+	LatencyMS        int64        `json:"latencyMs,omitempty"`
+	Usage            usageDetails `json:"usage"`
+	RequestedAtMS    int64        `json:"requestedAtMs,omitempty"`
 }
 
 type requestDiagnosticPayload struct {
@@ -246,13 +386,23 @@ type usageFinalizeInput struct {
 	errorMessage  string
 }
 
+type selectedAccountRecord struct {
+	AccountID    string
+	AccountEmail string
+	AuthID       string
+}
+
 type requestUsageTracker struct {
-	mu      sync.Mutex
-	records map[string][]usagePayload
+	mu               sync.Mutex
+	records          map[string][]usagePayload
+	selectedAccounts map[string]selectedAccountRecord
 }
 
 func newRequestUsageTracker() *requestUsageTracker {
-	return &requestUsageTracker{records: make(map[string][]usagePayload)}
+	return &requestUsageTracker{
+		records:          make(map[string][]usagePayload),
+		selectedAccounts: make(map[string]selectedAccountRecord),
+	}
 }
 
 func (t *requestUsageTracker) record(payload usagePayload) {
@@ -269,6 +419,34 @@ func (t *requestUsageTracker) record(payload usagePayload) {
 	t.mu.Unlock()
 }
 
+func (t *requestUsageTracker) recordSelectedAccount(requestID string, account *accountSpec, authID string) {
+	if t == nil {
+		return
+	}
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" || account == nil {
+		return
+	}
+	t.mu.Lock()
+	t.selectedAccounts[requestID] = selectedAccountRecord{
+		AccountID:    strings.TrimSpace(account.ID),
+		AccountEmail: strings.TrimSpace(account.Email),
+		AuthID:       strings.TrimSpace(authID),
+	}
+	t.mu.Unlock()
+}
+
+func normalizedUsageServiceTier(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "priority":
+		return "priority"
+	case "", "default", "standard":
+		return ""
+	default:
+		return ""
+	}
+}
+
 func (t *requestUsageTracker) finalize(requestID string, input usageFinalizeInput) (usagePayload, bool) {
 	requestID = strings.TrimSpace(requestID)
 	if requestID == "" {
@@ -276,10 +454,14 @@ func (t *requestUsageTracker) finalize(requestID string, input usageFinalizeInpu
 	}
 
 	var records []usagePayload
+	var selected selectedAccountRecord
+	var selectedOK bool
 	if t != nil {
 		t.mu.Lock()
 		records = append(records, t.records[requestID]...)
 		delete(t.records, requestID)
+		selected, selectedOK = t.selectedAccounts[requestID]
+		delete(t.selectedAccounts, requestID)
 		t.mu.Unlock()
 	}
 
@@ -317,6 +499,15 @@ func (t *requestUsageTracker) finalize(requestID string, input usageFinalizeInpu
 	}
 	if strings.TrimSpace(payload.RequestKind) == "" {
 		payload.RequestKind = strings.TrimSpace(input.requestKind)
+	}
+	if selectedOK {
+		payload.AccountID = selected.AccountID
+		payload.AccountEmail = selected.AccountEmail
+		payload.AuthID = selected.AuthID
+	} else {
+		payload.AccountID = ""
+		payload.AccountEmail = ""
+		payload.AuthID = ""
 	}
 	if input.status > 0 {
 		payload.Status = input.status
@@ -407,6 +598,8 @@ func loadManifest(path string) (*manifest, error) {
 	m.accountByID = make(map[string]*accountSpec)
 	m.accountByAuthID = make(map[string]*accountSpec)
 	m.accountByAPIKey = make(map[string]*accountSpec)
+	m.accountByChatGPT = make(map[string]*accountSpec)
+	m.accountByEmail = make(map[string]*accountSpec)
 	m.originalIndexByID = make(map[string]int)
 	for i := range m.Accounts {
 		account := &m.Accounts[i]
@@ -414,15 +607,32 @@ func loadManifest(path string) (*manifest, error) {
 		if account.ID == "" {
 			continue
 		}
+		account.Email = strings.TrimSpace(account.Email)
+		account.AuthKind = strings.ToLower(strings.TrimSpace(account.AuthKind))
+		account.ChatGPTAccountID = strings.TrimSpace(account.ChatGPTAccountID)
 		m.accountByID[account.ID] = account
 		m.originalIndexByID[account.ID] = i
 		if authID := strings.TrimSpace(account.AuthID); authID != "" {
 			account.AuthID = authID
 			m.accountByAuthID[strings.ToLower(authID)] = account
+			if base := filepath.Base(authID); base != authID {
+				m.accountByAuthID[strings.ToLower(base)] = account
+			}
 		}
 		if key := strings.TrimSpace(account.UpstreamAPIKey); key != "" {
 			account.UpstreamAPIKey = key
 			m.accountByAPIKey[key] = account
+		}
+		if account.ChatGPTAccountID != "" {
+			m.accountByChatGPT[strings.ToLower(account.ChatGPTAccountID)] = account
+		}
+		if account.Email != "" {
+			key := strings.ToLower(account.Email)
+			if existing, exists := m.accountByEmail[key]; exists && existing != account {
+				m.accountByEmail[key] = nil
+			} else {
+				m.accountByEmail[key] = account
+			}
 		}
 	}
 	m.aliasToSource = make(map[string]string)
@@ -525,6 +735,42 @@ func extractBearerToken(header string) string {
 	return strings.TrimSpace(parts[1])
 }
 
+func extractClientInstanceID(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if value := strings.TrimSpace(r.Header.Get(clientInstanceIDHeaderName)); value != "" {
+		return value
+	}
+	// Header map is case-insensitive via Get; keep an explicit fallback for odd clients.
+	for key, values := range r.Header {
+		if strings.EqualFold(strings.TrimSpace(key), clientInstanceIDHeaderName) {
+			for _, value := range values {
+				if trimmed := strings.TrimSpace(value); trimmed != "" {
+					return trimmed
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func clientInstanceIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	value, _ := ctx.Value(clientInstanceIDContextKey).(string)
+	return strings.TrimSpace(value)
+}
+
+func withClientInstanceID(ctx context.Context, instanceID string) context.Context {
+	instanceID = strings.TrimSpace(instanceID)
+	if instanceID == "" || ctx == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, clientInstanceIDContextKey, instanceID)
+}
+
 type requestPolicy struct {
 	manifest *manifest
 	emitter  *eventEmitter
@@ -542,6 +788,10 @@ func (p *requestPolicy) middleware() gin.HandlerFunc {
 		requestID := ensureRequestID(c)
 		spec := p.lookupAPIKey(c.Request)
 		requestKind := requestKindFromPath(c.Request.URL.Path)
+		clientInstanceID := extractClientInstanceID(c.Request)
+		if clientInstanceID != "" {
+			c.Request = c.Request.WithContext(withClientInstanceID(c.Request.Context(), clientInstanceID))
+		}
 		model := ""
 		startLogged := false
 		emitStart := func() {
@@ -561,6 +811,9 @@ func (p *requestPolicy) middleware() gin.HandlerFunc {
 			c.Set(ginUserAPIKeyKey, spec.Key)
 			ctx := context.WithValue(c.Request.Context(), clientAPIKeyContextKey, spec)
 			ctx = context.WithValue(ctx, requestKindContextKey, requestKind)
+			if clientInstanceID != "" {
+				ctx = withClientInstanceID(ctx, clientInstanceID)
+			}
 			c.Request = c.Request.WithContext(ctx)
 		}
 
@@ -595,7 +848,7 @@ func (p *requestPolicy) middleware() gin.HandlerFunc {
 		}
 		emitStart()
 		if err != nil {
-			p.emitBlockedRequest(requestID, spec, model, requestKind, startedAt, err.Error())
+			p.emitBlockedRequest(c, requestID, spec, model, requestKind, startedAt, err.Error())
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
 					"message": err.Error(),
@@ -729,23 +982,28 @@ func (p *requestPolicy) emitRequestCompleted(c *gin.Context, requestID string, s
 	}
 }
 
-func (p *requestPolicy) emitBlockedRequest(requestID string, spec *apiKeySpec, model, requestKind string, startedAt time.Time, message string) {
+func (p *requestPolicy) emitBlockedRequest(c *gin.Context, requestID string, spec *apiKeySpec, model, requestKind string, startedAt time.Time, message string) {
 	if p == nil || spec == nil {
 		return
 	}
+	clientInstanceID := ""
+	if c != nil && c.Request != nil {
+		clientInstanceID = clientInstanceIDFromContext(c.Request.Context())
+	}
 	payload := usagePayload{
-		Type:          "usage",
-		RequestID:     requestID,
-		Model:         model,
-		APIKeyID:      spec.ID,
-		APIKeyLabel:   spec.Label,
-		RequestKind:   requestKind,
-		Success:       false,
-		Status:        http.StatusNotFound,
-		ErrorCategory: "model_not_available",
-		ErrorMessage:  message,
-		LatencyMS:     time.Since(startedAt).Milliseconds(),
-		RequestedAtMS: time.Now().UnixMilli(),
+		Type:             "usage",
+		RequestID:        requestID,
+		Model:            model,
+		APIKeyID:         spec.ID,
+		APIKeyLabel:      spec.Label,
+		ClientInstanceID: clientInstanceID,
+		RequestKind:      requestKind,
+		Success:          false,
+		Status:           http.StatusNotFound,
+		ErrorCategory:    "model_not_available",
+		ErrorMessage:     message,
+		LatencyMS:        time.Since(startedAt).Milliseconds(),
+		RequestedAtMS:    time.Now().UnixMilli(),
 	}
 	if p.tracker != nil {
 		p.tracker.record(payload)
@@ -903,6 +1161,7 @@ func buildCodexClientModelsResponse(models []string) gin.H {
 	}
 	response := gin.H(sdkopenai.CodexClientModelsResponse(sourceModels))
 	if data, ok := response["models"].([]map[string]any); ok {
+		hydrateCodexCompatibilityModels(data)
 		for index, model := range data {
 			slug, _ := model["slug"].(string)
 			if isHiddenCodexClientModel(slug) {
@@ -919,6 +1178,33 @@ func buildCodexClientModelsResponse(models []string) gin.H {
 	return response
 }
 
+func hydrateCodexCompatibilityModels(models []map[string]any) {
+	var template map[string]any
+	for _, model := range models {
+		if model["slug"] == codexSparkCatalogTemplateModel {
+			template = model
+			break
+		}
+	}
+	if template == nil {
+		return
+	}
+
+	for index, model := range models {
+		if model["slug"] != codexSparkModel {
+			continue
+		}
+		compatibilityModel := make(map[string]any, len(template))
+		for key, value := range template {
+			compatibilityModel[key] = value
+		}
+		compatibilityModel["slug"] = codexSparkModel
+		compatibilityModel["display_name"] = "GPT-5.3 Codex Spark"
+		compatibilityModel["description"] = "GPT-5.3 Codex Spark"
+		models[index] = compatibilityModel
+	}
+}
+
 func displayNameForModel(model string) string {
 	switch model {
 	case "gpt-5-codex":
@@ -931,7 +1217,7 @@ func displayNameForModel(model string) string {
 		return "GPT-5.4 Mini"
 	case "gpt-5.3-codex":
 		return "GPT-5.3 Codex"
-	case "gpt-5.3-codex-spark":
+	case codexSparkModel:
 		return "GPT-5.3 Codex Spark"
 	case "gpt-5.2":
 		return "GPT-5.2"
@@ -1010,7 +1296,18 @@ func visibleModelsForAPIKey(m *manifest, spec *apiKeySpec) []string {
 		return nil
 	}
 	if spec != nil && spec.ProviderGateway != nil {
-		return append([]string(nil), spec.ProviderGateway.UpstreamModels...)
+		models := make([]string, 0, len(spec.ProviderGateway.UpstreamModels))
+		for _, upstreamModel := range spec.ProviderGateway.UpstreamModels {
+			clientModel := upstreamModel
+			for _, alias := range m.ModelAliases {
+				if strings.EqualFold(alias.SourceModel, upstreamModel) {
+					clientModel = alias.Alias
+					break
+				}
+			}
+			models = append(models, clientModel)
+		}
+		return normalizeStringList(models)
 	}
 	models := applyModelFilters(m.ModelIDs, nil, m.ExcludedModels)
 	if spec != nil {
@@ -1048,6 +1345,11 @@ func canonicalModelForClientModel(m *manifest, spec *apiKeySpec, model string) s
 		return codexAutoReviewModel
 	}
 	if spec != nil && spec.ProviderGateway != nil {
+		if m != nil {
+			if source := m.aliasToSource[strings.ToLower(withoutPrefix)]; source != "" {
+				withoutPrefix = source
+			}
+		}
 		return providerGatewayCanonicalModel(spec.ProviderGateway, withoutPrefix)
 	}
 	if m != nil {
@@ -1365,25 +1667,278 @@ func requestKindFromPath(path string) string {
 }
 
 type cockpitSelector struct {
+	manifest   *manifest
+	emitter    *eventEmitter
+	quota      *quotaReserveStateStore
+	priorities *apiKeyPriorityStateStore
+	mu         sync.Mutex
+	cursor     int
+}
+
+type recordingSelector struct {
+	inner    coreauth.Selector
 	manifest *manifest
-	emitter  *eventEmitter
-	mu       sync.Mutex
-	cursor   int
+	tracker  *requestUsageTracker
+}
+
+func (s *recordingSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
+	auth, err := s.inner.Pick(ctx, provider, model, opts, auths)
+	if err != nil || auth == nil || s.tracker == nil {
+		return auth, err
+	}
+	s.tracker.recordSelectedAccount(internallogging.GetRequestID(ctx), accountForAuthInManifest(s.manifest, auth), auth.ID)
+	return auth, nil
+}
+
+func (s *recordingSelector) Stop() {
+	if stoppable, ok := s.inner.(coreauth.StoppableSelector); ok {
+		stoppable.Stop()
+	}
+}
+
+type quotaReserveSelector struct {
+	manifest *manifest
+	fallback coreauth.Selector
+	quota    *quotaReserveStateStore
+}
+
+type backupAccountSelector struct {
+	manifest *manifest
+	fallback coreauth.Selector
+}
+
+func quotaReserveSnapshotsFromManifest(m *manifest) map[string]quotaReserveSnapshot {
+	snapshots := make(map[string]quotaReserveSnapshot)
+	if m == nil {
+		return snapshots
+	}
+	for index := range m.Accounts {
+		account := &m.Accounts[index]
+		if account.QuotaReserve == nil || strings.TrimSpace(account.ID) == "" {
+			continue
+		}
+		reserve := account.QuotaReserve
+		snapshots[account.ID] = quotaReserveSnapshot{
+			SnapshotUpdatedAtUnixSeconds: reserve.SnapshotUpdatedAtUnixSeconds,
+			HourlyRemainingPercent:       reserve.HourlyRemainingPercent,
+			WeeklyRemainingPercent:       reserve.WeeklyRemainingPercent,
+			HourlyWindowPresent:          reserve.HourlyWindowPresent,
+			WeeklyWindowPresent:          reserve.WeeklyWindowPresent,
+		}
+	}
+	return snapshots
+}
+
+func newQuotaReserveStateStore(path string, m *manifest) *quotaReserveStateStore {
+	store := &quotaReserveStateStore{path: strings.TrimSpace(path)}
+	store.snapshot.Store(quotaReserveSnapshotsFromManifest(m))
+	return store
+}
+
+func (s *quotaReserveStateStore) load() error {
+	if s == nil || s.path == "" {
+		return nil
+	}
+	content, err := os.ReadFile(s.path)
+	if err != nil {
+		return err
+	}
+	hash := sha256.Sum256(content)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.hasHash && hash == s.lastHash {
+		return nil
+	}
+	var state quotaReserveStateFile
+	if err := json.Unmarshal(content, &state); err != nil {
+		return err
+	}
+	if state.Accounts == nil {
+		state.Accounts = make(map[string]quotaReserveSnapshot)
+	}
+	normalized := make(map[string]quotaReserveSnapshot, len(state.Accounts))
+	for accountID, snapshot := range state.Accounts {
+		accountID = strings.TrimSpace(accountID)
+		if accountID != "" {
+			normalized[accountID] = snapshot
+		}
+	}
+	s.snapshot.Store(normalized)
+	s.lastHash = hash
+	s.hasHash = true
+	return nil
+}
+
+func (s *quotaReserveStateStore) start(ctx context.Context, emitter *eventEmitter) {
+	if s == nil || s.path == "" {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		lastError := ""
+		for {
+			if err := s.load(); err != nil {
+				message := err.Error()
+				if message != lastError && emitter != nil {
+					emitter.emit(map[string]any{
+						"type":    "quota_reserve_state_error",
+						"message": message,
+					})
+				}
+				lastError = message
+			} else {
+				lastError = ""
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+}
+
+func (s *quotaReserveStateStore) forAccount(accountID string) *quotaReserveSnapshot {
+	if s == nil {
+		return nil
+	}
+	loaded := s.snapshot.Load()
+	snapshots, ok := loaded.(map[string]quotaReserveSnapshot)
+	if !ok {
+		return nil
+	}
+	snapshot, ok := snapshots[strings.TrimSpace(accountID)]
+	if !ok {
+		return nil
+	}
+	return &snapshot
+}
+
+func (s *quotaReserveSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
+	if s == nil || s.fallback == nil {
+		return nil, fmt.Errorf("quota reserve selector is not initialized")
+	}
+	if s.manifest == nil {
+		return s.fallback.Pick(ctx, provider, model, opts, auths)
+	}
+
+	now := time.Now()
+	var filtered []*coreauth.Auth
+	quotaReserveReasons := make([]string, 0)
+	availableAfterReserve := 0
+	for index, auth := range auths {
+		if !authAvailable(auth, model, now) {
+			if filtered != nil {
+				filtered = append(filtered, auth)
+			}
+			continue
+		}
+		reason := quotaReserveBlockReasonWithState(
+			accountForAuthInManifest(s.manifest, auth),
+			s.quota,
+			now,
+		)
+		if reason == "" {
+			availableAfterReserve++
+			if filtered != nil {
+				filtered = append(filtered, auth)
+			}
+			continue
+		}
+		if filtered == nil {
+			filtered = append(make([]*coreauth.Auth, 0, len(auths)-1), auths[:index]...)
+		}
+		quotaReserveReasons = append(quotaReserveReasons, reason)
+	}
+	if filtered == nil {
+		return s.fallback.Pick(ctx, provider, model, opts, auths)
+	}
+	if availableAfterReserve == 0 {
+		return nil, noAuthAvailableError(quotaReserveReasons)
+	}
+	return s.fallback.Pick(ctx, provider, model, opts, filtered)
+}
+
+func (s *quotaReserveSelector) Stop() {
+	if s == nil || s.fallback == nil {
+		return
+	}
+	if stoppable, ok := s.fallback.(coreauth.StoppableSelector); ok {
+		stoppable.Stop()
+	}
+}
+
+func (s *backupAccountSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
+	if s == nil || s.fallback == nil {
+		return nil, fmt.Errorf("backup account selector is not initialized")
+	}
+	if s.manifest == nil || !strings.EqualFold(strings.TrimSpace(s.manifest.RoutingStrategy), "custom") {
+		return s.fallback.Pick(ctx, provider, model, opts, auths)
+	}
+
+	now := time.Now()
+	regular := make([]*coreauth.Auth, 0, len(auths))
+	backup := make([]*coreauth.Auth, 0)
+	regularAvailable := false
+	for _, auth := range auths {
+		if s.isBackupAuth(auth) {
+			backup = append(backup, auth)
+			continue
+		}
+		regular = append(regular, auth)
+		if authAvailable(auth, model, now) {
+			regularAvailable = true
+		}
+	}
+
+	if regularAvailable || len(backup) == 0 {
+		return s.fallback.Pick(ctx, provider, model, opts, regular)
+	}
+	return s.fallback.Pick(ctx, provider, model, opts, backup)
+}
+
+func (s *backupAccountSelector) isBackupAuth(auth *coreauth.Auth) bool {
+	account := accountForAuthInManifest(s.manifest, auth)
+	if account == nil {
+		return false
+	}
+	for _, rule := range s.manifest.CustomRoutingRules {
+		if rule.AccountID == account.ID {
+			return rule.IsBackup
+		}
+	}
+	return false
+}
+
+func (s *backupAccountSelector) Stop() {
+	if s == nil || s.fallback == nil {
+		return
+	}
+	if stoppable, ok := s.fallback.(coreauth.StoppableSelector); ok {
+		stoppable.Stop()
+	}
 }
 
 func (s *cockpitSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
-	_ = ctx
 	_ = provider
 	_ = opts
+	auths = s.filterAuthsForAPIKeyScope(ctx, auths)
 	now := time.Now()
 	available := make([]*coreauth.Auth, 0, len(auths))
+	quotaReserveReasons := make([]string, 0)
 	for _, auth := range auths {
-		if authAvailable(auth, model, now) {
-			available = append(available, auth)
+		if !authAvailable(auth, model, now) {
+			continue
 		}
+		if reason := quotaReserveBlockReasonWithState(s.accountForAuth(auth), s.quota, now); reason != "" {
+			quotaReserveReasons = append(quotaReserveReasons, reason)
+			continue
+		}
+		available = append(available, auth)
 	}
 	if len(available) == 0 {
-		return nil, fmt.Errorf("no auth available")
+		return nil, noAuthAvailableError(quotaReserveReasons)
 	}
 
 	s.mu.Lock()
@@ -1392,12 +1947,213 @@ func (s *cockpitSelector) Pick(ctx context.Context, provider, model string, opts
 	s.mu.Unlock()
 
 	ordered := s.orderAuths(available, start)
+	ordered = s.prioritizeAuthsForAPIKey(ctx, ordered)
 	if len(ordered) == 0 {
-		return nil, fmt.Errorf("no auth available")
+		return nil, noAuthAvailableError(quotaReserveReasons)
 	}
 	selected := ordered[0]
 	s.emitAuthSelected(ctx, selected, provider, model, len(auths), len(available))
 	return selected, nil
+}
+
+func (s *cockpitSelector) prioritizeAuthsForAPIKey(ctx context.Context, auths []*coreauth.Auth) []*coreauth.Auth {
+	if s == nil || ctx == nil || len(auths) <= 1 || s.priorities == nil {
+		return auths
+	}
+	spec, _ := ctx.Value(clientAPIKeyContextKey).(*apiKeySpec)
+	if spec == nil {
+		return auths
+	}
+	priorityAccountIDs := s.priorities.priorityAccountIDs(spec.ID)
+	if len(priorityAccountIDs) == 0 {
+		return auths
+	}
+
+	ordered := make([]*coreauth.Auth, 0, len(auths))
+	selected := make(map[*coreauth.Auth]struct{}, len(priorityAccountIDs))
+	for _, priorityAccountID := range priorityAccountIDs {
+		for _, auth := range auths {
+			account := s.accountForAuth(auth)
+			if account == nil || account.ID != priorityAccountID {
+				continue
+			}
+			if _, alreadySelected := selected[auth]; alreadySelected {
+				break
+			}
+			ordered = append(ordered, auth)
+			selected[auth] = struct{}{}
+			break
+		}
+	}
+	if len(ordered) == 0 {
+		return auths
+	}
+	for _, auth := range auths {
+		if _, alreadySelected := selected[auth]; !alreadySelected {
+			ordered = append(ordered, auth)
+		}
+	}
+	return ordered
+}
+
+func (s *cockpitSelector) filterAuthsForAPIKeyScope(ctx context.Context, auths []*coreauth.Auth) []*coreauth.Auth {
+	if s == nil || s.manifest == nil || ctx == nil {
+		return auths
+	}
+	spec, _ := ctx.Value(clientAPIKeyContextKey).(*apiKeySpec)
+	if spec == nil || len(spec.AccountIDs) == 0 {
+		return auths
+	}
+
+	allowedAccountIDs := make(map[string]struct{}, len(spec.AccountIDs))
+	for _, accountID := range spec.AccountIDs {
+		if accountID = strings.TrimSpace(accountID); accountID != "" {
+			allowedAccountIDs[accountID] = struct{}{}
+		}
+	}
+	if len(allowedAccountIDs) == 0 {
+		return nil
+	}
+
+	scoped := make([]*coreauth.Auth, 0, len(auths))
+	for _, auth := range auths {
+		account := s.accountForAuth(auth)
+		if account == nil {
+			continue
+		}
+		if _, allowed := allowedAccountIDs[account.ID]; allowed {
+			scoped = append(scoped, auth)
+		}
+	}
+	return scoped
+}
+
+func quotaReserveBlockReason(account *accountSpec, now time.Time) string {
+	return quotaReserveBlockReasonWithSnapshot(account, quotaReserveSnapshotFromSpec(account), now)
+}
+
+func quotaReserveBlockReasonWithState(account *accountSpec, state *quotaReserveStateStore, now time.Time) string {
+	var snapshot *quotaReserveSnapshot
+	if account != nil && state != nil {
+		snapshot = state.forAccount(account.ID)
+	}
+	if snapshot == nil {
+		snapshot = quotaReserveSnapshotFromSpec(account)
+	}
+	return quotaReserveBlockReasonWithSnapshot(account, snapshot, now)
+}
+
+func quotaReserveSnapshotFromSpec(account *accountSpec) *quotaReserveSnapshot {
+	if account == nil || account.QuotaReserve == nil {
+		return nil
+	}
+	reserve := account.QuotaReserve
+	return &quotaReserveSnapshot{
+		SnapshotUpdatedAtUnixSeconds: reserve.SnapshotUpdatedAtUnixSeconds,
+		HourlyRemainingPercent:       reserve.HourlyRemainingPercent,
+		WeeklyRemainingPercent:       reserve.WeeklyRemainingPercent,
+		HourlyWindowPresent:          reserve.HourlyWindowPresent,
+		WeeklyWindowPresent:          reserve.WeeklyWindowPresent,
+	}
+}
+
+func quotaReserveBlockReasonWithSnapshot(account *accountSpec, snapshot *quotaReserveSnapshot, now time.Time) string {
+	if account == nil || account.QuotaReserve == nil {
+		return ""
+	}
+
+	reserve := account.QuotaReserve
+	if snapshot == nil {
+		return quotaReserveAccountReason(account, []string{"quota snapshot unknown"})
+	}
+	if reason := quotaReserveSnapshotBlockReason(snapshot.SnapshotUpdatedAtUnixSeconds, now); reason != "" {
+		return quotaReserveAccountReason(account, []string{reason})
+	}
+
+	reasons := make([]string, 0, 2)
+	if reason := quotaReserveWindowBlockReason(
+		"5h",
+		reserve.HourlyThresholdPercent,
+		snapshot.HourlyRemainingPercent,
+		snapshot.HourlyWindowPresent,
+	); reason != "" {
+		reasons = append(reasons, reason)
+	}
+	if reason := quotaReserveWindowBlockReason(
+		"weekly",
+		reserve.WeeklyThresholdPercent,
+		snapshot.WeeklyRemainingPercent,
+		snapshot.WeeklyWindowPresent,
+	); reason != "" {
+		reasons = append(reasons, reason)
+	}
+	if len(reasons) == 0 {
+		return ""
+	}
+	return quotaReserveAccountReason(account, reasons)
+}
+
+func quotaReserveSnapshotBlockReason(updatedAt *int64, now time.Time) string {
+	if updatedAt == nil {
+		return "quota snapshot timestamp unknown"
+	}
+
+	nowUnix := now.Unix()
+	if *updatedAt <= 0 || *updatedAt > nowUnix {
+		return "quota snapshot timestamp invalid"
+	}
+	if nowUnix-*updatedAt > int64(quotaReserveMaxSnapshotAge/time.Second) {
+		return "quota snapshot stale"
+	}
+	return ""
+}
+
+func quotaReserveAccountReason(account *accountSpec, reasons []string) string {
+	accountLabel := strings.TrimSpace(account.Email)
+	if accountLabel == "" {
+		accountLabel = strings.TrimSpace(account.ID)
+	}
+	if accountLabel == "" {
+		accountLabel = "unknown account"
+	}
+	return fmt.Sprintf("%s (%s)", accountLabel, strings.Join(reasons, ", "))
+}
+
+func quotaReserveWindowBlockReason(window string, threshold, remaining *int, present *bool) string {
+	if present != nil && !*present {
+		return ""
+	}
+	if threshold == nil || *threshold < 1 || *threshold > 100 {
+		return fmt.Sprintf("%s reserve threshold unknown", window)
+	}
+	if remaining == nil || *remaining < 0 || *remaining > 100 {
+		return fmt.Sprintf("%s remaining quota unknown; reserve %d%%", window, *threshold)
+	}
+	if *remaining <= *threshold {
+		return fmt.Sprintf("%s remaining %d%% <= reserve %d%%", window, *remaining, *threshold)
+	}
+	return ""
+}
+
+func noAuthAvailableError(quotaReserveReasons []string) error {
+	if len(quotaReserveReasons) == 0 {
+		return fmt.Errorf("no auth available")
+	}
+
+	const maxReasons = 3
+	reasons := quotaReserveReasons
+	if len(reasons) > maxReasons {
+		reasons = reasons[:maxReasons]
+	}
+	detail := strings.Join(reasons, "; ")
+	if omitted := len(quotaReserveReasons) - len(reasons); omitted > 0 {
+		detail = fmt.Sprintf("%s; and %d more", detail, omitted)
+	}
+	return fmt.Errorf(
+		"no auth available: bound OAuth quota reserve blocked %d auth(s): %s",
+		len(quotaReserveReasons),
+		detail,
+	)
 }
 
 func authAvailable(auth *coreauth.Auth, model string, now time.Time) bool {
@@ -1439,6 +2195,13 @@ func (s *cockpitSelector) orderAuths(auths []*coreauth.Auth, start int) []*corea
 		return auths
 	}
 	strategy := strings.TrimSpace(strings.ToLower(s.manifest.RoutingStrategy))
+	if strategy == "random" {
+		out := append([]*coreauth.Auth(nil), auths...)
+		rand.Shuffle(len(out), func(i, j int) {
+			out[i], out[j] = out[j], out[i]
+		})
+		return out
+	}
 	if strategy == "custom" {
 		return s.orderCustom(auths, start)
 	}
@@ -1621,21 +2384,28 @@ func weightedOrder(group []*coreauth.Auth, rules map[string]customRoutingRule, s
 }
 
 func (s *cockpitSelector) accountForAuth(auth *coreauth.Auth) *accountSpec {
-	if s == nil || s.manifest == nil || auth == nil {
+	if s == nil {
+		return nil
+	}
+	return accountForAuthInManifest(s.manifest, auth)
+}
+
+func accountForAuthInManifest(m *manifest, auth *coreauth.Auth) *accountSpec {
+	if m == nil || auth == nil {
 		return nil
 	}
 	if auth.ID != "" {
-		if account := s.manifest.accountByAuthID[strings.ToLower(auth.ID)]; account != nil {
+		if account := m.accountByAuthID[strings.ToLower(auth.ID)]; account != nil {
 			return account
 		}
 		base := strings.TrimSuffix(filepath.Base(auth.ID), filepath.Ext(auth.ID))
-		if account := s.manifest.accountByID[base]; account != nil {
+		if account := m.accountByID[base]; account != nil {
 			return account
 		}
 	}
 	if auth.Attributes != nil {
 		if key := strings.TrimSpace(auth.Attributes["api_key"]); key != "" {
-			return s.manifest.accountByAPIKey[key]
+			return m.accountByAPIKey[key]
 		}
 	}
 	return nil
@@ -1723,22 +2493,24 @@ func (p *usagePlugin) HandleUsage(ctx context.Context, record coreusage.Record) 
 	status := record.Fail.StatusCode
 	success := !record.Failed
 	p.tracker.record(usagePayload{
-		Type:          "usage",
-		RequestID:     internallogging.GetRequestID(ctx),
-		Provider:      record.Provider,
-		Model:         model,
-		Alias:         record.Alias,
-		AccountID:     stringFromAccount(account, "id"),
-		AccountEmail:  stringFromAccount(account, "email"),
-		AuthID:        record.AuthID,
-		APIKeyID:      stringFromAPIKey(spec, "id"),
-		APIKeyLabel:   stringFromAPIKey(spec, "label"),
-		RequestKind:   requestKind,
-		Success:       success,
-		Status:        status,
-		ErrorCategory: errorCategory(status, record.Fail.Body, success),
-		ErrorMessage:  strings.TrimSpace(record.Fail.Body),
-		LatencyMS:     record.Latency.Milliseconds(),
+		Type:             "usage",
+		RequestID:        internallogging.GetRequestID(ctx),
+		Provider:         record.Provider,
+		Model:            model,
+		Alias:            record.Alias,
+		AccountID:        stringFromAccount(account, "id"),
+		AccountEmail:     stringFromAccount(account, "email"),
+		AuthID:           record.AuthID,
+		APIKeyID:         stringFromAPIKey(spec, "id"),
+		APIKeyLabel:      stringFromAPIKey(spec, "label"),
+		ClientInstanceID: clientInstanceIDFromContext(ctx),
+		RequestKind:      requestKind,
+		ServiceTier:      normalizedUsageServiceTier(record.ServiceTier),
+		Success:          success,
+		Status:           status,
+		ErrorCategory:    errorCategory(status, record.Fail.Body, success),
+		ErrorMessage:     strings.TrimSpace(record.Fail.Body),
+		LatencyMS:        record.Latency.Milliseconds(),
 		Usage: usageDetails{
 			InputTokens:     record.Detail.InputTokens,
 			OutputTokens:    record.Detail.OutputTokens,
@@ -1935,10 +2707,9 @@ func (h *authHook) emit(eventType string, auth *coreauth.Auth) {
 	})
 }
 
-func buildCoreAuthManager(cfg *config.Config, selector coreauth.Selector, hook coreauth.Hook) *coreauth.Manager {
-	tokenStore := sdkauth.GetTokenStore()
-	if dirSetter, ok := tokenStore.(interface{ SetBaseDir(string) }); ok && cfg != nil {
-		dirSetter.SetBaseDir(cfg.AuthDir)
+func buildCoreAuthSelector(cfg *config.Config, selector coreauth.Selector, m *manifest, quota *quotaReserveStateStore) coreauth.Selector {
+	if selector == nil {
+		selector = &coreauth.RoundRobinSelector{}
 	}
 	if cfg != nil && cfg.Routing.SessionAffinity {
 		ttl := time.Hour
@@ -1949,8 +2720,44 @@ func buildCoreAuthManager(cfg *config.Config, selector coreauth.Selector, hook c
 			Fallback: selector,
 			TTL:      ttl,
 		})
+		selector = &cockpitSessionAffinitySelector{inner: selector}
+	}
+	if m != nil {
+		selector = &backupAccountSelector{manifest: m, fallback: selector}
+		selector = &quotaReserveSelector{manifest: m, fallback: selector, quota: quota}
+	}
+	return selector
+}
+
+func buildCoreAuthManager(cfg *config.Config, selector coreauth.Selector, hook coreauth.Hook, m *manifest, quota *quotaReserveStateStore, tracker *requestUsageTracker) *coreauth.Manager {
+	tokenStore := sdkauth.GetTokenStore()
+	if dirSetter, ok := tokenStore.(interface{ SetBaseDir(string) }); ok && cfg != nil {
+		dirSetter.SetBaseDir(cfg.AuthDir)
+	}
+	selector = buildCoreAuthSelector(cfg, selector, m, quota)
+	if tracker != nil {
+		selector = &recordingSelector{inner: selector, manifest: m, tracker: tracker}
 	}
 	return coreauth.NewManager(tokenStore, selector, hook)
+}
+
+type cockpitSessionAffinitySelector struct {
+	inner coreauth.Selector
+}
+
+func (s *cockpitSessionAffinitySelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
+	if s == nil || s.inner == nil {
+		return nil, errors.New("session affinity selector is unavailable")
+	}
+	if spec, _ := ctx.Value(clientAPIKeyContextKey).(*apiKeySpec); spec != nil && strings.TrimSpace(spec.ID) != "" {
+		metadata := make(map[string]any, len(opts.Metadata)+1)
+		for key, value := range opts.Metadata {
+			metadata[key] = value
+		}
+		metadata[cliproxyexecutor.SessionAffinityNamespaceMetadataKey] = spec.ID
+		opts.Metadata = metadata
+	}
+	return s.inner.Pick(ctx, provider, model, opts, auths)
 }
 
 type sidecarRuntime struct {
@@ -2026,6 +2833,10 @@ func newSidecarRuntime(ctx context.Context, configPath string, cfg *config.Confi
 		cancel()
 		return nil, err
 	}
+	if err := registerManifestCodexTokenAuths(runtimeCtx, service, cfg, m, manager); err != nil {
+		cancel()
+		return nil, err
+	}
 	for _, auth := range manager.List() {
 		if auth == nil || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
 			continue
@@ -2065,6 +2876,187 @@ func registerConfigCodexAPIKeyAuths(ctx context.Context, service *cliproxy.Servi
 		linkManifestAccountForAuth(m, registered)
 	}
 	return nil
+}
+
+func registerManifestCodexTokenAuths(
+	ctx context.Context,
+	service *cliproxy.Service,
+	cfg *config.Config,
+	m *manifest,
+	manager *coreauth.Manager,
+) error {
+	if service == nil || cfg == nil || m == nil {
+		return nil
+	}
+	for i := range m.Accounts {
+		account := &m.Accounts[i]
+		authID := strings.TrimSpace(account.AuthID)
+		if authID == "" || manifestAccountAuthKind(account) == "api_key" {
+			continue
+		}
+		path := authID
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(cfg.AuthDir, path)
+		}
+		auth, err := readManifestCodexTokenAuth(account, cfg.AuthDir, path)
+		if err != nil {
+			return err
+		}
+		registered, err := service.UpsertRuntimeAuth(coreauth.WithSkipPersist(ctx), auth)
+		if err != nil {
+			return fmt.Errorf("register codex token auth %s: %w", auth.ID, err)
+		}
+		linkManifestAccountForAuth(m, registered)
+		registerManifestModelsForAuth(manager, m, registered)
+	}
+	return nil
+}
+
+func readManifestCodexTokenAuth(account *accountSpec, authDir, path string) (*coreauth.Auth, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read codex token auth file %s: %w", path, err)
+	}
+	metadata := make(map[string]any)
+	if err = json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("parse codex token auth file %s: %w", path, err)
+	}
+	provider := strings.TrimSpace(metadataString(metadata, "type"))
+	if provider == "" {
+		provider = "codex"
+	}
+	if !strings.EqualFold(provider, "codex") {
+		return nil, fmt.Errorf("codex token auth file %s has unsupported provider %q", path, provider)
+	}
+	accessToken := firstMetadataString(
+		metadata,
+		"personal_access_token",
+		"at_token",
+		"access_token",
+	)
+	if accessToken == "" {
+		return nil, fmt.Errorf("codex token auth file %s is missing access_token", path)
+	}
+	metadata["access_token"] = accessToken
+	if strings.TrimSpace(metadataString(metadata, "token_type")) == "" {
+		metadata["token_type"] = "Bearer"
+	}
+	if account != nil &&
+		(account.AccessTokenOnly || manifestAccountAuthKind(account) == "access_token") {
+		if strings.TrimSpace(metadataString(metadata, "auth_mode")) == "" {
+			metadata["auth_mode"] = "personal_access_token"
+		}
+		if strings.TrimSpace(metadataString(metadata, "openai_auth_mode")) == "" {
+			metadata["openai_auth_mode"] = "personal_access_token"
+		}
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("stat codex token auth file %s: %w", path, err)
+	}
+	id := manifestAuthFileID(authDir, path)
+	label := ""
+	if account != nil {
+		label = strings.TrimSpace(account.Email)
+	}
+	if label == "" {
+		label = firstMetadataString(metadata, "email", "label")
+	}
+	disabled, _ := metadata["disabled"].(bool)
+	status := coreauth.StatusActive
+	if disabled {
+		status = coreauth.StatusDisabled
+	}
+	auth := &coreauth.Auth{
+		ID:       id,
+		Provider: "codex",
+		FileName: id,
+		Label:    label,
+		Status:   status,
+		Disabled: disabled,
+		Attributes: map[string]string{
+			"path":      path,
+			"auth_kind": manifestAccountAuthKind(account),
+		},
+		Metadata:        metadata,
+		CreatedAt:       info.ModTime(),
+		UpdatedAt:       info.ModTime(),
+		LastRefreshedAt: time.Time{},
+	}
+	if account != nil {
+		auth.Attributes["account_id"] = strings.TrimSpace(account.ID)
+		if strings.TrimSpace(account.Email) != "" {
+			auth.Attributes["email"] = strings.TrimSpace(account.Email)
+		}
+		if strings.TrimSpace(account.ChatGPTAccountID) != "" {
+			auth.Attributes["chatgpt_account_id"] = strings.TrimSpace(account.ChatGPTAccountID)
+		}
+	}
+	if email := firstMetadataString(metadata, "email"); email != "" {
+		auth.Attributes["email"] = email
+	}
+	if proxyURL := firstMetadataString(metadata, "proxy_url", "proxy-url"); proxyURL != "" {
+		auth.ProxyURL = proxyURL
+	}
+	coreauth.ApplyCustomHeadersFromMetadata(auth)
+	return auth, nil
+}
+
+func manifestAccountAuthKind(account *accountSpec) string {
+	if account == nil {
+		return ""
+	}
+	if kind := strings.ToLower(strings.TrimSpace(account.AuthKind)); kind != "" {
+		switch kind {
+		case "api-key", "apikey", "api key":
+			return "api_key"
+		case "access-token", "accesstoken", "access token",
+			"personal_access_token", "pat", "at":
+			return "access_token"
+		default:
+			return kind
+		}
+	}
+	if strings.TrimSpace(account.UpstreamAPIKey) != "" {
+		return "api_key"
+	}
+	if account.AccessTokenOnly {
+		return "access_token"
+	}
+	return "oauth"
+}
+
+func manifestAuthFileID(authDir, path string) string {
+	id := path
+	if strings.TrimSpace(authDir) != "" {
+		if rel, err := filepath.Rel(authDir, path); err == nil && strings.TrimSpace(rel) != "" {
+			id = rel
+		}
+	}
+	if runtime.GOOS == "windows" {
+		id = strings.ToLower(id)
+	}
+	return id
+}
+
+func metadataString(metadata map[string]any, key string) string {
+	if metadata == nil {
+		return ""
+	}
+	if raw, ok := metadata[key].(string); ok {
+		return strings.TrimSpace(raw)
+	}
+	return ""
+}
+
+func firstMetadataString(metadata map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value := metadataString(metadata, key); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (r *sidecarRuntime) Execute(ctx context.Context, providers []string, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
@@ -2122,16 +3114,84 @@ func linkManifestAccountForAuth(m *manifest, auth *coreauth.Auth) {
 	if m.accountByAuthID == nil {
 		m.accountByAuthID = make(map[string]*accountSpec)
 	}
-	if _, exists := m.accountByAuthID[strings.ToLower(auth.ID)]; exists {
+	authID := strings.ToLower(strings.TrimSpace(auth.ID))
+	if _, exists := m.accountByAuthID[authID]; exists {
 		return
 	}
+	if account := findManifestAccountForAuth(m, auth); account != nil {
+		m.accountByAuthID[authID] = account
+		if base := strings.ToLower(filepath.Base(strings.TrimSpace(auth.ID))); base != "" && base != authID {
+			m.accountByAuthID[base] = account
+		}
+		return
+	}
+}
+
+func findManifestAccountForAuth(m *manifest, auth *coreauth.Auth) *accountSpec {
+	if m == nil || auth == nil {
+		return nil
+	}
+	for _, candidate := range []string{
+		strings.TrimSpace(auth.ID),
+		filepath.Base(strings.TrimSpace(auth.ID)),
+		strings.TrimSpace(auth.FileName),
+		filepath.Base(strings.TrimSpace(auth.FileName)),
+	} {
+		if candidate == "." || candidate == "" {
+			continue
+		}
+		if account := m.accountByAuthID[strings.ToLower(candidate)]; account != nil {
+			return account
+		}
+	}
 	if auth.Attributes != nil {
+		if path := strings.TrimSpace(auth.Attributes["path"]); path != "" {
+			if account := m.accountByAuthID[strings.ToLower(path)]; account != nil {
+				return account
+			}
+			if account := m.accountByAuthID[strings.ToLower(filepath.Base(path))]; account != nil {
+				return account
+			}
+		}
 		if key := strings.TrimSpace(auth.Attributes["api_key"]); key != "" {
 			if account := m.accountByAPIKey[key]; account != nil {
-				m.accountByAuthID[strings.ToLower(auth.ID)] = account
+				return account
+			}
+		}
+		if accountID := strings.TrimSpace(auth.Attributes["account_id"]); accountID != "" {
+			if account := m.accountByID[accountID]; account != nil {
+				return account
+			}
+		}
+		if chatGPTID := strings.TrimSpace(auth.Attributes["chatgpt_account_id"]); chatGPTID != "" {
+			if account := m.accountByChatGPT[strings.ToLower(chatGPTID)]; account != nil {
+				return account
+			}
+		}
+		if email := strings.TrimSpace(auth.Attributes["email"]); email != "" {
+			if account := m.accountByEmail[strings.ToLower(email)]; account != nil {
+				return account
 			}
 		}
 	}
+	if auth.Metadata != nil {
+		for _, key := range []string{"account_id", "chatgpt_account_id"} {
+			if value := metadataString(auth.Metadata, key); value != "" {
+				if account := m.accountByChatGPT[strings.ToLower(value)]; account != nil {
+					return account
+				}
+				if account := m.accountByID[value]; account != nil {
+					return account
+				}
+			}
+		}
+		if email := metadataString(auth.Metadata, "email"); email != "" {
+			if account := m.accountByEmail[strings.ToLower(email)]; account != nil {
+				return account
+			}
+		}
+	}
+	return nil
 }
 
 func registerManifestModelsForAuth(manager *coreauth.Manager, m *manifest, auth *coreauth.Auth) {
@@ -2271,6 +3331,9 @@ func (s *relayServer) router() *gin.Engine {
 	router.GET("/v1/models", s.handleModels)
 	router.POST("/v1/responses", s.handleResponses)
 	router.POST("/v1/responses/compact", s.handleResponsesCompact)
+	// Compatibility: some clients set chat-completions base and still append /v1/responses.
+	router.POST("/v1/chat/completions/v1/responses", s.handleResponses)
+	router.POST("/v1/chat/completions/v1/responses/compact", s.handleResponsesCompact)
 	router.POST("/v1/chat/completions", s.handleChatCompletions)
 	router.POST(anthropicMessagesPath, s.handleAnthropicMessages)
 	router.POST(anthropicCountTokensPath, s.handleAnthropicCountTokens)
@@ -2657,7 +3720,7 @@ func (s *relayServer) handleImagesRelayRequest(c *gin.Context, imageReq imageRel
 	defer cancelStream()
 	result, err := s.executeStreamWithOpenTimeout(c, streamCtx, []string{"codex"}, req, opts, model, startedAt, timeouts.open)
 	if err != nil {
-		writeExecutorError(c, err)
+		s.writeExecutorError(c, err)
 		return
 	}
 	if result == nil || result.Chunks == nil {
@@ -2670,7 +3733,7 @@ func (s *relayServer) handleImagesRelayRequest(c *gin.Context, imageReq imageRel
 	}
 	out, err := collectImagesResponse(streamCtx, result.Chunks, imageReq.responseFormat, timeouts.idle)
 	if err != nil {
-		writeExecutorError(c, err)
+		s.writeExecutorError(c, err)
 		return
 	}
 	writeUpstreamHeaders(c.Writer.Header(), result.Headers)
@@ -3281,6 +4344,7 @@ func (s *relayServer) handleProviderGatewayRequest(c *gin.Context, gateway *prov
 	if stream {
 		req.Header.Set("Accept", "text/event-stream")
 	}
+	copyProviderGatewayDiagnosticHeaders(req.Header, c.Request.Header)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -3363,6 +4427,31 @@ func rewriteProviderGatewayBodyModel(body []byte, model string) []byte {
 		return body
 	}
 	return next
+}
+
+func copyProviderGatewayDiagnosticHeaders(dst http.Header, src http.Header) {
+	if dst == nil || src == nil {
+		return
+	}
+	for key, values := range src {
+		trimmedKey := strings.TrimSpace(key)
+		if trimmedKey == "" {
+			continue
+		}
+		lowerKey := strings.ToLower(trimmedKey)
+		if lowerKey != "x-client-request-id" && !strings.HasPrefix(lowerKey, "x-agtools-") {
+			continue
+		}
+		canonicalKey := http.CanonicalHeaderKey(trimmedKey)
+		dst.Del(canonicalKey)
+		for _, value := range values {
+			value = strings.TrimSpace(value)
+			if value == "" {
+				continue
+			}
+			dst.Add(canonicalKey, value)
+		}
+	}
 }
 
 func (s *relayServer) writeProviderGatewayChatStream(c *gin.Context, body io.Reader, model string, originalBody []byte, chatBody []byte) {
@@ -3558,16 +4647,59 @@ func providerGatewayURL(baseURL string, path string) (string, error) {
 	}
 	cleanPath := "/" + strings.TrimLeft(path, "/")
 	basePath := strings.TrimRight(parsed.Path, "/")
+	endpointPath := providerGatewayEndpointPath(cleanPath)
 	if strings.HasSuffix(basePath, strings.TrimSuffix(cleanPath, "/")) {
 		parsed.Path = basePath
-	} else if strings.HasSuffix(basePath, "/v1") && strings.HasPrefix(cleanPath, "/v1/") {
-		parsed.Path = basePath + strings.TrimPrefix(cleanPath, "/v1")
+	} else if endpointPath != "" && strings.HasSuffix(basePath, strings.TrimSuffix(endpointPath, "/")) {
+		parsed.Path = basePath
+	} else if endpointPath != "" && providerGatewayBasePathHasVersionSegment(basePath) {
+		parsed.Path = basePath + endpointPath
 	} else {
 		parsed.Path = basePath + cleanPath
 	}
 	parsed.RawQuery = ""
 	parsed.Fragment = ""
 	return parsed.String(), nil
+}
+
+func providerGatewayEndpointPath(path string) string {
+	cleanPath := "/" + strings.TrimLeft(strings.TrimSpace(path), "/")
+	if strings.HasPrefix(cleanPath, "/v1/") {
+		return strings.TrimPrefix(cleanPath, "/v1")
+	}
+	return ""
+}
+
+func providerGatewayBasePathHasVersionSegment(basePath string) bool {
+	for _, segment := range strings.Split(strings.Trim(basePath, "/"), "/") {
+		if providerGatewayPathSegmentIsVersion(segment) {
+			return true
+		}
+	}
+	return false
+}
+
+func providerGatewayPathSegmentIsVersion(segment string) bool {
+	segment = strings.TrimSpace(segment)
+	if len(segment) < 2 || (segment[0] != 'v' && segment[0] != 'V') {
+		return false
+	}
+	hasDigit := false
+	for i := 1; i < len(segment); i++ {
+		ch := segment[i]
+		if ch >= '0' && ch <= '9' {
+			hasDigit = true
+			continue
+		}
+		if !hasDigit {
+			return false
+		}
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '-' || ch == '_' || ch == '.' {
+			continue
+		}
+		return false
+	}
+	return hasDigit
 }
 
 func (s *relayServer) handleNonStream(c *gin.Context, body []byte, model string, sourceFormat sdktranslator.Format, alt string) {
@@ -3579,7 +4711,7 @@ func (s *relayServer) handleNonStream(c *gin.Context, body []byte, model string,
 	stopWaitLogger()
 	if err != nil {
 		s.emitExecutorDiagnostic(c, "executor_failed", model, "execute", startedAt, err.Error())
-		writeExecutorError(c, err)
+		s.writeExecutorError(c, err)
 		return
 	}
 	s.emitExecutorDiagnostic(c, "executor_completed", model, "execute", startedAt, "")
@@ -3595,6 +4727,20 @@ func (s *relayServer) handleStream(c *gin.Context, body []byte, model string, so
 	req, opts := buildExecutorRequest(c, body, model, sourceFormat, alt, true)
 	startedAt := time.Now()
 	timeouts := s.streamTimeoutsForRequest(c.Request, body, model)
+	immediateSSE := s.manifest != nil && s.manifest.ImmediateSSEResponse
+	var immediateFlusher http.Flusher
+	if immediateSSE {
+		flusher, ok := c.Writer.(http.Flusher)
+		if !ok {
+			writeAPIError(c, http.StatusInternalServerError, "streaming not supported", "streaming_not_supported")
+			return
+		}
+		setEventStreamHeaders(c.Writer.Header())
+		c.Status(http.StatusOK)
+		_, _ = c.Writer.Write([]byte(": accepted\n\n"))
+		flusher.Flush()
+		immediateFlusher = flusher
+	}
 	s.emitExecutorDiagnostic(c, "executor_started", model, "execute_stream", startedAt, "")
 	stopWaitLogger := s.startExecutorWaitLogger(c, model, "execute_stream", startedAt)
 	streamCtx, cancelStream := context.WithCancel(relayContext(c))
@@ -3603,12 +4749,22 @@ func (s *relayServer) handleStream(c *gin.Context, body []byte, model string, so
 	stopWaitLogger()
 	if err != nil {
 		s.emitExecutorDiagnostic(c, "executor_failed", model, "execute_stream", startedAt, err.Error())
-		writeExecutorError(c, err)
+		if immediateSSE {
+			writeStreamTerminalError(c, err)
+			immediateFlusher.Flush()
+			return
+		}
+		s.writeExecutorError(c, err)
 		return
 	}
 	if result == nil || result.Chunks == nil {
 		s.emitExecutorDiagnostic(c, "executor_failed", model, "execute_stream", startedAt, "upstream stream is unavailable")
-		writeAPIError(c, http.StatusBadGateway, "upstream stream is unavailable", "bad_gateway")
+		if immediateSSE {
+			writeStreamTerminalError(c, relayStatusError{status: http.StatusBadGateway, message: "upstream stream is unavailable"})
+			immediateFlusher.Flush()
+		} else {
+			writeAPIError(c, http.StatusBadGateway, "upstream stream is unavailable", "bad_gateway")
+		}
 		return
 	}
 	s.emitExecutorDiagnostic(c, "stream_opened", model, "execute_stream", startedAt, "")
@@ -3618,9 +4774,11 @@ func (s *relayServer) handleStream(c *gin.Context, body []byte, model string, so
 		return
 	}
 
-	setEventStreamHeaders(c.Writer.Header())
-	writeUpstreamHeaders(c.Writer.Header(), result.Headers)
-	c.Status(http.StatusOK)
+	if !immediateSSE {
+		setEventStreamHeaders(c.Writer.Header())
+		writeUpstreamHeaders(c.Writer.Header(), result.Headers)
+		c.Status(http.StatusOK)
+	}
 
 	framer := newRelayStreamFramer(sourceFormat, requestPath(c.Request))
 	keepAlive := streamKeepAliveInterval(s.cfg)
@@ -4335,7 +5493,7 @@ func (s *relayServer) handleOllamaRuntimeNonStream(c *gin.Context, body []byte, 
 	req, opts := buildExecutorRequest(c, body, model, sdktranslator.FormatOpenAI, "", false)
 	resp, err := s.runtime.Execute(relayContext(c), []string{"codex"}, req, opts)
 	if err != nil {
-		writeExecutorError(c, err)
+		s.writeExecutorError(c, err)
 		return
 	}
 	payload := convertOpenAIChatResponseToOllama(resp.Payload, model)
@@ -4351,7 +5509,7 @@ func (s *relayServer) handleOllamaRuntimeStream(c *gin.Context, body []byte, mod
 	defer cancelStream()
 	result, err := s.executeStreamWithOpenTimeout(c, streamCtx, []string{"codex"}, req, opts, model, startedAt, timeouts.open)
 	if err != nil {
-		writeExecutorError(c, err)
+		s.writeExecutorError(c, err)
 		return
 	}
 	if result == nil || result.Chunks == nil {
@@ -4454,6 +5612,7 @@ func (s *relayServer) handleOllamaProviderGatewayChat(c *gin.Context, gateway *p
 	if stream {
 		req.Header.Set("Accept", "text/event-stream")
 	}
+	copyProviderGatewayDiagnosticHeaders(req.Header, c.Request.Header)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		writeAPIError(c, http.StatusBadGateway, err.Error(), "bad_gateway")
@@ -5027,7 +6186,7 @@ func writeAPIError(c *gin.Context, status int, message, code string) {
 	})
 }
 
-func writeExecutorError(c *gin.Context, err error) {
+func (s *relayServer) writeExecutorError(c *gin.Context, err error) {
 	status := statusCodeFromError(err)
 	code := "upstream_error"
 	if status == http.StatusUnauthorized || status == http.StatusForbidden {
@@ -5042,7 +6201,34 @@ func writeExecutorError(c *gin.Context, err error) {
 	if err != nil {
 		_ = c.Error(err)
 	}
+	if shouldThrottleDownstreamExecutorError(status) {
+		var ctx context.Context = context.Background()
+		if c != nil && c.Request != nil {
+			ctx = c.Request.Context()
+		}
+		if waitErr := util.SleepContext(ctx, s.downstreamExecutorErrorDelay()); waitErr != nil {
+			return
+		}
+	}
 	writeAPIError(c, status, errorMessage(err), code)
+}
+
+func shouldThrottleDownstreamExecutorError(status int) bool {
+	if status == http.StatusUnauthorized || status == http.StatusPaymentRequired ||
+		status == http.StatusForbidden || status == http.StatusRequestTimeout ||
+		status == http.StatusTooManyRequests {
+		return true
+	}
+	return status >= http.StatusInternalServerError
+}
+
+func (s *relayServer) downstreamExecutorErrorDelay() time.Duration {
+	if s == nil || s.cfg == nil {
+		return 0
+	}
+	base := time.Duration(s.cfg.Streaming.BootstrapRetryBaseDelayMS) * time.Millisecond
+	max := time.Duration(s.cfg.Streaming.BootstrapRetryMaxDelayMS) * time.Millisecond
+	return util.BackoffDelay(1, base, max)
 }
 
 func statusCodeFromError(err error) int {
@@ -5489,43 +6675,13 @@ func monitorParentProcess(ctx context.Context, parentPID int, cancel context.Can
 	if parentPID <= 0 || parentPID == os.Getpid() {
 		return
 	}
-	if goruntime.GOOS == "windows" {
-		if emitter != nil {
-			emitter.emit(map[string]any{
-				"type":      "parent_monitor_disabled",
-				"reason":    "windows_getppid_unreliable",
-				"parentPid": parentPID,
-			})
-		}
-		return
-	}
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if os.Getppid() == parentPID {
-					continue
-				}
-				if emitter != nil {
-					emitter.emit(map[string]any{
-						"type":      "parent_exit",
-						"parentPid": parentPID,
-					})
-				}
-				cancel()
-				return
-			}
-		}
-	}()
+	monitorParentProcessPlatform(ctx, parentPID, cancel, emitter)
 }
 
 func main() {
 	configPath := flag.String("config", "", "CLIProxyAPI config file")
 	manifestPath := flag.String("manifest", "", "Cockpit sidecar manifest file")
+	quotaReserveStatePath := flag.String("quota-reserve-state", "", "Cockpit OAuth quota reserve state file")
 	parentPID := flag.Int("parent-pid", 0, "Cockpit Tools parent process id")
 	flag.Parse()
 
@@ -5554,17 +6710,31 @@ func main() {
 		os.Exit(2)
 	}
 	emitter.emitStartupStage("init_runtime")
+	quotaState := newQuotaReserveStateStore(*quotaReserveStatePath, m)
+	if err := quotaState.load(); err != nil {
+		emitter.emit(map[string]any{
+			"type":    "quota_reserve_state_error",
+			"message": err.Error(),
+		})
+	}
 
 	usageTracker := newRequestUsageTracker()
 	policy := &requestPolicy{manifest: m, emitter: emitter, tracker: usageTracker}
 	hook := &authHook{manifest: m, emitter: emitter}
-	selector := &cockpitSelector{manifest: m, emitter: emitter}
-	coreManager := buildCoreAuthManager(cfg, selector, hook)
+	priorityState := newAPIKeyPriorityStateStore(*manifestPath)
+	selector := &cockpitSelector{
+		manifest:   m,
+		emitter:    emitter,
+		quota:      quotaState,
+		priorities: priorityState,
+	}
+	coreManager := buildCoreAuthManager(cfg, selector, hook, m, quotaState, usageTracker)
 
 	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx, cancel := context.WithCancel(signalCtx)
 	defer cancel()
+	quotaState.start(ctx, emitter)
 	monitorParentProcess(ctx, *parentPID, cancel, emitter)
 
 	coreusage.RegisterPlugin(&usagePlugin{manifest: m, tracker: usageTracker})

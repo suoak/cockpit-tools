@@ -18,6 +18,8 @@ import {
   FolderPlus,
   Image,
   KeyRound,
+  Pin,
+  PinOff,
   Plus,
   Power,
   RefreshCw,
@@ -26,6 +28,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  Undo2,
   Users,
   Wrench,
   X,
@@ -35,7 +38,6 @@ import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { CodexIcon } from "../components/icons/CodexIcon";
 import { ManualHelpIconButton } from "../components/ManualHelpIconButton";
-import { TopCenterPromoBanner } from "../components/TopCenterPromoBanner";
 import { PlatformGroupSwitcher } from "../components/platform/PlatformGroupSwitcher";
 import {
   findGroupByPlatform,
@@ -44,21 +46,33 @@ import {
 } from "../stores/usePlatformLayoutStore";
 import { getPlatformLabel } from "../utils/platformMeta";
 import { useCodexAccountStore } from "../stores/useCodexAccountStore";
+import {
+  isCodexApiKeyScopeAccountActive,
+  reconcileCodexApiKeyScopeAccountIds,
+  selectCodexApiKeyScopeAccounts,
+} from "../utils/codexApiKeyAccountScope";
+import { resolveCodexApiServiceCompatibilityBaseUrls } from "../utils/codexApiServiceCompatibility";
 import * as codexLocalAccessService from "../services/codexLocalAccessService";
+import * as codexInstanceService from "../services/codexInstanceService";
 import {
   getCodexAccountGroups,
   type CodexAccountGroup,
 } from "../services/codexAccountGroupService";
 import type { CodexAccount } from "../types/codex";
+import {
+  CODEX_API_SERVICE_BIND_ID,
+  type InstanceProfile,
+} from "../types/instance";
 import type {
   CodexLocalAccessAddressKind,
   CodexLocalAccessAccountModelRule,
+  CodexLocalAccessApiKey,
   CodexLocalAccessChatMessage,
   CodexLocalAccessChatStreamEvent,
   CodexLocalAccessClientBaseUrlHost,
+  CodexLocalAccessCollection,
   CodexLocalAccessCustomRoutingRule,
   CodexLocalAccessGatewayMode,
-  CodexLocalAccessImageGenerationMode,
   CodexLocalAccessModelAlias,
   CodexLocalAccessModelPricing,
   CodexLocalAccessRequestKind,
@@ -77,14 +91,21 @@ import {
   summarizeCodexQuotaPool,
 } from "../utils/codexQuotaPool";
 import { filterCodexLocalAccessAccountIds } from "../utils/codexLocalAccessAccounts";
+import { scrollElementTo } from "../utils/reducedMotion";
 import { SingleSelectDropdown } from "../components/SingleSelectDropdown";
 import { CodexLocalAccessModal } from "../components/CodexLocalAccessModal";
+import { CodexStatsRangePicker } from "../components/CodexStatsRangePicker";
 import { PaginationControls } from "../components/PaginationControls";
+import { useCodexAccountOverviewMemberView } from "../hooks/useCodexAccountOverviewMemberView";
+import {
+  buildCodexStatsTimeRange,
+  type CodexStatsRangeKey,
+  type CodexStatsTimeRange,
+} from "../utils/codexStatsRange";
 import "./CodexApiServicePage.css";
 
 type ServiceTab = "overview" | "keys" | "accounts" | "models" | "logs";
 type StatsLogTab = "accounts" | "logs" | "models" | "keys";
-type StatsRangeKey = "daily" | "weekly" | "monthly";
 type CopyField =
   | "baseUrl"
   | "lanBaseUrl"
@@ -102,6 +123,8 @@ interface ApiKeyPolicyDraft {
   modelPrefix: string;
   allowedModels: string;
   excludedModels: string;
+  inheritAccountPool: boolean;
+  accountIds: string[];
 }
 
 interface TestChatMessage {
@@ -113,18 +136,48 @@ interface TestChatMessage {
   failureDetail?: string;
 }
 
-interface ModelPricingRow extends CodexLocalAccessModelPricing {
+interface ModelPricingRow
+  extends Omit<
+    CodexLocalAccessModelPricing,
+    "inputUsdPerMillion" | "outputUsdPerMillion"
+  > {
+  inputUsdPerMillion: number | null;
+  outputUsdPerMillion: number | null;
   hasPreset: boolean;
   custom: boolean;
 }
 
 interface ModelPricingDraft {
   modelId: string;
+  longContextThresholdTokens: string;
   inputUsdPerMillion: string;
   cachedInputUsdPerMillion: string;
   outputUsdPerMillion: string;
+  standardLongInputUsdPerMillion: string;
+  standardLongCachedInputUsdPerMillion: string;
+  standardLongOutputUsdPerMillion: string;
+  priorityInputUsdPerMillion: string;
+  priorityCachedInputUsdPerMillion: string;
+  priorityOutputUsdPerMillion: string;
   hasPreset: boolean;
   custom: boolean;
+}
+
+type ModelPricingRepricePhase =
+  | "started"
+  | "running"
+  | "completed"
+  | "failed"
+  | "superseded";
+
+interface ModelPricingRepriceProgress {
+  jobId: number;
+  phase: ModelPricingRepricePhase;
+  total: number;
+  processed: number;
+  updated: number;
+  modelIds: string[];
+  message?: string;
 }
 
 const ADDRESS_KIND_STORAGE_KEY = "agtools.codex.local_access.address_kind.v1";
@@ -156,12 +209,12 @@ function persistAddressKind(value: CodexLocalAccessAddressKind): void {
   }
 }
 
-function normalizeStatsRange(value: string | null | undefined): StatsRangeKey {
+function normalizeStatsRange(value: string | null | undefined): CodexStatsRangeKey {
   if (value === "weekly" || value === "monthly") return value;
   return "daily";
 }
 
-function readStoredStatsRange(): StatsRangeKey {
+function readStoredStatsRange(): CodexStatsRangeKey {
   try {
     return normalizeStatsRange(localStorage.getItem(STATS_RANGE_STORAGE_KEY));
   } catch {
@@ -169,7 +222,7 @@ function readStoredStatsRange(): StatsRangeKey {
   }
 }
 
-function persistStatsRange(value: StatsRangeKey): void {
+function persistStatsRange(value: CodexStatsRangeKey): void {
   try {
     localStorage.setItem(STATS_RANGE_STORAGE_KEY, value);
   } catch {
@@ -244,6 +297,11 @@ function formatPriceDraftValue(value: number | null | undefined): string {
   return String(value);
 }
 
+function formatIntegerDraftValue(value: number | null | undefined): string {
+  if (!Number.isFinite(value ?? NaN)) return "";
+  return String(Math.trunc(value ?? 0));
+}
+
 function parsePriceDraftValue(
   value: string,
   allowEmpty: boolean,
@@ -255,6 +313,14 @@ function parsePriceDraftValue(
   return parsed;
 }
 
+function parseOptionalPositiveIntegerDraft(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed <= 0) return Number.NaN;
+  return parsed;
+}
+
 function sameOptionalPrice(
   left: number | null | undefined,
   right: number | null | undefined,
@@ -262,6 +328,40 @@ function sameOptionalPrice(
   if (left == null && right == null) return true;
   if (left == null || right == null) return false;
   return Math.abs(left - right) < 0.0000001;
+}
+
+function modelPricingDraftFromRow(item: ModelPricingRow): ModelPricingDraft {
+  return {
+    modelId: item.modelId,
+    longContextThresholdTokens: formatIntegerDraftValue(
+      item.longContextThresholdTokens,
+    ),
+    inputUsdPerMillion: formatPriceDraftValue(item.inputUsdPerMillion),
+    cachedInputUsdPerMillion: formatPriceDraftValue(
+      item.cachedInputUsdPerMillion,
+    ),
+    outputUsdPerMillion: formatPriceDraftValue(item.outputUsdPerMillion),
+    standardLongInputUsdPerMillion: formatPriceDraftValue(
+      item.standardLongInputUsdPerMillion,
+    ),
+    standardLongCachedInputUsdPerMillion: formatPriceDraftValue(
+      item.standardLongCachedInputUsdPerMillion,
+    ),
+    standardLongOutputUsdPerMillion: formatPriceDraftValue(
+      item.standardLongOutputUsdPerMillion,
+    ),
+    priorityInputUsdPerMillion: formatPriceDraftValue(
+      item.priorityInputUsdPerMillion,
+    ),
+    priorityCachedInputUsdPerMillion: formatPriceDraftValue(
+      item.priorityCachedInputUsdPerMillion,
+    ),
+    priorityOutputUsdPerMillion: formatPriceDraftValue(
+      item.priorityOutputUsdPerMillion,
+    ),
+    hasPreset: item.hasPreset,
+    custom: item.custom,
+  };
 }
 
 function formatDateTime(value: number | null | undefined): string {
@@ -312,6 +412,65 @@ function parseModelRuleText(value: string): string[] {
 
 function serializeModelRules(values: string[] | null | undefined): string {
   return (values ?? []).join("\n");
+}
+
+function apiKeyInheritsAccountPool(apiKey: CodexLocalAccessApiKey): boolean {
+  return (
+    apiKey.inheritAccountPool ?? ((apiKey.accountIds?.length ?? 0) === 0)
+  );
+}
+
+function apiKeyHasFixedAccountScope(
+  apiKey: CodexLocalAccessApiKey,
+  collection: CodexLocalAccessCollection | null,
+): boolean {
+  if (apiKey.providerGateway) return true;
+  const accountIds = apiKey.accountIds ?? [];
+  return Boolean(
+    collection?.boundOauthAccountId &&
+      collection.accountIds.length === 0 &&
+      accountIds.length === 1 &&
+      apiKey.id === `provider_gateway_${accountIds[0]}`,
+  );
+}
+
+function apiKeyPolicyDraftFromValue(
+  apiKey: CodexLocalAccessApiKey,
+): ApiKeyPolicyDraft {
+  return {
+    modelPrefix: apiKey.modelPrefix ?? "",
+    allowedModels: serializeModelRules(apiKey.allowedModels),
+    excludedModels: serializeModelRules(apiKey.excludedModels),
+    inheritAccountPool: apiKeyInheritsAccountPool(apiKey),
+    accountIds: apiKey.accountIds ?? [],
+  };
+}
+
+function sameStringList(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
+function apiKeyPolicyDraftIsDirty(
+  apiKey: CodexLocalAccessApiKey,
+  draft: ApiKeyPolicyDraft,
+): boolean {
+  const persisted = apiKeyPolicyDraftFromValue(apiKey);
+  return (
+    draft.modelPrefix !== persisted.modelPrefix ||
+    draft.allowedModels !== persisted.allowedModels ||
+    draft.excludedModels !== persisted.excludedModels ||
+    draft.inheritAccountPool !== persisted.inheritAccountPool ||
+    !sameStringList(draft.accountIds, persisted.accountIds)
+  );
+}
+
+function toggleStringSelection(values: string[], value: string): string[] {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
 }
 
 function parseModelAliasText(value: string): CodexLocalAccessModelAlias[] {
@@ -509,17 +668,67 @@ function gatewayModeLabel(
   return t("codex.apiService.logs.gatewayModeUnknown", "模式未知");
 }
 
+/** 与后端写入 x-cockpit-instance-id 一致：profile 目录 basename */
+function clientInstanceIdFromUserDataDir(userDataDir: string): string {
+  const normalized = userDataDir.trim().replace(/[/\\]+$/, "");
+  if (!normalized) return "";
+  const parts = normalized.split(/[/\\]/).filter(Boolean);
+  return parts[parts.length - 1] ?? "";
+}
+
+function instanceDisplayName(
+  instance: InstanceProfile,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  if (instance.isDefault) {
+    return t("instances.defaultName", "默认实例");
+  }
+  const name = instance.name?.trim();
+  return name || instance.id;
+}
+
+function resolveClientInstanceLabel(
+  clientInstanceId: string | null | undefined,
+  instances: InstanceProfile[],
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const id = clientInstanceId?.trim() ?? "";
+  if (!id) {
+    return t("codex.apiService.logs.instanceUnknown", "实例 -");
+  }
+  const matched = instances.find((instance) => {
+    const dirId = clientInstanceIdFromUserDataDir(instance.userDataDir || "");
+    return dirId === id || instance.id === id;
+  });
+  if (matched) {
+    return instanceDisplayName(matched, t);
+  }
+  return id;
+}
+
 export function CodexApiServicePage() {
   const { t } = useTranslation();
   const { platformGroups } = usePlatformLayoutStore();
-  const { accounts, fetchAccounts } = useCodexAccountStore();
+  const {
+    accounts,
+    accountsLoaded,
+    currentAccount,
+    fetchAccounts,
+    fetchCurrentAccount,
+  } = useCodexAccountStore();
   const [state, setState] = useState<CodexLocalAccessState | null>(null);
   const [groups, setGroups] = useState<CodexAccountGroup[]>([]);
   const [activeTab, setActiveTab] = useState<ServiceTab>("overview");
   const [statsLogTab, setStatsLogTab] = useState<StatsLogTab>("logs");
-  const [statsRange, setStatsRange] = useState<StatsRangeKey>(() =>
+  const [statsRange, setStatsRange] = useState<CodexStatsRangeKey>(() =>
     readStoredStatsRange(),
   );
+  const [statsTimeRange, setStatsTimeRange] = useState<CodexStatsTimeRange>(() =>
+    buildCodexStatsTimeRange(readStoredStatsRange()),
+  );
+  const [filteredStatsWindow, setFilteredStatsWindow] =
+    useState<CodexLocalAccessStatsWindow | null>(null);
+  const [statsRangeError, setStatsRangeError] = useState("");
   const [addressKind, setAddressKind] = useState<CodexLocalAccessAddressKind>(
     () => readStoredAddressKind(),
   );
@@ -540,6 +749,7 @@ export function CodexApiServicePage() {
   const [proxyInput, setProxyInput] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [apiServiceIsCurrent, setApiServiceIsCurrent] = useState(false);
   const [apiKeyDrafts, setApiKeyDrafts] = useState<Record<string, string>>({});
   const [apiKeyPolicyDrafts, setApiKeyPolicyDrafts] = useState<
     Record<string, ApiKeyPolicyDraft>
@@ -560,6 +770,8 @@ export function CodexApiServicePage() {
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [pricingDrafts, setPricingDrafts] = useState<ModelPricingDraft[]>([]);
   const [pricingError, setPricingError] = useState("");
+  const [pricingRepriceProgress, setPricingRepriceProgress] =
+    useState<ModelPricingRepriceProgress | null>(null);
   const [timeoutsModalOpen, setTimeoutsModalOpen] = useState(false);
   const [timeoutDrafts, setTimeoutDrafts] = useState<
     Record<keyof CodexLocalAccessTimeouts, string>
@@ -568,12 +780,13 @@ export function CodexApiServicePage() {
   const [selectedTimeoutPresetId, setSelectedTimeoutPresetId] =
     useState<TimeoutPresetId>("long_wait");
   const [timeoutPresetNameDraft, setTimeoutPresetNameDraft] = useState("");
-  const [sessionAffinityDraft, setSessionAffinityDraft] = useState(false);
+  const [sessionAffinityDraft, setSessionAffinityDraft] = useState(true);
   const [sessionAffinityTtlDraft, setSessionAffinityTtlDraft] =
     useState("3600");
   const [maxRetryCredentialsDraft, setMaxRetryCredentialsDraft] = useState("0");
   const [maxRetryIntervalDraft, setMaxRetryIntervalDraft] = useState("3");
   const [disableCoolingDraft, setDisableCoolingDraft] = useState(false);
+  const [immediateSseResponseDraft, setImmediateSseResponseDraft] = useState(false);
   const [requestLogPage, setRequestLogPage] = useState(1);
   const [requestLogPageSize, setRequestLogPageSize] = useState(() =>
     readStoredRequestLogPageSize(),
@@ -591,12 +804,21 @@ export function CodexApiServicePage() {
   const [requestLogModelQuery, setRequestLogModelQuery] = useState("");
   const [requestLogAccountQuery, setRequestLogAccountQuery] = useState("");
   const [requestLogApiKeyQuery, setRequestLogApiKeyQuery] = useState("");
+  const [requestLogInstanceQuery, setRequestLogInstanceQuery] = useState("all");
   const [requestLogErrorQuery, setRequestLogErrorQuery] = useState("");
+  const [codexInstances, setCodexInstances] = useState<InstanceProfile[]>([]);
   const mountedRef = useRef(true);
+  const stateRequestSeqRef = useRef(0);
+  const statsRequestSeqRef = useRef(0);
   const testChatScrollRef = useRef<HTMLDivElement | null>(null);
 
   const collection = state?.collection ?? null;
   const stats = state?.stats ?? null;
+  const memberView = useCodexAccountOverviewMemberView({
+    accounts,
+    groups,
+    currentAccountId: apiServiceIsCurrent ? null : (currentAccount?.id ?? null),
+  });
   const builtinTimeoutPresets = useMemo(
     () => [
       {
@@ -632,9 +854,13 @@ export function CodexApiServicePage() {
   );
   const selectedStatsWindow =
     useMemo<CodexLocalAccessStatsWindow | null>(() => {
-      if (!stats) return null;
+      if (filteredStatsWindow) return filteredStatsWindow;
+      if (!stats || statsRange === "custom") return null;
       return stats[statsRange];
-    }, [stats, statsRange]);
+    }, [filteredStatsWindow, stats, statsRange]);
+  const apiKeyStatsById = new Map(
+    (selectedStatsWindow?.apiKeys ?? []).map((item) => [item.apiKeyId, item]),
+  );
   const totals = selectedStatsWindow?.totals;
   const memberIds = collection?.accountIds ?? [];
   const localAccessAccounts = useMemo(() => accounts, [accounts]);
@@ -647,6 +873,21 @@ export function CodexApiServicePage() {
         .filter((account): account is CodexAccount => Boolean(account)),
     [memberIds, localAccessAccounts],
   );
+  const memberAccountIds = useMemo(
+    () => memberAccounts.map((account) => account.id),
+    [memberAccounts],
+  );
+  const accountDisplayNames = useMemo(() => {
+    const next = new Map<string, string>();
+    localAccessAccounts.forEach((account) => {
+      const displayName = buildCodexAccountPresentation(account, t).displayName;
+      const accountId = account.id.trim();
+      const email = account.email.trim();
+      if (accountId) next.set(accountId, displayName);
+      if (email) next.set(email, displayName);
+    });
+    return next;
+  }, [localAccessAccounts, t]);
   const accountModelRuleCount = collection?.accountModelRules.length ?? 0;
   const accountModelRuleAllSelected =
     memberAccounts.length > 0 &&
@@ -668,12 +909,15 @@ export function CodexApiServicePage() {
     addressKind === "lan" && state?.lanBaseUrl ? state.lanBaseUrl : baseUrl;
   const accessScope = collection?.accessScope ?? "localhost";
   const clientBaseUrlHost = collection?.clientBaseUrlHost ?? "localhost";
-  const imageGenerationMode = collection?.imageGenerationMode ?? "enabled";
   const routingStrategy = collection?.routingStrategy ?? "auto";
   const gatewayMode = collection?.gatewayMode ?? "sidecar";
   const modelIds = state?.modelIds ?? [];
   const exampleModelId = modelIds[0] ?? "gpt-5.5";
   const exampleApiKey = collection?.apiKey || "<api-key>";
+  const compatibilityBaseUrls = useMemo(
+    () => resolveCodexApiServiceCompatibilityBaseUrls(displayBaseUrl),
+    [displayBaseUrl],
+  );
   const compatibilityExamples = useMemo(
     () => [
       {
@@ -688,7 +932,7 @@ export function CodexApiServicePage() {
           "Base URL uses /v1.",
         ),
         value: [
-          `OPENAI_BASE_URL=${displayBaseUrl}/v1`,
+          `OPENAI_BASE_URL=${compatibilityBaseUrls.openai}`,
           `OPENAI_API_KEY=${exampleApiKey}`,
           `OPENAI_MODEL=${exampleModelId}`,
         ].join("\n"),
@@ -702,7 +946,7 @@ export function CodexApiServicePage() {
           "Codex-native Responses entry.",
         ),
         value: [
-          `OPENAI_BASE_URL=${displayBaseUrl}/v1`,
+          `OPENAI_BASE_URL=${compatibilityBaseUrls.openai}`,
           `OPENAI_API_KEY=${exampleApiKey}`,
           `OPENAI_MODEL=${exampleModelId}`,
           "OPENAI_API_ENDPOINT=/responses",
@@ -720,7 +964,7 @@ export function CodexApiServicePage() {
           "Use the same service key.",
         ),
         value: [
-          `ANTHROPIC_BASE_URL=${displayBaseUrl}`,
+          `ANTHROPIC_BASE_URL=${compatibilityBaseUrls.root}`,
           `ANTHROPIC_API_KEY=${exampleApiKey}`,
           `ANTHROPIC_MODEL=${exampleModelId}`,
         ].join("\n"),
@@ -734,7 +978,7 @@ export function CodexApiServicePage() {
           "Base URL uses /v1beta.",
         ),
         value: [
-          `GEMINI_BASE_URL=${displayBaseUrl}/v1beta`,
+          `GEMINI_BASE_URL=${compatibilityBaseUrls.gemini}`,
           `GEMINI_API_KEY=${exampleApiKey}`,
           `GEMINI_MODEL=${exampleModelId}`,
         ].join("\n"),
@@ -748,13 +992,13 @@ export function CodexApiServicePage() {
           "Use Authorization: Bearer.",
         ),
         value: [
-          `OLLAMA_HOST=${displayBaseUrl}`,
+          `OLLAMA_HOST=${compatibilityBaseUrls.root}`,
           `OLLAMA_API_KEY=${exampleApiKey}`,
           `OLLAMA_MODEL=${exampleModelId}`,
         ].join("\n"),
       },
     ],
-    [displayBaseUrl, exampleApiKey, exampleModelId, t],
+    [compatibilityBaseUrls, exampleApiKey, exampleModelId, t],
   );
   const modelPricingRows = useMemo<ModelPricingRow[]>(() => {
     const presetMap = new Map<string, CodexLocalAccessModelPricing>();
@@ -774,8 +1018,8 @@ export function CodexApiServicePage() {
       modelOrder.set(key, ids.length);
       ids.push(trimmed);
     };
-    modelIds.forEach(pushId);
     (state?.modelPricingPresets ?? []).forEach((item) => pushId(item.modelId));
+    modelIds.forEach(pushId);
     (collection?.modelPricings ?? []).forEach((item) => pushId(item.modelId));
     return ids.map((modelId) => {
       const key = modelId.toLowerCase();
@@ -784,14 +1028,84 @@ export function CodexApiServicePage() {
       const source = custom ?? preset;
       return {
         modelId: source?.modelId ?? modelId,
-        inputUsdPerMillion: source?.inputUsdPerMillion ?? 0,
-        outputUsdPerMillion: source?.outputUsdPerMillion ?? 0,
+        longContextThresholdTokens:
+          source?.longContextThresholdTokens ??
+          preset?.longContextThresholdTokens ??
+          null,
+        inputUsdPerMillion: source?.inputUsdPerMillion ?? null,
+        outputUsdPerMillion: source?.outputUsdPerMillion ?? null,
         cachedInputUsdPerMillion: source?.cachedInputUsdPerMillion ?? null,
+        standardLongInputUsdPerMillion:
+          source?.standardLongInputUsdPerMillion ?? null,
+        standardLongOutputUsdPerMillion:
+          source?.standardLongOutputUsdPerMillion ?? null,
+        standardLongCachedInputUsdPerMillion:
+          source?.standardLongCachedInputUsdPerMillion ?? null,
+        priorityInputUsdPerMillion: source?.priorityInputUsdPerMillion ?? null,
+        priorityOutputUsdPerMillion: source?.priorityOutputUsdPerMillion ?? null,
+        priorityCachedInputUsdPerMillion:
+          source?.priorityCachedInputUsdPerMillion ?? null,
         hasPreset: Boolean(preset),
         custom: Boolean(custom),
       };
     });
   }, [collection?.modelPricings, modelIds, state?.modelPricingPresets]);
+  const pricingRepricePercent = useMemo(() => {
+    if (!pricingRepriceProgress) return 0;
+    if (pricingRepriceProgress.phase === "completed") return 100;
+    if (pricingRepriceProgress.total <= 0) return 0;
+    return Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          (pricingRepriceProgress.processed / pricingRepriceProgress.total) *
+            100,
+        ),
+      ),
+    );
+  }, [pricingRepriceProgress]);
+  const pricingRepriceStatusText = useMemo(() => {
+    if (!pricingRepriceProgress) return "";
+    const processed = Math.min(
+      pricingRepriceProgress.processed,
+      pricingRepriceProgress.total,
+    );
+    if (pricingRepriceProgress.phase === "completed") {
+      return t("codex.apiService.models.pricingRepriceDone", {
+        updated: formatCompactNumber(pricingRepriceProgress.updated),
+        defaultValue: "历史估算价值已更新，变更 {{updated}} 条",
+      });
+    }
+    if (pricingRepriceProgress.phase === "failed") {
+      return t("codex.apiService.models.pricingRepriceFailedWithMessage", {
+        message:
+          pricingRepriceProgress.message ||
+          t(
+            "codex.apiService.models.pricingRepriceFailed",
+            "历史估算价值更新失败",
+          ),
+        defaultValue: "历史估算价值更新失败：{{message}}",
+      });
+    }
+    if (pricingRepriceProgress.phase === "superseded") {
+      return t(
+        "codex.apiService.models.pricingRepriceSuperseded",
+        "已收到新的价格配置，正在切换到最新重算任务",
+      );
+    }
+    return t("codex.apiService.models.pricingRepriceRunning", {
+      processed: formatCompactNumber(processed),
+      total: formatCompactNumber(pricingRepriceProgress.total),
+      updated: formatCompactNumber(pricingRepriceProgress.updated),
+      defaultValue:
+        "正在更新历史估算价值 {{processed}} / {{total}}，已更新 {{updated}} 条",
+    });
+  }, [pricingRepriceProgress, t]);
+  const pricingRepriceActive =
+    pricingRepriceProgress?.phase === "started" ||
+    pricingRepriceProgress?.phase === "running" ||
+    pricingRepriceProgress?.phase === "superseded";
   const avgLatency =
     totals && totals.requestCount > 0
       ? totals.totalLatencyMs / totals.requestCount
@@ -872,14 +1186,24 @@ export function CodexApiServicePage() {
   );
 
   const reloadState = useCallback(async () => {
-    const nextState = await codexLocalAccessService.getCodexLocalAccessState();
-    if (!mountedRef.current) return nextState;
-    setState(nextState);
-    setPortInput(
-      nextState.collection?.port ? String(nextState.collection.port) : "",
-    );
-    setProxyInput(nextState.collection?.upstreamProxyUrl ?? "");
-    return nextState;
+    const requestSeq = ++stateRequestSeqRef.current;
+    try {
+      const nextState = await codexLocalAccessService.getCodexLocalAccessState();
+      if (!mountedRef.current || requestSeq !== stateRequestSeqRef.current) {
+        return null;
+      }
+      setState(nextState);
+      setPortInput(
+        nextState.collection?.port ? String(nextState.collection.port) : "",
+      );
+      setProxyInput(nextState.collection?.upstreamProxyUrl ?? "");
+      return nextState;
+    } catch (error) {
+      if (!mountedRef.current || requestSeq !== stateRequestSeqRef.current) {
+        return null;
+      }
+      throw error;
+    }
   }, []);
 
   useEffect(() => {
@@ -888,6 +1212,24 @@ export function CodexApiServicePage() {
       setError(String(err).replace(/^Error:\s*/, "")),
     );
     void fetchAccounts();
+    void fetchCurrentAccount();
+    void codexInstanceService
+      .listInstances()
+      .then((instances) => {
+        const defaultInstance = instances.find((instance) => instance.isDefault);
+        if (mountedRef.current) {
+          setCodexInstances(instances);
+          setApiServiceIsCurrent(
+            defaultInstance?.bindAccountId === CODEX_API_SERVICE_BIND_ID,
+          );
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setCodexInstances([]);
+          setApiServiceIsCurrent(false);
+        }
+      });
     void getCodexAccountGroups()
       .then(setGroups)
       .catch(() => setGroups([]));
@@ -899,11 +1241,97 @@ export function CodexApiServicePage() {
       mountedRef.current = false;
       window.removeEventListener("codex-local-access-state-updated", onUpdated);
     };
-  }, [fetchAccounts, reloadState]);
+  }, [fetchAccounts, fetchCurrentAccount, reloadState]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    void listen<ModelPricingRepriceProgress>(
+      "codex-local-access-model-pricing-reprice",
+      (event) => {
+        if (disposed) return;
+        const progress = event.payload;
+        setPricingRepriceProgress((current) => {
+          if (current && progress.jobId < current.jobId) {
+            return current;
+          }
+          return progress;
+        });
+        if (progress.phase === "completed") {
+          void reloadState();
+          setPricingModalOpen(false);
+          setPricingRepriceProgress(null);
+          setNotice(
+            t(
+              "codex.apiService.models.pricingRepriceCompleted",
+              "历史估算价值已更新",
+            ),
+          );
+          return;
+        }
+        if (progress.phase === "failed") {
+          const message =
+            progress.message ||
+            t(
+              "codex.apiService.models.pricingRepriceFailed",
+              "历史估算价值更新失败",
+            );
+          setPricingError(message);
+          setError(message);
+        }
+      },
+    )
+      .then((nextUnlisten) => {
+        if (disposed) {
+          nextUnlisten();
+          return;
+        }
+        unlisten = nextUnlisten;
+      })
+      .catch((err) => {
+        if (!disposed) {
+          setError(String(err).replace(/^Error:\s*/, ""));
+        }
+      });
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [reloadState, t]);
 
   useEffect(() => {
     persistStatsRange(statsRange);
   }, [statsRange]);
+
+  useEffect(() => {
+    const requestSeq = ++statsRequestSeqRef.current;
+    setStatsRangeError("");
+    void codexLocalAccessService
+      .queryCodexLocalAccessStats(statsTimeRange.startAt, statsTimeRange.endAt)
+      .then((window) => {
+        if (!mountedRef.current || requestSeq !== statsRequestSeqRef.current) return;
+        setFilteredStatsWindow(window);
+      })
+      .catch((err) => {
+        if (!mountedRef.current || requestSeq !== statsRequestSeqRef.current) return;
+        setStatsRangeError(String(err).replace(/^Error:\s*/, ""));
+      });
+  }, [statsTimeRange.endAt, statsTimeRange.startAt, stats?.updatedAt]);
+
+  const handleStatsPresetChange = (
+    key: Exclude<CodexStatsRangeKey, "custom">,
+    range: CodexStatsTimeRange,
+  ) => {
+    setStatsRange(key);
+    setStatsTimeRange(range);
+  };
+
+  const handleCustomStatsRangeApply = (range: CodexStatsTimeRange) => {
+    setStatsRange("custom");
+    setStatsTimeRange(range);
+  };
 
   useEffect(() => {
     persistAddressKind(addressKind);
@@ -917,6 +1345,8 @@ export function CodexApiServicePage() {
     setRequestLogPage(1);
   }, [
     statsRange,
+    statsTimeRange.startAt,
+    statsTimeRange.endAt,
     requestLogPageSize,
     requestLogKindFilter,
     requestLogStatusFilter,
@@ -924,6 +1354,7 @@ export function CodexApiServicePage() {
     requestLogModelQuery,
     requestLogAccountQuery,
     requestLogApiKeyQuery,
+    requestLogInstanceQuery,
     requestLogErrorQuery,
   ]);
 
@@ -942,10 +1373,14 @@ export function CodexApiServicePage() {
       .queryCodexLocalAccessRequestLogs({
         page: requestLogPage,
         pageSize: requestLogPageSize,
-        statsRange,
+        statsRange: statsRange === "custom" ? null : statsRange,
+        startAt: statsTimeRange.startAt,
+        endAt: statsTimeRange.endAt,
         modelQuery: requestLogModelQuery,
         accountQuery: requestLogAccountQuery,
         apiKeyQuery: requestLogApiKeyQuery,
+        instanceQuery:
+          requestLogInstanceQuery === "all" ? null : requestLogInstanceQuery,
         gatewayMode:
           requestLogGatewayModeFilter === "all"
             ? null
@@ -979,6 +1414,8 @@ export function CodexApiServicePage() {
     activeTab,
     statsLogTab,
     statsRange,
+    statsTimeRange.startAt,
+    statsTimeRange.endAt,
     requestLogPage,
     requestLogPageSize,
     requestLogKindFilter,
@@ -987,6 +1424,7 @@ export function CodexApiServicePage() {
     requestLogModelQuery,
     requestLogAccountQuery,
     requestLogApiKeyQuery,
+    requestLogInstanceQuery,
     requestLogErrorQuery,
     stats?.updatedAt,
   ]);
@@ -997,16 +1435,17 @@ export function CodexApiServicePage() {
         (collection?.apiKeys ?? []).map((apiKey) => [apiKey.id, apiKey.label]),
       ),
     );
-    setApiKeyPolicyDrafts(
+    setApiKeyPolicyDrafts((currentDrafts) =>
       Object.fromEntries(
-        (collection?.apiKeys ?? []).map((apiKey) => [
-          apiKey.id,
-          {
-            modelPrefix: apiKey.modelPrefix ?? "",
-            allowedModels: serializeModelRules(apiKey.allowedModels),
-            excludedModels: serializeModelRules(apiKey.excludedModels),
-          },
-        ]),
+        (collection?.apiKeys ?? []).map((apiKey) => {
+          const currentDraft = currentDrafts[apiKey.id];
+          return [
+            apiKey.id,
+            currentDraft && apiKeyPolicyDraftIsDirty(apiKey, currentDraft)
+              ? currentDraft
+              : apiKeyPolicyDraftFromValue(apiKey),
+          ];
+        }),
       ),
     );
   }, [collection?.apiKeys]);
@@ -1024,7 +1463,7 @@ export function CodexApiServicePage() {
     );
     setAccountModelRuleSelected(new Set());
     setAccountModelRuleBulkText("");
-    setSessionAffinityDraft(collection?.sessionAffinity ?? false);
+    setSessionAffinityDraft(collection?.sessionAffinity ?? true);
     setSessionAffinityTtlDraft(
       formatSeconds(collection?.sessionAffinityTtlMs ?? 3600000),
     );
@@ -1033,6 +1472,7 @@ export function CodexApiServicePage() {
       formatSeconds(collection?.maxRetryIntervalMs ?? 3000),
     );
     setDisableCoolingDraft(collection?.disableCooling ?? false);
+    setImmediateSseResponseDraft(collection?.immediateSseResponse ?? false);
     setTimeoutDrafts(timeoutDraftsFromValue(collection?.timeouts));
     setSelectedTimeoutPresetId(
       collection?.activeTimeoutPresetId || "long_wait",
@@ -1046,6 +1486,7 @@ export function CodexApiServicePage() {
     collection?.maxRetryCredentials,
     collection?.maxRetryIntervalMs,
     collection?.disableCooling,
+    collection?.immediateSseResponse,
     collection?.timeouts,
     collection?.activeTimeoutPresetId,
   ]);
@@ -1062,26 +1503,13 @@ export function CodexApiServicePage() {
 
   useEffect(() => {
     if (!testDialogOpen) return;
-    testChatScrollRef.current?.scrollTo({
-      top: testChatScrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    const node = testChatScrollRef.current;
+    scrollElementTo(node, { top: node?.scrollHeight ?? 0 });
   }, [testChatMessages, testDialogOpen]);
 
   useEffect(() => {
     if (!pricingModalOpen) return;
-    setPricingDrafts(
-      modelPricingRows.map((item) => ({
-        modelId: item.modelId,
-        inputUsdPerMillion: formatPriceDraftValue(item.inputUsdPerMillion),
-        cachedInputUsdPerMillion: formatPriceDraftValue(
-          item.cachedInputUsdPerMillion,
-        ),
-        outputUsdPerMillion: formatPriceDraftValue(item.outputUsdPerMillion),
-        hasPreset: item.hasPreset,
-        custom: item.custom,
-      })),
-    );
+    setPricingDrafts(modelPricingRows.map(modelPricingDraftFromRow));
     setPricingError("");
   }, [modelPricingRows, pricingModalOpen]);
 
@@ -1354,25 +1782,6 @@ export function CodexApiServicePage() {
     );
   };
 
-  const handleUpdateImageMode = async (value: string) => {
-    const mode = (
-      value === "images_only" || value === "disabled" ? value : "enabled"
-    ) as CodexLocalAccessImageGenerationMode;
-    await runAction(
-      async () => {
-        const next =
-          await codexLocalAccessService.updateCodexLocalAccessImageGenerationMode(
-            mode,
-          );
-        setState(next);
-      },
-      t(
-        "codex.localAccess.imageGenerationSaveSuccess",
-        "image_generation 设置已更新",
-      ),
-    );
-  };
-
   const handleUpdateRouting = async (value: string) => {
     await runAction(
       async () => {
@@ -1405,6 +1814,7 @@ export function CodexApiServicePage() {
   const saveMembers = async (
     accountIds: string[],
     restrictFreeAccounts: boolean,
+    backupAccountIds?: string[],
   ) => {
     const filteredAccountIds =
       accountIds.length === 0
@@ -1424,9 +1834,15 @@ export function CodexApiServicePage() {
       );
     }
 
+    const filteredAccountIdSet = new Set(filteredAccountIds);
+    const nextBackupAccountIds = (backupAccountIds ?? []).filter((id) =>
+      filteredAccountIdSet.has(id),
+    );
+
     const next = await codexLocalAccessService.saveCodexLocalAccessAccounts(
       filteredAccountIds,
       restrictFreeAccounts,
+      nextBackupAccountIds,
     );
     setState(next);
     void fetchAccounts().catch((error) => {
@@ -1440,9 +1856,10 @@ export function CodexApiServicePage() {
   const handleSaveMembers = async (
     accountIds: string[],
     restrictFreeAccounts: boolean,
+    backupAccountIds?: string[],
   ) => {
     await runAction(
-      () => saveMembers(accountIds, restrictFreeAccounts),
+      () => saveMembers(accountIds, restrictFreeAccounts, backupAccountIds),
       t("codex.localAccess.saveSuccess", "API 服务集合已更新"),
     );
   };
@@ -1450,12 +1867,13 @@ export function CodexApiServicePage() {
   const handleSaveMembersFromModal = async (
     accountIds: string[],
     restrictFreeAccounts: boolean,
+    backupAccountIds?: string[],
   ) => {
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await saveMembers(accountIds, restrictFreeAccounts);
+      await saveMembers(accountIds, restrictFreeAccounts, backupAccountIds);
       setNotice(t("codex.localAccess.saveSuccess", "API 服务集合已更新"));
     } catch (err) {
       const message = String(err).replace(/^Error:\s*/, "");
@@ -1468,9 +1886,17 @@ export function CodexApiServicePage() {
 
   const handleRemoveMember = async (accountId: string) => {
     if (!collection) return;
+    const remainingIds = collection.accountIds.filter(
+      (item) => item !== accountId,
+    );
+    const remainingSet = new Set(remainingIds);
+    const backupAccountIds = (collection.customRoutingRules ?? [])
+      .filter((rule) => rule.isBackup && remainingSet.has(rule.accountId))
+      .map((rule) => rule.accountId);
     await handleSaveMembers(
-      collection.accountIds.filter((item) => item !== accountId),
+      remainingIds,
       collection.restrictFreeAccounts,
+      backupAccountIds,
     );
   };
 
@@ -1513,6 +1939,35 @@ export function CodexApiServicePage() {
   const handleSaveApiKeyPolicy = async (apiKeyId: string) => {
     const draft = apiKeyPolicyDrafts[apiKeyId];
     if (!draft) return;
+    const apiKey = collection?.apiKeys.find((item) => item.id === apiKeyId);
+    if (!apiKey) return;
+    const accountIds = reconcileCodexApiKeyScopeAccountIds({
+      accounts: localAccessAccounts,
+      restrictFreeAccounts: collection?.restrictFreeAccounts ?? true,
+      persistedAccountIds: apiKey.accountIds ?? [],
+      draftAccountIds: draft.accountIds,
+    });
+    if (
+      apiKeyHasFixedAccountScope(apiKey, collection) &&
+      (draft.inheritAccountPool || accountIds.length === 0)
+    ) {
+      setError(
+        t(
+          "codex.apiService.keys.accountScopeFixed",
+          "此 Key 已固定绑定账号，不能继承服务池或清空账号范围",
+        ),
+      );
+      return;
+    }
+    if (!draft.inheritAccountPool && accountIds.length === 0) {
+      setError(
+        t(
+          "codex.apiService.keys.accountScopeRequired",
+          "自定义账号池至少需要选择 1 个账号",
+        ),
+      );
+      return;
+    }
     await runAction(
       async () => {
         const next = await codexLocalAccessService.updateCodexLocalAccessApiKey(
@@ -1521,12 +1976,61 @@ export function CodexApiServicePage() {
             modelPrefix: draft.modelPrefix.trim(),
             allowedModels: parseModelRuleText(draft.allowedModels),
             excludedModels: parseModelRuleText(draft.excludedModels),
+            accountIds,
+            inheritAccountPool: draft.inheritAccountPool,
           },
         );
         setState(next);
+        const savedApiKey = next.collection?.apiKeys.find(
+          (item) => item.id === apiKeyId,
+        );
+        if (savedApiKey) {
+          setApiKeyPolicyDrafts((drafts) => ({
+            ...drafts,
+            [apiKeyId]: apiKeyPolicyDraftFromValue(savedApiKey),
+          }));
+        }
       },
-      t("codex.apiService.keys.policySaved", "Key 模型策略已保存"),
+      t("codex.apiService.keys.policySaved", "Key 策略已保存"),
     );
+  };
+
+  const handleSetApiKeyAccountPriority = async (
+    apiKey: CodexLocalAccessApiKey,
+    draft: ApiKeyPolicyDraft,
+    accountId: string,
+  ) => {
+    if (
+      draft.inheritAccountPool ||
+      !draft.accountIds.includes(accountId) ||
+      !apiKey.accountIds?.includes(accountId)
+    ) {
+      return;
+    }
+    const priorityRank = (apiKey.priorityAccountIds ?? []).indexOf(accountId);
+    const pinned = priorityRank !== 0;
+    await runAction(
+      async () => {
+        const next =
+          await codexLocalAccessService.setCodexLocalAccessApiKeyAccountPriority(
+            apiKey.id,
+            accountId,
+            pinned,
+          );
+        setState(next);
+      },
+      pinned
+        ? t("codex.apiService.keys.accountPrioritySaved", "已置顶账号")
+        : t("codex.apiService.keys.accountPriorityCleared", "已取消置顶账号"),
+    );
+  };
+
+  const handleResetApiKeyPolicy = (apiKey: CodexLocalAccessApiKey) => {
+    setApiKeyPolicyDrafts((drafts) => ({
+      ...drafts,
+      [apiKey.id]: apiKeyPolicyDraftFromValue(apiKey),
+    }));
+    setError("");
   };
 
   const handleToggleApiKey = async (apiKeyId: string, enabled: boolean) => {
@@ -1686,28 +2190,14 @@ export function CodexApiServicePage() {
   };
 
   const handleOpenPricingModal = () => {
-    setPricingDrafts(
-      modelPricingRows.map((item) => ({
-        modelId: item.modelId,
-        inputUsdPerMillion: formatPriceDraftValue(item.inputUsdPerMillion),
-        cachedInputUsdPerMillion: formatPriceDraftValue(
-          item.cachedInputUsdPerMillion,
-        ),
-        outputUsdPerMillion: formatPriceDraftValue(item.outputUsdPerMillion),
-        hasPreset: item.hasPreset,
-        custom: item.custom,
-      })),
-    );
+    setPricingDrafts(modelPricingRows.map(modelPricingDraftFromRow));
     setPricingError("");
     setPricingModalOpen(true);
   };
 
   const updatePricingDraft = (
     modelId: string,
-    field: keyof Pick<
-      ModelPricingDraft,
-      "inputUsdPerMillion" | "cachedInputUsdPerMillion" | "outputUsdPerMillion"
-    >,
+    field: keyof Omit<ModelPricingDraft, "modelId" | "hasPreset" | "custom">,
     value: string,
   ) => {
     setPricingDrafts((current) =>
@@ -1726,14 +2216,35 @@ export function CodexApiServicePage() {
         item.modelId === modelId
           ? {
               ...item,
+              longContextThresholdTokens: formatIntegerDraftValue(
+                preset?.longContextThresholdTokens ?? null,
+              ),
               inputUsdPerMillion: formatPriceDraftValue(
-                preset?.inputUsdPerMillion ?? 0,
+                preset?.inputUsdPerMillion ?? null,
               ),
               cachedInputUsdPerMillion: formatPriceDraftValue(
                 preset?.cachedInputUsdPerMillion ?? null,
               ),
               outputUsdPerMillion: formatPriceDraftValue(
-                preset?.outputUsdPerMillion ?? 0,
+                preset?.outputUsdPerMillion ?? null,
+              ),
+              standardLongInputUsdPerMillion: formatPriceDraftValue(
+                preset?.standardLongInputUsdPerMillion ?? null,
+              ),
+              standardLongCachedInputUsdPerMillion: formatPriceDraftValue(
+                preset?.standardLongCachedInputUsdPerMillion ?? null,
+              ),
+              standardLongOutputUsdPerMillion: formatPriceDraftValue(
+                preset?.standardLongOutputUsdPerMillion ?? null,
+              ),
+              priorityInputUsdPerMillion: formatPriceDraftValue(
+                preset?.priorityInputUsdPerMillion ?? null,
+              ),
+              priorityCachedInputUsdPerMillion: formatPriceDraftValue(
+                preset?.priorityCachedInputUsdPerMillion ?? null,
+              ),
+              priorityOutputUsdPerMillion: formatPriceDraftValue(
+                preset?.priorityOutputUsdPerMillion ?? null,
               ),
               custom: false,
             }
@@ -1743,51 +2254,176 @@ export function CodexApiServicePage() {
   };
 
   const handleSaveModelPricings = async () => {
+    if (pricingRepriceActive) {
+      setPricingError(
+        t(
+          "codex.apiService.models.pricingRepriceSaveBlocked",
+          "历史估算价值更新中，完成后再保存",
+        ),
+      );
+      return;
+    }
     const presetMap = new Map(
       (state?.modelPricingPresets ?? []).map((item) => [
         item.modelId.toLowerCase(),
         item,
       ]),
     );
+    const sameAsPreset = (
+      draft: ModelPricingDraft,
+      preset: CodexLocalAccessModelPricing,
+    ) =>
+      sameOptionalPrice(
+        parseOptionalPositiveIntegerDraft(draft.longContextThresholdTokens),
+        preset.longContextThresholdTokens ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.inputUsdPerMillion, false),
+        preset.inputUsdPerMillion,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.outputUsdPerMillion, false),
+        preset.outputUsdPerMillion,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.cachedInputUsdPerMillion, true),
+        preset.cachedInputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.standardLongInputUsdPerMillion, true),
+        preset.standardLongInputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.standardLongOutputUsdPerMillion, true),
+        preset.standardLongOutputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.standardLongCachedInputUsdPerMillion, true),
+        preset.standardLongCachedInputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.priorityInputUsdPerMillion, true),
+        preset.priorityInputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.priorityOutputUsdPerMillion, true),
+        preset.priorityOutputUsdPerMillion ?? null,
+      ) &&
+      sameOptionalPrice(
+        parsePriceDraftValue(draft.priorityCachedInputUsdPerMillion, true),
+        preset.priorityCachedInputUsdPerMillion ?? null,
+      );
     const nextPricings: CodexLocalAccessModelPricing[] = [];
     for (const draft of pricingDrafts) {
+      const longContextThresholdTokens = parseOptionalPositiveIntegerDraft(
+        draft.longContextThresholdTokens,
+      );
       const input = parsePriceDraftValue(draft.inputUsdPerMillion, false);
       const cached = parsePriceDraftValue(draft.cachedInputUsdPerMillion, true);
       const output = parsePriceDraftValue(draft.outputUsdPerMillion, false);
+      const standardLongInput = parsePriceDraftValue(
+        draft.standardLongInputUsdPerMillion,
+        true,
+      );
+      const standardLongCached = parsePriceDraftValue(
+        draft.standardLongCachedInputUsdPerMillion,
+        true,
+      );
+      const standardLongOutput = parsePriceDraftValue(
+        draft.standardLongOutputUsdPerMillion,
+        true,
+      );
+      const priorityInput = parsePriceDraftValue(
+        draft.priorityInputUsdPerMillion,
+        true,
+      );
+      const priorityCached = parsePriceDraftValue(
+        draft.priorityCachedInputUsdPerMillion,
+        true,
+      );
+      const priorityOutput = parsePriceDraftValue(
+        draft.priorityOutputUsdPerMillion,
+        true,
+      );
+      const preset = presetMap.get(draft.modelId.toLowerCase());
+      const unsetUnknown =
+        !preset &&
+        draft.longContextThresholdTokens.trim() === "" &&
+        draft.inputUsdPerMillion.trim() === "" &&
+        draft.cachedInputUsdPerMillion.trim() === "" &&
+        draft.outputUsdPerMillion.trim() === "" &&
+        draft.standardLongInputUsdPerMillion.trim() === "" &&
+        draft.standardLongCachedInputUsdPerMillion.trim() === "" &&
+        draft.standardLongOutputUsdPerMillion.trim() === "" &&
+        draft.priorityInputUsdPerMillion.trim() === "" &&
+        draft.priorityCachedInputUsdPerMillion.trim() === "" &&
+        draft.priorityOutputUsdPerMillion.trim() === "";
+      if (unsetUnknown) {
+        continue;
+      }
+      const tokenInvalid =
+        longContextThresholdTokens === null ||
+        !Number.isFinite(longContextThresholdTokens ?? 1);
       const inputInvalid = input === null || !Number.isFinite(input);
       const cachedInvalid = cached !== null && !Number.isFinite(cached);
       const outputInvalid = output === null || !Number.isFinite(output);
-      if (inputInvalid || cachedInvalid || outputInvalid) {
+      const tierInvalid =
+        (standardLongInput !== null && !Number.isFinite(standardLongInput)) ||
+        (standardLongOutput !== null &&
+          !Number.isFinite(standardLongOutput)) ||
+        (standardLongCached !== null && !Number.isFinite(standardLongCached)) ||
+        (priorityInput !== null && !Number.isFinite(priorityInput)) ||
+        (priorityOutput !== null && !Number.isFinite(priorityOutput)) ||
+        (priorityCached !== null && !Number.isFinite(priorityCached));
+      if (
+        tokenInvalid ||
+        inputInvalid ||
+        cachedInvalid ||
+        outputInvalid ||
+        tierInvalid
+      ) {
         setPricingError(
           t(
             "codex.apiService.models.pricingInvalid",
-            "价格必须是大于或等于 0 的数字",
+            "价格必须是大于或等于 0 的数字，Token 阈值必须是正整数",
           ),
         );
         return;
       }
-      const preset = presetMap.get(draft.modelId.toLowerCase());
-      const sameAsPreset =
-        preset &&
-        sameOptionalPrice(input, preset.inputUsdPerMillion) &&
-        sameOptionalPrice(output, preset.outputUsdPerMillion) &&
-        sameOptionalPrice(cached, preset.cachedInputUsdPerMillion ?? null);
       const allZero =
         !preset &&
         input === 0 &&
         output === 0 &&
-        (cached == null || cached === 0);
-      if (sameAsPreset || allZero) {
+        (cached == null || cached === 0) &&
+        standardLongInput === 0 &&
+        standardLongOutput === 0 &&
+        (standardLongCached == null || standardLongCached === 0) &&
+        priorityInput === 0 &&
+        priorityOutput === 0 &&
+        (priorityCached == null || priorityCached === 0);
+      if ((preset && sameAsPreset(draft, preset)) || allZero) {
         continue;
       }
       nextPricings.push({
         modelId: draft.modelId,
+        longContextThresholdTokens,
         inputUsdPerMillion: input,
         outputUsdPerMillion: output,
         cachedInputUsdPerMillion: cached,
+        standardLongInputUsdPerMillion: standardLongInput,
+        standardLongOutputUsdPerMillion: standardLongOutput,
+        standardLongCachedInputUsdPerMillion: standardLongCached,
+        priorityInputUsdPerMillion: priorityInput,
+        priorityOutputUsdPerMillion: priorityOutput,
+        priorityCachedInputUsdPerMillion: priorityCached,
+        // priority_long_* is not a product tier; keep wire fields cleared.
+        priorityLongInputUsdPerMillion: null,
+        priorityLongOutputUsdPerMillion: null,
+        priorityLongCachedInputUsdPerMillion: null,
       });
     }
     setPricingError("");
+    setPricingRepriceProgress(null);
     await runAction(
       async () => {
         const next =
@@ -1795,10 +2431,30 @@ export function CodexApiServicePage() {
             nextPricings,
           );
         setState(next);
-        setPricingModalOpen(false);
       },
       t("codex.apiService.models.pricingSaved", "价格设置已保存"),
     );
+  };
+
+  const handleRepriceRequestLogs = async () => {
+    setBusy(true);
+    setPricingError("");
+    setNotice("");
+    try {
+      const next =
+        await codexLocalAccessService.repriceCodexLocalAccessRequestLogs();
+      setState(next);
+      setNotice(
+        t(
+          "codex.apiService.models.pricingRepriced",
+          "历史估值已按当前价格重算",
+        ),
+      );
+    } catch (err) {
+      setPricingError(String(err).replace(/^Error:\s*/, ""));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSaveRoutingOptions = async () => {
@@ -1852,6 +2508,7 @@ export function CodexApiServicePage() {
             maxRetryCredentials,
             maxRetryIntervalMs: maxRetryIntervalSeconds * 1000,
             disableCooling: disableCoolingDraft,
+            immediateSseResponse: immediateSseResponseDraft,
           });
         setState(next);
       },
@@ -2230,24 +2887,18 @@ export function CodexApiServicePage() {
     { value: "localhost", label: "localhost" },
     { value: "127.0.0.1", label: "127.0.0.1" },
   ];
-  const imageModeOptions = [
-    {
-      value: "enabled",
-      label: t("codex.localAccess.imageGenerationMode.enabled", "启用"),
-    },
-    {
-      value: "images_only",
-      label: t("codex.localAccess.imageGenerationMode.imagesOnly", "仅图片"),
-    },
-    {
-      value: "disabled",
-      label: t("codex.localAccess.imageGenerationMode.disabled", "禁用"),
-    },
-  ];
   const routingOptions = [
     {
       value: "auto",
       label: t("codex.localAccess.routingStrategy.auto", "自动（推荐）"),
+    },
+    {
+      value: "random",
+      label: t("codex.localAccess.routingStrategy.random", "随机分散"),
+    },
+    {
+      value: "single_account",
+      label: t("codex.localAccess.routingStrategy.singleAccount", "固定首个账号"),
     },
     {
       value: "quota_high_first",
@@ -2280,20 +2931,14 @@ export function CodexApiServicePage() {
       label: t("codex.localAccess.routingStrategy.custom", "自定义"),
     },
   ];
-  const statsRangeOptions = [
-    {
-      key: "daily" as const,
-      label: t("codex.localAccess.statsRange.daily", "日"),
-    },
-    {
-      key: "weekly" as const,
-      label: t("codex.localAccess.statsRange.weekly", "周"),
-    },
-    {
-      key: "monthly" as const,
-      label: t("codex.localAccess.statsRange.monthly", "月"),
-    },
-  ];
+  const selectedStatsRangeTitle =
+    statsRange === "daily"
+      ? t("codex.apiService.statsRange.today", "Today")
+      : statsRange === "weekly"
+        ? t("codex.apiService.statsRange.thisWeek", "This week")
+        : statsRange === "monthly"
+          ? t("codex.apiService.statsRange.thisMonth", "This month")
+          : `${statsTimeRange.startInput} - ${statsTimeRange.endInput}`;
   const requestLogKindOptions: Array<{
     value: RequestLogKindFilter;
     label: string;
@@ -2321,6 +2966,27 @@ export function CodexApiServicePage() {
     },
     { value: "failed", label: t("codex.localAccess.requestLogFailed", "失败") },
   ];
+  const requestLogInstanceOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = [
+      {
+        value: "all",
+        label: t("codex.apiService.logs.allInstances", "全部实例"),
+      },
+    ];
+    const seen = new Set<string>(["all"]);
+    for (const instance of codexInstances) {
+      const value =
+        clientInstanceIdFromUserDataDir(instance.userDataDir || "") ||
+        instance.id;
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      options.push({
+        value,
+        label: instanceDisplayName(instance, t),
+      });
+    }
+    return options;
+  }, [codexInstances, t]);
   const requestLogGatewayModeOptions: Array<{
     value: RequestLogGatewayModeFilter;
     label: string;
@@ -2463,6 +3129,7 @@ export function CodexApiServicePage() {
     requestLogKindFilter !== "all" ||
     requestLogStatusFilter !== "all" ||
     requestLogGatewayModeFilter !== "all" ||
+    requestLogInstanceQuery !== "all" ||
     requestLogModelQuery.trim() ||
     requestLogAccountQuery.trim() ||
     requestLogApiKeyQuery.trim() ||
@@ -2475,6 +3142,7 @@ export function CodexApiServicePage() {
     setRequestLogModelQuery("");
     setRequestLogAccountQuery("");
     setRequestLogApiKeyQuery("");
+    setRequestLogInstanceQuery("all");
     setRequestLogErrorQuery("");
   };
 
@@ -2487,7 +3155,6 @@ export function CodexApiServicePage() {
           </span>
           <ManualHelpIconButton className="platform-header-help" />
         </div>
-        <TopCenterPromoBanner />
         <div className="page-top-strip-right-placeholder" aria-hidden="true" />
       </div>
 
@@ -2601,7 +3268,7 @@ export function CodexApiServicePage() {
           </div>
         </section>
 
-        {(error || notice || state?.lastError) && (
+        {(error || notice || state?.lastError || pricingRepriceActive) && (
           <div className="codex-api-service-message-stack">
             {error && (
               <div className="codex-api-service-message error">
@@ -2630,8 +3297,48 @@ export function CodexApiServicePage() {
                 <span>{notice}</span>
               </div>
             )}
+            {pricingRepriceActive && (
+              <div className="codex-api-service-message codex-api-service-reprice-message">
+                <RefreshCw size={15} />
+                <div className="codex-api-service-reprice-status">
+                  <span>{pricingRepriceStatusText}</span>
+                  <div className="codex-api-service-reprice-track">
+                    <div
+                      className="codex-api-service-reprice-fill"
+                      style={{ width: `${pricingRepricePercent}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        <section className="codex-api-service-usage-toolbar">
+          <div className="codex-api-service-usage-context">
+            <Activity size={16} />
+            <div>
+              <strong>
+                {t("codex.apiService.usage.title", "用量统计")}
+              </strong>
+              <span>
+                {selectedStatsRangeTitle}
+                {stats?.updatedAt
+                  ? ` · ${t("codex.apiService.usage.lastRecorded", "最近入账")} ${formatDateTime(stats.updatedAt)}`
+                  : ""}
+              </span>
+            </div>
+          </div>
+          <CodexStatsRangePicker
+            value={statsRange}
+            range={statsTimeRange}
+            onPresetChange={handleStatsPresetChange}
+            onCustomApply={handleCustomStatsRangeApply}
+            disabled={busy}
+            error={statsRangeError}
+            compact
+          />
+        </section>
 
         <section className="codex-api-service-summary-grid">
           {summaryCards.map((item) => (
@@ -2927,22 +3634,57 @@ export function CodexApiServicePage() {
           <section className="codex-api-service-panel">
             <div className="codex-api-service-panel-head">
               <h2>{t("codex.localAccess.apiKeysTitle", "客户端 Key")}</h2>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => void handleCreateApiKey()}
-                disabled={busy || !collection}
-              >
-                <Plus size={14} />
-                {t("codex.localAccess.apiKeyAdd", "新增 Key")}
-              </button>
+              <div className="codex-api-service-head-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => void handleCreateApiKey()}
+                  disabled={busy || !collection}
+                >
+                  <Plus size={14} />
+                  {t("codex.localAccess.apiKeyAdd", "新增 Key")}
+                </button>
+              </div>
             </div>
             <div className="codex-api-service-table">
               {(collection?.apiKeys ?? []).map((apiKey) => {
                 const labelDraft = apiKeyDrafts[apiKey.id] ?? apiKey.label;
-                const keyStats = selectedStatsWindow?.apiKeys.find(
-                  (item) => item.apiKeyId === apiKey.id,
+                const policyDraft =
+                  apiKeyPolicyDrafts[apiKey.id] ??
+                  apiKeyPolicyDraftFromValue(apiKey);
+                const persistedInheritAccountPool =
+                  apiKeyInheritsAccountPool(apiKey);
+                const persistedAccountIds = apiKey.accountIds ?? [];
+                const accountScopeLocked = apiKeyHasFixedAccountScope(
+                  apiKey,
+                  collection,
                 );
+                const keySelectableAccounts = selectCodexApiKeyScopeAccounts({
+                  accounts: localAccessAccounts,
+                  restrictFreeAccounts: collection?.restrictFreeAccounts ?? true,
+                  scopedAccountIds: apiKey.accountIds ?? [],
+                });
+                const keySelectableAccountIds = keySelectableAccounts.map(
+                  (account) => account.id,
+                );
+                const keySelectableAccountIdSet = new Set(
+                  keySelectableAccounts.map((account) => account.id),
+                );
+                const policyDirty = apiKeyPolicyDraftIsDirty(
+                  apiKey,
+                  policyDraft,
+                );
+                const customScopeInvalid =
+                  !policyDraft.inheritAccountPool &&
+                  policyDraft.accountIds.length === 0;
+                const keyStats = apiKeyStatsById.get(apiKey.id);
+                const keyUsage = keyStats?.usage;
+                const keySuccessRate =
+                  keyUsage && keyUsage.requestCount > 0
+                    ? Math.round(
+                        (keyUsage.successCount / keyUsage.requestCount) * 100,
+                      )
+                    : 0;
                 const policyExpanded = expandedApiKeyPolicyIds.has(apiKey.id);
                 return (
                   <div key={apiKey.id} className="codex-api-service-key-card">
@@ -2976,9 +3718,11 @@ export function CodexApiServicePage() {
                           ? t("common.enabled", "已启用")
                           : t("common.disabled", "已停用")}
                       </span>
-                      <span>{formatDateTime(apiKey.lastUsedAt)}</span>
-                      <span>
-                        {formatCompactNumber(keyStats?.usage.requestCount ?? 0)}
+                      <span className="codex-api-service-key-last-used">
+                        <small>
+                          {t("codex.apiService.keys.lastUsed", "最近使用")}
+                        </small>
+                        <strong>{formatDateTime(apiKey.lastUsedAt)}</strong>
                       </span>
                       <div className="codex-api-service-row-actions">
                         <button
@@ -2987,6 +3731,7 @@ export function CodexApiServicePage() {
                           onClick={() =>
                             void handleCopy(`apiKey:${apiKey.id}`, apiKey.key)
                           }
+                          title={t("common.copy", "复制")}
                         >
                           {copiedField === `apiKey:${apiKey.id}` ? (
                             <Check size={14} />
@@ -3001,6 +3746,11 @@ export function CodexApiServicePage() {
                             void handleToggleApiKey(apiKey.id, !apiKey.enabled)
                           }
                           disabled={busy}
+                          title={
+                            apiKey.enabled
+                              ? t("common.disable", "停用")
+                              : t("common.enable", "启用")
+                          }
                         >
                           <Power size={14} />
                         </button>
@@ -3009,6 +3759,10 @@ export function CodexApiServicePage() {
                           className="folder-icon-btn"
                           onClick={() => void handleRotateApiKey(apiKey.id)}
                           disabled={busy}
+                          title={t(
+                            "codex.localAccess.apiKeyRotate",
+                            "轮换 Key",
+                          )}
                         >
                           <RefreshCw size={14} />
                         </button>
@@ -3019,9 +3773,85 @@ export function CodexApiServicePage() {
                           disabled={
                             busy || (collection?.apiKeys.length ?? 0) <= 1
                           }
+                          title={t("common.delete", "删除")}
                         >
                           <Trash2 size={14} />
                         </button>
+                      </div>
+                    </div>
+                    <div className="api-key-details-row">
+                      <div
+                        className={`api-key-routing-summary ${
+                          !persistedInheritAccountPool &&
+                          persistedAccountIds.length === 0
+                            ? "warning"
+                            : ""
+                        }`}
+                      >
+                        <Route size={16} />
+                        <div>
+                          <span>
+                            {t("codex.apiService.keys.routingAccounts", "分流账号")}
+                          </span>
+                          <strong>
+                            {persistedInheritAccountPool
+                              ? t(
+                                  "codex.apiService.keys.accountScopeInheritedCount",
+                                  "继承服务池 · {{count}} 个账号",
+                                  { count: memberIds.length },
+                                )
+                              : persistedAccountIds.length === 0
+                                ? t(
+                                    "codex.apiService.keys.accountScopeUnavailable",
+                                    "无可用账号",
+                                  )
+                                : t(
+                                    "codex.apiService.keys.accountScopeCount",
+                                    "自定义 · {{selected}}/{{total}} 个账号",
+                                    {
+                                      selected: persistedAccountIds.length,
+                                      total: keySelectableAccountIds.length,
+                                    },
+                                  )}
+                          </strong>
+                        </div>
+                      </div>
+                      <div
+                        key={`${statsRange}:${statsTimeRange.startAt}:${statsTimeRange.endAt}`}
+                        className="api-key-usage-grid"
+                        aria-live="polite"
+                        aria-label={`${selectedStatsRangeTitle} Key 用量`}
+                      >
+                        <div className="api-key-usage-grid-head">
+                          <Activity size={14} />
+                          <span>{selectedStatsRangeTitle}</span>
+                        </div>
+                        <div>
+                          <span>
+                            {t("codex.localAccess.stats.requests", "请求")}
+                          </span>
+                          <strong>
+                            {formatCompactNumber(keyUsage?.requestCount ?? 0)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Token</span>
+                          <strong>{formatAccountTokenUsage(keyUsage)}</strong>
+                        </div>
+                        <div>
+                          <span>
+                            {t("codex.localAccess.stats.successRateLabel", "成功率")}
+                          </span>
+                          <strong>{keySuccessRate}%</strong>
+                        </div>
+                        <div>
+                          <span>
+                            {t("codex.localAccess.stats.estimatedCost", "估算费用")}
+                          </span>
+                          <strong>
+                            {formatUsdCost(keyUsage?.estimatedCostUsd ?? 0)}
+                          </strong>
+                        </div>
                       </div>
                     </div>
                     <button
@@ -3035,11 +3865,19 @@ export function CodexApiServicePage() {
                         <span>
                           {t(
                             "codex.apiService.keys.advancedPolicyTitle",
-                            "高级功能：模型策略",
+                            "账号池与模型策略",
                           )}
                         </span>
                       </span>
                       <span className="codex-api-service-key-advanced-state">
+                        {policyDirty && (
+                          <span className="api-key-policy-dirty">
+                            {t(
+                              "codex.apiService.keys.unsaved",
+                              "未保存",
+                            )}
+                          </span>
+                        )}
                         {policyExpanded
                           ? t("common.collapse", "收起")
                           : t("common.expand", "展开")}
@@ -3048,6 +3886,249 @@ export function CodexApiServicePage() {
                     </button>
                     {policyExpanded && (
                       <div className="codex-api-service-key-policy">
+                        <div className="api-key-account-scope">
+                          <div className="api-key-account-scope-header">
+                            <span>
+                              {t(
+                                "codex.apiService.keys.accountScope",
+                                "账号轮转范围",
+                              )}
+                            </span>
+                            <span className="api-key-account-scope-hint">
+                              {accountScopeLocked
+                                ? t(
+                                    "codex.apiService.keys.accountScopeFixed",
+                                    "此 Key 已固定绑定账号，不能继承服务池或清空账号范围",
+                                  )
+                                : policyDraft.inheritAccountPool
+                                  ? t(
+                                      "codex.apiService.keys.accountScopeInherit",
+                                      "随服务账号池自动更新",
+                                    )
+                                  : customScopeInvalid
+                                    ? t(
+                                        "codex.apiService.keys.accountScopeRequired",
+                                        "自定义账号池至少需要选择 1 个账号",
+                                      )
+                                    : t(
+                                        "codex.apiService.keys.accountScopeSelected",
+                                        "已选择 {{count}} 个账号",
+                                        { count: policyDraft.accountIds.length },
+                                      )}
+                            </span>
+                          </div>
+                          <div
+                            className="api-key-account-scope-mode"
+                            role="group"
+                            aria-label={t(
+                              "codex.apiService.keys.accountScope",
+                              "账号轮转范围",
+                            )}
+                          >
+                            <button
+                              type="button"
+                              className={
+                                policyDraft.inheritAccountPool ? "active" : ""
+                              }
+                              aria-pressed={policyDraft.inheritAccountPool}
+                              onClick={() =>
+                                setApiKeyPolicyDrafts((drafts) => ({
+                                  ...drafts,
+                                  [apiKey.id]: {
+                                    ...(drafts[apiKey.id] ?? policyDraft),
+                                    inheritAccountPool: true,
+                                  },
+                                }))
+                              }
+                              disabled={busy || accountScopeLocked}
+                              title={
+                                accountScopeLocked
+                                  ? t(
+                                      "codex.apiService.keys.accountScopeFixed",
+                                      "此 Key 已固定绑定账号，不能继承服务池或清空账号范围",
+                                    )
+                                  : undefined
+                              }
+                            >
+                              {t(
+                                "codex.apiService.keys.accountScopeModeInherit",
+                                "继承服务池",
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className={
+                                policyDraft.inheritAccountPool ? "" : "active"
+                              }
+                              aria-pressed={!policyDraft.inheritAccountPool}
+                              onClick={() =>
+                                setApiKeyPolicyDrafts((drafts) => {
+                                  const currentDraft =
+                                    drafts[apiKey.id] ?? policyDraft;
+                                  const reusableAccountIds =
+                                    currentDraft.accountIds.filter((accountId) =>
+                                      keySelectableAccountIdSet.has(accountId),
+                                    );
+                                  return {
+                                    ...drafts,
+                                    [apiKey.id]: {
+                                      ...currentDraft,
+                                      inheritAccountPool: false,
+                                      accountIds:
+                                        reusableAccountIds.length > 0
+                                          ? reusableAccountIds
+                                          : memberAccountIds,
+                                    },
+                                  };
+                                })
+                              }
+                              disabled={
+                                busy ||
+                                accountScopeLocked ||
+                                keySelectableAccounts.length === 0
+                              }
+                            >
+                              {t(
+                                "codex.apiService.keys.accountScopeModeCustom",
+                                "自定义账号池",
+                              )}
+                            </button>
+                          </div>
+                          {keySelectableAccounts.length === 0 ? (
+                            <div className="codex-api-service-empty">
+                              {t(
+                                "codex.localAccess.emptyMembers",
+                                "当前集合暂无账号",
+                              )}
+                            </div>
+                          ) : (
+                            <div className="api-key-account-scope-grid">
+                              {keySelectableAccounts.map((account) => {
+                                const presentation =
+                                  buildCodexAccountPresentation(account, t);
+                                const accountSelected =
+                                  isCodexApiKeyScopeAccountActive({
+                                    accountId: account.id,
+                                    inheritAccountPool:
+                                      policyDraft.inheritAccountPool,
+                                    accountIds: policyDraft.accountIds,
+                                    inheritedAccountIds: memberAccountIds,
+                                  });
+                                const canPinAccount =
+                                  !policyDraft.inheritAccountPool &&
+                                  !accountScopeLocked &&
+                                  !policyDirty &&
+                                  apiKey.accountIds?.includes(account.id);
+                                const priorityRank = (
+                                  apiKey.priorityAccountIds ?? []
+                                ).indexOf(account.id);
+                                const isPrioritizedAccount = priorityRank >= 0;
+                                const isTopPriorityAccount = priorityRank === 0;
+                                return (
+                                  <div
+                                    key={account.id}
+                                    className={`api-key-account-scope-item${
+                                      isPrioritizedAccount ? " is-preferred" : ""
+                                    }`}
+                                  >
+                                    <label className="api-key-account-scope-selection">
+                                      <input
+                                        type="checkbox"
+                                        checked={accountSelected}
+                                        onChange={() =>
+                                          setApiKeyPolicyDrafts((drafts) => {
+                                            const currentDraft =
+                                              drafts[apiKey.id] ?? policyDraft;
+                                            const accountIds = toggleStringSelection(
+                                              currentDraft.accountIds,
+                                              account.id,
+                                            );
+                                            return {
+                                              ...drafts,
+                                              [apiKey.id]: {
+                                                ...currentDraft,
+                                                accountIds,
+                                              },
+                                            };
+                                          })
+                                        }
+                                        disabled={
+                                          busy ||
+                                          policyDraft.inheritAccountPool ||
+                                          accountScopeLocked
+                                        }
+                                      />
+                                      <span>
+                                        <strong title={presentation.displayName}>
+                                          {maskAccountText(
+                                            presentation.displayName,
+                                          )}
+                                        </strong>
+                                        <small>{presentation.planLabel}</small>
+                                      </span>
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="api-key-account-priority-btn"
+                                      data-priority-rank={
+                                        isPrioritizedAccount
+                                          ? priorityRank + 1
+                                          : undefined
+                                      }
+                                      aria-label={
+                                        isTopPriorityAccount
+                                          ? t(
+                                              "codex.apiService.keys.accountPriorityClear",
+                                              "取消置顶账号",
+                                            )
+                                          : isPrioritizedAccount
+                                            ? t(
+                                                "codex.apiService.keys.accountPriorityPromote",
+                                                "提升为最高优先级",
+                                              )
+                                          : t(
+                                              "codex.apiService.keys.accountPrioritySet",
+                                              "置顶账号优先调用",
+                                            )
+                                      }
+                                      aria-pressed={isPrioritizedAccount}
+                                      title={
+                                        isTopPriorityAccount
+                                          ? t(
+                                              "codex.apiService.keys.accountPriorityClear",
+                                              "取消置顶账号",
+                                            )
+                                          : isPrioritizedAccount
+                                            ? t(
+                                                "codex.apiService.keys.accountPriorityPromote",
+                                                "提升为最高优先级",
+                                              )
+                                          : t(
+                                              "codex.apiService.keys.accountPrioritySet",
+                                              "置顶账号优先调用",
+                                            )
+                                      }
+                                      onClick={() =>
+                                        void handleSetApiKeyAccountPriority(
+                                          apiKey,
+                                          policyDraft,
+                                          account.id,
+                                        )
+                                      }
+                                      disabled={busy || !canPinAccount}
+                                    >
+                                      {isTopPriorityAccount ? (
+                                        <PinOff size={14} />
+                                      ) : (
+                                        <Pin size={14} />
+                                      )}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                         <div className="codex-api-service-policy-grid">
                           <label>
                             <span>
@@ -3057,18 +4138,12 @@ export function CodexApiServicePage() {
                               )}
                             </span>
                             <input
-                              value={
-                                apiKeyPolicyDrafts[apiKey.id]?.modelPrefix ?? ""
-                              }
+                              value={policyDraft.modelPrefix}
                               onChange={(event) =>
                                 setApiKeyPolicyDrafts((drafts) => ({
                                   ...drafts,
                                   [apiKey.id]: {
-                                    ...(drafts[apiKey.id] ?? {
-                                      modelPrefix: "",
-                                      allowedModels: "",
-                                      excludedModels: "",
-                                    }),
+                                    ...(drafts[apiKey.id] ?? policyDraft),
                                     modelPrefix: event.target.value,
                                   },
                                 }))
@@ -3088,19 +4163,12 @@ export function CodexApiServicePage() {
                               )}
                             </span>
                             <textarea
-                              value={
-                                apiKeyPolicyDrafts[apiKey.id]?.allowedModels ??
-                                ""
-                              }
+                              value={policyDraft.allowedModels}
                               onChange={(event) =>
                                 setApiKeyPolicyDrafts((drafts) => ({
                                   ...drafts,
                                   [apiKey.id]: {
-                                    ...(drafts[apiKey.id] ?? {
-                                      modelPrefix: "",
-                                      allowedModels: "",
-                                      excludedModels: "",
-                                    }),
+                                    ...(drafts[apiKey.id] ?? policyDraft),
                                     allowedModels: event.target.value,
                                   },
                                 }))
@@ -3120,19 +4188,12 @@ export function CodexApiServicePage() {
                               )}
                             </span>
                             <textarea
-                              value={
-                                apiKeyPolicyDrafts[apiKey.id]?.excludedModels ??
-                                ""
-                              }
+                              value={policyDraft.excludedModels}
                               onChange={(event) =>
                                 setApiKeyPolicyDrafts((drafts) => ({
                                   ...drafts,
                                   [apiKey.id]: {
-                                    ...(drafts[apiKey.id] ?? {
-                                      modelPrefix: "",
-                                      allowedModels: "",
-                                      excludedModels: "",
-                                    }),
+                                    ...(drafts[apiKey.id] ?? policyDraft),
                                     excludedModels: event.target.value,
                                   },
                                 }))
@@ -3147,11 +4208,25 @@ export function CodexApiServicePage() {
                           <div className="codex-api-service-policy-actions">
                             <button
                               type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => handleResetApiKeyPolicy(apiKey)}
+                              disabled={busy || !policyDirty}
+                            >
+                              <Undo2 size={14} />
+                              {t(
+                                "codex.apiService.keys.resetPolicy",
+                                "撤销修改",
+                              )}
+                            </button>
+                            <button
+                              type="button"
                               className="btn btn-secondary btn-sm"
                               onClick={() =>
                                 void handleSaveApiKeyPolicy(apiKey.id)
                               }
-                              disabled={busy}
+                              disabled={
+                                busy || !policyDirty || customScopeInvalid
+                              }
                             >
                               <Check size={14} />
                               {t(
@@ -3402,6 +4477,22 @@ export function CodexApiServicePage() {
                     disabled={busy || !collection}
                   />
                 </label>
+                <label>
+                  <span>
+                    {t(
+                      "codex.apiService.routing.immediateSseResponse",
+                      "SSE 立即返回 200",
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={immediateSseResponseDraft}
+                    onChange={(event) =>
+                      setImmediateSseResponseDraft(event.target.checked)
+                    }
+                    disabled={busy || !collection || gatewayMode !== "sidecar"}
+                  />
+                </label>
               </div>
             </section>
           </div>
@@ -3460,24 +4551,6 @@ export function CodexApiServicePage() {
                   </h2>
                 </div>
                 <div className="codex-api-service-config-list">
-                  <label>
-                    <span>
-                      {t(
-                        "codex.localAccess.imageGenerationLabel",
-                        "image_generation",
-                      )}
-                    </span>
-                    <SingleSelectDropdown
-                      value={imageGenerationMode}
-                      options={imageModeOptions}
-                      onChange={(value) => void handleUpdateImageMode(value)}
-                      disabled={busy || !collection}
-                      ariaLabel={t(
-                        "codex.localAccess.imageGenerationLabel",
-                        "image_generation",
-                      )}
-                    />
-                  </label>
                   <label>
                     <span>
                       {t("codex.localAccess.accessScopeLabel", "访问范围")}
@@ -3575,18 +4648,6 @@ export function CodexApiServicePage() {
                 ))}
               </div>
               <div className="codex-api-service-head-actions">
-                <div className="codex-api-service-range-tabs">
-                  {statsRangeOptions.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={statsRange === option.key ? "active" : ""}
-                      onClick={() => setStatsRange(option.key)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
                 <button
                   type="button"
                   className="btn btn-danger btn-sm"
@@ -3796,6 +4857,24 @@ export function CodexApiServicePage() {
                     />
                   </label>
                   <label>
+                    <span>
+                      {t("codex.apiService.logs.instanceFilter", "实例")}
+                    </span>
+                    <SingleSelectDropdown
+                      value={requestLogInstanceQuery}
+                      options={requestLogInstanceOptions}
+                      onChange={setRequestLogInstanceQuery}
+                      ariaLabel={t(
+                        "codex.apiService.logs.instanceFilter",
+                        "实例",
+                      )}
+                      placeholder={t(
+                        "codex.apiService.logs.allInstances",
+                        "全部实例",
+                      )}
+                    />
+                  </label>
+                  <label>
                     <span>{t("codex.apiService.logs.kindFilter", "类型")}</span>
                     <SingleSelectDropdown
                       value={requestLogKindFilter}
@@ -3879,9 +4958,17 @@ export function CodexApiServicePage() {
                     </div>
                   )}
                   {requestLogEvents.map((event, index) => {
-                    const errorDetail = truncateRequestLogErrorDetail(
-                      cleanRequestLogErrorDetail(event.errorMessage),
+                    const fullErrorDetail = cleanRequestLogErrorDetail(
+                      event.errorMessage,
                     );
+                    const errorDetail =
+                      truncateRequestLogErrorDetail(fullErrorDetail);
+                    const accountDisplayName =
+                      accountDisplayNames.get((event.accountId || "").trim()) ||
+                      accountDisplayNames.get((event.email || "").trim()) ||
+                      event.email ||
+                      event.accountId ||
+                      "-";
                     return (
                       <div
                         key={`${event.timestamp}-${event.requestId || event.apiKeyId}-${index}`}
@@ -3914,8 +5001,25 @@ export function CodexApiServicePage() {
                           <span>
                             {event.apiKeyLabel || event.apiKeyId || "-"}
                           </span>
+                          <span
+                            title={
+                              event.clientInstanceId
+                                ? `${resolveClientInstanceLabel(
+                                    event.clientInstanceId,
+                                    codexInstances,
+                                    t,
+                                  )} (${event.clientInstanceId})`
+                                : undefined
+                            }
+                          >
+                            {resolveClientInstanceLabel(
+                              event.clientInstanceId,
+                              codexInstances,
+                              t,
+                            )}
+                          </span>
                           <span>
-                            {maskAccountText(event.email || event.accountId)}
+                            {maskAccountText(accountDisplayName)}
                           </span>
                           <span>{formatLatencyMs(event.latencyMs)}</span>
                           <span>
@@ -3944,7 +5048,7 @@ export function CodexApiServicePage() {
                           {errorDetail ? (
                             <span
                               className="codex-api-service-log-error-detail"
-                              title={errorDetail}
+                              title={fullErrorDetail}
                             >
                               {errorDetail}
                             </span>
@@ -4525,6 +5629,15 @@ export function CodexApiServicePage() {
               <button
                 type="button"
                 className="btn btn-secondary"
+                onClick={() => void handleRepriceRequestLogs()}
+                disabled={busy}
+              >
+                <RefreshCw size={15} />
+                {t("codex.apiService.models.pricingReprice", "重算历史估值")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
                 onClick={handleResetTimeoutDrafts}
               >
                 {t("codex.apiService.timeouts.resetDefaults", "恢复默认")}
@@ -4753,94 +5866,340 @@ export function CodexApiServicePage() {
                   <span>{pricingError}</span>
                 </div>
               )}
+              {pricingRepriceProgress && (
+                <div
+                  className={`codex-api-service-pricing-reprice is-${pricingRepriceProgress.phase}`}
+                >
+                  <div className="codex-api-service-pricing-reprice-head">
+                    <span>{pricingRepriceStatusText}</span>
+                    <strong>{pricingRepricePercent}%</strong>
+                  </div>
+                  <div className="codex-api-service-reprice-track">
+                    <div
+                      className="codex-api-service-reprice-fill"
+                      style={{ width: `${pricingRepricePercent}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="codex-api-service-pricing-table">
                 <div className="codex-api-service-pricing-head">
                   <span>
                     {t("codex.apiService.models.pricingModel", "模型")}
                   </span>
                   <span>
-                    {t("codex.apiService.models.pricingInput", "输入")}
+                    {t(
+                      "codex.apiService.models.pricingLongThreshold",
+                      "长上下文阶梯阈值（tokens）",
+                    )}
                   </span>
-                  <span>
-                    {t("codex.apiService.models.pricingCache", "缓存输入")}
-                  </span>
-                  <span>
-                    {t("codex.apiService.models.pricingOutput", "输出")}
-                  </span>
-                  <span>
-                    {t("codex.apiService.models.pricingSource", "来源")}
-                  </span>
-                  <span>
-                    {t("codex.apiService.models.pricingActions", "操作")}
-                  </span>
-                </div>
-                {pricingDrafts.map((draft) => (
-                  <div
-                    key={draft.modelId}
-                    className="codex-api-service-pricing-row"
-                  >
-                    <strong>{draft.modelId}</strong>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.000001"
-                      value={draft.inputUsdPerMillion}
-                      onChange={(event) =>
-                        updatePricingDraft(
-                          draft.modelId,
-                          "inputUsdPerMillion",
-                          event.target.value,
-                        )
-                      }
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.000001"
-                      value={draft.cachedInputUsdPerMillion}
-                      placeholder={t(
-                        "codex.apiService.models.pricingCachePlaceholder",
-                        "同输入",
-                      )}
-                      onChange={(event) =>
-                        updatePricingDraft(
-                          draft.modelId,
-                          "cachedInputUsdPerMillion",
-                          event.target.value,
-                        )
-                      }
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.000001"
-                      value={draft.outputUsdPerMillion}
-                      onChange={(event) =>
-                        updatePricingDraft(
-                          draft.modelId,
-                          "outputUsdPerMillion",
-                          event.target.value,
-                        )
-                      }
-                    />
-                    <span
-                      className={`codex-api-service-pill ${draft.custom ? "success" : "muted"}`}
-                    >
-                      {draft.custom
-                        ? t("codex.apiService.models.pricingCustom", "自定义")
-                        : draft.hasPreset
-                          ? t("codex.apiService.models.pricingPreset", "预设")
-                          : t("codex.apiService.models.pricingUnset", "未设置")}
+                  <span className="codex-api-service-pricing-head-tier">
+                    {t(
+                      "codex.apiService.models.pricingStandard",
+                      "标准",
+                    )}
+                    <span className="codex-api-service-pricing-head-fields">
+                      <span>{t("codex.apiService.models.pricingInput", "输入")}</span>
+                      <span>
+                        {t("codex.apiService.models.pricingCache", "缓存输入")}
+                      </span>
+                      <span>{t("codex.apiService.models.pricingOutput", "输出")}</span>
                     </span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => resetPricingDraft(draft.modelId)}
-                    >
-                      {t("codex.apiService.models.pricingReset", "重置")}
-                    </button>
+                  </span>
+                  <span className="codex-api-service-pricing-head-tier">
+                    {t(
+                      "codex.apiService.models.pricingStandardLong",
+                      "标准（长上下文）",
+                    )}
+                    <span className="codex-api-service-pricing-head-fields">
+                      <span>{t("codex.apiService.models.pricingInput", "输入")}</span>
+                      <span>
+                        {t("codex.apiService.models.pricingCache", "缓存输入")}
+                      </span>
+                      <span>{t("codex.apiService.models.pricingOutput", "输出")}</span>
+                    </span>
+                  </span>
+                  <span className="codex-api-service-pricing-head-tier">
+                    {t(
+                      "codex.apiService.models.pricingPriority",
+                      "快速",
+                    )}
+                    <span className="codex-api-service-pricing-head-fields">
+                      <span>{t("codex.apiService.models.pricingInput", "输入")}</span>
+                      <span>
+                        {t("codex.apiService.models.pricingCache", "缓存输入")}
+                      </span>
+                      <span>{t("codex.apiService.models.pricingOutput", "输出")}</span>
+                    </span>
+                  </span>
+                  <div className="codex-api-service-pricing-cell">
+                    <span>
+                      {t("codex.apiService.models.pricingSource", "来源")}
+                    </span>
                   </div>
-                ))}
+                  <div className="codex-api-service-pricing-cell">
+                    <span>
+                      {t("codex.apiService.models.pricingActions", "操作")}
+                    </span>
+                  </div>
+                </div>
+                <div className="codex-api-service-pricing-rows">
+                  {pricingDrafts.map((draft) => (
+                    <div
+                      key={draft.modelId}
+                      className="codex-api-service-pricing-row"
+                    >
+                      <strong>{draft.modelId}</strong>
+                      <div className="codex-api-service-pricing-inputs compact">
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={draft.longContextThresholdTokens}
+                          placeholder={t(
+                            "codex.apiService.models.pricingLongThreshold",
+                            "长上下文阶梯阈值（tokens）",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingLongThreshold",
+                            "长上下文阶梯阈值（tokens）",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "longContextThresholdTokens",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="codex-api-service-pricing-inputs">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.inputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingInput",
+                            "输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "inputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.cachedInputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingCache",
+                            "缓存输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "cachedInputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.outputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingOutput",
+                            "输出",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "outputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="codex-api-service-pricing-inputs">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.standardLongInputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingStandardLongInput",
+                            "标准（长上下文）输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "standardLongInputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.standardLongCachedInputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingStandardLongCache",
+                            "标准（长上下文）缓存输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "standardLongCachedInputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.standardLongOutputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingStandardLongOutput",
+                            "标准（长上下文）输出",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "standardLongOutputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="codex-api-service-pricing-inputs">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.priorityInputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingPriorityInput",
+                            "快速 输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "priorityInputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.priorityCachedInputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingPriorityCache",
+                            "快速 缓存输入",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "priorityCachedInputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.000001"
+                          value={draft.priorityOutputUsdPerMillion}
+                          placeholder={t(
+                            "codex.apiService.models.pricingOfficialMissing",
+                            "-",
+                          )}
+                          aria-label={t(
+                            "codex.apiService.models.pricingPriorityOutput",
+                            "快速 输出",
+                          )}
+                          onChange={(event) =>
+                            updatePricingDraft(
+                              draft.modelId,
+                              "priorityOutputUsdPerMillion",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="codex-api-service-pricing-cell">
+                        <span
+                          className={`codex-api-service-pill ${draft.custom ? "success" : "muted"}`}
+                        >
+                          {draft.custom
+                            ? t(
+                                "codex.apiService.models.pricingCustom",
+                                "自定义",
+                              )
+                            : draft.hasPreset
+                              ? t(
+                                  "codex.apiService.models.pricingPreset",
+                                  "预设",
+                                )
+                              : t(
+                                  "codex.apiService.models.pricingUnset",
+                                  "未设置",
+                                )}
+                        </span>
+                      </div>
+                      <div className="codex-api-service-pricing-cell">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => resetPricingDraft(draft.modelId)}
+                        >
+                          {t("codex.apiService.models.pricingReset", "重置")}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="modal-footer">
@@ -4855,7 +6214,7 @@ export function CodexApiServicePage() {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => void handleSaveModelPricings()}
-                disabled={busy}
+                disabled={busy || pricingRepriceActive}
               >
                 <Check size={15} />
                 {t("common.save", "保存")}
@@ -5064,12 +6423,22 @@ export function CodexApiServicePage() {
           setAddressKind(normalizeAddressKind(value))
         }
         accounts={accounts}
+        accountsLoaded={accountsLoaded}
         accountGroups={groups}
+        memberView={memberView}
         initialSelectedIds={memberIds}
         maskAccountText={maskAccountText}
         onClose={() => setMemberModalOpen(false)}
-        onSaveAccounts={({ accountIds, restrictFreeAccounts }) =>
-          handleSaveMembersFromModal(accountIds, restrictFreeAccounts)
+        onSaveAccounts={({
+          accountIds,
+          restrictFreeAccounts,
+          backupAccountIds,
+        }) =>
+          handleSaveMembersFromModal(
+            accountIds,
+            restrictFreeAccounts,
+            backupAccountIds,
+          )
         }
         onClearStats={() =>
           codexLocalAccessService.clearCodexLocalAccessStats().then(setState)

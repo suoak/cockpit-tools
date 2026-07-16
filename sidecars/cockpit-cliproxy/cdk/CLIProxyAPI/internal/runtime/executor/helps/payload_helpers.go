@@ -14,6 +14,51 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+const DisableImageGenerationHeader = "X-Agtools-Disable-Image-Generation"
+
+func EffectiveDisableImageGenerationMode(cfg *config.Config, headers http.Header) config.DisableImageGenerationMode {
+	mode := config.DisableImageGenerationOff
+	if cfg != nil {
+		mode = cfg.DisableImageGeneration
+	}
+	if mode == config.DisableImageGenerationAll {
+		return mode
+	}
+	headerMode := disableImageGenerationModeFromHeader(headers)
+	if headerMode == config.DisableImageGenerationAll {
+		return headerMode
+	}
+	if mode == config.DisableImageGenerationChat || headerMode == config.DisableImageGenerationChat {
+		return config.DisableImageGenerationChat
+	}
+	return mode
+}
+
+func ShouldInjectImageGenerationTool(cfg *config.Config, requestPath string, headers http.Header) bool {
+	mode := EffectiveDisableImageGenerationMode(cfg, headers)
+	return mode == config.DisableImageGenerationOff ||
+		(mode == config.DisableImageGenerationChat && isImagesEndpointRequestPath(requestPath))
+}
+
+func disableImageGenerationModeFromHeader(headers http.Header) config.DisableImageGenerationMode {
+	if headers == nil {
+		return config.DisableImageGenerationOff
+	}
+	switch strings.TrimSpace(strings.ToLower(headers.Get(DisableImageGenerationHeader))) {
+	case "true", "1", "on", "yes", "all", "disabled":
+		return config.DisableImageGenerationAll
+	case "chat", "images_only", "images-only":
+		return config.DisableImageGenerationChat
+	default:
+		return config.DisableImageGenerationOff
+	}
+}
+
+func shouldFilterImageGenerationPayload(mode config.DisableImageGenerationMode, requestPath string) bool {
+	return mode != config.DisableImageGenerationOff &&
+		(mode != config.DisableImageGenerationChat || !isImagesEndpointRequestPath(requestPath))
+}
+
 // ApplyPayloadConfigWithRoot behaves like applyPayloadConfig but treats all parameter
 // paths as relative to the provided root path (for example, "request" for Gemini CLI)
 // and restricts matches to the given protocol when supplied. Defaults are checked
@@ -26,18 +71,28 @@ func ApplyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 
 // ApplyPayloadConfigWithRequest applies payload config using source protocol and request header gates.
 func ApplyPayloadConfigWithRequest(cfg *config.Config, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header) []byte {
-	if cfg == nil || len(payload) == 0 {
+	if len(payload) == 0 {
 		return payload
 	}
 	out := payload
 
-	// Apply disable-image-generation filtering before payload rules so config payload
-	// overrides can explicitly re-enable image_generation when desired.
-	if cfg.DisableImageGeneration != config.DisableImageGenerationOff {
-		if cfg.DisableImageGeneration != config.DisableImageGenerationChat || !isImagesEndpointRequestPath(requestPath) {
-			out = removeToolTypeFromPayloadWithRoot(out, root, "image_generation")
-			out = removeToolChoiceFromPayloadWithRoot(out, root, "image_generation")
+	// Apply config disable-image-generation filtering before payload rules so
+	// conditions/defaults see the filtered shape. A final pass below enforces the
+	// effective mode again after overrides.
+	disableImageGeneration := config.DisableImageGenerationOff
+	if cfg != nil {
+		disableImageGeneration = cfg.DisableImageGeneration
+	}
+	if shouldFilterImageGenerationPayload(disableImageGeneration, requestPath) {
+		out = removeImageGenerationToolsFromPayloadWithRoot(out, root)
+	}
+
+	if cfg == nil {
+		headerImageGeneration := disableImageGenerationModeFromHeader(headers)
+		if shouldFilterImageGenerationPayload(headerImageGeneration, requestPath) {
+			out = removeImageGenerationToolsFromPayloadWithRoot(out, root)
 		}
+		return out
 	}
 
 	rules := cfg.Payload
@@ -177,6 +232,12 @@ func ApplyPayloadConfigWithRequest(cfg *config.Config, model, protocol, fromProt
 				}
 			}
 		}
+	}
+	// disable-image-generation is a hard request/output gate and must win over
+	// payload overrides that may have restored image_generation.
+	effectiveImageGeneration := EffectiveDisableImageGenerationMode(cfg, headers)
+	if shouldFilterImageGenerationPayload(effectiveImageGeneration, requestPath) {
+		out = removeImageGenerationToolsFromPayloadWithRoot(out, root)
 	}
 	return out
 }
@@ -723,6 +784,161 @@ func removeToolTypeFromPayloadWithRoot(payload []byte, root string, toolType str
 	}
 	toolsPath := buildPayloadPath(root, "tools")
 	return removeToolTypeFromToolsArray(payload, toolsPath, toolType)
+}
+
+// removeImageGenerationToolsFromPayloadWithRoot removes all image-generation tool
+// declarations understood by the Responses APIs. Besides the hosted
+// image_generation tool, Responses Lite can expose image generation as an
+// image_gen namespace or as the image_gen.imagegen function. additional_tools
+// input items carry the same declarations in a nested tools array.
+func removeImageGenerationToolsFromPayloadWithRoot(payload []byte, root string) []byte {
+	if len(payload) == 0 {
+		return payload
+	}
+
+	out := removeImageGenerationToolsArray(payload, buildPayloadPath(root, "tools"))
+	out = removeImageGenerationToolChoice(out, buildPayloadPath(root, "tool_choice"))
+
+	inputPath := buildPayloadPath(root, "input")
+	input := gjson.GetBytes(out, inputPath)
+	if !input.Exists() || !input.IsArray() {
+		return out
+	}
+	inputItems := input.Array()
+	for index := len(inputItems) - 1; index >= 0; index-- {
+		item := inputItems[index]
+		if !strings.EqualFold(strings.TrimSpace(item.Get("type").String()), "additional_tools") {
+			continue
+		}
+		itemPath := appendPayloadPathPart(inputPath, strconv.Itoa(index))
+		toolsPath := appendPayloadPathPart(itemPath, "tools")
+		toolsBefore := gjson.GetBytes(out, toolsPath)
+		out = removeImageGenerationToolsArray(out, toolsPath)
+		out = removeImageGenerationToolChoice(out, appendPayloadPathPart(itemPath, "tool_choice"))
+		if toolsBefore.IsArray() && len(toolsBefore.Array()) > 0 && len(gjson.GetBytes(out, toolsPath).Array()) == 0 {
+			if updated, errDel := sjson.DeleteBytes(out, itemPath); errDel == nil {
+				out = updated
+			}
+		}
+	}
+	return out
+}
+
+func removeImageGenerationToolsArray(payload []byte, toolsPath string) []byte {
+	tools := gjson.GetBytes(payload, toolsPath)
+	if !tools.Exists() || !tools.IsArray() {
+		return payload
+	}
+	removed := false
+	filtered := []byte(`[]`)
+	for _, tool := range tools.Array() {
+		if isImageGenerationToolReference(tool) {
+			removed = true
+			continue
+		}
+		updated, errSet := sjson.SetRawBytes(filtered, "-1", []byte(tool.Raw))
+		if errSet != nil {
+			return payload
+		}
+		filtered = updated
+	}
+	if !removed {
+		return payload
+	}
+	updated, errSet := sjson.SetRawBytes(payload, toolsPath, filtered)
+	if errSet != nil {
+		return payload
+	}
+	return updated
+}
+
+func removeImageGenerationToolChoice(payload []byte, toolChoicePath string) []byte {
+	choice := gjson.GetBytes(payload, toolChoicePath)
+	if !choice.Exists() {
+		return payload
+	}
+	if isImageGenerationToolReference(choice) {
+		updated, errDel := sjson.DeleteBytes(payload, toolChoicePath)
+		if errDel == nil {
+			return updated
+		}
+		return payload
+	}
+	if choice.Type != gjson.JSON {
+		return payload
+	}
+
+	choiceToolsPath := appendPayloadPathPart(toolChoicePath, "tools")
+	choiceToolsBefore := gjson.GetBytes(payload, choiceToolsPath)
+	updated := removeImageGenerationToolsArray(payload, choiceToolsPath)
+	if choiceToolsBefore.IsArray() && len(choiceToolsBefore.Array()) > 0 && len(gjson.GetBytes(updated, choiceToolsPath).Array()) == 0 {
+		if withoutChoice, errDel := sjson.DeleteBytes(updated, toolChoicePath); errDel == nil {
+			return withoutChoice
+		}
+	}
+	allowedToolsPath := appendPayloadPathPart(toolChoicePath, "allowed_tools")
+	allowedTools := gjson.GetBytes(updated, allowedToolsPath)
+	if allowedTools.IsArray() {
+		updated = removeImageGenerationToolsArray(updated, allowedToolsPath)
+		if len(allowedTools.Array()) > 0 && len(gjson.GetBytes(updated, allowedToolsPath).Array()) == 0 {
+			if withoutChoice, errDel := sjson.DeleteBytes(updated, toolChoicePath); errDel == nil {
+				return withoutChoice
+			}
+		}
+	} else if allowedTools.Type == gjson.JSON {
+		nestedToolsPath := appendPayloadPathPart(allowedToolsPath, "tools")
+		nestedToolsBefore := gjson.GetBytes(updated, nestedToolsPath)
+		updated = removeImageGenerationToolsArray(updated, nestedToolsPath)
+		if nestedToolsBefore.IsArray() && len(nestedToolsBefore.Array()) > 0 && len(gjson.GetBytes(updated, nestedToolsPath).Array()) == 0 {
+			if withoutChoice, errDel := sjson.DeleteBytes(updated, toolChoicePath); errDel == nil {
+				return withoutChoice
+			}
+		}
+	}
+	return updated
+}
+
+func isImageGenerationToolReference(tool gjson.Result) bool {
+	if tool.Type == gjson.String {
+		return isImageGenerationToolName(tool.String())
+	}
+	if tool.Type != gjson.JSON {
+		return false
+	}
+	for _, nestedPath := range []string{"tool", "function"} {
+		nested := tool.Get(nestedPath)
+		if nested.Exists() && (isImageGenerationToolReference(nested) || isImageGenerationToolName(nested.Get("name").String())) {
+			return true
+		}
+	}
+
+	toolType := strings.TrimSpace(tool.Get("type").String())
+	switch strings.ToLower(toolType) {
+	case "image_generation":
+		return true
+	case "namespace":
+		return strings.EqualFold(strings.TrimSpace(tool.Get("name").String()), "image_gen") ||
+			strings.EqualFold(strings.TrimSpace(tool.Get("namespace").String()), "image_gen")
+	case "function":
+		name := strings.TrimSpace(tool.Get("name").String())
+		if name == "" {
+			name = strings.TrimSpace(tool.Get("function.name").String())
+		}
+		return strings.EqualFold(name, "image_gen.imagegen")
+	case "tool":
+		return isImageGenerationToolName(tool.Get("name").String())
+	default:
+		return false
+	}
+}
+
+func isImageGenerationToolName(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "image_generation", "image_gen", "image_gen.imagegen":
+		return true
+	default:
+		return false
+	}
 }
 
 func removeToolChoiceFromPayloadWithRoot(payload []byte, root string, toolType string) []byte {

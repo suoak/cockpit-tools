@@ -19,12 +19,16 @@ type InstancesAppType =
   | 'windsurf'
   | 'kiro'
   | 'cursor'
-  | 'gemini'
+  | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
   | 'qoder'
   | 'trae'
-  | 'workbuddy';
+  | 'trae_solo'
+  | 'trae_cn'
+  | 'trae_solo_cn'
+  | 'workbuddy'
+  | 'zcode';
 
 interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   instanceStore: InstanceStoreState;
@@ -32,6 +36,7 @@ interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   fetchAccounts: () => Promise<void>;
   renderAccountQuotaPreview: (account: TAccount) => ReactNode;
   renderAccountBadge?: (account: TAccount) => ReactNode;
+  getAccountDisplayText?: (account: TAccount) => string;
   getAccountSearchText: (account: TAccount) => string;
   appType: InstancesAppType;
   isSupported: boolean;
@@ -40,6 +45,10 @@ interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   unsupportedDescKey: string;
   unsupportedDescDefault: string;
   onInstanceStarted?: (instance: InstanceProfile) => void | Promise<void>;
+  onInstanceStartError?: (
+    error: unknown,
+    instance: InstanceProfile,
+  ) => boolean | Promise<boolean>;
   resolveStartSuccessMessage?: (instance: InstanceProfile) => string;
   isAccountAllowedForLaunchMode?: (account: TAccount, launchMode: InstanceLaunchMode) => boolean;
   toolbarExtraActions?: ReactNode;
@@ -51,6 +60,7 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
   fetchAccounts,
   renderAccountQuotaPreview,
   renderAccountBadge,
+  getAccountDisplayText,
   getAccountSearchText,
   appType,
   isSupported,
@@ -59,6 +69,7 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
   unsupportedDescKey,
   unsupportedDescDefault,
   onInstanceStarted,
+  onInstanceStartError,
   resolveStartSuccessMessage,
   isAccountAllowedForLaunchMode,
   toolbarExtraActions,
@@ -88,9 +99,11 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
         fetchAccounts={fetchAccounts}
         renderAccountQuotaPreview={renderAccountQuotaPreview}
         renderAccountBadge={renderAccountBadge}
+        getAccountDisplayText={getAccountDisplayText}
         getAccountSearchText={getAccountSearchText}
         appType={appType}
         onInstanceStarted={onInstanceStarted}
+        onInstanceStartError={onInstanceStartError}
         resolveStartSuccessMessage={resolveStartSuccessMessage}
         isAccountAllowedForLaunchMode={isAccountAllowedForLaunchMode}
         toolbarExtraActions={toolbarExtraActions}

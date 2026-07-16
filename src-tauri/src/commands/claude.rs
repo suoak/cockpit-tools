@@ -37,6 +37,8 @@ pub(crate) fn powershell_quote(value: &str) -> String {
 
 #[cfg(target_os = "windows")]
 fn resolve_claude_cli_command() -> String {
+    use std::os::windows::process::CommandExt;
+
     if let Some(user_profile) = std::env::var_os("USERPROFILE") {
         let candidate = Path::new(&user_profile)
             .join(".local")
@@ -47,7 +49,12 @@ fn resolve_claude_cli_command() -> String {
         }
     }
 
-    if let Ok(output) = Command::new("where").arg("claude").output() {
+    if let Ok(output) = Command::new("where")
+        .arg("claude")
+        .creation_flags(0x08000000)
+        .stdin(std::process::Stdio::null())
+        .output()
+    {
         if output.status.success() {
             if let Some(path) = String::from_utf8_lossy(&output.stdout)
                 .lines()
@@ -339,18 +346,12 @@ fn prepare_claude_cli_launch(
         ClaudeAuthMode::DesktopOAuth | ClaudeAuthMode::DesktopGateway
     ) {
         return Err(
-            "Claude 登录态不能启动 Claude Code CLI，请使用 OAuth / Setup Token 账号。"
-                .to_string(),
+            "Claude 登录态不能启动 Claude Code CLI，请使用 OAuth / Setup Token 账号。".to_string(),
         );
     }
     let normalized_working_dir = normalize_cli_working_dir(working_dir)?;
     claude_account::inject_to_claude_config(account_id, None)?;
-    let env = if account.auth_mode == ClaudeAuthMode::ApiKey {
-        claude_account::build_api_key_cli_env_map(&account)?
-    } else {
-        BTreeMap::new()
-    };
-    let command = build_claude_cli_command(&normalized_working_dir, &env)?;
+    let command = build_claude_cli_command(&normalized_working_dir, &BTreeMap::new())?;
     crate::modules::provider_current_state::set_current_account_id(
         "claude_code_account",
         Some(account_id),
@@ -428,6 +429,7 @@ pub async fn import_claude_desktop_gateway(
     api_provider_source_tag: Option<String>,
     api_provider_website: Option<String>,
     api_provider_api_key_url: Option<String>,
+    api_key_field: Option<String>,
     api_model_catalog: Option<Vec<String>>,
     api_extra_env: Option<BTreeMap<String, String>>,
     auth_scheme: Option<String>,
@@ -446,7 +448,7 @@ pub async fn import_claude_desktop_gateway(
             api_provider_source_tag,
             api_provider_website,
             api_provider_api_key_url,
-            api_key_field: None,
+            api_key_field,
             api_model_catalog,
             api_extra_env,
         },
@@ -472,6 +474,7 @@ pub async fn update_claude_desktop_gateway(
     api_provider_source_tag: Option<String>,
     api_provider_website: Option<String>,
     api_provider_api_key_url: Option<String>,
+    api_key_field: Option<String>,
     api_model_catalog: Option<Vec<String>>,
     api_extra_env: Option<BTreeMap<String, String>>,
     auth_scheme: Option<String>,
@@ -491,7 +494,7 @@ pub async fn update_claude_desktop_gateway(
             api_provider_source_tag,
             api_provider_website,
             api_provider_api_key_url,
-            api_key_field: None,
+            api_key_field,
             api_model_catalog,
             api_extra_env,
         },
@@ -561,11 +564,14 @@ pub async fn import_claude_cli_from_local(app: AppHandle) -> Result<ClaudeAccoun
 
 #[tauri::command]
 pub async fn claude_desktop_login_start(
-    _app: AppHandle,
+    app: AppHandle,
+    progress_id: Option<String>,
 ) -> Result<ClaudeDesktopLoginStartResponse, String> {
-    tauri::async_runtime::spawn_blocking(claude_account::start_desktop_login)
-        .await
-        .map_err(|error| format!("启动 Claude 登录任务失败: {}", error))?
+    tauri::async_runtime::spawn_blocking(move || {
+        claude_account::start_desktop_login(Some(app), progress_id)
+    })
+    .await
+    .map_err(|error| format!("启动 Claude 登录任务失败: {}", error))?
 }
 
 #[tauri::command]
@@ -586,6 +592,15 @@ pub async fn claude_desktop_login_complete(
 #[tauri::command]
 pub fn claude_desktop_login_cancel(login_id: Option<String>) -> Result<(), String> {
     claude_account::cancel_desktop_login(login_id.as_deref())
+}
+
+#[tauri::command]
+pub async fn claude_open_verification_window(account_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        claude_account::open_desktop_verification_window(&account_id)
+    })
+    .await
+    .map_err(|error| format!("打开 Claude 验证窗口任务失败: {}", error))?
 }
 
 #[tauri::command]
@@ -777,5 +792,13 @@ pub fn switch_claude_account(app: AppHandle, account_id: String) -> Result<Strin
         account.email,
         started_at.elapsed().as_millis()
     ));
-    Ok(format!("切换完成: {}", account.email))
+    let message = match account.auth_mode {
+        ClaudeAuthMode::DesktopGateway => {
+            format!("Claude Desktop 供应商配置已应用: {}", account.email)
+        }
+        ClaudeAuthMode::DesktopOAuth => format!("Claude Desktop 登录态已切换: {}", account.email),
+        ClaudeAuthMode::ApiKey => format!("Claude Code API Key 已应用: {}", account.email),
+        _ => format!("切换完成: {}", account.email),
+    };
+    Ok(message)
 }

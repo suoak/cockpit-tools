@@ -7,10 +7,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use crate::models::{
-    Account, AccountIndex, AccountSummary, QuotaData,
-    QuotaErrorInfo, TokenData,
-};
+use crate::models::{Account, AccountIndex, AccountSummary, QuotaData, QuotaErrorInfo, TokenData};
 use crate::modules;
 
 static ACCOUNT_INDEX_LOCK: std::sync::LazyLock<Mutex<()>> =
@@ -25,9 +22,6 @@ static LIST_ACCOUNTS_LOAD_LOCK: std::sync::LazyLock<Mutex<()>> =
 
 const QUOTA_ALERT_COOLDOWN_SECONDS: i64 = 300;
 const LIST_ACCOUNTS_CACHE_TTL_MS: u64 = 800;
-
-// 使用与 AntigravityCockpit 插件相同的数据目录
-const DATA_DIR: &str = ".antigravity_cockpit";
 
 const ACCOUNTS_INDEX: &str = "accounts.json";
 const ACCOUNTS_DIR: &str = "accounts";
@@ -70,8 +64,7 @@ fn write_list_accounts_cache(accounts: &[Account]) {
 }
 /// 获取数据目录路径
 pub fn get_data_dir() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("无法获取用户主目录")?;
-    let data_dir = home.join(DATA_DIR);
+    let data_dir = modules::config::get_data_dir()?;
 
     if !data_dir.exists() {
         fs::create_dir_all(&data_dir).map_err(|e| format!("创建数据目录失败: {}", e))?;
@@ -479,7 +472,6 @@ pub fn delete_account(account_id: &str) -> Result<(), String> {
         .lock()
         .map_err(|e| format!("获取锁失败: {}", e))?;
     let mut index = load_account_index()?;
-
 
     let original_len = index.accounts.len();
     index.accounts.retain(|s| s.id != account_id);
@@ -1149,7 +1141,6 @@ fn build_quota_alert_notification_text(payload: &QuotaAlertPayload) -> (String, 
         "windsurf" => "Windsurf",
         "kiro" => "Kiro",
         "cursor" => "Cursor",
-        "gemini" => "Gemini Cli",
         "codebuddy" => "CodeBuddy",
         "zed" => "Zed",
         _ => "Antigravity IDE",
@@ -1929,7 +1920,6 @@ pub async fn switch_account_local_no_restart(account_id: &str) -> Result<Account
             e
         ));
     }
-
 
     let default_dir = modules::instance::get_default_user_data_dir()?;
     modules::instance::inject_account_to_profile(&default_dir, account_id)?;

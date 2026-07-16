@@ -4,7 +4,7 @@
 
 ### 标题
 
-`SC-Cockpit Tools vX.Y.Z`
+`Cockpit Tools vX.Y.Z`
 
 ### 更新摘要
 
@@ -38,7 +38,7 @@
 
 ### Title
 
-`SC-Cockpit Tools vX.Y.Z`
+`Cockpit Tools vX.Y.Z`
 
 ### Highlights
 

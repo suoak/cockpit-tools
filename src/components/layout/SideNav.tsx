@@ -68,11 +68,15 @@ const PAGE_PLATFORM_MAP: Partial<Record<Page, PlatformId>> = {
   windsurf: 'windsurf',
   kiro: 'kiro',
   cursor: 'cursor',
-  gemini: 'gemini',
+  grok: 'grok',
   codebuddy: 'codebuddy',
   'codebuddy-cn': 'codebuddy_cn',
   qoder: 'qoder',
+  zcode: 'zcode',
   trae: 'trae',
+  'trae-solo': 'trae_solo',
+  'trae-cn': 'trae_cn',
+  'trae-solo-cn': 'trae_solo_cn',
   workbuddy: 'workbuddy',
 };
 
@@ -119,6 +123,10 @@ function renderEntryIcon(entry: SideNavEntry, size: number) {
 
 function isAntigravitySuitePlatformIds(platformIds: PlatformId[]): boolean {
   return platformIds.includes('antigravity') && platformIds.includes('antigravity_ide');
+}
+
+function isAntigravitySuitePage(page: Page): boolean {
+  return page === 'overview' || page === 'instances' || page === 'wakeup' || page === 'verification';
 }
 
 export function SideNav({
@@ -178,7 +186,7 @@ export function SideNav({
   const remoteHiddenPlatformIds = useRemoteConfigStore((state) => state.hiddenPlatformIds);
 
   const antigravityRuntimeTarget = useAntigravityRuntimeTarget();
-  const currentPlatformId = page === 'overview'
+  const currentPlatformId = isAntigravitySuitePage(page)
     ? antigravityRuntimeTarget
     : PAGE_PLATFORM_MAP[page] ?? null;
   const currentEntryId = useMemo<SideNavEntryId | null>(
@@ -374,14 +382,13 @@ export function SideNav({
   const isMoreActive = !!currentEntryId && !sidebarMenuEntryIdSet.has(currentEntryId);
   const shouldLockActiveOnMore = showMore;
 
-  const shouldShowUpdateEntry = updateActionState !== 'hidden'
+  const shouldShowUpdateActionEntry = updateActionState !== 'hidden'
     && (
       updateRemindersEnabled
       || updateActionState === 'downloading'
       || updateActionState === 'installing'
       || updateActionState === 'ready'
     );
-
   const recalculateClassicAdaptiveScale = useCallback(() => {
     if (!isClassicLayout || typeof window === 'undefined') {
       setClassicAdaptiveScale((prev) => (prev === 1 ? prev : 1));
@@ -511,7 +518,7 @@ export function SideNav({
     classicScaleContentKey,
     isClassicLayout,
     recalculateClassicAdaptiveScale,
-    shouldShowUpdateEntry,
+    shouldShowUpdateActionEntry,
   ]);
 
   useEffect(() => {
@@ -649,7 +656,7 @@ export function SideNav({
       window.removeEventListener('resize', updateClassicHandleTop);
       resizeObserver?.disconnect();
     };
-  }, [isClassicLayout, isClassicCollapsed, shouldShowUpdateEntry]);
+  }, [isClassicLayout, isClassicCollapsed, shouldShowUpdateActionEntry]);
 
   const handleLogoClick = useCallback(() => {
     if (hasBreakoutSession) {
@@ -734,6 +741,16 @@ export function SideNav({
     : updateActionState === 'downloading' || updateActionState === 'installing'
       ? 'progress'
       : 'update';
+  const updateEntryTitle = updateActionState === 'downloading'
+    ? t('update_notification.downloading', '下载中...')
+    : updateActionState === 'installing'
+      ? t('nav.quickUpdate.installing', '安装中')
+      : updateActionState === 'ready'
+        ? t('nav.quickUpdate.restart', '重启')
+        : t('nav.quickUpdate.update', '更新');
+  const updateEntryText = updateActionState === 'ready'
+    ? t('nav.quickUpdate.restart', '重启')
+    : t('nav.quickUpdate.update', '更新');
 
   const morePopoverContent = showMore ? (
     <div
@@ -844,21 +861,13 @@ export function SideNav({
         style={classicScaleStyle}
         className={`side-nav${isClassicLayout ? ' side-nav-classic' : ''}${isClassicCollapsed ? ' side-nav-classic-collapsed' : ''}`}
       >
-      {shouldShowUpdateEntry && (
+      {shouldShowUpdateActionEntry && (
         <div className="side-nav-update-entry" ref={updateEntryRef}>
           <button
             type="button"
             className={`side-nav-update-btn is-${updateVisualState}`}
             onClick={onUpdateActionClick}
-            title={
-              updateActionState === 'downloading'
-                ? t('update_notification.downloading', '下载中...')
-                : updateActionState === 'installing'
-                  ? t('nav.quickUpdate.installing', '安装中')
-                  : updateActionState === 'ready'
-                    ? t('nav.quickUpdate.restart', '重启')
-                    : t('nav.quickUpdate.update', '更新')
-            }
+            title={updateEntryTitle}
             disabled={updateActionState === 'installing'}
           >
             {updateActionState === 'downloading' ? (
@@ -876,9 +885,7 @@ export function SideNav({
               <span className="side-nav-update-text">{t('nav.quickUpdate.installing', '安装中')}</span>
             ) : (
               <span className="side-nav-update-text">
-                {updateActionState === 'ready'
-                  ? t('nav.quickUpdate.restart', '重启')
-                  : t('nav.quickUpdate.update', '更新')}
+                {updateEntryText}
               </span>
             )}
           </button>

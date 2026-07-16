@@ -36,6 +36,7 @@ import {
   X,
 } from 'lucide-react';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -46,7 +47,6 @@ import { ManualHelpIconButton } from '../components/ManualHelpIconButton';
 import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { SingleSelectDropdown } from '../components/SingleSelectDropdown';
 import { TagEditModal } from '../components/TagEditModal';
-import { TopCenterPromoBanner } from '../components/TopCenterPromoBanner';
 import { ClaudeIcon } from '../components/icons/ClaudeIcon';
 import { ModelProviderUsagePanel } from '../components/model-provider/ModelProviderUsagePanel';
 import { PlatformGroupSwitcher } from '../components/platform/PlatformGroupSwitcher';
@@ -76,6 +76,7 @@ import type {
   ClaudeDesktopGatewayConnectionMode,
   ClaudeDesktopGatewayModelMapping,
   ClaudeDesktopLoginStartResponse,
+  ClaudeDesktopLoginProgressPayload,
   ClaudeOAuthStartResponse,
 } from '../types/claude';
 import { isMenuVisiblePlatform, type PlatformId } from '../types/platform';
@@ -104,6 +105,14 @@ import {
   type ClaudeApiProviderPreset,
 } from '../utils/claudeProviderPresets';
 import {
+  CLAUDE_DESKTOP_GATEWAY_DEFAULT_MODELS,
+  CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID,
+  CLAUDE_DESKTOP_GATEWAY_PROVIDER_PRESETS,
+  findClaudeDesktopGatewayProviderPresetById,
+  getDefaultClaudeDesktopGatewayProviderPresetId,
+  inferClaudeDesktopGatewayApiKeyField,
+} from '../utils/claudeDesktopProviderPresets';
+import {
   APIKEY_FUN_PREFILL_EVENT,
   consumeApiKeyFunPrefill,
   type ApiKeyFunPrefillPayload,
@@ -117,9 +126,96 @@ const CLAUDE_ACCOUNTS_VIEW_MODE_KEY = 'agtools.claude.accounts_view_mode';
 const CLAUDE_API_KEY_USAGE_CACHE_KEY = 'agtools.claude.apiKeyUsage.cache.v1';
 const CLAUDE_CLI_LAST_WORKING_DIR_KEY = 'agtools.claude.cli.last_working_dir';
 const CLAUDE_API_KEY_USAGE_REFRESH_THROTTLE_MS = 10 * 1000;
+const CLAUDE_DESKTOP_LOGIN_PROGRESS_EVENT = 'claude:desktop-login-progress';
 const claudeApiKeyUsageInFlight = new Set<string>();
-const claudeApiKeyUsageAutoRefreshAt: Record<string, number> = {};
 const claudeApiKeyUsageManualRefreshAt: Record<string, number> = {};
+
+function isClaudeCloudflareError(message?: string | null): boolean {
+  const normalized = message?.toLowerCase() ?? '';
+  return (
+    normalized.includes('cloudflare') ||
+    normalized.includes('just a moment') ||
+    normalized.includes('cf-ray') ||
+    normalized.includes('challenge-platform') ||
+    normalized.includes('verify you are human') ||
+    normalized.includes('checking your browser')
+  );
+}
+
+function createClaudeDesktopLoginProgressId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `claude-login-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function clampProgressPercent(value?: number | null): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function formatProgressBytes(value?: number | null): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+  return `${Math.round(value)} B`;
+}
+
+function getClaudeDesktopLoginProgressLabel(
+  t: TFunction,
+  progress?: ClaudeDesktopLoginProgressPayload | null,
+): string {
+  switch (progress?.phase) {
+    case 'start':
+      return t('claude.desktopOAuth.progress.start', '准备登录任务');
+    case 'profile':
+      return t('claude.desktopOAuth.progress.profile', '创建隔离 profile');
+    case 'resolve-runtime':
+      return t('claude.desktopOAuth.progress.resolveRuntime', '查找登录组件');
+    case 'check-cache':
+      return t('claude.desktopOAuth.progress.checkCache', '检查本地组件缓存');
+    case 'cached':
+      return t('claude.desktopOAuth.progress.cached', '使用本地组件缓存');
+    case 'download-start':
+      return t('claude.desktopOAuth.progress.downloadStart', '开始下载登录组件');
+    case 'downloading':
+      return t('claude.desktopOAuth.progress.downloading', '下载登录组件');
+    case 'downloaded':
+      return t('claude.desktopOAuth.progress.downloaded', '登录组件下载完成');
+    case 'verify':
+      return t('claude.desktopOAuth.progress.verify', '校验组件完整性');
+    case 'extract':
+      return t('claude.desktopOAuth.progress.extract', '解压登录组件');
+    case 'runtime-ready':
+      return t('claude.desktopOAuth.progress.runtimeReady', '登录组件已准备');
+    case 'launch':
+      return t('claude.desktopOAuth.progress.launch', '启动 Claude 登录窗口');
+    case 'ready':
+      return t('claude.desktopOAuth.progress.ready', '登录窗口已打开');
+    default:
+      return t('claude.desktopOAuth.progress.default', '准备登录组件');
+  }
+}
+
+function getClaudeDesktopLoginProgressDetail(
+  t: TFunction,
+  progress?: ClaudeDesktopLoginProgressPayload | null,
+): string {
+  const downloaded = formatProgressBytes(progress?.downloadedBytes);
+  const total = formatProgressBytes(progress?.totalBytes);
+  if (progress?.phase === 'downloading' || progress?.phase === 'downloaded') {
+    if (downloaded && total) {
+      return t('claude.desktopOAuth.progress.bytesWithTotal', '已下载 {{downloaded}}，共 {{total}}', {
+        downloaded,
+        total,
+      });
+    }
+    if (downloaded) {
+      return t('claude.desktopOAuth.progress.bytesOnly', '已下载 {{downloaded}}', { downloaded });
+    }
+  }
+  return t('claude.desktopOAuth.progress.hint', '首次准备完成后，后续会直接复用本地缓存。');
+}
 
 type ViewMode = 'grid' | 'list';
 type AddTab = 'desktop' | 'desktopGateway' | 'oauth' | 'apikey' | 'import';
@@ -127,14 +223,9 @@ type ClaudeSubPlatform = 'desktop' | 'cli';
 type ClaudePageSection = ClaudeSubPlatform | 'instances';
 const DEFAULT_CLAUDE_API_PROVIDER_ID = getDefaultClaudeApiProviderPresetId();
 const DEFAULT_CLAUDE_API_PROVIDER = findClaudeApiProviderPresetById(DEFAULT_CLAUDE_API_PROVIDER_ID);
-const DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS = [
-  'claude-opus-4-8',
-  'claude-fable-5',
-  'claude-opus-4-7',
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5',
-];
+const DEFAULT_CLAUDE_DESKTOP_GATEWAY_PROVIDER_ID = getDefaultClaudeDesktopGatewayProviderPresetId();
+const DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS = [...CLAUDE_DESKTOP_GATEWAY_DEFAULT_MODELS];
+const CLAUDE_DESKTOP_GATEWAY_GENERATED_ROUTE_BASE = 'claude-sonnet-4-6';
 const CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL = '__custom_desktop_model__';
 
 type ClaudeApiKeyUsageState = {
@@ -452,6 +543,24 @@ function isClaudeDesktopGatewayRouteModel(value: string): boolean {
   return model.startsWith('claude-') || model.startsWith('anthropic/claude-');
 }
 
+function getNextClaudeDesktopGatewaySafeModel(usedModels: Iterable<string>): string {
+  const used = new Set(
+    Array.from(usedModels)
+      .map((model) => model.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const defaultModel = DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.find(
+    (model) => !used.has(model.toLowerCase()),
+  );
+  if (defaultModel) return defaultModel;
+
+  let index = 2;
+  while (used.has(`${CLAUDE_DESKTOP_GATEWAY_GENERATED_ROUTE_BASE}-r${index}`)) {
+    index += 1;
+  }
+  return `${CLAUDE_DESKTOP_GATEWAY_GENERATED_ROUTE_BASE}-r${index}`;
+}
+
 function normalizeClaudeDesktopGatewayMode(
   value?: string | null,
 ): ClaudeDesktopGatewayConnectionMode {
@@ -462,13 +571,31 @@ function buildClaudeDesktopGatewayMappings(
   desktopModels: string[],
   upstreamModels: string[],
 ): ClaudeDesktopGatewayModelMapping[] {
-  const fallback = upstreamModels.find((model) => model.trim()) ?? '';
-  return desktopModels
-    .map((model) => model.trim())
+  const normalizedDesktopModels = desktopModels.map((model) => model.trim()).filter(Boolean);
+  const normalizedUpstreamModels = upstreamModels.map((model) => model.trim()).filter(Boolean);
+  if (normalizedUpstreamModels.length > 0) {
+    const usedDesktopModels = new Set<string>();
+    return normalizedUpstreamModels.map((upstreamModel, index) => {
+      const preferredModel = normalizedDesktopModels[index] ?? '';
+      const preferredKey = preferredModel.toLowerCase();
+      const desktopModel = preferredModel
+        && isClaudeDesktopGatewayRouteModel(preferredModel)
+        && !usedDesktopModels.has(preferredKey)
+        ? preferredModel
+        : getNextClaudeDesktopGatewaySafeModel(usedDesktopModels);
+      usedDesktopModels.add(desktopModel.toLowerCase());
+      return {
+        desktopModel,
+        upstreamModel,
+        labelOverride: upstreamModel,
+      };
+    });
+  }
+  return normalizedDesktopModels
     .filter(Boolean)
     .map((desktopModel, index) => ({
       desktopModel,
-      upstreamModel: upstreamModels[index]?.trim() || fallback,
+      upstreamModel: upstreamModels[index]?.trim() || '',
     }));
 }
 
@@ -484,9 +611,54 @@ function normalizeClaudeDesktopGatewayMappings(
     const key = desktopModel.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    result.push({ desktopModel, upstreamModel });
+    result.push({
+      desktopModel,
+      upstreamModel,
+      labelOverride: upstreamModel,
+      ...(mapping.supports1m === true ? { supports1m: true } : {}),
+    });
   });
   return result;
+}
+
+function cloneClaudeDesktopGatewayMappings(
+  mappings?: readonly ClaudeDesktopGatewayModelMapping[] | null,
+): ClaudeDesktopGatewayModelMapping[] {
+  return (mappings ?? []).map((mapping) => ({
+    desktopModel: mapping.desktopModel,
+    upstreamModel: mapping.upstreamModel,
+    labelOverride: mapping.labelOverride ?? null,
+    supports1m: mapping.supports1m === true,
+  }));
+}
+
+function getClaudeDesktopGatewayUpstreamModels(
+  mappings: ClaudeDesktopGatewayModelMapping[],
+): string[] {
+  const seen = new Set<string>();
+  const models: string[] = [];
+  mappings.forEach((mapping) => {
+    const upstreamModel = mapping.upstreamModel.trim();
+    const key = upstreamModel.toLowerCase();
+    if (!upstreamModel || seen.has(key)) return;
+    seen.add(key);
+    models.push(upstreamModel);
+  });
+  return models;
+}
+
+function getClaudeDesktopGatewayDuplicateModel(
+  mappings: ClaudeDesktopGatewayModelMapping[],
+): string | null {
+  const seen = new Set<string>();
+  for (const mapping of mappings) {
+    const desktopModel = mapping.desktopModel.trim();
+    if (!desktopModel) continue;
+    const key = desktopModel.toLowerCase();
+    if (seen.has(key)) return desktopModel;
+    seen.add(key);
+  }
+  return null;
 }
 
 function buildClaudeDesktopGatewayDesktopModelOptions(
@@ -644,6 +816,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     useState<ClaudeDesktopGatewayConnectionMode>('direct');
   const [desktopGatewayUpstreamModels, setDesktopGatewayUpstreamModels] = useState<string[]>([]);
   const [desktopGatewayModelMappings, setDesktopGatewayModelMappings] = useState<ClaudeDesktopGatewayModelMapping[]>([]);
+  const [desktopGatewayMappingsExpanded, setDesktopGatewayMappingsExpanded] = useState(false);
   const [desktopGatewayModelsLoading, setDesktopGatewayModelsLoading] = useState(false);
   const [desktopGatewayModelsError, setDesktopGatewayModelsError] = useState<string | null>(null);
   const [desktopGatewayModelsMessage, setDesktopGatewayModelsMessage] = useState<string | null>(null);
@@ -651,6 +824,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   const desktopGatewayModelsFetchSignatureRef = useRef('');
   const desktopGatewayModelsFetchRequestRef = useRef(0);
   const [desktopLogin, setDesktopLogin] = useState<ClaudeDesktopLoginStartResponse | null>(null);
+  const [desktopLoginProgress, setDesktopLoginProgress] = useState<ClaudeDesktopLoginProgressPayload | null>(null);
   const [desktopAccountNameInput, setDesktopAccountNameInput] = useState('');
   const [desktopStarting, setDesktopStarting] = useState(false);
   const [desktopCompleting, setDesktopCompleting] = useState(false);
@@ -663,14 +837,14 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   const [oauthCopied, setOauthCopied] = useState(false);
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
+  const [verifyingAccountId, setVerifyingAccountId] = useState<string | null>(null);
   const [apiKeyUsageMap, setApiKeyUsageMap] = useState<Record<string, ClaudeApiKeyUsageState>>(
     () => readClaudeApiKeyUsageCache(),
   );
   const apiKeyUsageInFlightRef = useRef<Set<string>>(claudeApiKeyUsageInFlight);
-  const apiKeyUsageAutoRefreshAtRef = useRef<Record<string, number>>(claudeApiKeyUsageAutoRefreshAt);
   const apiKeyUsageManualRefreshAtRef = useRef<Record<string, number>>(claudeApiKeyUsageManualRefreshAt);
-  const providerApiKeyUsageAutoRefreshPendingRef = useRef(true);
-  const previousActiveSubPlatformRef = useRef<ClaudeSubPlatform>(activeSubPlatform);
+  const desktopLoginProgressIdRef = useRef<string | null>(null);
+  const desktopLoginProgressUnlistenRef = useRef<UnlistenFn | null>(null);
   const oauthPrepareAttemptedRef = useRef(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [cliLaunchingAccountId, setCliLaunchingAccountId] = useState<string | null>(null);
@@ -720,7 +894,23 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     [activeSubPlatform],
   );
 
+  const cleanupDesktopLoginProgressListener = useCallback(() => {
+    desktopLoginProgressIdRef.current = null;
+    const unlisten = desktopLoginProgressUnlistenRef.current;
+    desktopLoginProgressUnlistenRef.current = null;
+    if (unlisten) {
+      try {
+        unlisten();
+      } catch {
+        // ignore listener cleanup failures
+      }
+    }
+  }, []);
+
+  useEffect(() => cleanupDesktopLoginProgressListener, [cleanupDesktopLoginProgressListener]);
+
   const resetAddModalState = useCallback((platform: ClaudeSubPlatform = activeSubPlatform) => {
+    cleanupDesktopLoginProgressListener();
     setAddTab(getDefaultAddTab(platform));
     setJsonInput('');
     setApiKeyInput('');
@@ -735,6 +925,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setDesktopGatewayConnectionMode('direct');
     setDesktopGatewayUpstreamModels([]);
     setDesktopGatewayModelMappings([]);
+    setDesktopGatewayMappingsExpanded(false);
     setDesktopGatewayModelsLoading(false);
     setDesktopGatewayModelsError(null);
     setDesktopGatewayModelsMessage(null);
@@ -742,6 +933,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     desktopGatewayModelsFetchSignatureRef.current = '';
     desktopGatewayModelsFetchRequestRef.current += 1;
     setDesktopLogin(null);
+    setDesktopLoginProgress(null);
     setDesktopAccountNameInput('');
     setOauthLogin(null);
     setOauthCallbackInput('');
@@ -749,7 +941,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setOauthCopied(false);
     oauthPrepareAttemptedRef.current = false;
     setAddModalError(null);
-  }, [activeSubPlatform, getDefaultAddTab, setAddModalError]);
+  }, [activeSubPlatform, cleanupDesktopLoginProgressListener, getDefaultAddTab, setAddModalError]);
 
   const closeAddModal = useCallback(() => {
     if (desktopLogin?.loginId) {
@@ -807,13 +999,6 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setSelectedIds(new Set());
   }, [activeSubPlatform]);
 
-  useEffect(() => {
-    if (previousActiveSubPlatformRef.current !== activeSubPlatform) {
-      providerApiKeyUsageAutoRefreshPendingRef.current = true;
-      previousActiveSubPlatformRef.current = activeSubPlatform;
-    }
-  }, [activeSubPlatform]);
-
   const maskAccountText = useCallback(
     (value?: string | null) => maskSensitiveValue(value, privacyModeEnabled),
     [privacyModeEnabled],
@@ -852,6 +1037,13 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     () => findClaudeApiProviderPresetById(apiProviderPresetId),
     [apiProviderPresetId],
   );
+  const selectedDesktopGatewayProviderPreset = useMemo(
+    () => findClaudeDesktopGatewayProviderPresetById(apiProviderPresetId),
+    [apiProviderPresetId],
+  );
+  const selectedFormProviderPreset = addTab === 'desktopGateway'
+    ? selectedDesktopGatewayProviderPreset
+    : selectedApiProviderPreset;
   const resolvedApiBaseUrlInput = useMemo(
     () => applyClaudeApiProviderTemplateValue(apiBaseUrlInput, apiProviderTemplateValues),
     [apiBaseUrlInput, apiProviderTemplateValues],
@@ -1032,6 +1224,54 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setShowAddModal(true);
   };
 
+  function clearDesktopGatewayModelDiscoveryStatus() {
+    setDesktopGatewayModelsLoading(false);
+    setDesktopGatewayModelsError(null);
+    setDesktopGatewayModelsMessage(null);
+    desktopGatewayModelsFetchSignatureRef.current = '';
+    desktopGatewayModelsFetchRequestRef.current += 1;
+  }
+
+  function applyDesktopGatewayProviderPreset(providerId: string) {
+    setApiProviderPresetId(providerId);
+    setApiKeyModelCatalogOverride(null);
+    setApiProviderTemplateValues({});
+    clearDesktopGatewayModelDiscoveryStatus();
+    setAddModalError(null);
+
+    if (providerId === CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID) {
+      return;
+    }
+
+    const preset = findClaudeDesktopGatewayProviderPresetById(providerId);
+    if (!preset) return;
+    const mappings = cloneClaudeDesktopGatewayMappings(preset.modelMappings);
+    setApiBaseUrlInput(preset.baseUrls[0] ?? '');
+    setDesktopGatewayAuthScheme(preset.authScheme);
+    setDesktopGatewayConnectionMode(preset.connectionMode);
+    setDesktopGatewayUpstreamModels(getClaudeDesktopGatewayUpstreamModels(mappings));
+    setDesktopGatewayMappingsExpanded(false);
+    if (preset.connectionMode === 'local_mapping') {
+      const nextMappings = mappings.length > 0
+        ? mappings
+        : buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, []);
+      setDesktopGatewayModelMappings(nextMappings);
+      setDesktopGatewayModelsInput(
+        (nextMappings.length > 0
+          ? nextMappings.map((mapping) => mapping.desktopModel)
+          : DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS
+        ).join('\n'),
+      );
+    } else {
+      const directModels = mappings.map((mapping) => mapping.desktopModel).filter(Boolean);
+      setDesktopGatewayModelMappings(mappings);
+      setDesktopGatewayModelsInput(
+        (directModels.length > 0 ? directModels : DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS).join('\n'),
+      );
+    }
+    setApiKeyNameInput(preset.name);
+  }
+
   const openEditDesktopGatewayModal = (account: ClaudeAccount) => {
     if (!isClaudeDesktopGatewayAccount(account)) return;
     resetAddModalState('desktop');
@@ -1046,7 +1286,10 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setEditingDesktopGatewayAccountId(account.id);
     setShowAddModal(true);
     setAddTab('desktopGateway');
-    setApiProviderPresetId(CLAUDE_API_PROVIDER_CUSTOM_ID);
+    setApiProviderPresetId(
+      findClaudeDesktopGatewayProviderPresetById(account.api_provider_id)?.id
+        ?? CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID,
+    );
     setApiProviderTemplateValues({});
     setApiKeyModelCatalogOverride(null);
     setApiKeyNameInput(providerName);
@@ -1080,12 +1323,13 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setDesktopGatewayConnectionMode(mode);
     setDesktopGatewayUpstreamModels(upstreamModels);
     setDesktopGatewayModelMappings(
-      mode === 'local_mapping'
-        ? mappings.length > 0
-          ? mappings
-          : buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, upstreamModels)
-        : [],
+      mappings.length > 0
+        ? mappings
+        : mode === 'local_mapping'
+          ? buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, upstreamModels)
+          : [],
     );
+    setDesktopGatewayMappingsExpanded(true);
     setDesktopGatewayModelsInput(
       mode === 'local_mapping'
         ? DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.join('\n')
@@ -1117,6 +1361,9 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     if (tab === 'oauth' && addTab !== 'oauth') {
       oauthPrepareAttemptedRef.current = false;
     }
+    if (tab === 'desktopGateway' && addTab !== 'desktopGateway') {
+      applyDesktopGatewayProviderPreset(DEFAULT_CLAUDE_DESKTOP_GATEWAY_PROVIDER_ID);
+    }
     setAddTab(tab);
   };
 
@@ -1147,6 +1394,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
           setDesktopGatewayConnectionMode('direct');
           setDesktopGatewayModelsInput(claudeModels.join('\n'));
           setDesktopGatewayModelMappings([]);
+          setDesktopGatewayMappingsExpanded(false);
         } else {
           setDesktopGatewayConnectionMode('local_mapping');
           setDesktopGatewayModelsInput(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.join('\n'));
@@ -1154,6 +1402,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
             DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS,
             models,
           ));
+          setDesktopGatewayMappingsExpanded(false);
         }
         setDesktopGatewayModelsError(null);
         setDesktopGatewayModelsMessage(t(
@@ -1246,14 +1495,43 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   };
 
   const handleStartDesktopLogin = async () => {
+    cleanupDesktopLoginProgressListener();
+    const progressId = createClaudeDesktopLoginProgressId();
+    desktopLoginProgressIdRef.current = progressId;
     setDesktopStarting(true);
     setAddModalError(null);
+    setDesktopLoginProgress({
+      progressId,
+      phase: 'start',
+      percent: 0,
+    });
     try {
-      const login = await claudeService.claudeDesktopLoginStart();
+      desktopLoginProgressUnlistenRef.current = await listen<ClaudeDesktopLoginProgressPayload>(
+        CLAUDE_DESKTOP_LOGIN_PROGRESS_EVENT,
+        (event) => {
+          const payload = event.payload;
+          if (!payload || payload.progressId !== desktopLoginProgressIdRef.current) return;
+          setDesktopLoginProgress((previous) => ({
+            ...payload,
+            percent: payload.percent ?? previous?.percent ?? null,
+            downloadedBytes: payload.downloadedBytes ?? previous?.downloadedBytes ?? null,
+            totalBytes: payload.totalBytes ?? previous?.totalBytes ?? null,
+          }));
+        },
+      );
+      const login = await claudeService.claudeDesktopLoginStart(progressId);
       setDesktopLogin(login);
+      setDesktopLoginProgress((previous) => ({
+        progressId,
+        phase: 'ready',
+        percent: 100,
+        downloadedBytes: previous?.downloadedBytes ?? null,
+        totalBytes: previous?.totalBytes ?? null,
+      }));
     } catch (error) {
       setAddModalError(String(error).replace(/^Error:\s*/, ''));
     } finally {
+      cleanupDesktopLoginProgressListener();
       setDesktopStarting(false);
     }
   };
@@ -1367,27 +1645,15 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     }
   };
 
-  const resetDesktopGatewayModelDiscovery = () => {
-    setDesktopGatewayModelsInput('');
-    setDesktopGatewayConnectionMode('direct');
-    setDesktopGatewayUpstreamModels([]);
-    setDesktopGatewayModelMappings([]);
-    setDesktopGatewayModelsLoading(false);
-    setDesktopGatewayModelsError(null);
-    setDesktopGatewayModelsMessage(null);
-    desktopGatewayModelsFetchSignatureRef.current = '';
-    desktopGatewayModelsFetchRequestRef.current += 1;
-  };
-
   const handleSelectApiProviderPreset = (providerId: string) => {
+    if (addTab === 'desktopGateway') {
+      applyDesktopGatewayProviderPreset(providerId);
+      return;
+    }
     setApiProviderPresetId(providerId);
     setApiKeyModelCatalogOverride(null);
-    if (addTab === 'desktopGateway') {
-      resetDesktopGatewayModelDiscovery();
-    } else {
-      setDesktopGatewayModelsError(null);
-      setDesktopGatewayModelsMessage(null);
-    }
+    setDesktopGatewayModelsError(null);
+    setDesktopGatewayModelsMessage(null);
     if (providerId === CLAUDE_API_PROVIDER_CUSTOM_ID) {
       setApiProviderTemplateValues({});
       return;
@@ -1399,9 +1665,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setApiBaseUrlInput(
       applyClaudeApiProviderTemplateValue(preset.baseUrls[0] ?? '', templateValues),
     );
-    if (!apiKeyNameInput.trim()) {
-      setApiKeyNameInput(preset.name);
-    }
+    setApiKeyNameInput(preset.name);
     setAddModalError(null);
   };
 
@@ -1426,6 +1690,31 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setDesktopGatewayModelsLoading(true);
     setDesktopGatewayModelsError(null);
     setDesktopGatewayModelsMessage(null);
+    const fallbackMappings = (() => {
+      const presetMappings = cloneClaudeDesktopGatewayMappings(selectedDesktopGatewayProviderPreset?.modelMappings);
+      if (presetMappings.length > 0) return presetMappings;
+      if (desktopGatewayModelMappings.length > 0) return cloneClaudeDesktopGatewayMappings(desktopGatewayModelMappings);
+      return buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, []);
+    })();
+    const applyFallbackMappings = () => {
+      setDesktopGatewayConnectionMode('local_mapping');
+      setDesktopGatewayUpstreamModels(getClaudeDesktopGatewayUpstreamModels(fallbackMappings));
+      setDesktopGatewayModelsInput(
+        (fallbackMappings.length > 0
+          ? fallbackMappings.map((mapping) => mapping.desktopModel)
+          : DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS
+        ).join('\n'),
+      );
+      setDesktopGatewayModelMappings(fallbackMappings);
+      setDesktopGatewayModelsError(null);
+      if (fallbackMappings.some((mapping) => mapping.upstreamModel.trim())) {
+        setDesktopGatewayMappingsExpanded(false);
+        setDesktopGatewayModelsMessage(t('claude.desktopGateway.usingPresetMappings', '已使用预设映射，可按需修改。'));
+      } else {
+        setDesktopGatewayModelsMessage(null);
+        setDesktopGatewayMappingsExpanded(true);
+      }
+    };
     try {
       const result = await claudeService.listClaudeDesktopGatewayModels({
         apiKey,
@@ -1437,12 +1726,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       }
       const models = result.models.map((model) => model.id.trim()).filter(Boolean);
       if (models.length === 0) {
-        setDesktopGatewayConnectionMode('local_mapping');
-        setDesktopGatewayUpstreamModels([]);
-        setDesktopGatewayModelsInput(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.join('\n'));
-        setDesktopGatewayModelMappings(buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, []));
-        setDesktopGatewayModelsError(null);
-        setDesktopGatewayModelsMessage(null);
+        applyFallbackMappings();
         return;
       }
       const claudeModels = models.filter(isClaudeDesktopGatewayRouteModel);
@@ -1450,12 +1734,14 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
         setDesktopGatewayConnectionMode('direct');
         setDesktopGatewayModelsInput(claudeModels.join('\n'));
         setDesktopGatewayUpstreamModels(models);
-        setDesktopGatewayModelMappings([]);
+        setDesktopGatewayModelMappings(buildClaudeDesktopGatewayMappings(claudeModels, []));
+        setDesktopGatewayMappingsExpanded(false);
       } else {
         setDesktopGatewayConnectionMode('local_mapping');
         setDesktopGatewayUpstreamModels(models);
         setDesktopGatewayModelsInput(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.join('\n'));
         setDesktopGatewayModelMappings(buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, models));
+        setDesktopGatewayMappingsExpanded(false);
       }
       setDesktopGatewayModelsMessage(t('claude.desktopGateway.modelsLoaded', '已获取 {{count}} 个模型，可按需修改。', {
         count: models.length,
@@ -1464,12 +1750,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       if (desktopGatewayModelsFetchRequestRef.current !== requestId) {
         return;
       }
-      setDesktopGatewayConnectionMode('local_mapping');
-      setDesktopGatewayUpstreamModels([]);
-      setDesktopGatewayModelsInput(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.join('\n'));
-      setDesktopGatewayModelMappings(buildClaudeDesktopGatewayMappings(DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS, []));
-      setDesktopGatewayModelsError(null);
-      setDesktopGatewayModelsMessage(null);
+      applyFallbackMappings();
     } finally {
       if (desktopGatewayModelsFetchRequestRef.current === requestId) {
         setDesktopGatewayModelsLoading(false);
@@ -1511,9 +1792,11 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       setAddModalError(t('claude.apiKey.required', '请输入 API Key'));
       return;
     }
-    const missingTemplateValue = Object.entries(selectedApiProviderPreset?.templateValues ?? {}).find(
-      ([key]) => !(apiProviderTemplateValues[key] ?? '').trim(),
-    );
+    const missingTemplateValue = addTab === 'desktopGateway'
+      ? undefined
+      : Object.entries(selectedApiProviderPreset?.templateValues ?? {}).find(
+        ([key]) => !(apiProviderTemplateValues[key] ?? '').trim(),
+      );
     if (missingTemplateValue) {
       setAddModalError(t('claude.apiKey.templateRequired', '请填写 {{label}}', {
         label: missingTemplateValue[1].label,
@@ -1530,20 +1813,50 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       return;
     }
     const directDesktopGatewayModels = parseClaudeDesktopGatewayModels(desktopGatewayModelsInput);
-    const desktopGatewayMappings = normalizeClaudeDesktopGatewayMappings(desktopGatewayModelMappings);
+    const desktopGatewayMappingRows = desktopGatewayModelMappings
+      .map((mapping) => ({
+        desktopModel: mapping.desktopModel.trim(),
+        upstreamModel: mapping.upstreamModel.trim(),
+        supports1m: mapping.supports1m === true,
+      }))
+      .filter((mapping) => mapping.desktopModel || mapping.upstreamModel);
+    const desktopGatewayMappings = normalizeClaudeDesktopGatewayMappings(desktopGatewayMappingRows);
     const desktopGatewayModels = addTab === 'desktopGateway'
       ? desktopGatewayConnectionMode === 'local_mapping'
         ? desktopGatewayMappings.map((mapping) => mapping.desktopModel)
         : directDesktopGatewayModels
       : [];
+    const directDesktopGatewayModelSet = new Set(
+      directDesktopGatewayModels.map((model) => model.toLowerCase()),
+    );
+    const directDesktopGatewayModelMappings = normalizeClaudeDesktopGatewayMappings(
+      desktopGatewayModelMappings
+        .filter((mapping) => directDesktopGatewayModelSet.has(mapping.desktopModel.trim().toLowerCase()))
+        .map((mapping) => ({
+          desktopModel: mapping.desktopModel,
+          upstreamModel: mapping.upstreamModel || mapping.desktopModel,
+          supports1m: mapping.supports1m === true,
+        })),
+    );
     if (addTab === 'desktopGateway') {
       if (desktopGatewayConnectionMode === 'local_mapping') {
         if (desktopGatewayMappings.length === 0) {
           setAddModalError(t('claude.desktopGateway.mappingsRequired', '请配置模型映射'));
           return;
         }
+        if (desktopGatewayMappingRows.some((mapping) => !mapping.desktopModel || !mapping.upstreamModel)) {
+          setAddModalError(t('claude.desktopGateway.mappingsIncomplete', '请补全模型映射'));
+          return;
+        }
         if (desktopGatewayMappings.some((mapping) => !isClaudeDesktopGatewayRouteModel(mapping.desktopModel))) {
           setAddModalError(t('claude.desktopGateway.mappingDesktopModelInvalid', '映射左侧必须填写 Claude 可识别的 Claude 模型名'));
+          return;
+        }
+        const duplicatedModel = getClaudeDesktopGatewayDuplicateModel(desktopGatewayMappingRows);
+        if (duplicatedModel) {
+          setAddModalError(t('claude.desktopGateway.mappingDesktopModelDuplicated', 'Claude 模型名不能重复：{{model}}', {
+            model: duplicatedModel,
+          }));
           return;
         }
       } else {
@@ -1560,17 +1873,23 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setApiKeyImporting(true);
     setAddModalError(null);
     try {
+      const providerPresetForPayload = addTab === 'desktopGateway'
+        ? selectedDesktopGatewayProviderPreset
+        : selectedApiProviderPreset;
       const providerPayload = {
         apiBaseUrl: normalizedBaseUrl,
-        apiProviderId: selectedApiProviderPreset?.id ?? null,
-        apiProviderName: selectedApiProviderPreset?.name || apiKeyNameInput || null,
-        apiProviderSourceTag: selectedApiProviderPreset?.sourceTag ?? null,
-        apiProviderWebsite: selectedApiProviderPreset?.website ?? null,
-        apiProviderApiKeyUrl: selectedApiProviderPreset?.apiKeyUrl ?? null,
+        apiProviderId: providerPresetForPayload?.id ?? null,
+        apiProviderName: providerPresetForPayload?.name || apiKeyNameInput || null,
+        apiProviderSourceTag: providerPresetForPayload?.sourceTag ?? null,
+        apiProviderWebsite: providerPresetForPayload?.website ?? null,
+        apiProviderApiKeyUrl: providerPresetForPayload?.apiKeyUrl ?? null,
+        apiKeyField: addTab === 'desktopGateway'
+          ? inferClaudeDesktopGatewayApiKeyField(selectedDesktopGatewayProviderPreset, desktopGatewayAuthScheme)
+          : null,
         apiModelCatalog: addTab === 'desktopGateway'
           ? null
           : apiKeyModelCatalogOverride ?? selectedApiProviderPreset?.modelCatalog ?? null,
-        apiExtraEnv: resolvedApiProviderExtraEnv,
+        apiExtraEnv: addTab === 'desktopGateway' ? null : resolvedApiProviderExtraEnv,
       };
       const gatewayPayload = {
         ...providerPayload,
@@ -1580,7 +1899,9 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
         desktopGatewayUpstreamModels,
         desktopGatewayModelMappings: desktopGatewayConnectionMode === 'local_mapping'
           ? desktopGatewayMappings
-          : null,
+          : directDesktopGatewayModelMappings.length > 0
+            ? directDesktopGatewayModelMappings
+            : null,
       };
       const account = addTab === 'desktopGateway'
         ? editingDesktopGatewayAccountId
@@ -1632,12 +1953,30 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     try {
       await store.switchAccount(account.id);
       setCurrentAccountId(account.id);
+      const displayName = maskAccountText(getClaudeAccountDisplayEmail(account));
       setMessage({
-        text: t('messages.switched', {
-          email: maskAccountText(getClaudeAccountDisplayEmail(account)),
-        }),
+        text: isClaudeDesktopGatewayAccount(account)
+          ? t(
+            'claude.desktopGateway.switchSuccess',
+            '已应用 Claude Desktop 供应商配置：{{name}}。',
+            { name: displayName },
+          )
+          : t('messages.switched', {
+            email: displayName,
+          }),
       });
     } catch (error) {
+      if (String(error ?? '').startsWith('APP_PATH_NOT_FOUND:claude')) {
+        window.dispatchEvent(
+          new CustomEvent('app-path-missing', {
+            detail: {
+              app: 'claude',
+              retry: { kind: 'switchAccount', accountId: account.id },
+            },
+          }),
+        );
+        return;
+      }
       setMessage({
         text: t('messages.switchFailed', {
           error: String(error),
@@ -1893,12 +2232,11 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   const refreshClaudeApiKeyUsage = useCallback(
     async (
       account: ClaudeAccount,
-      options?: { showMessage?: boolean; source?: 'auto' | 'manual' },
+      options?: { showMessage?: boolean },
     ) => {
       const apiKey = account.api_key?.trim() || '';
       const baseUrl = account.api_base_url?.trim() || '';
       const showMessage = options?.showMessage === true;
-      const source = options?.source ?? 'auto';
       if (!apiKey || !baseUrl) {
         if (showMessage) {
           setMessage({
@@ -1909,14 +2247,12 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
         return;
       }
       const requestKey = getClaudeApiKeyUsageRequestKey(account);
-      const throttleRef =
-        source === 'manual' ? apiKeyUsageManualRefreshAtRef : apiKeyUsageAutoRefreshAtRef;
       const now = Date.now();
-      const lastRequestedAt = throttleRef.current[requestKey] ?? 0;
+      const lastRequestedAt = apiKeyUsageManualRefreshAtRef.current[requestKey] ?? 0;
       if (now - lastRequestedAt < CLAUDE_API_KEY_USAGE_REFRESH_THROTTLE_MS) return;
       if (apiKeyUsageInFlightRef.current.has(requestKey)) return;
 
-      throttleRef.current[requestKey] = now;
+      apiKeyUsageManualRefreshAtRef.current[requestKey] = now;
       apiKeyUsageInFlightRef.current.add(requestKey);
       setApiKeyUsageMap((previous) =>
         setClaudeApiKeyUsageStateForAccount(previous, account, {
@@ -1972,26 +2308,13 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     [t],
   );
 
-  useEffect(() => {
-    if (!providerApiKeyUsageAutoRefreshPendingRef.current) return;
-    const apiKeyAccounts = currentSubPlatformAccounts.filter(
-      (account) => isClaudeProviderApiKeyAccount(account),
-    );
-    if (apiKeyAccounts.length === 0) return;
-
-    providerApiKeyUsageAutoRefreshPendingRef.current = false;
-    apiKeyAccounts.forEach((account) => {
-      void refreshClaudeApiKeyUsage(account, { source: 'auto' });
-    });
-  }, [activeSubPlatform, currentSubPlatformAccounts, refreshClaudeApiKeyUsage]);
-
   const handleRefresh = async (accountId: string) => {
     const targetAccount = useClaudeAccountStore
       .getState()
       .accounts.find((account) => account.id === accountId);
     if (targetAccount && isClaudeProviderApiKeyAccount(targetAccount)) {
       setMessage(null);
-      await refreshClaudeApiKeyUsage(targetAccount, { showMessage: true, source: 'manual' });
+      await refreshClaudeApiKeyUsage(targetAccount, { showMessage: true });
       return;
     }
 
@@ -2030,7 +2353,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     try {
       for (const account of currentSubPlatformAccounts) {
         if (isClaudeProviderApiKeyAccount(account)) {
-          await refreshClaudeApiKeyUsage(account, { source: 'manual' });
+          await refreshClaudeApiKeyUsage(account);
         } else {
           await store.refreshToken(account.id);
         }
@@ -2047,6 +2370,29 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       });
     } finally {
       setRefreshingAll(false);
+    }
+  };
+
+  const handleOpenVerificationWindow = async (accountId: string) => {
+    setVerifyingAccountId(accountId);
+    setMessage(null);
+    try {
+      await claudeService.openClaudeVerificationWindow(accountId);
+      setMessage({
+        text: t(
+          'claude.quota.verificationWindowOpened',
+          '已打开 Claude 验证窗口，完成验证后请重新刷新额度。',
+        ),
+      });
+    } catch (error) {
+      setMessage({
+        text: t('claude.quota.verificationWindowFailed', '打开 Claude 验证窗口失败：{{error}}', {
+          error: String(error).replace(/^Error:\s*/, ''),
+        }),
+        tone: 'error',
+      });
+    } finally {
+      setVerifyingAccountId(null);
     }
   };
 
@@ -2190,11 +2536,13 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                   : t('claude.cli.quickLaunch', 'CLI 启动')
               : isApiKey
                 ? t('claude.apiKey.switchDisabled', 'API Key 账号不能写入本地登录态')
-                : isClaudeCodeOAuth
-                  ? t('claude.oauth.switchHint', '切换到本机 Claude Code')
-                : isDesktopRuntime
-                  ? t('claude.desktopOAuth.switchHint', '切换到官方 Claude')
-                  : t('common.shared.switchAccount', '切换账号')
+                : isDesktopGateway
+                  ? t('claude.desktopGateway.switchHint', '应用供应商配置并启动 Claude Desktop')
+                  : isClaudeCodeOAuth
+                    ? t('claude.oauth.switchHint', '切换到本机 Claude Code')
+                    : isDesktopRuntime
+                      ? t('claude.desktopOAuth.switchHint', '切换到官方 Claude')
+                      : t('common.shared.switchAccount', '切换账号')
           }
         >
           {(isCliSubPlatform ? cliLaunchingAccountId : switching) === account.id
@@ -2307,6 +2655,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     const errorMessage = account.quota_error?.message?.trim();
     const isDesktopAccount = isClaudeDesktopOAuthAccount(account);
     const isApiKey = normalizeClaudeAuthMode(account.auth_mode) === 'api_key';
+    const canOpenVerificationWindow = isDesktopAccount && isClaudeCloudflareError(errorMessage);
 
     if (isApiKey && !isDesktopAccount && items.length === 0 && !errorMessage) {
       return variant === 'table' ? (
@@ -2369,6 +2718,24 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
           <div className={`quota-error-inline ${variant === 'table' ? 'table' : ''}`} title={errorMessage}>
             <CircleAlert size={variant === 'table' ? 12 : 14} />
             <span>{errorMessage}</span>
+            {canOpenVerificationWindow && (
+              <button
+                type="button"
+                className="btn btn-secondary quota-error-action"
+                disabled={verifyingAccountId === account.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleOpenVerificationWindow(account.id);
+                }}
+              >
+                <ExternalLink size={12} />
+                <span>
+                  {verifyingAccountId === account.id
+                    ? t('claude.quota.openingVerification', '正在打开...')
+                    : t('claude.quota.openVerification', '打开验证窗口')}
+                </span>
+              </button>
+            )}
           </div>
         )}
       </>
@@ -2393,6 +2760,9 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       Boolean(desktopGatewayModelsInput.trim()) ||
       desktopGatewayModelMappings.length > 0
     );
+  const shouldShowDesktopGatewayMappingEditor =
+    desktopGatewayMappingsExpanded || desktopGatewayModelMappings.length === 0;
+  const desktopGatewayMappingPreview = desktopGatewayModelMappings.slice(0, 3);
   const subPlatformAccountsCount = currentSubPlatformAccounts.length;
   const claudeTopTabs: Array<{
     key: ClaudePageSection;
@@ -2411,7 +2781,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     },
     {
       key: 'instances',
-      label: t('instances.title', '多开实例'),
+      label: t('instances.title', '应用多开'),
       icon: <Layers className="tab-icon" />,
     },
   ];
@@ -2434,7 +2804,6 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
           </span>
           <ManualHelpIconButton className="platform-header-help" />
         </div>
-        <TopCenterPromoBanner />
         <div className="page-top-strip-right-placeholder" aria-hidden="true" />
       </div>
       <div className="page-tabs-row page-tabs-center page-tabs-row-with-leading">
@@ -2991,6 +3360,18 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                       '首次使用时会下载并校验 Electron 登录组件到本地应用数据目录；安装包不内置，之后复用本地缓存。',
                     )}
                   </p>
+                  {desktopStarting && desktopLoginProgress && (
+                    <div className="claude-desktop-login-progress" role="status" aria-live="polite">
+                      <div className="claude-desktop-login-progress__head">
+                        <strong>{getClaudeDesktopLoginProgressLabel(t, desktopLoginProgress)}</strong>
+                        <span>{clampProgressPercent(desktopLoginProgress.percent)}%</span>
+                      </div>
+                      <div className="claude-desktop-login-progress__bar" aria-hidden="true">
+                        <span style={{ width: `${clampProgressPercent(desktopLoginProgress.percent)}%` }} />
+                      </div>
+                      <p>{getClaudeDesktopLoginProgressDetail(t, desktopLoginProgress)}</p>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label>{t('claude.desktopOAuth.nameLabel', '账号名称')}</label>
                     <input
@@ -3136,7 +3517,10 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                   <div className="form-group">
                     <label>{t('claude.apiKey.providerLabel', '供应商')}</label>
                     <div className="claude-provider-chip-list">
-                      {CLAUDE_API_PROVIDER_PRESETS.map((preset) => (
+                      {(addTab === 'desktopGateway'
+                        ? CLAUDE_DESKTOP_GATEWAY_PROVIDER_PRESETS
+                        : CLAUDE_API_PROVIDER_PRESETS
+                      ).map((preset) => (
                         <button
                           key={preset.id}
                           type="button"
@@ -3149,23 +3533,36 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                       ))}
                       <button
                         type="button"
-                        className={`claude-provider-chip ${apiProviderPresetId === CLAUDE_API_PROVIDER_CUSTOM_ID ? 'active' : ''}`}
-                        onClick={() => handleSelectApiProviderPreset(CLAUDE_API_PROVIDER_CUSTOM_ID)}
+                        className={`claude-provider-chip ${apiProviderPresetId === (
+                          addTab === 'desktopGateway'
+                            ? CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID
+                            : CLAUDE_API_PROVIDER_CUSTOM_ID
+                        ) ? 'active' : ''}`}
+                        onClick={() => handleSelectApiProviderPreset(
+                          addTab === 'desktopGateway'
+                            ? CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID
+                            : CLAUDE_API_PROVIDER_CUSTOM_ID,
+                        )}
                       >
                         <span>{t('claude.apiKey.customProvider', '自定义')}</span>
                       </button>
                     </div>
                   </div>
-                  {selectedApiProviderPreset && selectedApiProviderPreset.baseUrls.length > 1 && (
+                  {selectedFormProviderPreset && selectedFormProviderPreset.baseUrls.length > 1 && (
                     <div className="form-group">
                       <label>{t('claude.apiKey.endpointLabel', '供应商端点')}</label>
                       <div className="claude-provider-endpoint-list">
-                        {selectedApiProviderPreset.baseUrls.map((baseUrl) => (
+                        {selectedFormProviderPreset.baseUrls.map((baseUrl) => (
                           <button
                             key={baseUrl || 'official'}
                             type="button"
                             className={`claude-provider-endpoint-chip ${apiBaseUrlInput === applyClaudeApiProviderTemplateValue(baseUrl, apiProviderTemplateValues) ? 'active' : ''}`}
-                            onClick={() => setApiBaseUrlInput(applyClaudeApiProviderTemplateValue(baseUrl, apiProviderTemplateValues))}
+                            onClick={() => {
+                              setApiBaseUrlInput(applyClaudeApiProviderTemplateValue(baseUrl, apiProviderTemplateValues));
+                              if (addTab === 'desktopGateway') {
+                                clearDesktopGatewayModelDiscoveryStatus();
+                              }
+                            }}
                           >
                             {applyClaudeApiProviderTemplateValue(baseUrl, apiProviderTemplateValues) ||
                               t('claude.apiKey.officialEndpoint', '官方默认')}
@@ -3174,7 +3571,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                       </div>
                     </div>
                   )}
-                  {selectedApiProviderPreset?.templateValues &&
+                  {addTab !== 'desktopGateway' && selectedApiProviderPreset?.templateValues &&
                     Object.entries(selectedApiProviderPreset.templateValues).map(([key, config]) => (
                       <div className="form-group" key={key}>
                         <label>{config.label}</label>
@@ -3188,9 +3585,6 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                               [key]: event.target.value,
                             };
                             setApiProviderTemplateValues(nextValues);
-                            if (addTab === 'desktopGateway') {
-                              resetDesktopGatewayModelDiscovery();
-                            }
                             setApiBaseUrlInput(
                               applyClaudeApiProviderTemplateValue(
                                 selectedApiProviderPreset.baseUrls[0] ?? '',
@@ -3212,11 +3606,15 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                         value={apiBaseUrlInput}
                         onChange={(event) => {
                           setApiBaseUrlInput(event.target.value);
-                          setApiProviderPresetId(CLAUDE_API_PROVIDER_CUSTOM_ID);
+                          setApiProviderPresetId(
+                            addTab === 'desktopGateway'
+                              ? CLAUDE_DESKTOP_GATEWAY_PROVIDER_CUSTOM_ID
+                              : CLAUDE_API_PROVIDER_CUSTOM_ID,
+                          );
                           setApiProviderTemplateValues({});
                           setApiKeyModelCatalogOverride(null);
                           if (addTab === 'desktopGateway') {
-                            resetDesktopGatewayModelDiscovery();
+                            clearDesktopGatewayModelDiscoveryStatus();
                           } else {
                             setDesktopGatewayModelsError(null);
                             setDesktopGatewayModelsMessage(null);
@@ -3237,7 +3635,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                             className={`claude-provider-endpoint-chip ${desktopGatewayAuthScheme === scheme ? 'active' : ''}`}
                             onClick={() => {
                               setDesktopGatewayAuthScheme(scheme);
-                              resetDesktopGatewayModelDiscovery();
+                              clearDesktopGatewayModelDiscoveryStatus();
                             }}
                           >
                             {scheme}
@@ -3264,7 +3662,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                         onChange={(event) => {
                           setApiKeyInput(event.target.value);
                           if (addTab === 'desktopGateway') {
-                            resetDesktopGatewayModelDiscovery();
+                            clearDesktopGatewayModelDiscoveryStatus();
                           } else {
                             setDesktopGatewayModelsError(null);
                             setDesktopGatewayModelsMessage(null);
@@ -3352,101 +3750,179 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                           />
                         ) : (
                           <div className="claude-gateway-mapping-list">
-                            {desktopGatewayModelMappings.map((mapping, index) => {
-                              const desktopModelOptions = buildClaudeDesktopGatewayDesktopModelOptions(
-                                t('claude.apiKey.customProvider', '自定义'),
-                              );
-                              const desktopModelInOptions = desktopModelOptions.some((option) => option.value === mapping.desktopModel);
-                              const desktopDropdownValue = desktopModelInOptions && mapping.desktopModel
-                                ? mapping.desktopModel
-                                : CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL;
-                              const showCustomDesktopInput =
-                                desktopDropdownValue === CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL;
-                              return (
-                                <div className="claude-gateway-mapping-row" key={`${index}-${mapping.upstreamModel}-${mapping.desktopModel}`}>
-                                  <input
-                                    className="form-input"
-                                    value={mapping.upstreamModel}
-                                    onChange={(event) => {
-                                      const next = [...desktopGatewayModelMappings];
-                                      next[index] = { ...mapping, upstreamModel: event.target.value };
-                                      setDesktopGatewayModelMappings(next);
-                                      setDesktopGatewayModelsError(null);
-                                      setAddModalError(null);
-                                    }}
-                                    placeholder={t('claude.desktopGateway.upstreamModelPlaceholder', '上游真实模型名')}
-                                    spellCheck={false}
-                                  />
-                                  <div className="claude-gateway-mapped-model-field">
-                                    <SingleSelectDropdown
-                                      value={desktopDropdownValue}
-                                      options={desktopModelOptions}
-                                      onChange={(value) => {
-                                        const next = [...desktopGatewayModelMappings];
-                                        next[index] = {
-                                          ...mapping,
-                                          desktopModel:
-                                            value === CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL
-                                              ? desktopModelInOptions
-                                                ? ''
-                                                : mapping.desktopModel
-                                              : value,
-                                        };
-                                        setDesktopGatewayModelMappings(next);
-                                        setDesktopGatewayModelsError(null);
-                                        setAddModalError(null);
-                                      }}
-                                      ariaLabel={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
-                                      placeholder={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
-                                      menuWidth={260}
-                                    />
-                                    {showCustomDesktopInput && (
-                                      <input
-                                        className="form-input"
-                                        value={mapping.desktopModel}
-                                        onChange={(event) => {
-                                          const next = [...desktopGatewayModelMappings];
-                                          next[index] = { ...mapping, desktopModel: event.target.value };
-                                          setDesktopGatewayModelMappings(next);
-                                          setDesktopGatewayModelsError(null);
-                                          setAddModalError(null);
-                                        }}
-                                        placeholder={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
-                                        spellCheck={false}
-                                      />
-                                    )}
+                            {!shouldShowDesktopGatewayMappingEditor && (
+                              <div className="claude-gateway-mapping-summary">
+                                <div className="claude-gateway-mapping-summary-header">
+                                  <div>
+                                    <strong>
+                                      {t('claude.desktopGateway.mappingSummary', '已配置 {{count}} 个映射', {
+                                        count: desktopGatewayModelMappings.length,
+                                      })}
+                                    </strong>
+                                    <span>{t('claude.desktopGateway.mappingSummaryHint', '保存前可展开检查或修改。')}</span>
                                   </div>
                                   <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => {
-                                      setDesktopGatewayModelMappings((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-                                      setAddModalError(null);
-                                    }}
+                                    onClick={() => setDesktopGatewayMappingsExpanded(true)}
                                   >
-                                    <Trash2 size={14} />
-                                    {t('common.delete', '删除')}
+                                    <Pencil size={14} />
+                                    {t('claude.desktopGateway.editMappings', '编辑映射')}
                                   </button>
                                 </div>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={() => {
-                                setDesktopGatewayModelMappings((prev) => [
-                                  ...prev,
-                                  {
-                                    desktopModel: DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS[prev.length % DEFAULT_CLAUDE_DESKTOP_GATEWAY_MODELS.length] ?? '',
-                                    upstreamModel: '',
-                                  },
-                                ]);
-                                setAddModalError(null);
-                              }}
-                            >
-                              <Plus size={14} />
-                              {t('claude.desktopGateway.addMapping', '添加映射')}
-                            </button>
+                                <div className="claude-gateway-mapping-preview-list">
+                                  {desktopGatewayMappingPreview.map((mapping, index) => (
+                                    <div className="claude-gateway-mapping-preview-item" key={`${index}-${mapping.upstreamModel}-${mapping.desktopModel}`}>
+                                      <span title={mapping.upstreamModel}>{mapping.upstreamModel || '-'}</span>
+                                      <span>-&gt;</span>
+                                      <span title={mapping.desktopModel}>{mapping.desktopModel || '-'}</span>
+                                    </div>
+                                  ))}
+                                  {desktopGatewayModelMappings.length > desktopGatewayMappingPreview.length && (
+                                    <div className="claude-gateway-mapping-preview-more">
+                                      {t('claude.desktopGateway.moreMappings', '还有 {{count}} 个', {
+                                        count: desktopGatewayModelMappings.length - desktopGatewayMappingPreview.length,
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            {shouldShowDesktopGatewayMappingEditor && (
+                              <>
+                                {desktopGatewayModelMappings.length > 0 && (
+                                  <div className="claude-gateway-mapping-editor-toolbar">
+                                    <span>{t('claude.desktopGateway.mappingEditorTitle', '模型映射')}</span>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => setDesktopGatewayMappingsExpanded(false)}
+                                    >
+                                      {t('claude.desktopGateway.hideMappings', '收起')}
+                                    </button>
+                                  </div>
+                                )}
+                                {desktopGatewayModelMappings.map((mapping, index) => {
+                                  const desktopModelOptions = buildClaudeDesktopGatewayDesktopModelOptions(
+                                    t('claude.apiKey.customProvider', '自定义'),
+                                  );
+                                  const desktopModelInOptions = desktopModelOptions.some((option) => option.value === mapping.desktopModel);
+                                  const desktopDropdownValue = desktopModelInOptions && mapping.desktopModel
+                                    ? mapping.desktopModel
+                                    : CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL;
+                                  const showCustomDesktopInput =
+                                    desktopDropdownValue === CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL;
+                                  return (
+                                    <div className="claude-gateway-mapping-row" key={`${index}-${mapping.upstreamModel}-${mapping.desktopModel}`}>
+                                      <input
+                                        className="form-input"
+                                        value={mapping.upstreamModel}
+                                        onChange={(event) => {
+                                          const next = [...desktopGatewayModelMappings];
+                                          next[index] = { ...mapping, upstreamModel: event.target.value };
+                                          setDesktopGatewayModelMappings(next);
+                                          setDesktopGatewayModelsError(null);
+                                          setAddModalError(null);
+                                        }}
+                                        placeholder={t('claude.desktopGateway.upstreamModelPlaceholder', '上游真实模型名')}
+                                        spellCheck={false}
+                                      />
+                                      <div className="claude-gateway-mapped-model-field">
+                                        <SingleSelectDropdown
+                                          value={desktopDropdownValue}
+                                          options={desktopModelOptions}
+                                          onChange={(value) => {
+                                            const next = [...desktopGatewayModelMappings];
+                                            next[index] = {
+                                              ...mapping,
+                                              desktopModel:
+                                                value === CLAUDE_DESKTOP_GATEWAY_CUSTOM_DESKTOP_MODEL
+                                                  ? desktopModelInOptions
+                                                    ? ''
+                                                    : mapping.desktopModel
+                                                  : value,
+                                            };
+                                            setDesktopGatewayModelMappings(next);
+                                            setDesktopGatewayModelsError(null);
+                                            setAddModalError(null);
+                                          }}
+                                          ariaLabel={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
+                                          placeholder={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
+                                          menuWidth={260}
+                                        />
+                                        {showCustomDesktopInput && (
+                                          <input
+                                            className="form-input"
+                                            value={mapping.desktopModel}
+                                            onChange={(event) => {
+                                              const next = [...desktopGatewayModelMappings];
+                                              next[index] = { ...mapping, desktopModel: event.target.value };
+                                              setDesktopGatewayModelMappings(next);
+                                              setDesktopGatewayModelsError(null);
+                                              setAddModalError(null);
+                                            }}
+                                            placeholder={t('claude.desktopGateway.desktopModelPlaceholder', 'Claude 模型名')}
+                                            spellCheck={false}
+                                          />
+                                        )}
+                                      </div>
+                                      <label
+                                        className="claude-gateway-supports1m-toggle"
+                                        title={t('claude.desktopGateway.supports1mLabel', '声明支持 1M')}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={mapping.supports1m === true}
+                                          onChange={(event) => {
+                                            const next = [...desktopGatewayModelMappings];
+                                            next[index] = { ...mapping, supports1m: event.target.checked };
+                                            setDesktopGatewayModelMappings(next);
+                                            setDesktopGatewayModelsError(null);
+                                            setAddModalError(null);
+                                          }}
+                                        />
+                                        <span className="claude-gateway-supports1m-box" aria-hidden="true">
+                                          {mapping.supports1m === true && <Check size={12} />}
+                                        </span>
+                                        <span>{t('claude.desktopGateway.supports1mShort', '1M')}</span>
+                                      </label>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => {
+                                          setDesktopGatewayModelMappings((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+                                          setAddModalError(null);
+                                        }}
+                                      >
+                                        <Trash2 size={14} />
+                                        {t('common.delete', '删除')}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => {
+                                    setDesktopGatewayModelMappings((prev) => [
+                                      ...prev,
+                                      {
+                                        desktopModel: getNextClaudeDesktopGatewaySafeModel(
+                                          prev.map((mapping) => mapping.desktopModel),
+                                        ),
+                                        upstreamModel: '',
+                                        supports1m: false,
+                                      },
+                                    ]);
+                                    setDesktopGatewayMappingsExpanded(true);
+                                    setAddModalError(null);
+                                  }}
+                                >
+                                  <Plus size={14} />
+                                  {t('claude.desktopGateway.addMapping', '添加映射')}
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

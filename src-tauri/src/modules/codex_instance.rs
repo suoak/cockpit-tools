@@ -160,13 +160,7 @@ pub fn update_default_app_speed(speed: CodexAppSpeed) -> Result<DefaultInstanceS
 }
 
 pub fn get_default_codex_home() -> Result<PathBuf, String> {
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    {
-        return Ok(modules::codex_account::get_codex_home());
-    }
-
-    #[allow(unreachable_code)]
-    Err("Codex 多开实例仅支持 macOS 和 Windows".to_string())
+    Ok(modules::codex_account::get_codex_home())
 }
 
 pub fn get_default_instances_root_dir() -> Result<PathBuf, String> {

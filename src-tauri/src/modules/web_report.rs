@@ -114,8 +114,8 @@ fn build_service_refresh_policies(cfg: &super::config::UserConfig) -> Vec<Servic
             interval_minutes: cfg.cursor_auto_refresh_minutes,
         },
         ServiceRefreshPolicy {
-            key: "gemini",
-            interval_minutes: cfg.gemini_auto_refresh_minutes,
+            key: "grok",
+            interval_minutes: cfg.grok_auto_refresh_minutes,
         },
         ServiceRefreshPolicy {
             key: "codebuddy",
@@ -132,6 +132,18 @@ fn build_service_refresh_policies(cfg: &super::config::UserConfig) -> Vec<Servic
         ServiceRefreshPolicy {
             key: "trae",
             interval_minutes: cfg.trae_auto_refresh_minutes,
+        },
+        ServiceRefreshPolicy {
+            key: "trae_solo",
+            interval_minutes: cfg.trae_solo_auto_refresh_minutes,
+        },
+        ServiceRefreshPolicy {
+            key: "trae_cn",
+            interval_minutes: cfg.trae_cn_auto_refresh_minutes,
+        },
+        ServiceRefreshPolicy {
+            key: "trae_solo_cn",
+            interval_minutes: cfg.trae_solo_cn_auto_refresh_minutes,
         },
         ServiceRefreshPolicy {
             key: "zed",
@@ -170,7 +182,8 @@ async fn run_refresh_for_service(policy: ServiceRefreshPolicy) -> Result<(), Str
         "cursor" => super::cursor_account::refresh_all_tokens()
             .await
             .map(|_| ()),
-        "gemini" => super::gemini_account::refresh_all_tokens()
+
+        "grok" => super::grok_account::refresh_all_accounts()
             .await
             .map(|_| ()),
         "codebuddy" => super::codebuddy_account::refresh_all_tokens()
@@ -182,7 +195,26 @@ async fn run_refresh_for_service(policy: ServiceRefreshPolicy) -> Result<(), Str
         "qoder" => super::qoder_oauth::refresh_all_accounts_from_openapi()
             .await
             .map(|_| ()),
-        "trae" => super::trae_account::refresh_all_tokens().await.map(|_| ()),
+        "trae" => super::trae_account::refresh_tokens_for_platform(
+            super::trae_account::TraePlatformKind::Trae,
+        )
+        .await
+        .map(|_| ()),
+        "trae_solo" => super::trae_account::refresh_tokens_for_platform(
+            super::trae_account::TraePlatformKind::TraeSolo,
+        )
+        .await
+        .map(|_| ()),
+        "trae_cn" => super::trae_account::refresh_tokens_for_platform(
+            super::trae_account::TraePlatformKind::TraeCn,
+        )
+        .await
+        .map(|_| ()),
+        "trae_solo_cn" => super::trae_account::refresh_tokens_for_platform(
+            super::trae_account::TraePlatformKind::TraeSoloCn,
+        )
+        .await
+        .map(|_| ()),
         "zed" => super::zed_account::refresh_all_accounts().await.map(|_| ()),
         _ => Err(format!("未知服务: {}", policy.key)),
     }
@@ -587,7 +619,6 @@ fn build_report_rows() -> Vec<ReportRow> {
     append_windsurf_rows(&mut rows);
     append_kiro_rows(&mut rows);
     append_cursor_rows(&mut rows);
-    append_gemini_rows(&mut rows);
     append_codebuddy_rows(
         &mut rows,
         "CodeBuddy",
@@ -1455,68 +1486,6 @@ fn append_cursor_rows(rows: &mut Vec<ReportRow>) {
     }
 }
 
-fn append_gemini_rows(rows: &mut Vec<ReportRow>) {
-    let accounts = super::gemini_account::list_accounts();
-    for account in accounts {
-        let account_name = account.email.clone();
-        let status = account.status.as_deref().unwrap_or("normal");
-        let mut pushed = false;
-
-        if let Some(raw_usage) = account.gemini_usage_raw.as_ref() {
-            if let Some(buckets) =
-                get_nested_value(raw_usage, &["buckets"]).and_then(Value::as_array)
-            {
-                for bucket in buckets {
-                    let Some(model_id) = get_nested_value(bucket, &["modelId"])
-                        .and_then(Value::as_str)
-                        .map(str::trim)
-                        .filter(|value| !value.is_empty())
-                    else {
-                        continue;
-                    };
-
-                    let Some(remaining_fraction) =
-                        get_nested_value(bucket, &["remainingFraction"]).and_then(as_f64)
-                    else {
-                        continue;
-                    };
-
-                    let remaining = clamp_percent(remaining_fraction * 100.0);
-                    let used = 100.0 - remaining;
-                    let reset = parse_reset_value(get_nested_value(bucket, &["resetTime"]));
-
-                    rows.push(make_row(
-                        "Gemini",
-                        &account_name,
-                        model_id,
-                        &percent_text(used),
-                        &percent_text(remaining),
-                        &reset,
-                        status,
-                        "",
-                    ));
-                    pushed = true;
-                }
-            }
-        }
-
-        if !pushed {
-            rows.push(make_row(
-                "Gemini",
-                &account_name,
-                "Usage",
-                "-",
-                "-",
-                "-",
-                status,
-                account
-                    .status_reason
-                    .as_deref()
-                    .unwrap_or("Usage data unavailable"),
-            ));
-        }
-    }
-}
 
 fn append_codebuddy_rows(
     rows: &mut Vec<ReportRow>,
@@ -1955,9 +1924,12 @@ fn append_copilot_snapshot_rows(
     let mut count = 0usize;
 
     for (key, label) in metrics {
-        let Some(snapshot) = get_nested_value(snapshots, &[key]) else {
+        let Some(snapshot) = get_copilot_snapshot(snapshots, key) else {
             continue;
         };
+        if copilot_snapshot_without_displayable_quota(snapshot) {
+            continue;
+        }
         let Some(remaining) = get_nested_value(snapshot, &["percent_remaining"]).and_then(as_f64)
         else {
             continue;
@@ -1978,6 +1950,30 @@ fn append_copilot_snapshot_rows(
     }
 
     count
+}
+
+fn get_copilot_snapshot<'a>(snapshots: &'a Value, key: &str) -> Option<&'a Value> {
+    if matches!(key, "premium_models" | "premium_interactions") {
+        return get_nested_value(snapshots, &["premium_models"])
+            .or_else(|| get_nested_value(snapshots, &["premium_interactions"]));
+    }
+    get_nested_value(snapshots, &[key])
+}
+
+fn copilot_snapshot_without_displayable_quota(snapshot: &Value) -> bool {
+    if get_nested_value(snapshot, &["unlimited"]).and_then(Value::as_bool) == Some(true) {
+        return false;
+    }
+
+    let entitlement = get_nested_value(snapshot, &["entitlement"]).and_then(as_f64);
+    if entitlement.map(|value| value < 0.0).unwrap_or(false) {
+        return false;
+    }
+    if let Some(value) = entitlement {
+        return value <= 0.0;
+    }
+
+    get_nested_value(snapshot, &["has_quota"]).and_then(Value::as_bool) == Some(false)
 }
 
 fn pick_copilot_reset_text(reset_unix: Option<i64>, reset_iso: Option<&str>) -> String {
@@ -2289,7 +2285,7 @@ fn render_markdown(meta: &ReportMeta, rows: &[ReportRow]) -> String {
     let now = chrono::Utc::now();
     let data_collected_at = format_data_collected_at(meta);
     let mut output = String::new();
-    output.push_str("# SC-Cockpit Tools Usage Report\n\n");
+    output.push_str("# Cockpit Tools Usage Report\n\n");
     output.push_str(&format!(
         "- Generated at: {}\n",
         markdown_cell(&meta.generated_at)
@@ -2402,12 +2398,12 @@ fn render_html(meta: &ReportMeta, rows: &[ReportRow]) -> String {
     output.push_str(
         "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>",
     );
-    output.push_str("<title>SC-Cockpit Tools Usage Report</title>");
+    output.push_str("<title>Cockpit Tools Usage Report</title>");
     output.push_str(
         "<style>body{margin:0;background:#f6f8fb;color:#0f172a;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}main{max-width:1120px;margin:24px auto;padding:0 16px 24px}h1{font-size:22px;margin:0 0 12px}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:16px}th,td{font-size:13px;padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}th{background:#e8eafe;color:#334155;font-weight:600;position:sticky;top:0}tr:last-child td{border-bottom:none}.meta-table{margin-top:0}.meta-key{width:360px;color:#334155;font-weight:600;background:#e8eafe}.group-even td{background:#ffffff}.group-odd td{background:#f0faff}.status-disabled{color:#b45309}.status-normal{color:#166534}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.reset-friendly-col{min-width:240px;width:240px;white-space:nowrap}</style>",
     );
     output.push_str("</head><body><main>");
-    output.push_str("<h1>SC-Cockpit Tools Usage Report</h1>");
+    output.push_str("<h1>Cockpit Tools Usage Report</h1>");
     output.push_str("<table class=\"meta-table\"><tbody>");
     output.push_str(&format!(
         "<tr><th class=\"meta-key\">Generated at</th><td class=\"mono\">{}</td></tr>",

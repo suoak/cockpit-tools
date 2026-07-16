@@ -120,6 +120,7 @@ type ClaudeDesktopGatewayProviderInput = {
   apiProviderSourceTag?: string | null;
   apiProviderWebsite?: string | null;
   apiProviderApiKeyUrl?: string | null;
+  apiKeyField?: string | null;
   apiModelCatalog?: string[] | null;
   apiExtraEnv?: Record<string, string> | null;
   authScheme?: string | null;
@@ -143,6 +144,7 @@ function buildClaudeDesktopGatewayPayload(
     apiProviderSourceTag: provider?.apiProviderSourceTag?.trim() || null,
     apiProviderWebsite: provider?.apiProviderWebsite?.trim() || null,
     apiProviderApiKeyUrl: provider?.apiProviderApiKeyUrl?.trim() || null,
+    apiKeyField: provider?.apiKeyField?.trim() || null,
     apiModelCatalog: provider?.apiModelCatalog ?? null,
     apiExtraEnv: provider?.apiExtraEnv ?? null,
     authScheme: provider?.authScheme?.trim() || null,
@@ -189,8 +191,10 @@ export async function importClaudeCliFromLocal(): Promise<ClaudeAccount> {
   return await invoke('import_claude_cli_from_local');
 }
 
-export async function claudeDesktopLoginStart(): Promise<ClaudeDesktopLoginStartResponse> {
-  const raw = await invoke<ClaudeDesktopLoginStartResponseRaw>('claude_desktop_login_start');
+export async function claudeDesktopLoginStart(progressId?: string): Promise<ClaudeDesktopLoginStartResponse> {
+  const raw = await invoke<ClaudeDesktopLoginStartResponseRaw>('claude_desktop_login_start', {
+    progressId: progressId || null,
+  });
   return normalizeClaudeDesktopLoginStartResponse(raw);
 }
 
@@ -244,6 +248,10 @@ export async function refreshClaudeQuota(accountId: string): Promise<ClaudeAccou
 
 export async function refreshAllClaudeQuotas(): Promise<number> {
   return await invoke('refresh_all_claude_quotas');
+}
+
+export async function openClaudeVerificationWindow(accountId: string): Promise<void> {
+  return await invoke('claude_open_verification_window', { accountId });
 }
 
 export async function updateClaudeAccountTags(

@@ -35,9 +35,10 @@ import (
 )
 
 const (
-	codexUserAgent             = "codex-tui/0.135.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.135.0)"
-	codexOriginator            = "codex-tui"
-	codexDefaultImageToolModel = "gpt-image-2"
+	codexUserAgent               = "codex-tui/0.135.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.135.0)"
+	codexOriginator              = "codex-tui"
+	codexDefaultImageToolModel   = "gpt-image-2"
+	codexResponsesLiteHeaderName = "X-OpenAI-Internal-Codex-Responses-Lite"
 )
 
 var dataTag = []byte("data:")
@@ -453,10 +454,15 @@ func filterCodexReasoningReplayItemsForInput(body []byte, items [][]byte) [][]by
 	}
 
 	hasInputReasoning := codexInputHasValidReasoningEncryptedContent(body)
+	inputItems := input.Array()
 	existingCalls := make(map[string]bool)
-	for _, inputItem := range input.Array() {
+	outputCalls := make(map[string]bool)
+	for _, inputItem := range inputItems {
 		for _, key := range codexReplayToolCallKeys(inputItem) {
 			existingCalls[key] = true
+		}
+		for _, key := range codexReplayToolOutputKeys(inputItem) {
+			outputCalls[key] = true
 		}
 	}
 
@@ -473,6 +479,9 @@ func filterCodexReasoningReplayItemsForInput(body []byte, items [][]byte) [][]by
 			if len(keys) == 0 || codexReplayAnyToolCallKeyExists(existingCalls, keys) {
 				continue
 			}
+			if !codexReplayAnyToolCallKeyExists(outputCalls, keys) {
+				continue
+			}
 			for _, key := range keys {
 				existingCalls[key] = true
 			}
@@ -482,6 +491,58 @@ func filterCodexReasoningReplayItemsForInput(body []byte, items [][]byte) [][]by
 		filtered = append(filtered, item)
 	}
 	return filtered
+}
+
+func filterCodexUnpairedToolCallItems(body []byte) []byte {
+	input := gjson.GetBytes(body, "input")
+	if !input.IsArray() {
+		return body
+	}
+
+	inputItems := input.Array()
+	callKeys := make(map[string]bool)
+	outputKeys := make(map[string]bool)
+	for _, inputItem := range inputItems {
+		for _, key := range codexReplayToolCallKeys(inputItem) {
+			callKeys[key] = true
+		}
+		for _, key := range codexReplayToolOutputKeys(inputItem) {
+			outputKeys[key] = true
+		}
+	}
+	if len(callKeys) == 0 && len(outputKeys) == 0 {
+		return body
+	}
+
+	changed := false
+	items := make([]string, 0, len(inputItems))
+	for _, inputItem := range inputItems {
+		itemType := strings.TrimSpace(inputItem.Get("type").String())
+		switch itemType {
+		case "function_call", "custom_tool_call":
+			keys := codexReplayToolCallKeys(inputItem)
+			if len(keys) == 0 || !codexReplayAnyToolCallKeyExists(outputKeys, keys) {
+				changed = true
+				continue
+			}
+		case "function_call_output", "custom_tool_call_output":
+			keys := codexReplayToolOutputKeys(inputItem)
+			if len(keys) == 0 || !codexReplayAnyToolCallKeyExists(callKeys, keys) {
+				changed = true
+				continue
+			}
+		}
+		items = append(items, inputItem.Raw)
+	}
+	if !changed {
+		return body
+	}
+
+	updated, err := sjson.SetRawBytes(body, "input", []byte("["+strings.Join(items, ",")+"]"))
+	if err != nil {
+		return body
+	}
+	return updated
 }
 
 func insertCodexReasoningReplayItems(body []byte, replayItems [][]byte) ([]byte, bool) {
@@ -566,14 +627,14 @@ func codexAlignReasoningReplayToolCallIDs(inputItems []gjson.Result, replayItems
 			continue
 		}
 
-		callID := strings.TrimSpace(itemResult.Get("call_id").String())
 		outputCallID := ""
-		for _, candidate := range codexReplayComparableCallIDs(callID) {
-			if value := outputCallIDs[candidate]; value != "" {
+		for _, key := range codexReplayToolCallKeys(itemResult) {
+			if value := outputCallIDs[key]; value != "" {
 				outputCallID = value
 				break
 			}
 		}
+		callID := strings.TrimSpace(itemResult.Get("call_id").String())
 		if outputCallID == "" || outputCallID == callID {
 			aligned = append(aligned, replayItem)
 			continue
@@ -592,16 +653,12 @@ func codexAlignReasoningReplayToolCallIDs(inputItems []gjson.Result, replayItems
 func codexReplayOutputCallIDs(inputItems []gjson.Result) map[string]string {
 	outputCallIDs := make(map[string]string)
 	for _, inputItem := range inputItems {
-		itemType := strings.TrimSpace(inputItem.Get("type").String())
-		if itemType != "function_call_output" && itemType != "custom_tool_call_output" {
-			continue
-		}
 		callID := strings.TrimSpace(inputItem.Get("call_id").String())
 		if callID == "" {
 			continue
 		}
-		for _, candidate := range codexReplayComparableCallIDs(callID) {
-			outputCallIDs[candidate] = callID
+		for _, key := range codexReplayToolOutputKeys(inputItem) {
+			outputCallIDs[key] = callID
 		}
 	}
 	return outputCallIDs
@@ -631,6 +688,28 @@ func codexReplayToolCallKeys(item gjson.Result) []string {
 	keys := make([]string, 0, len(callIDs))
 	for _, callID := range callIDs {
 		keys = append(keys, itemType+":"+callID)
+	}
+	return keys
+}
+
+func codexReplayToolOutputKeys(item gjson.Result) []string {
+	itemType := strings.TrimSpace(item.Get("type").String())
+	var callType string
+	switch itemType {
+	case "function_call_output":
+		callType = "function_call"
+	case "custom_tool_call_output":
+		callType = "custom_tool_call"
+	default:
+		return nil
+	}
+	callIDs := codexReplayComparableCallIDs(item.Get("call_id").String())
+	if len(callIDs) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(callIDs))
+	for _, callID := range callIDs {
+		keys = append(keys, callType+":"+callID)
 	}
 	return keys
 }
@@ -778,11 +857,15 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	body, _ = sjson.DeleteBytes(body, "safety_identifier")
 	body, _ = sjson.DeleteBytes(body, "stream_options")
 	body = normalizeCodexInstructions(body)
-	if e.cfg == nil || e.cfg.DisableImageGeneration == config.DisableImageGenerationOff {
+	if helps.ShouldInjectImageGenerationTool(e.cfg, requestPath, opts.Headers) {
 		body = ensureImageGenerationTool(body, baseModel, auth)
 	}
+	body, useFullResponses := normalizeCodexResponsesLiteRequest(body, opts.Headers, auth, true)
 	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	body, replayScope := applyCodexReasoningReplayCache(ctx, from, req, opts, body)
+	if sourceFormatEqual(from, sdktranslator.FormatClaude) {
+		body = filterCodexUnpairedToolCallItems(body)
+	}
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses"
@@ -792,6 +875,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		return resp, err
 	}
 	applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
+	removeCodexResponsesLiteHeaderForFullResponse(httpReq.Header, useFullResponses)
 	applyCodexIdentityConfuseHeaders(httpReq.Header, &identityState)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
@@ -945,9 +1029,10 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 	body, _ = sjson.DeleteBytes(body, "stream")
 	body = normalizeCodexInstructions(body)
-	if e.cfg == nil || e.cfg.DisableImageGeneration == config.DisableImageGenerationOff {
+	if helps.ShouldInjectImageGenerationTool(e.cfg, requestPath, opts.Headers) {
 		body = ensureImageGenerationTool(body, baseModel, auth)
 	}
+	body, _ = normalizeCodexResponsesLiteRequest(body, opts.Headers, auth, false)
 	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
@@ -1053,11 +1138,15 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	body, _ = sjson.DeleteBytes(body, "stream_options")
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 	body = normalizeCodexInstructions(body)
-	if e.cfg == nil || e.cfg.DisableImageGeneration == config.DisableImageGenerationOff {
+	if helps.ShouldInjectImageGenerationTool(e.cfg, requestPath, opts.Headers) {
 		body = ensureImageGenerationTool(body, baseModel, auth)
 	}
+	body, useFullResponses := normalizeCodexResponsesLiteRequest(body, opts.Headers, auth, true)
 	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	body, replayScope := applyCodexReasoningReplayCache(ctx, from, req, opts, body)
+	if sourceFormatEqual(from, sdktranslator.FormatClaude) {
+		body = filterCodexUnpairedToolCallItems(body)
+	}
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses"
@@ -1067,6 +1156,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		return nil, err
 	}
 	applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
+	removeCodexResponsesLiteHeaderForFullResponse(httpReq.Header, useFullResponses)
 	applyCodexIdentityConfuseHeaders(httpReq.Header, &identityState)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
@@ -1560,6 +1650,8 @@ func applyCodexHeaders(r *http.Request, auth *cliproxyauth.Auth, token string, s
 	misc.EnsureHeader(r.Header, ginHeaders, "Version", "")
 	misc.EnsureHeader(r.Header, ginHeaders, "X-Codex-Turn-Metadata", "")
 	misc.EnsureHeader(r.Header, ginHeaders, "X-Client-Request-Id", "")
+	misc.EnsureHeader(r.Header, ginHeaders, codexResponsesLiteHeaderName, "")
+	copyCodexAgtoolsDiagnosticHeaders(r.Header, ginHeaders)
 	cfgUserAgent, _ := codexHeaderDefaults(cfg, auth)
 	ensureHeaderWithConfigPrecedence(r.Header, ginHeaders, "User-Agent", cfgUserAgent, codexUserAgent)
 
@@ -1597,6 +1689,27 @@ func applyCodexHeaders(r *http.Request, auth *cliproxyauth.Auth, token string, s
 		attrs = auth.Attributes
 	}
 	util.ApplyCustomHeadersFromAttrs(r, attrs)
+}
+
+func copyCodexAgtoolsDiagnosticHeaders(dst http.Header, src http.Header) {
+	if dst == nil || src == nil {
+		return
+	}
+	for key, values := range src {
+		trimmedKey := strings.TrimSpace(key)
+		if trimmedKey == "" || !strings.HasPrefix(strings.ToLower(trimmedKey), "x-agtools-") {
+			continue
+		}
+		canonicalKey := http.CanonicalHeaderKey(trimmedKey)
+		dst.Del(canonicalKey)
+		for _, value := range values {
+			value = strings.TrimSpace(value)
+			if value == "" {
+				continue
+			}
+			dst.Add(canonicalKey, value)
+		}
+	}
 }
 
 func newCodexStatusErr(statusCode int, body []byte) statusErr {
@@ -1666,6 +1779,95 @@ func normalizeCodexInstructions(body []byte) []byte {
 	return body
 }
 
+func normalizeCodexResponsesLiteRequest(body []byte, headers http.Header, auth *cliproxyauth.Auth, allowFullResponsesForImage bool) ([]byte, bool) {
+	if !codexResponsesLiteEnabled(headers) || codexAuthUsesAPIKey(auth) {
+		return body, false
+	}
+
+	body, _ = sjson.SetBytes(body, "parallel_tool_calls", false)
+	if allowFullResponsesForImage && codexRequestUsesImageGeneration(body) {
+		return body, true
+	}
+
+	tools := gjson.GetBytes(body, "tools")
+	if tools.IsArray() {
+		toolItems := tools.Array()
+		for index := len(toolItems) - 1; index >= 0; index-- {
+			if codexResponsesLiteToolSupported(toolItems[index]) {
+				continue
+			}
+			body, _ = sjson.DeleteBytes(body, fmt.Sprintf("tools.%d", index))
+		}
+		if remaining := gjson.GetBytes(body, "tools"); remaining.IsArray() && len(remaining.Array()) == 0 {
+			body, _ = sjson.DeleteBytes(body, "tools")
+		}
+	}
+
+	toolChoice := gjson.GetBytes(body, "tool_choice")
+	if !toolChoice.Exists() {
+		return body, false
+	}
+	if toolChoice.Type == gjson.String {
+		switch toolChoice.String() {
+		case "auto", "none", "required":
+			return body, false
+		default:
+			body, _ = sjson.DeleteBytes(body, "tool_choice")
+			return body, false
+		}
+	}
+	if !codexResponsesLiteToolSupported(toolChoice) {
+		body, _ = sjson.DeleteBytes(body, "tool_choice")
+	}
+	return body, false
+}
+
+func codexRequestUsesImageGeneration(body []byte) bool {
+	tools := gjson.GetBytes(body, "tools")
+	if tools.IsArray() {
+		for _, tool := range tools.Array() {
+			if strings.EqualFold(strings.TrimSpace(tool.Get("type").String()), "image_generation") ||
+				codexToolConflictsWithHostedImageGeneration(tool) {
+				return true
+			}
+		}
+	}
+
+	toolChoice := gjson.GetBytes(body, "tool_choice")
+	return strings.EqualFold(strings.TrimSpace(toolChoice.String()), "image_generation") ||
+		isImageGenFunctionName(toolChoice.String()) ||
+		strings.EqualFold(strings.TrimSpace(toolChoice.Get("type").String()), "image_generation") ||
+		(strings.EqualFold(strings.TrimSpace(toolChoice.Get("type").String()), "tool") &&
+			strings.EqualFold(strings.TrimSpace(toolChoice.Get("name").String()), "image_generation")) ||
+		codexToolConflictsWithHostedImageGeneration(toolChoice)
+}
+
+func removeCodexResponsesLiteHeaderForFullResponse(headers http.Header, useFullResponses bool) {
+	if useFullResponses {
+		deleteHeaderCaseInsensitive(headers, codexResponsesLiteHeaderName)
+	}
+}
+
+func codexResponsesLiteEnabled(headers http.Header) bool {
+	for name := range headers {
+		if strings.EqualFold(name, codexResponsesLiteHeaderName) {
+			return true
+		}
+	}
+	return false
+}
+
+func codexResponsesLiteToolSupported(tool gjson.Result) bool {
+	switch strings.TrimSpace(tool.Get("type").String()) {
+	case "function", "custom":
+		return true
+	case "tool_search":
+		return strings.EqualFold(strings.TrimSpace(tool.Get("execution").String()), "client")
+	default:
+		return false
+	}
+}
+
 var imageGenToolJSON = []byte(`{"type":"image_generation","output_format":"png"}`)
 var imageGenToolArrayJSON = []byte(`[{"type":"image_generation","output_format":"png"}]`)
 
@@ -1677,6 +1879,48 @@ func isCodexFreePlanAuth(auth *cliproxyauth.Auth) bool {
 		return false
 	}
 	return strings.EqualFold(strings.TrimSpace(auth.Attributes["plan_type"]), "free")
+}
+
+func isImageGenFunctionName(name string) bool {
+	return strings.EqualFold(strings.TrimSpace(name), "image_gen.imagegen")
+}
+
+func codexToolConflictsWithHostedImageGeneration(tool gjson.Result) bool {
+	if isImageGenFunctionName(tool.Get("name").String()) || isImageGenFunctionName(tool.Get("function.name").String()) {
+		return true
+	}
+	if !strings.EqualFold(strings.TrimSpace(tool.Get("name").String()), "image_gen") {
+		return false
+	}
+	children := tool.Get("tools")
+	if !children.IsArray() {
+		return false
+	}
+	for _, child := range children.Array() {
+		if strings.EqualFold(strings.TrimSpace(child.Get("name").String()), "imagegen") ||
+			strings.EqualFold(strings.TrimSpace(child.Get("function.name").String()), "imagegen") {
+			return true
+		}
+	}
+	return false
+}
+
+func removeHostedImageGenerationForFunctionConflict(body []byte, tools gjson.Result) []byte {
+	toolItems := tools.Array()
+	for index := len(toolItems) - 1; index >= 0; index-- {
+		if toolItems[index].Get("type").String() != "image_generation" {
+			continue
+		}
+		body, _ = sjson.DeleteBytes(body, fmt.Sprintf("tools.%d", index))
+	}
+
+	toolChoice := gjson.GetBytes(body, "tool_choice")
+	if toolChoice.String() == "image_generation" ||
+		toolChoice.Get("type").String() == "image_generation" ||
+		(toolChoice.Get("type").String() == "tool" && toolChoice.Get("name").String() == "image_generation") {
+		body, _ = sjson.DeleteBytes(body, "tool_choice")
+	}
+	return body
 }
 
 func ensureImageGenerationTool(body []byte, baseModel string, auth *cliproxyauth.Auth) []byte {
@@ -1692,10 +1936,21 @@ func ensureImageGenerationTool(body []byte, baseModel string, auth *cliproxyauth
 		body, _ = sjson.SetRawBytes(body, "tools", imageGenToolArrayJSON)
 		return body
 	}
+	hasFunctionConflict := false
+	hasHostedImageGeneration := false
 	for _, t := range tools.Array() {
-		if t.Get("type").String() == "image_generation" {
-			return body
+		if codexToolConflictsWithHostedImageGeneration(t) {
+			hasFunctionConflict = true
 		}
+		if t.Get("type").String() == "image_generation" {
+			hasHostedImageGeneration = true
+		}
+	}
+	if hasFunctionConflict {
+		return removeHostedImageGenerationForFunctionConflict(body, tools)
+	}
+	if hasHostedImageGeneration {
+		return body
 	}
 	body, _ = sjson.SetRawBytes(body, "tools.-1", imageGenToolJSON)
 	return body

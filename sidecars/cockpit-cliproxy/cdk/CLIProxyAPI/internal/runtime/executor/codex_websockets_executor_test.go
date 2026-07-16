@@ -93,6 +93,78 @@ func TestCodexWebsocketsExecutePreservesPreviousResponseIDUpstream(t *testing.T)
 	}
 }
 
+func TestCodexWebsocketsExecutePreservesImageGenNamespaceOutsideResponsesLite(t *testing.T) {
+	type capturedRequest struct {
+		header  http.Header
+		payload []byte
+	}
+	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	captured := make(chan capturedRequest, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Errorf("upgrade websocket: %v", err)
+			return
+		}
+		defer func() { _ = conn.Close() }()
+
+		_, payload, err := conn.ReadMessage()
+		if err != nil {
+			t.Errorf("read upstream websocket message: %v", err)
+			return
+		}
+		captured <- capturedRequest{header: r.Header.Clone(), payload: bytes.Clone(payload)}
+
+		completed := []byte(`{"type":"response.completed","response":{"id":"resp-1","output":[],"usage":{"input_tokens":0,"output_tokens":0,"total_tokens":0}}}`)
+		if errWrite := conn.WriteMessage(websocket.TextMessage, completed); errWrite != nil {
+			t.Errorf("write completed websocket message: %v", errWrite)
+		}
+	}))
+	defer server.Close()
+
+	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ginContext.Request = httptest.NewRequest(http.MethodPost, "http://localhost/v1/responses", nil)
+	ginContext.Request.Header.Set(codexResponsesLiteHeaderName, "true")
+	ctx := context.WithValue(context.Background(), "gin", ginContext)
+
+	exec := NewCodexWebsocketsExecutor(&config.Config{})
+	auth := &cliproxyauth.Auth{
+		Attributes: map[string]string{"base_url": server.URL},
+		Metadata:   map[string]any{"access_token": "oauth-token"},
+	}
+	req := cliproxyexecutor.Request{
+		Model: "gpt-5-codex",
+		Payload: []byte(`{
+			"model":"gpt-5-codex",
+			"input":"draw a test image",
+			"tools":[{"type":"namespace","name":"image_gen","tools":[{"type":"function","name":"imagegen"}]}]
+		}`),
+	}
+	opts := cliproxyexecutor.Options{
+		SourceFormat: sdktranslator.FromString("codex"),
+		Headers:      http.Header{codexResponsesLiteHeaderName: []string{"true"}},
+	}
+
+	if _, err := exec.Execute(ctx, auth, req, opts); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	select {
+	case got := <-captured:
+		if codexResponsesLiteEnabled(got.header) {
+			t.Fatalf("upstream websocket retained Responses Lite header: %v", got.header)
+		}
+		if name := gjson.GetBytes(got.payload, "tools.0.name").String(); name != "image_gen" {
+			t.Fatalf("upstream imagegen namespace = %q, want image_gen: %s", name, got.payload)
+		}
+		if name := gjson.GetBytes(got.payload, "tools.0.tools.0.name").String(); name != "imagegen" {
+			t.Fatalf("upstream imagegen function = %q, want imagegen: %s", name, got.payload)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for upstream websocket request")
+	}
+}
+
 func TestCodexWebsocketsUpstreamDisconnectChanSignalsOnInvalidate(t *testing.T) {
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +220,24 @@ func TestCodexWebsocketsUpstreamDisconnectChanSignalsOnInvalidate(t *testing.T) 
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for disconnect signal")
+	}
+}
+
+func TestCodexWebsocketRetryDelayUsesStreamingBackoff(t *testing.T) {
+	cfg := &config.Config{
+		SDKConfig: config.SDKConfig{
+			Streaming: config.StreamingConfig{
+				BootstrapRetryBaseDelayMS: 300,
+				BootstrapRetryMaxDelayMS:  1500,
+			},
+		},
+	}
+
+	if got := codexWebsocketRetryDelay(cfg, 1); got != 300*time.Millisecond {
+		t.Fatalf("attempt 1 delay = %v, want 300ms", got)
+	}
+	if got := codexWebsocketRetryDelay(cfg, 2); got != 600*time.Millisecond {
+		t.Fatalf("attempt 2 delay = %v, want 600ms", got)
 	}
 }
 
@@ -721,6 +811,63 @@ func TestApplyCodexHeadersDoesNotInjectClientOnlyHeadersByDefault(t *testing.T) 
 	}
 	if got := req.Header.Get("X-Client-Request-Id"); got != "" {
 		t.Fatalf("X-Client-Request-Id = %q, want empty", got)
+	}
+}
+
+func TestApplyCodexHeadersPassesThroughResponsesLiteHeader(t *testing.T) {
+	for _, path := range []string{"/responses", "/responses/compact"} {
+		t.Run(path, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodPost, "https://example.com"+path, nil)
+			if err != nil {
+				t.Fatalf("NewRequest() error = %v", err)
+			}
+			req = req.WithContext(contextWithGinHeaders(map[string]string{
+				codexResponsesLiteHeaderName: "true",
+			}))
+
+			applyCodexHeaders(req, nil, "oauth-token", path == "/responses", nil)
+
+			if got := req.Header.Get(codexResponsesLiteHeaderName); got != "true" {
+				t.Fatalf("%s = %q, want true", codexResponsesLiteHeaderName, got)
+			}
+		})
+	}
+}
+
+func TestApplyCodexHeadersDoesNotInjectResponsesLiteHeader(t *testing.T) {
+	for _, path := range []string{"/responses", "/responses/compact"} {
+		t.Run(path, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodPost, "https://example.com"+path, nil)
+			if err != nil {
+				t.Fatalf("NewRequest() error = %v", err)
+			}
+
+			applyCodexHeaders(req, nil, "oauth-token", path == "/responses", nil)
+
+			if got := req.Header.Get(codexResponsesLiteHeaderName); got != "" {
+				t.Fatalf("%s = %q, want empty", codexResponsesLiteHeaderName, got)
+			}
+		})
+	}
+}
+
+func TestApplyCodexWebsocketHeadersPassesThroughAgtoolsDiagnosticHeaders(t *testing.T) {
+	ctx := contextWithGinHeaders(map[string]string{
+		"X-Agtools-Test-Run-Id":       "run-1",
+		"X-Agtools-Provider-Name-B64": "UHJvdmlkZXI=",
+		"X-Not-Agtools":               "drop-me",
+	})
+
+	headers := applyCodexWebsocketHeaders(ctx, http.Header{}, nil, "", nil)
+
+	if got := headers.Get("X-Agtools-Test-Run-Id"); got != "run-1" {
+		t.Fatalf("X-Agtools-Test-Run-Id = %q, want run-1", got)
+	}
+	if got := headers.Get("X-Agtools-Provider-Name-B64"); got != "UHJvdmlkZXI=" {
+		t.Fatalf("X-Agtools-Provider-Name-B64 = %q, want UHJvdmlkZXI=", got)
+	}
+	if got := headers.Get("X-Not-Agtools"); got != "" {
+		t.Fatalf("X-Not-Agtools = %q, want empty", got)
 	}
 }
 

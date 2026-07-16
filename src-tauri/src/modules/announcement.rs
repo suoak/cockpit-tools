@@ -1,4 +1,4 @@
-﻿use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -8,7 +8,7 @@ use super::config;
 use super::logger;
 
 const ANNOUNCEMENT_URL: &str =
-    "https://raw.githubusercontent.com/suoak/cockpit-tools/main/announcements.json";
+    "https://raw.githubusercontent.com/jlcodes99/cockpit-tools/main/announcements.json";
 const ANNOUNCEMENT_CACHE_FILE: &str = "announcement_cache.json";
 const ANNOUNCEMENT_FORCE_REFRESH_ATTEMPTS_FILE: &str =
     "announcement_force_refresh_attempt_versions.json";
@@ -123,6 +123,16 @@ pub struct TopRightAd {
     pub cta_label: Option<String>,
     #[serde(default)]
     pub cta_url: Option<String>,
+    #[serde(default)]
+    pub display_mode: Option<String>,
+    #[serde(default)]
+    pub display_pages: Option<Vec<String>>,
+    #[serde(default)]
+    pub display_platforms: Option<Vec<String>>,
+    #[serde(default)]
+    pub exclude_pages: Option<Vec<String>>,
+    #[serde(default)]
+    pub exclude_platforms: Option<Vec<String>>,
     #[serde(default = "default_target_versions")]
     pub target_versions: String,
     #[serde(default)]
@@ -1040,6 +1050,18 @@ async fn load_announcements_raw() -> Result<AnnouncementResponse, String> {
         .map(|cache| Utc::now().timestamp_millis() - cache.time < CACHE_TTL_MS)
         .unwrap_or(false);
 
+    let external_network_enabled =
+        crate::modules::config::get_user_config().external_network_enabled;
+
+    // #1104: when external network is disabled, never hit remote announcement URLs.
+    if !external_network_enabled {
+        if let Some(cache) = cached {
+            logger::log_info("[Announcement] 外连已关闭，使用本地缓存公告");
+            return Ok(cache.data);
+        }
+        return Err("外连已关闭，无法拉取远端公告".to_string());
+    }
+
     if let Some(payload) =
         try_load_force_refreshed_announcements(current_version, cache_is_fresh).await?
     {
@@ -1141,6 +1163,11 @@ pub async fn get_sponsor_module_state() -> Result<SponsorModuleState, String> {
 pub async fn force_refresh_sponsor_module() -> Result<SponsorModuleState, String> {
     remove_cache()?;
     get_sponsor_module_state().await
+}
+
+pub async fn force_refresh_top_right_ad() -> Result<TopRightAdState, String> {
+    remove_cache()?;
+    get_top_right_ad_state().await
 }
 
 pub async fn mark_announcement_as_read(id: &str) -> Result<(), String> {

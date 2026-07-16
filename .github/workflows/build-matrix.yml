@@ -22,12 +22,12 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Node.js setup
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: "npm"
 
       - name: Install frontend dependencies
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Install dependencies (Linux)
         if: startsWith(matrix.platform, 'ubuntu')
@@ -100,9 +100,9 @@ jobs:
           cache-dependency-path: sidecars/cockpit-cliproxy/go.sum
 
       - name: Node.js setup
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: "npm"
 
       - name: Install frontend dependencies

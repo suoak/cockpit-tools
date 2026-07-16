@@ -1,20 +1,20 @@
 {
   "name": "cockpit-tools",
   "private": true,
-  "version": "0.26.0",
+  "version": "1.3.4",
   "type": "module",
   "scripts": {
-    "dev:strip": "scripts\\dev.bat",
     "dev": "vite",
+    "test:codex-api-key-scope": "node --test src/utils/codexApiKeyAccountScope.test.ts",
     "typecheck": "tsc --noEmit",
     "prebuild": "npm run typecheck",
     "build": "npm run sync-version && tsc && vite build",
-    "build:strip": "scripts\\build.bat",
     "release:preflight": "node scripts/release/preflight.cjs",
     "preview": "vite preview",
+    "pretauri:dev": "npm run typecheck",
+    "tauri:dev": "node scripts/tauri-dev.cjs",
     "pretauri": "npm run typecheck",
-    "tauri": "npm run sync-version && tauri",
-    "tauri:build-strip": "npm run sync-version && scripts\\build.bat",
+    "tauri": "node scripts/tauri.cjs",
     "sync-version": "node scripts/sync-version.js"
   },
   "dependencies": {

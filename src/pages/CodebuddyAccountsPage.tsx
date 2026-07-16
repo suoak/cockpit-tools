@@ -11,6 +11,7 @@ import { ExportJsonModal } from '../components/ExportJsonModal';
 import { ModalErrorMessage } from '../components/ModalErrorMessage';
 import { MfaQuickCodeSelect } from '../components/MfaQuickCodeSelect';
 import { PaginationControls } from '../components/PaginationControls';
+import { AccountSelectionToolbar } from '../components/AccountSelectionToolbar';
 import {
   CB_PACKAGE_CODE,
   CodebuddyAccount,
@@ -44,6 +45,8 @@ import {
   removeAccountsOverviewFilterField,
   writeAccountsOverviewFilterField,
 } from '../utils/accountsOverviewFilterPersistence';
+import { CodebuddySessionListPanel } from '../components/codebuddy/CodebuddySessionListPanel';
+import { CodebuddySessionManager } from '../components/codebuddy/CodebuddySessionManager';
 
 const CB_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.codebuddy.flow_notice_collapsed';
 const CB_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddy.current_account_id';
@@ -562,9 +565,12 @@ export function CodebuddyAccountsPage() {
         platform="codebuddy"
         active={activeTab}
         onTabChange={setActiveTab}
+        tabs={['overview', 'sessions', 'instances']}
       />
       {activeTab === 'instances' ? (
         <CodebuddyInstancesContent accountsForSelect={filteredAccounts} />
+      ) : activeTab === 'sessions' ? (
+        <CodebuddySessionManager platform="intl" accounts={store.accounts as any} />
       ) : (
         <>
       <div className={`ghcp-flow-notice ${isFlowNoticeCollapsed ? 'collapsed' : ''}`} role="note">
@@ -662,12 +668,29 @@ export function CodebuddyAccountsPage() {
             title={exportSelectionCount > 0 ? `${t('common.shared.export.title', '导出')} (${exportSelectionCount})` : t('common.shared.export.title', '导出')}>
             <Upload size={14} />
           </button>
-          {selected.size > 0 && (
-            <button className="btn btn-danger icon-only" onClick={handleBatchDelete} title={`${t('common.delete', '删除')} (${selected.size})`}><Trash2 size={14} /></button>
-          )}
           <QuickSettingsPopover type="codebuddy" />
         </div>
       </div>
+
+      {filteredAccounts.length > 0 && (
+        <AccountSelectionToolbar
+          selectedCount={selected.size}
+          allSelected={isAllPaginatedSelected}
+          disabled={paginatedIds.length === 0}
+          onToggleSelectAll={() => toggleSelectAll(paginatedIds)}
+          onClearSelection={() => toggleSelectAll(Array.from(selected))}
+          actions={(
+            <button
+              className="btn btn-danger icon-only"
+              onClick={handleBatchDelete}
+              title={`${t('common.delete', '删除')} (${selected.size})`}
+              aria-label={`${t('common.delete', '删除')} (${selected.size})`}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        />
+      )}
 
       {loading && accounts.length === 0 ? (
         <div className="loading-container"><RefreshCw size={24} className="loading-spinner" /><p>{t('common.loading', '加载中...')}</p></div>
@@ -766,6 +789,9 @@ export function CodebuddyAccountsPage() {
         onPreviousPage={pagination.goToPreviousPage}
         onNextPage={pagination.goToNextPage}
       />
+
+      {/* Full session manager is on the sessions tab; keep lightweight list on overview. */}
+      <CodebuddySessionListPanel />
 
       {showAddModal && (
         <div className="modal-overlay">

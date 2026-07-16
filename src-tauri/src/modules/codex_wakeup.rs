@@ -27,7 +27,27 @@ const REASONING_EFFORT_HIGH: &str = "high";
 const REASONING_EFFORT_XHIGH: &str = "xhigh";
 const CODEX_WAKEUP_TEST_CANCELLED_MESSAGE: &str = "Codex 唤醒测试已取消";
 const CODEX_WAKEUP_CANCEL_POLL_MS: u64 = 120;
+const GPT_5_6_MODEL_PRESETS_MIGRATION_ID: &str = "add-gpt-5-6-model-presets";
 const GPT_5_5_MODEL_PRESET_MIGRATION_ID: &str = "add-gpt-5-5-model-preset";
+const PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID: &str =
+    "prune-legacy-codex-model-presets-before-gpt-5-4";
+const LEGACY_CODEX_MODEL_PRESET_IDS: &[&str] = &[
+    "preset-gpt-5-3-codex",
+    "preset-gpt-5-2-codex",
+    "preset-gpt-5-2",
+    "preset-gpt-5-1-codex-max",
+    "preset-gpt-5-1-codex-mini",
+];
+const LEGACY_CODEX_MODEL_PRESET_MODELS: &[&str] = &[
+    "gpt-5-codex",
+    "gpt-5-codex-mini",
+    "gpt-5.3-codex",
+    "gpt-5.3-codex-spark",
+    "gpt-5.2",
+    "gpt-5.2-codex",
+    "gpt-5.1-codex-max",
+    "gpt-5.1-codex-mini",
+];
 
 static TASKS_LOCK: std::sync::LazyLock<Mutex<()>> = std::sync::LazyLock::new(|| Mutex::new(()));
 static HISTORY_LOCK: std::sync::LazyLock<Mutex<()>> = std::sync::LazyLock::new(|| Mutex::new(()));
@@ -344,7 +364,11 @@ impl Default for CodexWakeupState {
             enabled: false,
             tasks: Vec::new(),
             model_presets: default_model_presets(),
-            model_preset_migrations: vec![GPT_5_5_MODEL_PRESET_MIGRATION_ID.to_string()],
+            model_preset_migrations: vec![
+                GPT_5_6_MODEL_PRESETS_MIGRATION_ID.to_string(),
+                GPT_5_5_MODEL_PRESET_MIGRATION_ID.to_string(),
+                PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID.to_string(),
+            ],
         }
     }
 }
@@ -435,7 +459,7 @@ fn normalize_reasoning_effort(value: &str) -> Option<String> {
     }
 }
 
-fn official_chat_runtime_status() -> CodexCliStatus {
+pub fn wakeup_runtime_status() -> CodexCliStatus {
     CodexCliStatus {
         available: true,
         binary_path: None,
@@ -466,22 +490,12 @@ fn default_reasoning_efforts_for_model(model: &str) -> Vec<String> {
 
 fn default_model_presets() -> Vec<CodexWakeupModelPreset> {
     let items = [
+        ("preset-gpt-5-6-sol", "GPT-5.6 Sol", "gpt-5.6-sol"),
+        ("preset-gpt-5-6-terra", "GPT-5.6 Terra", "gpt-5.6-terra"),
+        ("preset-gpt-5-6-luna", "GPT-5.6 Luna", "gpt-5.6-luna"),
         ("preset-gpt-5-5", "GPT-5.5", "gpt-5.5"),
         ("preset-gpt-5-4", "GPT-5.4", "gpt-5.4"),
         ("preset-gpt-5-4-mini", "GPT-5.4-Mini", "gpt-5.4-mini"),
-        ("preset-gpt-5-3-codex", "GPT-5.3-Codex", "gpt-5.3-codex"),
-        ("preset-gpt-5-2-codex", "GPT-5.2-Codex", "gpt-5.2-codex"),
-        ("preset-gpt-5-2", "GPT-5.2", "gpt-5.2"),
-        (
-            "preset-gpt-5-1-codex-max",
-            "GPT-5.1-Codex-Max",
-            "gpt-5.1-codex-max",
-        ),
-        (
-            "preset-gpt-5-1-codex-mini",
-            "GPT-5.1-Codex-Mini",
-            "gpt-5.1-codex-mini",
-        ),
     ];
 
     items
@@ -508,6 +522,43 @@ fn default_model_presets() -> Vec<CodexWakeupModelPreset> {
             }
         })
         .collect()
+}
+
+fn gpt_5_6_model_presets() -> Vec<CodexWakeupModelPreset> {
+    default_model_presets()
+        .into_iter()
+        .filter(|preset| preset.model.starts_with("gpt-5.6-"))
+        .collect()
+}
+
+fn ensure_gpt_5_6_model_presets(state: &mut CodexWakeupState) -> bool {
+    if state
+        .model_preset_migrations
+        .iter()
+        .any(|item| item == GPT_5_6_MODEL_PRESETS_MIGRATION_ID)
+    {
+        return false;
+    }
+
+    state
+        .model_preset_migrations
+        .push(GPT_5_6_MODEL_PRESETS_MIGRATION_ID.to_string());
+
+    let existing_models = state
+        .model_presets
+        .iter()
+        .map(|preset| preset.model.trim().to_ascii_lowercase())
+        .collect::<HashSet<_>>();
+    let additions = gpt_5_6_model_presets()
+        .into_iter()
+        .filter(|preset| !existing_models.contains(&preset.model.to_ascii_lowercase()))
+        .collect::<Vec<_>>();
+    if additions.is_empty() {
+        return true;
+    }
+
+    state.model_presets.splice(0..0, additions);
+    true
 }
 
 fn gpt_5_5_model_preset() -> CodexWakeupModelPreset {
@@ -556,6 +607,45 @@ fn ensure_gpt_5_5_model_preset(state: &mut CodexWakeupState) -> bool {
 
     state.model_presets.insert(0, gpt_5_5_model_preset());
     true
+}
+
+fn is_legacy_codex_model_preset(preset: &CodexWakeupModelPreset) -> bool {
+    let id = preset.id.trim();
+    let model = preset.model.trim();
+    LEGACY_CODEX_MODEL_PRESET_IDS
+        .iter()
+        .any(|item| id.eq_ignore_ascii_case(item))
+        || LEGACY_CODEX_MODEL_PRESET_MODELS
+            .iter()
+            .any(|item| model.eq_ignore_ascii_case(item))
+}
+
+fn prune_legacy_model_presets(state: &mut CodexWakeupState) -> bool {
+    if state
+        .model_preset_migrations
+        .iter()
+        .any(|item| item == PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID)
+    {
+        return false;
+    }
+
+    state
+        .model_preset_migrations
+        .push(PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID.to_string());
+    state
+        .model_presets
+        .retain(|preset| !is_legacy_codex_model_preset(preset));
+    true
+}
+
+fn apply_model_preset_migrations(state: &mut CodexWakeupState) -> bool {
+    let mut changed = false;
+    changed |= prune_legacy_model_presets(state);
+    changed |= ensure_gpt_5_6_model_presets(state);
+    changed |= ensure_gpt_5_5_model_preset(state);
+    state.model_preset_migrations.sort();
+    state.model_preset_migrations.dedup();
+    changed
 }
 
 fn data_dir() -> Result<PathBuf, String> {
@@ -810,6 +900,56 @@ fn append_home_cli_dirs(dirs: &mut Vec<PathBuf>) {
         home.join("bin"),
     ] {
         push_unique_dir(dirs, dir);
+    }
+    append_version_manager_cli_dirs(dirs, &home);
+}
+
+/// Discover CLI bins managed by nvm / fnm / asdf, which GUI apps often miss
+/// because they inherit a minimal PATH without login-shell hooks.
+fn append_version_manager_cli_dirs(dirs: &mut Vec<PathBuf>, home: &Path) {
+    if let Some(nvm_bin) = std::env::var_os("NVM_BIN") {
+        push_unique_dir(dirs, PathBuf::from(nvm_bin));
+    }
+    if let Some(nvm_dir) = std::env::var_os("NVM_DIR") {
+        append_node_version_bin_dirs(dirs, PathBuf::from(nvm_dir).join("versions/node"));
+    } else {
+        append_node_version_bin_dirs(dirs, home.join(".nvm/versions/node"));
+    }
+
+    if let Some(fnm_multishell) = std::env::var_os("FNM_MULTISHELL_PATH") {
+        push_unique_dir(dirs, PathBuf::from(fnm_multishell));
+    }
+    if let Some(fnm_dir) = std::env::var_os("FNM_DIR") {
+        append_node_version_bin_dirs(dirs, PathBuf::from(fnm_dir).join("node-versions"));
+    } else {
+        append_node_version_bin_dirs(dirs, home.join(".local/share/fnm/node-versions"));
+        append_node_version_bin_dirs(dirs, home.join(".fnm/node-versions"));
+    }
+
+    let asdf_data = std::env::var_os("ASDF_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".asdf"));
+    append_node_version_bin_dirs(dirs, asdf_data.join("installs/nodejs"));
+    push_unique_dir(dirs, asdf_data.join("shims"));
+}
+
+fn append_node_version_bin_dirs(dirs: &mut Vec<PathBuf>, versions_root: PathBuf) {
+    let Ok(entries) = std::fs::read_dir(&versions_root) else {
+        return;
+    };
+    let mut version_dirs: Vec<PathBuf> = entries
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir())
+        .collect();
+    // Prefer newer versions when multiple nvm installs exist.
+    version_dirs.sort();
+    version_dirs.reverse();
+    for version_dir in version_dirs {
+        // nvm: ~/.nvm/versions/node/v20.x.y/bin
+        push_unique_dir(dirs, version_dir.join("bin"));
+        // fnm: ~/.fnm/node-versions/v20.x.y/installation/bin
+        push_unique_dir(dirs, version_dir.join("installation/bin"));
     }
 }
 
@@ -1466,6 +1606,116 @@ fn normalize_schedule(raw: &CodexWakeupSchedule) -> CodexWakeupSchedule {
     }
 }
 
+fn existing_codex_account_id_set() -> HashSet<String> {
+    codex_account::list_accounts()
+        .into_iter()
+        .map(|account| account.id)
+        .collect()
+}
+
+/// Keep only non-empty account ids that still exist in the Codex account store.
+/// Returns true when the list changed.
+fn retain_existing_account_ids(account_ids: &mut Vec<String>, existing: &HashSet<String>) -> bool {
+    let before = account_ids.clone();
+    account_ids.retain(|account_id| {
+        let trimmed = account_id.trim();
+        !trimmed.is_empty() && existing.contains(trimmed)
+    });
+    if account_ids != &before {
+        return true;
+    }
+    false
+}
+
+/// Drop deleted/missing account ids from every task. Tasks that become empty are removed.
+/// Returns true when state changed.
+fn prune_missing_accounts_from_state(
+    state: &mut CodexWakeupState,
+    existing: &HashSet<String>,
+) -> bool {
+    let mut changed = false;
+    let mut kept = Vec::with_capacity(state.tasks.len());
+    for mut task in state.tasks.drain(..) {
+        if retain_existing_account_ids(&mut task.account_ids, existing) {
+            changed = true;
+            task.updated_at = now_ts();
+        }
+        if task.account_ids.is_empty() {
+            changed = true;
+            continue;
+        }
+        kept.push(task);
+    }
+    state.tasks = kept;
+    changed
+}
+
+/// Remove deleted account ids from persisted Codex wakeup tasks.
+/// Called when Codex accounts are deleted so task snapshots stay in sync.
+pub fn remove_deleted_accounts_from_tasks(account_ids: &[String]) -> Result<(), String> {
+    let remove_ids: HashSet<String> = account_ids
+        .iter()
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty())
+        .collect();
+    if remove_ids.is_empty() {
+        return Ok(());
+    }
+
+    let _lock = TASKS_LOCK.lock().map_err(|_| "获取 Codex 唤醒任务锁失败")?;
+    let path = tasks_path()?;
+    if !path.exists() {
+        return Ok(());
+    }
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("读取 Codex 唤醒任务失败: {}", e))?;
+    if content.trim().is_empty() {
+        return Ok(());
+    }
+    let mut state: CodexWakeupState = match serde_json::from_str(&content) {
+        Ok(state) => state,
+        Err(error) => {
+            quarantine_corrupted_wakeup_file(&path, "任务配置", &error);
+            return Ok(());
+        }
+    };
+
+    let mut changed = false;
+    let mut kept = Vec::with_capacity(state.tasks.len());
+    for mut task in state.tasks.drain(..) {
+        let before_len = task.account_ids.len();
+        task.account_ids
+            .retain(|account_id| !remove_ids.contains(account_id.trim()));
+        if task.account_ids.len() != before_len {
+            changed = true;
+            task.updated_at = now_ts();
+        }
+        if task.account_ids.is_empty() {
+            changed = true;
+            continue;
+        }
+        kept.push(task);
+    }
+    if !changed {
+        return Ok(());
+    }
+
+    state.tasks = kept;
+    // Normalize + refresh schedules before writing, without re-entering load_state locks.
+    state.tasks = state.tasks.iter().map(normalize_task).collect();
+    state.tasks.retain(|task| !task.account_ids.is_empty());
+    let existing = existing_codex_account_id_set();
+    let _ = prune_missing_accounts_from_state(&mut state, &existing);
+    refresh_next_run_at(&mut state);
+    save_json_atomic(&path, &state)?;
+    logger::log_info(&format!(
+        "[CodexWakeup] 已从唤醒任务中移除已删除账号引用: removed={}, remaining_tasks={}",
+        remove_ids.len(),
+        state.tasks.len()
+    ));
+    Ok(())
+}
+
 fn normalize_task(raw: &CodexWakeupTask) -> CodexWakeupTask {
     let now = now_ts();
     let mut account_ids: Vec<String> = raw
@@ -1539,36 +1789,6 @@ fn normalize_task(raw: &CodexWakeupTask) -> CodexWakeupTask {
     }
 }
 
-fn disable_tasks_when_cli_missing_with_runtime(
-    state: &mut CodexWakeupState,
-    runtime_available: bool,
-) -> bool {
-    if runtime_available {
-        return false;
-    }
-
-    let mut changed = false;
-    if state.enabled {
-        state.enabled = false;
-        changed = true;
-    }
-
-    for task in &mut state.tasks {
-        if task.enabled {
-            task.enabled = false;
-            task.updated_at = now_ts();
-            changed = true;
-        }
-    }
-
-    changed
-}
-
-fn disable_tasks_when_cli_missing(state: &mut CodexWakeupState) -> bool {
-    let runtime = get_cli_status();
-    disable_tasks_when_cli_missing_with_runtime(state, runtime.available)
-}
-
 fn refresh_next_run_at(state: &mut CodexWakeupState) {
     for task in &mut state.tasks {
         task.next_run_at = if state.enabled && task.enabled {
@@ -1615,10 +1835,7 @@ pub fn save_runtime_config(
     Ok(normalized)
 }
 
-fn load_state_inner(
-    apply_cli_guard: bool,
-    runtime_available_override: Option<bool>,
-) -> Result<CodexWakeupState, String> {
+fn load_state_inner() -> Result<CodexWakeupState, String> {
     let path = tasks_path()?;
     if !path.exists() {
         return Ok(CodexWakeupState::default());
@@ -1651,18 +1868,11 @@ fn load_state_inner(
         .collect();
     state.model_preset_migrations.sort();
     state.model_preset_migrations.dedup();
-    let migration_changed = ensure_gpt_5_5_model_preset(&mut state);
-    let changed = if apply_cli_guard {
-        if let Some(runtime_available) = runtime_available_override {
-            disable_tasks_when_cli_missing_with_runtime(&mut state, runtime_available)
-        } else {
-            disable_tasks_when_cli_missing(&mut state)
-        }
-    } else {
-        false
-    };
+    let migration_changed = apply_model_preset_migrations(&mut state);
+    let existing_accounts = existing_codex_account_id_set();
+    let account_prune_changed = prune_missing_accounts_from_state(&mut state, &existing_accounts);
     refresh_next_run_at(&mut state);
-    if migration_changed || changed {
+    if migration_changed || account_prune_changed {
         let _lock = TASKS_LOCK.lock().map_err(|_| "获取 Codex 唤醒任务锁失败")?;
         save_json_atomic(&path, &state)?;
     }
@@ -1670,20 +1880,16 @@ fn load_state_inner(
 }
 
 pub fn load_state() -> Result<CodexWakeupState, String> {
-    load_state_inner(true, None)
+    load_state_inner()
 }
 
 pub fn load_state_for_scheduler() -> Result<CodexWakeupState, String> {
-    load_state_inner(false, None)
-}
-
-fn load_state_with_runtime_available(runtime_available: bool) -> Result<CodexWakeupState, String> {
-    load_state_inner(true, Some(runtime_available))
+    load_state_inner()
 }
 
 pub fn load_overview() -> Result<CodexWakeupOverview, String> {
-    let runtime = get_cli_status();
-    let state = load_state_with_runtime_available(runtime.available)?;
+    let runtime = wakeup_runtime_status();
+    let state = load_state()?;
     let history = load_history()?;
     Ok(CodexWakeupOverview {
         runtime,
@@ -1721,9 +1927,10 @@ pub fn save_state(next_state: &CodexWakeupState) -> Result<CodexWakeupState, Str
     };
     state.model_preset_migrations.sort();
     state.model_preset_migrations.dedup();
-    ensure_gpt_5_5_model_preset(&mut state);
+    apply_model_preset_migrations(&mut state);
+    let existing_accounts = existing_codex_account_id_set();
+    let _ = prune_missing_accounts_from_state(&mut state, &existing_accounts);
 
-    disable_tasks_when_cli_missing(&mut state);
     refresh_next_run_at(&mut state);
 
     save_json_atomic(&tasks_path()?, &state)?;
@@ -2297,13 +2504,15 @@ pub async fn run_batch(
     run_id: Option<String>,
     cancel_scope_id: Option<&str>,
 ) -> Result<CodexWakeupBatchResult, String> {
+    let existing_accounts = existing_codex_account_id_set();
     let cleaned_ids: Vec<String> = account_ids
         .into_iter()
         .map(|item| item.trim().to_string())
         .filter(|item| !item.is_empty())
+        .filter(|item| existing_accounts.contains(item))
         .collect();
     if cleaned_ids.is_empty() {
-        return Err("至少选择一个账号".to_string());
+        return Err("至少选择一个有效账号（已删除的账号不会被执行）".to_string());
     }
 
     let prompt = prompt
@@ -2312,7 +2521,7 @@ pub async fn run_batch(
         .filter(|item| !item.is_empty())
         .unwrap_or_else(|| DEFAULT_PROMPT.to_string());
     let total = cleaned_ids.len();
-    let runtime = official_chat_runtime_status();
+    let runtime = wakeup_runtime_status();
     let run_id = run_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let cancel_flag = resolve_cancel_flag(cancel_scope_id)?;
     emit_progress(
@@ -2485,4 +2694,219 @@ pub fn get_task(task_id: &str) -> Result<Option<CodexWakeupTask>, String> {
         .tasks
         .into_iter()
         .find(|item| item.id == task_id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        append_version_manager_cli_dirs, apply_model_preset_migrations, default_model_presets,
+        prune_missing_accounts_from_state, retain_existing_account_ids, CodexWakeupModelPreset,
+        CodexWakeupSchedule, CodexWakeupState, CodexWakeupTask, GPT_5_5_MODEL_PRESET_MIGRATION_ID,
+        GPT_5_6_MODEL_PRESETS_MIGRATION_ID, PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID,
+        REASONING_EFFORT_MEDIUM,
+    };
+    use std::collections::HashSet;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn model_preset(id: &str, name: &str, model: &str) -> CodexWakeupModelPreset {
+        CodexWakeupModelPreset {
+            id: id.to_string(),
+            name: name.to_string(),
+            model: model.to_string(),
+            allowed_reasoning_efforts: vec![REASONING_EFFORT_MEDIUM.to_string()],
+            default_reasoning_effort: REASONING_EFFORT_MEDIUM.to_string(),
+        }
+    }
+
+    fn sample_task(id: &str, account_ids: &[&str]) -> CodexWakeupTask {
+        CodexWakeupTask {
+            id: id.to_string(),
+            name: id.to_string(),
+            enabled: true,
+            account_ids: account_ids.iter().map(|item| item.to_string()).collect(),
+            prompt: None,
+            model: None,
+            model_display_name: None,
+            model_reasoning_effort: None,
+            schedule: CodexWakeupSchedule {
+                kind: "daily".to_string(),
+                daily_time: Some("09:00".to_string()),
+                weekly_days: Vec::new(),
+                weekly_time: None,
+                interval_hours: None,
+                quota_reset_window: None,
+                startup_delay_minutes: None,
+            },
+            created_at: 1,
+            updated_at: 1,
+            last_run_at: None,
+            last_status: None,
+            last_message: None,
+            last_success_count: None,
+            last_failure_count: None,
+            last_duration_ms: None,
+            next_run_at: None,
+            execution_mode: None,
+            confirm_timeout_minutes: None,
+        }
+    }
+
+    #[test]
+    fn retain_existing_account_ids_drops_missing() {
+        let existing = HashSet::from(["keep-a".to_string(), "keep-b".to_string()]);
+        let mut account_ids = vec![
+            "keep-a".to_string(),
+            "deleted".to_string(),
+            "keep-b".to_string(),
+            "".to_string(),
+        ];
+        assert!(retain_existing_account_ids(&mut account_ids, &existing));
+        assert_eq!(
+            account_ids,
+            vec!["keep-a".to_string(), "keep-b".to_string()]
+        );
+        assert!(!retain_existing_account_ids(&mut account_ids, &existing));
+    }
+
+    #[test]
+    fn prune_missing_accounts_removes_stale_ids_and_empty_tasks() {
+        let mut state = CodexWakeupState {
+            enabled: true,
+            tasks: vec![
+                sample_task("task-keep", &["acc-1", "acc-gone"]),
+                sample_task("task-empty", &["acc-gone"]),
+            ],
+            model_presets: Vec::new(),
+            model_preset_migrations: Vec::new(),
+        };
+        let existing = HashSet::from(["acc-1".to_string()]);
+
+        assert!(prune_missing_accounts_from_state(&mut state, &existing));
+        assert_eq!(state.tasks.len(), 1);
+        assert_eq!(state.tasks[0].id, "task-keep");
+        assert_eq!(state.tasks[0].account_ids, vec!["acc-1".to_string()]);
+    }
+
+    #[test]
+    fn default_model_presets_include_gpt_5_6_models() {
+        let models: Vec<String> = default_model_presets()
+            .into_iter()
+            .map(|preset| preset.model)
+            .collect();
+
+        assert_eq!(
+            models,
+            vec![
+                "gpt-5.6-sol",
+                "gpt-5.6-terra",
+                "gpt-5.6-luna",
+                "gpt-5.5",
+                "gpt-5.4",
+                "gpt-5.4-mini"
+            ]
+        );
+    }
+
+    #[test]
+    fn model_preset_migration_prunes_legacy_codex_defaults() {
+        let mut state = CodexWakeupState {
+            enabled: false,
+            tasks: Vec::new(),
+            model_presets: vec![
+                model_preset("preset-gpt-5-5", "GPT-5.5", "gpt-5.5"),
+                model_preset("preset-gpt-5-codex", "GPT-5 Codex", "gpt-5-codex"),
+                model_preset("preset-gpt-5-3-codex", "GPT-5.3-Codex", "gpt-5.3-codex"),
+                model_preset("custom-gpt-5-4", "Custom GPT-5.4", "gpt-5.4"),
+            ],
+            model_preset_migrations: Vec::new(),
+        };
+
+        assert!(apply_model_preset_migrations(&mut state));
+        let models: Vec<String> = state
+            .model_presets
+            .iter()
+            .map(|preset| preset.model.clone())
+            .collect();
+
+        assert_eq!(
+            models,
+            vec![
+                "gpt-5.6-sol",
+                "gpt-5.6-terra",
+                "gpt-5.6-luna",
+                "gpt-5.5",
+                "gpt-5.4"
+            ]
+        );
+        assert!(state
+            .model_preset_migrations
+            .iter()
+            .any(|item| item == PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID));
+        assert!(state
+            .model_preset_migrations
+            .iter()
+            .any(|item| item == GPT_5_6_MODEL_PRESETS_MIGRATION_ID));
+    }
+
+    #[test]
+    fn model_preset_migration_keeps_existing_5_6_and_custom_presets() {
+        let mut state = CodexWakeupState {
+            enabled: false,
+            tasks: Vec::new(),
+            model_presets: vec![
+                model_preset("custom-sol", "Custom Sol", "gpt-5.6-sol"),
+                model_preset("custom-model", "Custom Model", "custom-model"),
+            ],
+            model_preset_migrations: vec![
+                GPT_5_5_MODEL_PRESET_MIGRATION_ID.to_string(),
+                PRUNE_LEGACY_MODEL_PRESETS_MIGRATION_ID.to_string(),
+            ],
+        };
+
+        assert!(apply_model_preset_migrations(&mut state));
+        let models = state
+            .model_presets
+            .iter()
+            .map(|preset| preset.model.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            models,
+            vec![
+                "gpt-5.6-terra",
+                "gpt-5.6-luna",
+                "gpt-5.6-sol",
+                "custom-model"
+            ]
+        );
+        assert!(!apply_model_preset_migrations(&mut state));
+    }
+
+    #[test]
+    fn version_manager_cli_dirs_include_nvm_node_bins() {
+        let root = std::env::temp_dir().join(format!(
+            "codex-wakeup-nvm-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let nvm_bin = root.join(".nvm/versions/node/v20.19.2/bin");
+        fs::create_dir_all(&nvm_bin).expect("create nvm bin");
+        fs::write(nvm_bin.join("codex"), "#!/bin/sh\n").expect("write codex");
+        fs::write(nvm_bin.join("node"), "#!/bin/sh\n").expect("write node");
+
+        let mut dirs: Vec<PathBuf> = Vec::new();
+        append_version_manager_cli_dirs(&mut dirs, &root);
+
+        assert!(
+            dirs.iter().any(|dir| dir == &nvm_bin),
+            "expected nvm bin dir in search paths: {:?}",
+            dirs
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
 }
