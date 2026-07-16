@@ -62,6 +62,7 @@ import {
   deleteCodexAccounts,
   getCurrentCodexAccount,
   listCodexAccounts,
+  syncCodexApiKeyProviderAccounts,
   updateCodexApiKeyBoundOAuthAccount,
 } from "../../services/codexService";
 import {
@@ -134,6 +135,7 @@ import {
   type CodexProviderWireApi,
 } from "../../utils/codexProviderGateway";
 import { emitAccountsChanged } from "../../utils/accountSyncEvents";
+import { findCodexAccountsReferencingModelProvider } from "../../utils/codexModelProviderAccountSync";
 import { CodexQuickConfigCard } from "./CodexQuickConfigCard";
 import {
   CodexServicePanelModal,
@@ -2173,6 +2175,49 @@ export function CodexModelProviderManager({
           console.warn("[CodexModelProviders] 额度类型探测失败", usageErr);
         }
       }
+      if (savedProvider && currentEditingProvider) {
+        const linkedAccountIds = findCodexAccountsReferencingModelProvider(
+          currentEditingProvider,
+          accounts,
+        );
+        if (linkedAccountIds.length > 0) {
+          const presetId = resolveCodexApiProviderPresetId(savedProvider.baseUrl);
+          const isOpenAIOfficial = presetId === "openai_official";
+          const wireApi = resolveProviderWireApi(savedProvider);
+          const updatedAccountCount = await syncCodexApiKeyProviderAccounts({
+            accountIds: linkedAccountIds,
+            apiBaseUrl: savedProvider.baseUrl,
+            apiProviderMode: isOpenAIOfficial ? "openai_builtin" : "custom",
+            apiProviderId:
+              presetId === CODEX_API_PROVIDER_CUSTOM_ID
+                ? savedProvider.id
+                : presetId,
+            apiProviderName: savedProvider.name,
+            apiModelCatalog: savedProvider.modelCatalog,
+            apiWireApi: wireApi,
+            apiSupportsWebsockets:
+              !isOpenAIOfficial &&
+              wireApi === "responses" &&
+              savedProvider.supportsWebsockets === true,
+            apiSupportsVision: savedProvider.supportsVision === true,
+            apiModelVisionSupport: Object.fromEntries(
+              Object.entries(savedProvider.modelCapabilities ?? {}).map(
+                ([model, capability]) => [
+                  model,
+                  capability.supportsVision === true,
+                ],
+              ),
+            ),
+            apiVisionRoutingModel: savedProvider.visionRoutingModel,
+          });
+          if (updatedAccountCount > 0) {
+            await emitAccountsChanged({
+              platformId: "codex",
+              reason: "provider-snapshot-sync",
+            });
+          }
+        }
+      }
       await reloadProviders();
       setShowModal(false);
       setForm(EMPTY_FORM);
@@ -2187,6 +2232,8 @@ export function CodexModelProviderManager({
       setSaving(false);
     }
   }, [
+    accounts,
+    currentEditingProvider,
     currentEditingProvider?.apiKeys.length,
     form,
     parseServiceError,

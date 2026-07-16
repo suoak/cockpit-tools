@@ -10581,7 +10581,7 @@ async fn prepare_sidecar_launch_config_in_dir(
         "streaming".to_string(),
         json!({
             "keepalive-seconds": timeouts.sidecar_stream_keepalive_seconds,
-            "bootstrap-retries": timeouts.single_account_status_retry_attempts,
+            "bootstrap-retries": timeouts.sidecar_streaming_bootstrap_retries,
             "bootstrap-retry-base-delay-ms": timeouts.single_account_status_retry_base_delay_ms,
             "bootstrap-retry-max-delay-ms": timeouts.single_account_status_retry_max_delay_ms,
             "stream-open-timeout-ms": timeouts.sidecar_stream_open_timeout_ms,
@@ -12901,14 +12901,33 @@ fn is_free_plan_type(plan_type: Option<&str>) -> bool {
     !normalized.is_empty() && normalized.contains("free")
 }
 
-fn is_local_access_eligible_account(account: &CodexAccount, restrict_free_accounts: bool) -> bool {
+fn local_access_account_has_oauth_token(account: &CodexAccount) -> bool {
+    !account.tokens.access_token.trim().is_empty()
+        || !account.tokens.id_token.trim().is_empty()
+        || codex_account::account_has_refresh_token(account)
+}
+
+fn local_access_ineligible_reason(
+    account: &CodexAccount,
+    restrict_free_accounts: bool,
+) -> Option<&'static str> {
+    // PENDING / incomplete OAuth: no usable credentials for API service routing.
+    if codex_account::is_pending_oauth_account(account)
+        || (!account.is_api_key_auth() && !local_access_account_has_oauth_token(account))
+    {
+        return Some("pending_oauth");
+    }
     if account_requires_provider_gateway(account) {
-        return false;
+        return Some("chat_completions_api_key");
     }
     if restrict_free_accounts && is_free_plan_type(account.plan_type.as_deref()) {
-        return false;
+        return Some("free_restricted");
     }
-    true
+    None
+}
+
+fn is_local_access_eligible_account(account: &CodexAccount, restrict_free_accounts: bool) -> bool {
+    local_access_ineligible_reason(account, restrict_free_accounts).is_none()
 }
 
 fn normalize_upstream_proxy_url(upstream_proxy_url: Option<String>) -> Option<String> {
@@ -17412,14 +17431,7 @@ fn append_eligible_local_access_account_ids(
             });
             continue;
         };
-        let ineligible_reason = if account_requires_provider_gateway(account) {
-            Some("chat_completions_api_key")
-        } else if restrict_free_accounts && is_free_plan_type(account.plan_type.as_deref()) {
-            Some("free_restricted")
-        } else {
-            None
-        };
-        if let Some(reason) = ineligible_reason {
+        if let Some(reason) = local_access_ineligible_reason(account, restrict_free_accounts) {
             skipped_accounts.push(CodexLocalAccessAppendAccountSkipped {
                 account_id,
                 reason: reason.to_string(),
@@ -23522,6 +23534,7 @@ mod tests {
         is_codex_oauth_auth_text, is_image_generation_capability_error,
         is_local_access_eligible_account, is_local_access_gateway_base_url,
         is_provider_gateway_eligible_account, is_responses_completion_event,
+        local_access_ineligible_reason,
         is_stream_incomplete_error_message, is_upstream_response_failed_error_message,
         legacy_stream_error_category, local_access_chat_completions_url,
         lookup_codex_model_provider_base_url_in_dir, macos_proxy_url_from_scutil_map,
@@ -25065,6 +25078,39 @@ wire_api = "responses"
                 ("chat", "chat_completions_api_key"),
                 ("missing", "not_found"),
             ]
+        );
+    }
+
+    #[test]
+    fn pending_oauth_accounts_are_not_eligible_for_local_access_pool() {
+        let mut pending = test_account_with_plan("plus");
+        pending.id = "pending".to_string();
+        pending.authorization_status = Some("pending".to_string());
+        pending.tokens.access_token = String::new();
+        pending.tokens.id_token = String::new();
+        pending.tokens.refresh_token = None;
+
+        assert!(!is_local_access_eligible_account(&pending, true));
+        assert_eq!(
+            local_access_ineligible_reason(&pending, true),
+            Some("pending_oauth")
+        );
+
+        let (next_ids, synced_ids, added_ids, skipped) = append_eligible_local_access_account_ids(
+            &[],
+            vec![pending.id.clone()],
+            &[pending.clone()],
+            true,
+        );
+        assert!(next_ids.is_empty());
+        assert!(synced_ids.is_empty());
+        assert!(added_ids.is_empty());
+        assert_eq!(
+            skipped
+                .iter()
+                .map(|item| (item.account_id.as_str(), item.reason.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("pending", "pending_oauth")]
         );
     }
 
@@ -29314,6 +29360,46 @@ data: {"error":{"code":"server_error","type":"upstream","message":"stream aborte
             &fs::read_to_string(&launch_config.config_path).expect("read sidecar config"),
         )
         .expect("parse sidecar config");
+
+        fs::remove_dir_all(&dir).expect("cleanup temp dir");
+    }
+
+    #[tokio::test]
+    async fn sidecar_config_uses_streaming_bootstrap_retry_setting() {
+        let dir = make_temp_dir("codex-sidecar-streaming-bootstrap-retries");
+        let account = CodexAccount::new(
+            "oauth-streaming-retries-1".to_string(),
+            "oauth@example.com".to_string(),
+            CodexTokens {
+                id_token: String::new(),
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+            },
+        );
+        let mut collection = test_local_access_collection(vec![account.id.clone()]);
+        collection.timeouts.single_account_status_retry_attempts = 4;
+        collection.timeouts.sidecar_streaming_bootstrap_retries = 2;
+
+        let launch_config = prepare_sidecar_launch_config_in_dir(
+            &collection,
+            dir.clone(),
+            HashMap::new(),
+            None,
+            HashMap::from([(account.id.clone(), account)]),
+        )
+        .await
+        .expect("sidecar config should build");
+        let config: Value = serde_json::from_str(
+            &fs::read_to_string(&launch_config.config_path).expect("read sidecar config"),
+        )
+        .expect("parse sidecar config");
+
+        assert_eq!(
+            config
+                .get("streaming")
+                .and_then(|streaming| streaming.get("bootstrap-retries")),
+            Some(&json!(2))
+        );
 
         fs::remove_dir_all(&dir).expect("cleanup temp dir");
     }

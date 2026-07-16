@@ -61,6 +61,8 @@ struct CodexBatchDeleteJob {
     errors: Vec<CodexBatchDeleteError>,
     account_ids: Vec<String>,
     next_index: usize,
+    #[serde(default)]
+    api_service_cleaned: bool,
     created_at: i64,
     updated_at: i64,
 }
@@ -219,8 +221,55 @@ fn get_codex_batch_delete_job_status(job_id: &str) -> Result<CodexBatchDeleteJob
     Ok(codex_batch_delete_status(job_id, job))
 }
 
+async fn cleanup_batch_accounts_from_api_service(job_id: &str, account_ids: Vec<String>) {
+    if account_ids.is_empty() {
+        return;
+    }
+    match tokio::time::timeout(
+        Duration::from_secs(5),
+        codex_local_access::remove_deleted_accounts_from_local_access_pool(&account_ids),
+    )
+    .await
+    {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => {
+            logger::log_warn(&format!(
+                "[Codex Batch Delete] 删除前批量移除 API 服务账号池引用失败，继续删除账号: job_id={}, account_count={}, error={}",
+                job_id,
+                account_ids.len(),
+                error
+            ));
+        }
+        Err(_) => {
+            logger::log_warn(&format!(
+                "[Codex Batch Delete] 删除前批量移除 API 服务账号池引用超时，继续删除账号: job_id={}, account_count={}",
+                job_id,
+                account_ids.len()
+            ));
+        }
+    }
+}
+
 async fn run_codex_batch_delete_job(job_id: String) {
     loop {
+        let cleanup_request = {
+            let mut jobs = CODEX_BATCH_DELETE_JOBS.lock().unwrap();
+            let Some(job) = jobs.get_mut(&job_id) else {
+                return;
+            };
+            if job.api_service_cleaned {
+                None
+            } else {
+                job.api_service_cleaned = true;
+                Some((job.account_ids.clone(), job.clone()))
+            }
+        };
+        if let Some((cleanup_ids, snapshot)) = cleanup_request {
+            save_codex_batch_delete_job_snapshot_best_effort(&job_id, &snapshot);
+            cleanup_batch_accounts_from_api_service(&job_id, cleanup_ids).await;
+            continue;
+        }
+
         let next_account_id = {
             let mut jobs = CODEX_BATCH_DELETE_JOBS.lock().unwrap();
             let Some(job) = jobs.get_mut(&job_id) else {
@@ -257,31 +306,19 @@ async fn run_codex_batch_delete_job(job_id: String) {
         .map_err(|error| format!("批量删除后台任务失败: {}", error))
         .and_then(|result| result);
 
-        let mut deleted_account_id_for_cleanup = None;
         let result = match remove_result {
-            Ok(()) => {
-                deleted_account_id_for_cleanup = Some(next_account_id.clone());
-                Ok(())
-            }
+            Ok(()) => Ok(()),
             Err(error) => Err(error),
         };
 
-        if let Some(account_id) = deleted_account_id_for_cleanup {
+        if result.is_ok() {
+            let account_id = next_account_id.clone();
             if let Err(error) =
                 codex_wakeup::remove_deleted_accounts_from_tasks(&[account_id.clone()])
             {
                 logger::log_warn(&format!(
                     "[Codex Batch Delete] 清理唤醒任务账号引用失败: job_id={}, account_id={}, error={}",
                     job_id, account_id, error
-                ));
-            }
-            if let Err(error) =
-                codex_local_access::remove_deleted_accounts_from_local_access_pool(&[account_id])
-                    .await
-            {
-                logger::log_warn(&format!(
-                    "[Codex Batch Delete] 清理 API 服务账号池引用失败: job_id={}, error={}",
-                    job_id, error
                 ));
             }
         }
@@ -336,6 +373,7 @@ fn start_codex_batch_delete_job(
         errors: Vec::new(),
         account_ids: normalized_ids,
         next_index: 0,
+        api_service_cleaned: false,
         created_at: now,
         updated_at: now,
     };
@@ -1486,6 +1524,39 @@ pub fn update_codex_api_key_credentials(
         api_model_vision_support.unwrap_or_default(),
         api_vision_routing_model,
     )
+}
+
+#[tauri::command]
+pub async fn sync_codex_api_key_provider_accounts(
+    account_ids: Vec<String>,
+    api_base_url: Option<String>,
+    api_provider_mode: Option<CodexApiProviderMode>,
+    api_provider_id: Option<String>,
+    api_provider_name: Option<String>,
+    api_model_catalog: Option<Vec<String>>,
+    api_wire_api: Option<String>,
+    api_supports_websockets: Option<bool>,
+    api_supports_vision: Option<bool>,
+    api_model_vision_support: Option<std::collections::HashMap<String, bool>>,
+    api_vision_routing_model: Option<String>,
+) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        codex_account::sync_api_key_provider_accounts(
+            account_ids,
+            api_base_url,
+            api_provider_mode,
+            api_provider_id,
+            api_provider_name,
+            api_model_catalog.unwrap_or_default(),
+            api_wire_api,
+            api_supports_websockets.unwrap_or(false),
+            api_supports_vision.unwrap_or(false),
+            api_model_vision_support.unwrap_or_default(),
+            api_vision_routing_model,
+        )
+    })
+    .await
+    .map_err(|error| format!("同步 Codex 供应商账号快照任务失败: {}", error))?
 }
 
 #[tauri::command]
