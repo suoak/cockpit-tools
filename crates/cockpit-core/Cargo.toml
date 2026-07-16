@@ -2,7 +2,7 @@
 name = "cockpit-core"
 version = "0.1.0"
 edition = "2021"
-authors = ["jlcodes"]
+authors = ["suoak"]
 license = "CC-BY-NC-SA-4.0"
 
 [dependencies]

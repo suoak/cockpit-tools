@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Cockpit Tools Dev",
-  "identifier": "com.jlcodes.cockpit-tools.dev",
+  "identifier": "com.suoak.cockpit-tools.dev",
   "app": {
     "windows": [
       {
