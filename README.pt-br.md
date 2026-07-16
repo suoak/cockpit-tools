@@ -307,10 +307,10 @@ Se você se deparar com o aviso "O aplicativo está danificado" do macOS, també
 brew install --cask --no-quarantine cockpit-tools
 ```
 
-Se o Homebrew disser que o aplicativo já existe (por exemplo, `já existe um aplicativo em '/Applications/Cockpit Tools.app'`), remova o aplicativo antigo e instale-o novamente:
+Se o Homebrew disser que o aplicativo já existe (por exemplo, `já existe um aplicativo em '/Applications/SC-Cockpit Tools.app'`), remova o aplicativo antigo e instale-o novamente:
 
 ```bash
-rm -rf "/Applications/Cockpit Tools.app"
+rm -rf "/Applications/SC-Cockpit Tools.app"
 brew install --cask cockpit-tools
 ```
 
@@ -328,7 +328,7 @@ Devido aos mecanismos de segurança do macOS, apps que não foram baixados da Ap
 1.  **Correção via linha de comando** (Recomendado):
     Abra o Terminal e execute o seguinte comando:
     ```bash
-    sudo xattr -rd com.apple.quarantine "/Applications/Cockpit Tools.app"
+    sudo xattr -rd com.apple.quarantine "/Applications/SC-Cockpit Tools.app"
     ```
     > **Observação**: Se você alterou o nome do aplicativo, ajuste o caminho no comando de acordo.
 
