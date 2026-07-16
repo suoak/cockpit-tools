@@ -297,7 +297,9 @@ const FALLBACK_PLATFORM_SETTINGS_ORDER: Record<PlatformId, number> = {
   'github-copilot': 4,
   windsurf: 5,
   kiro: 6,
-  cursor: 7,  grok: 9,
+  cursor: 7,
+  gemini: 8,
+  grok: 9,
   codebuddy: 10,
   codebuddy_cn: 11,
   qoder: 12,
@@ -2267,6 +2269,8 @@ export function SettingsPage() {
         return parseRefresh(kiroAutoRefresh) > 0;
       case 'cursor':
         return parseRefresh(cursorAutoRefresh) > 0;
+      case 'gemini':
+        return parseRefresh(autoRefresh) > 0;
       case 'grok':
         return parseRefresh(grokAutoRefresh) > 0;
       case 'codebuddy':

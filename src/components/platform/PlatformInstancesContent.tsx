@@ -19,6 +19,7 @@ type InstancesAppType =
   | 'windsurf'
   | 'kiro'
   | 'cursor'
+  | 'gemini'
   | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'

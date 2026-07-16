@@ -160,6 +160,7 @@ interface InstancesManagerProps<TAccount extends AccountLike> {
     | "windsurf"
     | "kiro"
     | "cursor"
+    | "gemini"
     | "grok"
     | "codebuddy"
     | "codebuddy_cn"

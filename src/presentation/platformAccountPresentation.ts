@@ -8,6 +8,7 @@ import type { ClaudeAccount } from "../types/claude";
 import type { GitHubCopilotAccount } from "../types/githubCopilot";
 import type { WindsurfAccount } from "../types/windsurf";
 import type { CursorAccount } from "../types/cursor";
+import type { GeminiAccount } from "../types/gemini";
 import type { GrokAccount } from "../types/grok";
 import type { KiroAccount, KiroAccountStatus } from "../types/kiro";
 import type { QoderAccount, QoderSubscriptionInfo } from "../types/qoder";
@@ -80,6 +81,14 @@ import {
   getCursorUsage,
   isCursorAccountBanned,
 } from "../types/cursor";
+import {
+  getGeminiAccountDisplayEmail,
+  getGeminiPlanBadge,
+  getGeminiPlanBadgeClass,
+  getGeminiTierQuotaSummary,
+  getGeminiUsage,
+  isGeminiAccountBanned,
+} from "../types/gemini";
 import {
   formatGrokQuotaUsedTotal,
   getGrokAccountDisplayEmail,
@@ -1669,6 +1678,74 @@ export function buildCursorAccountPresentation(
     planClass: getCursorPlanBadgeClass(account.membership_type, account),
     isBanned: isCursorAccountBanned(account),
     quotaItems,
+  };
+}
+
+export interface GeminiAccountPresentation extends UnifiedAccountPresentation {
+  isBanned: boolean;
+}
+
+export function buildGeminiAccountPresentation(
+  account: GeminiAccount,
+  t: Translate,
+): GeminiAccountPresentation {
+  const planLabel = getGeminiPlanBadge(account);
+  const usage = getGeminiUsage(account);
+  const tierSummary = getGeminiTierQuotaSummary(account);
+  const quotaItems: UnifiedQuotaMetric[] = [];
+
+  const pushTier = (key: keyof ReturnType<typeof getGeminiTierQuotaSummary>) => {
+    const tier = tierSummary[key];
+    if (tier.remainingPercent == null && tier.resetAt == null) {
+      return;
+    }
+    const remainingPercent = tier.remainingPercent ?? 0;
+    const usedPercent = clampPercent(100 - remainingPercent);
+    quotaItems.push({
+      key: tier.key,
+      label: t(`gemini.quota.${tier.key}`, tier.label),
+      percentage: remainingPercent,
+      progressPercent: remainingPercent,
+      quotaClass: getCursorUsageQuotaClass(usedPercent),
+      valueText: t("common.shared.remaining", {
+        value: `${remainingPercent}%`,
+        defaultValue: "剩余 {{value}}",
+      }),
+      resetText: formatMetricResetText(tier.resetAt, t),
+      resetAt: tier.resetAt,
+      showProgress: true,
+    });
+  };
+
+  pushTier("gemini5h");
+  pushTier("geminiWeekly");
+  pushTier("claude5h");
+  pushTier("claudeWeekly");
+
+  if (quotaItems.length === 0 && usage.totalPercentUsed != null) {
+    const usedPercent = clampPercent(usage.totalPercentUsed);
+    const remainingPercent = clampPercent(100 - usedPercent);
+    quotaItems.push({
+      key: "total",
+      label: t("gemini.quota.total", "Total Usage"),
+      percentage: remainingPercent,
+      progressPercent: remainingPercent,
+      quotaClass: getCursorUsageQuotaClass(usedPercent),
+      valueText: t("common.shared.remaining", {
+        value: `${remainingPercent}%`,
+        defaultValue: "剩余 {{value}}",
+      }),
+      showProgress: true,
+    });
+  }
+
+  return {
+    id: account.id,
+    displayName: getGeminiAccountDisplayEmail(account),
+    planLabel,
+    planClass: getGeminiPlanBadgeClass(planLabel, account),
+    quotaItems,
+    isBanned: isGeminiAccountBanned(account),
   };
 }
 

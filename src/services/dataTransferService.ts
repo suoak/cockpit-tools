@@ -52,6 +52,7 @@ import * as githubCopilotService from './githubCopilotService';
 import * as windsurfService from './windsurfService';
 import * as kiroService from './kiroService';
 import * as cursorService from './cursorService';
+import * as geminiService from './geminiService';
 import * as grokService from './grokService';
 import * as codebuddyService from './codebuddyService';
 import * as codebuddyCnService from './codebuddyCnService';
@@ -286,6 +287,7 @@ const ACCOUNT_LOADERS: Record<PlatformId, AccountLoader> = {
   windsurf: async () => (await windsurfService.listWindsurfAccounts()) as unknown as TransferAccountRecord[],
   kiro: async () => (await kiroService.listKiroAccounts()) as unknown as TransferAccountRecord[],
   cursor: async () => (await cursorService.listCursorAccounts()) as unknown as TransferAccountRecord[],
+  gemini: async () => (await geminiService.listGeminiAccounts()) as unknown as TransferAccountRecord[],
   grok: async () => (await grokService.listGrokAccounts()) as unknown as TransferAccountRecord[],
   codebuddy: async () => (await codebuddyService.listCodebuddyAccounts()) as unknown as TransferAccountRecord[],
   codebuddy_cn: async () =>
@@ -309,6 +311,7 @@ const LEGACY_IMPORTERS: Record<PlatformId, ((jsonContent: string) => Promise<unk
   windsurf: windsurfService.importWindsurfFromJson,
   kiro: kiroService.importKiroFromJson,
   cursor: cursorService.importCursorFromJson,
+  gemini: geminiService.importGeminiFromJson,
   grok: undefined,
   codebuddy: codebuddyService.importCodebuddyFromJson,
   codebuddy_cn: codebuddyCnService.importCodebuddyCnFromJson,

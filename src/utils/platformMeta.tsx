@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Github } from 'lucide-react';
+import { Github, Sparkles } from 'lucide-react';
 import { TFunction } from 'i18next';
 import { PlatformId } from '../types/platform';
 import { AntigravityIcon } from '../components/icons/AntigravityIcon';
@@ -36,6 +36,8 @@ export function getPlatformLabel(platformId: PlatformId, _t: TFunction): string 
       return 'Kiro';
     case 'cursor':
       return 'Cursor';
+    case 'gemini':
+      return 'Gemini';
     case 'grok':
       return 'Grok CLI';
     case 'codebuddy':
@@ -81,6 +83,8 @@ export function renderPlatformIcon(platformId: PlatformId, size = 20): ReactNode
       return <KiroIcon style={{ width: size, height: size }} />;
     case 'cursor':
       return <CursorIcon style={{ width: size, height: size }} />;
+    case 'gemini':
+      return <Sparkles size={size} />;
     case 'grok':
       return <GrokIcon style={{ width: size, height: size }} />;
     case 'codebuddy':

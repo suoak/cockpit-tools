@@ -148,6 +148,8 @@ interface GeneralConfig {
   kiro_quota_alert_threshold: number;
   cursor_quota_alert_enabled: boolean;
   cursor_quota_alert_threshold: number;
+  gemini_quota_alert_enabled: boolean;
+  gemini_quota_alert_threshold: number;
   grok_quota_alert_enabled: boolean;
   grok_quota_alert_threshold: number;
   claude_quota_alert_enabled: boolean;
@@ -180,6 +182,7 @@ export type QuickSettingsType =
   | 'windsurf'
   | 'kiro'
   | 'cursor'
+  | 'gemini'
   | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
@@ -220,6 +223,7 @@ type QuotaAlertEnabledKey =
   | 'windsurf_quota_alert_enabled'
   | 'kiro_quota_alert_enabled'
   | 'cursor_quota_alert_enabled'
+  | 'gemini_quota_alert_enabled'
   | 'grok_quota_alert_enabled'
   | 'codebuddy_quota_alert_enabled'
   | 'codebuddy_cn_quota_alert_enabled'
@@ -238,6 +242,7 @@ type QuotaAlertThresholdKey =
   | 'windsurf_quota_alert_threshold'
   | 'kiro_quota_alert_threshold'
   | 'cursor_quota_alert_threshold'
+  | 'gemini_quota_alert_threshold'
   | 'grok_quota_alert_threshold'
   | 'codebuddy_quota_alert_threshold'
   | 'codebuddy_cn_quota_alert_threshold'
@@ -384,6 +389,8 @@ const getCurrentAccountRefreshPlatformForType = (
       return 'kiro';
     case 'cursor':
       return 'cursor';
+    case 'gemini':
+      return 'gemini';
     case 'grok':
       return 'grok';
     case 'codebuddy':
@@ -947,6 +954,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       case 'windsurf': return 'windsurf_auto_refresh_minutes';
       case 'kiro': return 'kiro_auto_refresh_minutes';
       case 'cursor': return 'cursor_auto_refresh_minutes';
+      case 'gemini': return 'auto_refresh_minutes';
       case 'grok': return 'grok_auto_refresh_minutes';
       case 'codebuddy': return 'codebuddy_auto_refresh_minutes';
       case 'codebuddy_cn': return 'codebuddy_cn_auto_refresh_minutes';
@@ -1159,6 +1167,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'kiro_quota_alert_enabled';
       case 'cursor':
         return 'cursor_quota_alert_enabled';
+      case 'gemini':
+        return 'gemini_quota_alert_enabled';
       case 'grok':
         return 'grok_quota_alert_enabled';
       case 'codebuddy':
@@ -1198,6 +1208,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'kiro_quota_alert_threshold';
       case 'cursor':
         return 'cursor_quota_alert_threshold';
+      case 'gemini':
+        return 'gemini_quota_alert_threshold';
       case 'grok':
         return 'grok_quota_alert_threshold';
       case 'codebuddy':
@@ -1324,6 +1336,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return t('quickSettings.kiro.appPath', 'Kiro 路径');
       case 'cursor':
         return t('quickSettings.cursor.appPath', 'Cursor 路径');
+      case 'gemini':
+        return t('quickSettings.gemini.appPath', 'Gemini CLI 路径');
       case 'grok':
         return t('quickSettings.grok.appPath', 'Grok CLI 路径');
       case 'codebuddy':
@@ -1365,6 +1379,8 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         return 'kiro';
       case 'cursor':
         return 'cursor';
+      case 'gemini':
+        return 'antigravity';
       case 'grok':
         return 'antigravity';
       case 'codebuddy':

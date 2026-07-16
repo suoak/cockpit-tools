@@ -10,6 +10,7 @@ export type PlatformId =
   | 'windsurf'
   | 'kiro'
   | 'cursor'
+  | 'gemini'
   | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
@@ -31,6 +32,7 @@ export const ALL_PLATFORM_IDS: PlatformId[] = [
   'windsurf',
   'kiro',
   'cursor',
+  'gemini',
   'grok',
   'codebuddy',
   'codebuddy_cn',
@@ -63,6 +65,7 @@ export const PLATFORM_PAGE_MAP: Record<PlatformId, Page> = {
   windsurf: 'windsurf',
   kiro: 'kiro',
   cursor: 'cursor',
+  gemini: 'gemini',
   grok: 'grok',
   codebuddy: 'codebuddy',
   codebuddy_cn: 'codebuddy-cn',

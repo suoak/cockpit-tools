@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, FolderOpen, Github, Layers, Server } from 'lucide-react';
+import { Clock3, FolderOpen, Github, Layers, Server, Sparkles } from 'lucide-react';
 import { CodexIcon } from '../icons/CodexIcon';
 import { ClaudeIcon } from '../icons/ClaudeIcon';
 import { WindsurfIcon } from '../icons/WindsurfIcon';
@@ -38,6 +38,7 @@ export type PlatformOverviewHeaderId =
   | 'windsurf'
   | 'kiro'
   | 'cursor'
+  | 'gemini'
   | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
@@ -95,6 +96,10 @@ const CONFIGS: Record<PlatformOverviewHeaderId, PlatformOverviewConfig> = {
   cursor: {
     platformLabel: 'Cursor',
     overviewIcon: <CursorIcon className="tab-icon" />,
+  },
+  gemini: {
+    platformLabel: 'Gemini',
+    overviewIcon: <Sparkles className="tab-icon" />,
   },
   grok: {
     platformLabel: 'Grok CLI',
