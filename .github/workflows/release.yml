@@ -976,7 +976,7 @@ jobs:
           base: main
           delete-branch: true
 
-      - name: Enable auto-merge for cask PR
+      - name: Merge cask PR
         if: ${{ steps.create_cask_pr.outputs.pull-request-number != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -989,4 +989,24 @@ jobs:
             echo "Unexpected PR branch: ${PR_BRANCH}"
             exit 1
           fi
-          gh pr merge "${PR_NUMBER}" --auto --squash --delete-branch
+
+          for i in $(seq 1 30); do
+            MERGE_STATE="$(gh pr view "${PR_NUMBER}" --json mergeStateStatus --jq '.mergeStateStatus')"
+            echo "PR #${PR_NUMBER} merge state: ${MERGE_STATE} (attempt ${i}/30)"
+            case "${MERGE_STATE}" in
+              CLEAN|HAS_HOOKS|UNSTABLE)
+                gh pr merge "${PR_NUMBER}" --squash --delete-branch
+                exit 0
+                ;;
+              DIRTY|BLOCKED|UNKNOWN)
+                sleep 5
+                ;;
+              *)
+                sleep 5
+                ;;
+            esac
+          done
+
+          gh pr view "${PR_NUMBER}" --json mergeStateStatus,reviewDecision,statusCheckRollup,url
+          echo "Cask PR was not mergeable after waiting."
+          exit 1
