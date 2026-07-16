@@ -79,6 +79,7 @@ Invoke-Checked "git" @("fetch", $remoteName)
 Invoke-Checked "git" @("rev-parse", "--verify", $UpstreamRef)
 
 Write-Step "Merging $UpstreamRef"
+$headBeforeMerge = Get-FirstGitLine @("rev-parse", "HEAD")
 & git merge --no-edit $UpstreamRef
 if ($LASTEXITCODE -ne 0) {
   Write-Host ""
@@ -88,6 +89,12 @@ if ($LASTEXITCODE -ne 0) {
   Write-Host "  git status --short"
   Write-Host "  git diff --name-only --diff-filter=U"
   exit 2
+}
+$headAfterMerge = Get-FirstGitLine @("rev-parse", "HEAD")
+if ($headAfterMerge -eq $headBeforeMerge) {
+  Write-Host ""
+  Write-Host "Already up to date; skipping branding audit, typecheck, and release tests." -ForegroundColor Green
+  exit 0
 }
 
 Write-Step "Running branding audit"
