@@ -36,11 +36,20 @@ function Get-GitOutput {
   return $output
 }
 
+function Get-FirstGitLine {
+  param([string[]]$Arguments)
+  $output = @(Get-GitOutput $Arguments)
+  if ($output.Count -eq 0) {
+    return ""
+  }
+  return [string]$output[0]
+}
+
 Write-Step "Checking repository"
-$repoRoot = (Get-GitOutput @("rev-parse", "--show-toplevel"))[0]
+$repoRoot = Get-FirstGitLine @("rev-parse", "--show-toplevel")
 Set-Location $repoRoot
 
-$currentBranch = (Get-GitOutput @("branch", "--show-current"))[0]
+$currentBranch = Get-FirstGitLine @("branch", "--show-current")
 if ($currentBranch -ne $Branch) {
   throw "Current branch is '$currentBranch'. Switch to '$Branch' before syncing."
 }
