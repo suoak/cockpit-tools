@@ -219,13 +219,6 @@
       "loginSuccess": "تسجيل الدخول ناجح",
       "switchAccount": "تبديل الحساب"
     },
-    "topRightAd": {
-      "ariaLabel": "موضع إعلان عام أعلى اليمين",
-      "badge": "إعلان",
-      "title": "موضع الإعلان أعلى اليمين",
-      "desc": "تُثبَّت هذه المنطقة في أعلى يمين جميع الصفحات لعرض الحملات أو إعلانات العلامة التجارية.",
-      "action": "عرض التفاصيل"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "طي",
     "confirmDelete": "تأكيد الحذف",
@@ -676,8 +669,6 @@
       "floatingCardShowNowAction": "إظهار البطاقة العائمة",
       "dataDir": "مجلد البيانات",
       "dataDirDesc": "موقع تخزين الحسابات وملفات التكوين.",
-      "topRightAdVisible": "إظهار الترويج العلوي",
-      "topRightAdVisibleDesc": "إخفاء موضع الترويج العلوي داخل التطبيق. لا تتأثر صفحة الرعاة.",
       "opencodeTitle": "تكامل OpenCode",
       "opencodeRestart": "إعادة تشغيل OpenCode عند تبديل Codex",
       "opencodeRestartDesc": "مزامنة معلومات حساب Codex في OpenCode",

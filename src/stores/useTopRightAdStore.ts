@@ -79,7 +79,7 @@ export const useTopRightAdStore = create<TopRightAdStoreState>((set, get) => ({
       persistTopRightAdState(nextState);
       return nextState;
     } catch (error) {
-      console.error('加载右上角广告位失败:', error);
+      console.error('加载顶部提示失败:', error);
       const currentState = get().state;
       set({ state: currentState, loading: false, initialized: true });
       return currentState;
@@ -94,7 +94,7 @@ export const useTopRightAdStore = create<TopRightAdStoreState>((set, get) => ({
       persistTopRightAdState(nextState);
       return nextState;
     } catch (error) {
-      console.error('强制刷新右上角广告位失败:', error);
+      console.error('强制刷新顶部提示失败:', error);
       const currentState = get().state;
       set({ state: currentState, loading: false, initialized: true });
       return currentState;

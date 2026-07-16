@@ -219,13 +219,6 @@
       "loginSuccess": "Giriş başarılı",
       "switchAccount": "Hesap Değiştir"
     },
-    "topRightAd": {
-      "ariaLabel": "Genel sağ üst reklam alanı",
-      "badge": "REKLAM",
-      "title": "Sağ üst reklam alanı",
-      "desc": "Bu alan tüm sayfalarda sağ üstte sabitlenir ve kampanya ya da marka reklamları için uygundur.",
-      "action": "Ayrıntıları görüntüle"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Daralt",
     "confirmDelete": "Silmeyi Onayla",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "Yüzen kartı göster",
       "dataDir": "Veri dizini",
       "dataDirDesc": "Hesaplar ve yapılandırma dosyaları için depolama konumu.",
-      "topRightAdVisible": "Üst tanıtımı göster",
-      "topRightAdVisibleDesc": "Uygulamadaki üst tanıtım alanını gizler. Sponsorlar sayfası etkilenmez.",
       "opencodeTitle": "OpenCode Entegrasyonu",
       "opencodeRestart": "Codex değiştirildiğinde OpenCode'u yeniden başlat",
       "opencodeRestartDesc": "OpenCode içinde Codex hesap bilgisini senkronize et",

@@ -949,14 +949,24 @@ jobs:
           ref: main
 
       - name: Download universal DMG from GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Cockpit.Tools_${VERSION}_universal.dmg"
-          echo "Downloading: ${URL}"
+          PATTERN="*_${VERSION}_universal.dmg"
+          mkdir -p cask-assets
+          echo "Downloading universal DMG matching: ${PATTERN}"
           for i in $(seq 1 30); do
-            if curl -fL --retry 3 --retry-delay 1 -o cockpit-tools.dmg "${URL}"; then
-              exit 0
+            rm -f cask-assets/*.dmg
+            if gh release download "v${VERSION}" --repo "${GITHUB_REPOSITORY}" --dir cask-assets --pattern "${PATTERN}" --clobber; then
+              mapfile -t dmg_files < <(find cask-assets -maxdepth 1 -type f -name "*.dmg" | sort)
+              if [ "${#dmg_files[@]}" -eq 1 ]; then
+                echo "Downloaded: ${dmg_files[0]}"
+                mv "${dmg_files[0]}" cockpit-tools.dmg
+                exit 0
+              fi
+              echo "Expected exactly one universal DMG, found ${#dmg_files[@]}."
             fi
             echo "Asset not ready yet (attempt $i/30). Sleeping 10s..."
             sleep 10

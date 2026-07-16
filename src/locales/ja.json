@@ -219,13 +219,6 @@
       "loginSuccess": "ログイン成功",
       "switchAccount": "アカウント切替"
     },
-    "topRightAd": {
-      "ariaLabel": "全ページ共通の右上広告枠",
-      "badge": "広告",
-      "title": "右上広告枠",
-      "desc": "このエリアは全ページの右上に固定表示され、キャンペーン情報やブランド広告の掲載に適しています。",
-      "action": "詳細を見る"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "折りたたむ",
     "confirmDelete": "削除を確認",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "フローティングカードを表示",
       "dataDir": "データディレクトリ",
       "dataDirDesc": "アカウントと設定ファイルの保存場所。",
-      "topRightAdVisible": "上部プロモを表示",
-      "topRightAdVisibleDesc": "アプリ上部のプロモ枠を非表示にします。スポンサー画面には影響しません。",
       "opencodeTitle": "OpenCode 連携",
       "opencodeRestart": "Codex 切替時に OpenCode を自動再起動",
       "opencodeRestartDesc": "OpenCode 内の Codex アカウント情報を同期して切り替え",

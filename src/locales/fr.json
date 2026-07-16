@@ -219,13 +219,6 @@
       "loginSuccess": "Connexion réussie",
       "switchAccount": "Changer de compte"
     },
-    "topRightAd": {
-      "ariaLabel": "Emplacement publicitaire global en haut à droite",
-      "badge": "PUB",
-      "title": "Emplacement publicitaire en haut à droite",
-      "desc": "Cette zone est fixée en haut à droite sur toutes les pages pour les campagnes ou publicités de marque.",
-      "action": "Voir les détails"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Réduire",
     "confirmDelete": "Confirmer la suppression",
@@ -629,8 +622,6 @@
       "floatingCardShowNowAction": "Afficher la carte flottante",
       "dataDir": "Répertoire de données",
       "dataDirDesc": "Emplacement de stockage des comptes et fichiers de configuration.",
-      "topRightAdVisible": "Afficher la promo haute",
-      "topRightAdVisibleDesc": "Masque l’emplacement promotionnel supérieur dans l’application. La page Sponsors n’est pas affectée.",
       "opencodeTitle": "Intégration OpenCode",
       "opencodeRestart": "Redémarrer OpenCode lors du changement de Codex",
       "opencodeRestartDesc": "Synchroniser les informations du compte Codex dans OpenCode",

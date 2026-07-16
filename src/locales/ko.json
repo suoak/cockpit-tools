@@ -219,13 +219,6 @@
       "loginSuccess": "로그인 성공",
       "switchAccount": "계정 전환"
     },
-    "topRightAd": {
-      "ariaLabel": "전역 우측 상단 광고 영역",
-      "badge": "광고",
-      "title": "우측 상단 광고 영역",
-      "desc": "이 영역은 모든 페이지의 우측 상단에 고정되어 캠페인 또는 브랜드 광고 노출에 적합합니다.",
-      "action": "자세히 보기"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "접기",
     "confirmDelete": "삭제 확인",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "플로팅 카드 표시",
       "dataDir": "데이터 디렉터리",
       "dataDirDesc": "계정 및 구성 파일 저장 위치.",
-      "topRightAdVisible": "상단 프로모션 표시",
-      "topRightAdVisibleDesc": "앱 상단 프로모션 영역을 숨깁니다. 스폰서 페이지에는 영향을 주지 않습니다.",
       "opencodeTitle": "OpenCode 연동",
       "opencodeRestart": "Codex 전환 시 OpenCode 재시작",
       "opencodeRestartDesc": "OpenCode에서 Codex 계정 정보를 동기화하여 전환",

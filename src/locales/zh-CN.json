@@ -26,13 +26,6 @@
     "detail": "详情",
     "editable": "可编辑",
     "preview": "预览",
-    "topRightAd": {
-      "ariaLabel": "全局右上角广告位",
-      "badge": "广告",
-      "title": "右上角广告位",
-      "desc": "该区域在所有页面右上角固定展示，适合投放活动信息或品牌广告。",
-      "action": "查看详情"
-    },
     "shared": {
       "addAccount": "添加账号",
       "columns": {
@@ -1001,8 +994,6 @@
       "floatingCardShowNowAction": "显示悬浮卡片",
       "dataDir": "数据目录",
       "dataDirDesc": "账号与配置文件的存储位置。",
-      "topRightAdVisible": "显示顶部推广",
-      "topRightAdVisibleDesc": "关闭后隐藏应用顶部推广位。",
       "opencodeTitle": "OpenCode 联动",
       "opencodeAuthOverwrite": "切换 Codex 时覆盖 OpenCode 登录信息",
       "opencodeAuthOverwriteDesc": "关闭后仅切换 Codex，不会改写 OpenCode 当前登录态",

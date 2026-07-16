@@ -58,13 +58,13 @@ export function TopCenterPromoBanner({ reserveWhenEmpty = true, ads: adsOverride
     <div
       className="global-promo-center"
       role="complementary"
-      aria-label={t('common.topRightAd.ariaLabel', '全局右上角广告位')}
+      aria-label={t('common.topRightAd.ariaLabel', '顶部提示')}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       <div className="global-promo-slot">
         <span className="global-ad-slot-badge">
-          {ad.badge || t('common.topRightAd.badge', '广告')}
+          {ad.badge || t('common.topRightAd.badge', '提示')}
         </span>
         <div className="global-promo-main">
           <p className="global-promo-text">{ad.text}</p>

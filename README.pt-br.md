@@ -2,10 +2,10 @@
 
 [English](README.en.md)  · Portuguese (BR) · [简体中文](README.md)
 
-[![GitHub stars](https://img.shields.io/github/stars/jlcodes99/cockpit-tools?style=flat&color=gold)](https://github.com/jlcodes99/cockpit-tools)
-[![GitHub downloads](https://img.shields.io/github/downloads/jlcodes99/cockpit-tools/total?style=flat&color=blue)](https://github.com/jlcodes99/cockpit-tools/releases)
-[![GitHub release](https://img.shields.io/github/v/release/jlcodes99/cockpit-tools?style=flat)](https://github.com/jlcodes99/cockpit-tools/releases)
-[![GitHub issues](https://img.shields.io/github/issues/jlcodes99/cockpit-tools)](https://github.com/jlcodes99/cockpit-tools/issues)
+[![GitHub stars](https://img.shields.io/github/stars/suoak/cockpit-tools?style=flat&color=gold)](https://github.com/suoak/cockpit-tools)
+[![GitHub downloads](https://img.shields.io/github/downloads/suoak/cockpit-tools/total?style=flat&color=blue)](https://github.com/suoak/cockpit-tools/releases)
+[![GitHub release](https://img.shields.io/github/v/release/suoak/cockpit-tools?style=flat)](https://github.com/suoak/cockpit-tools/releases)
+[![GitHub issues](https://img.shields.io/github/issues/suoak/cockpit-tools)](https://github.com/suoak/cockpit-tools/issues)
 
 Uma **ferramenta universal de gerenciamento de contas para IDEs de IA**, atualmente compatível com **Antigravity IDE**, **Codex**, **GitHub Copilot**, **Windsurf**, **Kiro**, **Cursor**, **CodeBuddy**, **CodeBuddy CN**, **Qoder**, **Trae** e **Zed**, com fluxos de trabalho paralelos em múltiplas instâncias.
 
@@ -285,7 +285,7 @@ Observações:
 
 ### Opção A: Download Manual (Recomendado)
 
-Acesse a [página de lançamentos do GitHub](https://github.com/jlcodes99/cockpit-tools/releases) para baixar o pacote para o seu sistema:
+Acesse a [página de lançamentos do GitHub](https://github.com/suoak/cockpit-tools/releases) para baixar o pacote para o seu sistema:
 
 *   **macOS**: `.dmg` (Apple Silicon & Intel)
 *   **Windows**: `.msi` (Recommended) or `.exe`
@@ -297,7 +297,7 @@ Acesse a [página de lançamentos do GitHub](https://github.com/jlcodes99/cockpi
 
 
 ```bash
-brew tap jlcodes99/cockpit-tools https://github.com/jlcodes99/cockpit-tools
+brew tap suoak/cockpit-tools https://github.com/suoak/cockpit-tools
 brew install --cask cockpit-tools
 ```
 
@@ -366,21 +366,13 @@ npm run tauri build
 
 ## Histórico do Star
 
-[![Gráfico do Histórico do Star](https://api.star-history.com/svg?repos=jlcodes99/cockpit-tools&type=Date)](https://star-history.com/#jlcodes99/cockpit-tools&Date)
+[![Gráfico do Histórico do Star](https://api.star-history.com/svg?repos=suoak/cockpit-tools&type=Date)](https://star-history.com/#suoak/cockpit-tools&Date)
 
 ---
 
 ## Comunidade
 
 Grupo de bate-papo no Telegram recém-criado: [Junte-se ao grupo](https://t.me/+Y8gMv4SlZUU2MWY1)
-
----
-
-## Patrocínio
-
-Se você achar este projeto útil, considere apoiá-lo aqui: [☕ Doar](docs/DONATE.pt-br.md)
-
-Toda contribuição ajuda a manter o desenvolvimento de código aberto. Obrigado!
 
 ---
 

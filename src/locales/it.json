@@ -219,13 +219,6 @@
       "loginSuccess": "Accesso riuscito",
       "switchAccount": "Cambia account"
     },
-    "topRightAd": {
-      "ariaLabel": "Slot pubblicitario globale in alto a destra",
-      "badge": "ANNUNCIO",
-      "title": "Slot pubblicitario in alto a destra",
-      "desc": "Quest’area è fissata in alto a destra su tutte le pagine per campagne o annunci del brand.",
-      "action": "Vedi dettagli"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Comprimi",
     "confirmDelete": "Conferma eliminazione",
@@ -629,8 +622,6 @@
       "floatingCardShowNowAction": "Mostra la scheda flottante",
       "dataDir": "Directory dati",
       "dataDirDesc": "Posizione di archiviazione per account e file di configurazione.",
-      "topRightAdVisible": "Mostra promo superiore",
-      "topRightAdVisibleDesc": "Nasconde lo spazio promo superiore nell’app. La pagina Sponsor non viene modificata.",
       "opencodeTitle": "Integrazione OpenCode",
       "opencodeRestart": "Riavvia OpenCode quando si cambia Codex",
       "opencodeRestartDesc": "Sincronizza le informazioni dell'account Codex in OpenCode",

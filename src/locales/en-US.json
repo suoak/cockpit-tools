@@ -26,13 +26,6 @@
     "detail": "Details",
     "editable": "Editable",
     "preview": "Preview",
-    "topRightAd": {
-      "ariaLabel": "Global top-right ad slot",
-      "badge": "AD",
-      "title": "Top-right ad slot",
-      "desc": "This area is fixed at the top-right across all pages for campaigns or brand ads.",
-      "action": "View details"
-    },
     "shared": {
       "addAccount": "Add Account",
       "columns": {
@@ -941,8 +934,6 @@
       "floatingCardShowNowAction": "Show floating card",
       "dataDir": "Data Directory",
       "dataDirDesc": "Storage location for accounts and configuration files.",
-      "topRightAdVisible": "Show top promo",
-      "topRightAdVisibleDesc": "Hide the top promo slot in the app. The Sponsors page is not affected.",
       "opencodeTitle": "OpenCode Integration",
       "opencodeAuthOverwrite": "Overwrite OpenCode login when switching Codex",
       "opencodeAuthOverwriteDesc": "When off, only Codex is switched and OpenCode keeps its current login state",

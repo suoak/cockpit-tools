@@ -12,11 +12,11 @@ cask "cockpit-tools" do
 
   postflight do
     system_command "/usr/bin/xattr",
-                   args: ["-cr", "#{appdir}/SC-Cockpit Tools.app"],
+                   args: ["-cr", "#{appdir}/Cockpit Tools.app"],
                    sudo: true
   end
 
-  app "SC-Cockpit Tools.app"
+  app "Cockpit Tools.app"
 
   zap trash: [
     "~/Library/Application Support/com.suoak.cockpit-tools",
@@ -32,6 +32,6 @@ cask "cockpit-tools" do
   caveats <<~EOS
     The app is automatically quarantined by macOS. A postflight hook has been added to remove this quarantine.
     If you still encounter the "App is damaged" error, please run:
-      sudo xattr -rd com.apple.quarantine "/Applications/SC-Cockpit Tools.app"
+      sudo xattr -rd com.apple.quarantine "/Applications/Cockpit Tools.app"
   EOS
 end

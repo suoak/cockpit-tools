@@ -4,11 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
+const { normalizeReleaseAssetName } = require('./stage_release_assets.cjs');
 
 const DEFAULT_REPO = 'suoak/cockpit-tools';
 const DEFAULT_CASK_PATH = 'Casks/cockpit-tools.rb';
 const DEFAULT_TARGET = 'universal-apple-darwin';
-const DEFAULT_RELEASE_ASSET_PREFIX = 'SC-Cockpit.Tools';
 
 function printHelp() {
   console.log('Usage: node scripts/release/publish_github_release_and_cask.cjs [options]');
@@ -115,6 +115,15 @@ function readPackageVersion() {
   return pkg.version;
 }
 
+function readTauriProductName() {
+  const configPath = path.resolve('src-tauri', 'tauri.conf.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  if (!config.productName) {
+    throw new Error('src-tauri/tauri.conf.json productName is missing');
+  }
+  return config.productName;
+}
+
 function logSection(title) {
   console.log(`\n=== ${title} ===`);
 }
@@ -194,7 +203,7 @@ function resolveSourceDmgPath(version, options) {
     'release',
     'bundle',
     'dmg',
-    `SC-Cockpit Tools_${version}_universal.dmg`
+    `${readTauriProductName()}_${version}_universal.dmg`
   );
 
   ensureFileExists(defaultPath, 'Universal DMG');
@@ -203,7 +212,10 @@ function resolveSourceDmgPath(version, options) {
 
 function stageReleaseAsset(sourcePath, version, options) {
   const releaseArtifactsDir = path.resolve('release-artifacts');
-  const stagedName = `${DEFAULT_RELEASE_ASSET_PREFIX}_${version}_universal.dmg`;
+  const stagedName = normalizeReleaseAssetName(path.basename(sourcePath));
+  if (!stagedName.endsWith(`_${version}_universal.dmg`)) {
+    throw new Error(`Universal DMG name does not match expected release pattern: ${stagedName}`);
+  }
   const stagedPath = path.join(releaseArtifactsDir, stagedName);
 
   logSection('Stage Release Asset');
@@ -308,7 +320,7 @@ function replaceRequired(content, pattern, replacer, label) {
   return content.replace(pattern, replacer);
 }
 
-function updateCaskFile(version, digest, options) {
+function updateCaskFile(version, digest, stagedName, options) {
   if (options.skipCask) {
     console.log('[skip] cask update');
     return;
@@ -333,6 +345,12 @@ function updateCaskFile(version, digest, options) {
     `$1${digest}$3`,
     'sha256'
   );
+  updated = replaceRequired(
+    updated,
+    /^(\s*url\s+")([^"]+)(".*)$/m,
+    `$1https://github.com/${options.repo}/releases/download/v#{version}/${stagedName.replace(version, '#{version}')}$3`,
+    'url'
+  );
 
   const urlLineMatch = updated.match(/^\s*url\s+"([^"]+)"/m);
   if (!urlLineMatch) {
@@ -344,6 +362,7 @@ function updateCaskFile(version, digest, options) {
 
   const versionLine = updated.match(/^\s*version\s+"([^"]+)"/m)?.[0] || '';
   const shaLine = updated.match(/^\s*sha256\s+"([^"]+)"/m)?.[0] || '';
+  const urlLine = updated.match(/^\s*url\s+"([^"]+)"/m)?.[0] || '';
 
   if (updated === original) {
     console.log('[ok] cask file already matches target version/sha256');
@@ -353,11 +372,14 @@ function updateCaskFile(version, digest, options) {
   if (options.dryRun) {
     const oldVersionLine = original.match(/^\s*version\s+"([^"]+)"/m)?.[0] || '';
     const oldShaLine = original.match(/^\s*sha256\s+"([^"]+)"/m)?.[0] || '';
+    const oldUrlLine = original.match(/^\s*url\s+"([^"]+)"/m)?.[0] || '';
     console.log('[dry-run] cask changes preview:');
     console.log(`- ${oldVersionLine}`);
     console.log(`+ ${versionLine}`);
     console.log(`- ${oldShaLine}`);
     console.log(`+ ${shaLine}`);
+    console.log(`- ${oldUrlLine}`);
+    console.log(`+ ${urlLine}`);
     return;
   }
 
@@ -365,6 +387,7 @@ function updateCaskFile(version, digest, options) {
   console.log(`[ok] updated cask: ${path.relative(process.cwd(), caskPath)}`);
   console.log(`[ok] ${versionLine}`);
   console.log(`[ok] ${shaLine}`);
+  console.log(`[ok] ${urlLine}`);
 }
 
 function main() {
@@ -384,7 +407,7 @@ function main() {
   const sourceDmgPath = resolveSourceDmgPath(version, options);
   console.log(`asset: ${sourceDmgPath}`);
 
-  const { stagedPath } = stageReleaseAsset(sourceDmgPath, version, options);
+  const { stagedPath, stagedName } = stageReleaseAsset(sourceDmgPath, version, options);
 
   logSection('Compute SHA256');
   const digest = sha256(options.dryRun ? sourceDmgPath : stagedPath);
@@ -392,7 +415,7 @@ function main() {
 
   ensureGhAvailable(options);
   uploadToGitHubRelease(tag, options.repo, stagedPath, options);
-  updateCaskFile(version, digest, options);
+  updateCaskFile(version, digest, stagedName, options);
 
   logSection('Done');
   console.log('Next steps (if not using --dry-run):');

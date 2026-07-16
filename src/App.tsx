@@ -845,7 +845,7 @@ function MainApp() {
   const sponsorModuleInitialized = useSponsorStore((state) => state.initialized);
   const fetchRemoteConfigState = useRemoteConfigStore((state) => state.fetchState);
   const sponsorEntryVisible = Boolean(sponsorModuleState.sponsorModule);
-  const [topRightAdVisible, setTopRightAdVisible] = useState(true);
+  const [topRightAdVisible, setTopRightAdVisible] = useState(false);
   const topRightAdVisibleRef = useRef<boolean | null>(null);
   const visibleTopCenterPromoAds = useMemo(
     () => topRightAdState.ads.filter((ad) => isTopPromoAdVisibleOnPage(ad, page)),
@@ -1049,7 +1049,7 @@ function MainApp() {
         if (disposed) {
           return;
         }
-        const nextVisible = config.top_right_ad_visible ?? true;
+        const nextVisible = config.top_right_ad_visible ?? false;
         const previousVisible = topRightAdVisibleRef.current;
         topRightAdVisibleRef.current = nextVisible;
         setTopRightAdVisible(nextVisible);
@@ -1061,8 +1061,8 @@ function MainApp() {
           return;
         }
         console.error('Failed to load top-right ad visibility config:', error);
-        topRightAdVisibleRef.current = true;
-        setTopRightAdVisible(true);
+        topRightAdVisibleRef.current = false;
+        setTopRightAdVisible(false);
       }
     };
 

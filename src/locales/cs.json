@@ -219,13 +219,6 @@
       "loginSuccess": "Přihlášení úspěšné",
       "switchAccount": "Přepnout účet"
     },
-    "topRightAd": {
-      "ariaLabel": "Globální reklamní slot vpravo nahoře",
-      "badge": "REKLAMA",
-      "title": "Reklamní slot vpravo nahoře",
-      "desc": "Tato oblast je pevně umístěná vpravo nahoře na všech stránkách pro kampaně nebo brandové reklamy.",
-      "action": "Zobrazit podrobnosti"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Sbalit",
     "confirmDelete": "Potvrdit smazání",
@@ -629,8 +622,6 @@
       "floatingCardShowNowAction": "Zobrazit plovoucí kartu",
       "dataDir": "Datový adresář",
       "dataDirDesc": "Umístění pro uložení účtů a konfiguračních souborů.",
-      "topRightAdVisible": "Zobrazit horní promo",
-      "topRightAdVisibleDesc": "Skryje horní promo pozici v aplikaci. Stránka sponzorů zůstane beze změny.",
       "opencodeTitle": "Integrace OpenCode",
       "opencodeRestart": "Restartovat OpenCode při přepnutí Codex",
       "opencodeRestartDesc": "Synchronizovat informace o účtu Codex v OpenCode",

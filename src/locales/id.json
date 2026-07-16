@@ -26,13 +26,6 @@
     "detail": "Detail",
     "editable": "Dapat Diedit",
     "preview": "Pratinjau",
-    "topRightAd": {
-      "ariaLabel": "Slot iklan kanan atas global",
-      "badge": "IKLAN",
-      "title": "Slot iklan kanan atas",
-      "desc": "Area ini ditampilkan secara tetap di kanan atas pada semua halaman untuk kampanye atau iklan merek.",
-      "action": "Lihat detail"
-    },
     "shared": {
       "addAccount": "Tambah Akun",
       "columns": {
@@ -687,8 +680,6 @@
       "floatingCardShowNowAction": "Tampilkan kartu mengambang",
       "dataDir": "Direktori Data",
       "dataDirDesc": "Lokasi penyimpanan akun dan berkas konfigurasi.",
-      "topRightAdVisible": "Tampilkan promo atas",
-      "topRightAdVisibleDesc": "Sembunyikan slot promo atas di aplikasi. Halaman Sponsor tidak terpengaruh.",
       "opencodeTitle": "Integrasi OpenCode",
       "opencodeAuthOverwrite": "Timpa login OpenCode saat mengganti Codex",
       "opencodeAuthOverwriteDesc": "Jika dinonaktifkan, hanya Codex yang diganti dan OpenCode mempertahankan status login saat ini",

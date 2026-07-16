@@ -219,13 +219,6 @@
       "loginSuccess": "Anmeldung erfolgreich",
       "switchAccount": "Konto wechseln"
     },
-    "topRightAd": {
-      "ariaLabel": "Globaler Anzeigenplatz oben rechts",
-      "badge": "ANZEIGE",
-      "title": "Anzeigenplatz oben rechts",
-      "desc": "Dieser Bereich ist auf allen Seiten oben rechts fixiert und eignet sich für Kampagnen oder Markenanzeigen.",
-      "action": "Details ansehen"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Einklappen",
     "confirmDelete": "Löschen bestätigen",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "Schwebende Karte anzeigen",
       "dataDir": "Datenverzeichnis",
       "dataDirDesc": "Speicherort für Konten und Konfigurationsdateien.",
-      "topRightAdVisible": "Top-Promo anzeigen",
-      "topRightAdVisibleDesc": "Blendet den oberen Promo-Bereich in der App aus. Die Sponsorenseite bleibt unverändert.",
       "opencodeTitle": "OpenCode-Integration",
       "opencodeRestart": "OpenCode beim Codex-Wechsel neu starten",
       "opencodeRestartDesc": "Codex-Kontoinformationen in OpenCode synchronisieren",

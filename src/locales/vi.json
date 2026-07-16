@@ -219,13 +219,6 @@
       "loginSuccess": "Đăng nhập thành công",
       "switchAccount": "Chuyển tài khoản"
     },
-    "topRightAd": {
-      "ariaLabel": "Vị trí quảng cáo toàn cục góc trên bên phải",
-      "badge": "QUẢNG CÁO",
-      "title": "Vị trí quảng cáo góc trên bên phải",
-      "desc": "Khu vực này được cố định ở góc trên bên phải trên mọi trang, phù hợp cho chiến dịch hoặc quảng cáo thương hiệu.",
-      "action": "Xem chi tiết"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Thu gọn",
     "confirmDelete": "Xác nhận xóa",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "Hiển thị thẻ nổi",
       "dataDir": "Thư mục dữ liệu",
       "dataDirDesc": "Vị trí lưu trữ tài khoản và cấu hình.",
-      "topRightAdVisible": "Hiện quảng bá trên cùng",
-      "topRightAdVisibleDesc": "Ẩn vị trí quảng bá trên cùng trong ứng dụng. Trang Nhà tài trợ không bị ảnh hưởng.",
       "opencodeTitle": "Tích hợp OpenCode",
       "opencodeRestart": "Khởi động lại OpenCode khi chuyển Codex",
       "opencodeRestartDesc": "Đồng bộ thông tin tài khoản Codex trong OpenCode",

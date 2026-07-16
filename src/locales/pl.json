@@ -219,13 +219,6 @@
       "loginSuccess": "Logowanie powiodło się",
       "switchAccount": "Przełącz konto"
     },
-    "topRightAd": {
-      "ariaLabel": "Globalne miejsce reklamowe w prawym górnym rogu",
-      "badge": "REKLAMA",
-      "title": "Miejsce reklamowe w prawym górnym rogu",
-      "desc": "Ten obszar jest przypięty w prawym górnym rogu na wszystkich stronach i nadaje się do kampanii lub reklam marki.",
-      "action": "Zobacz szczegóły"
-    },
     "appName": "Cockpit Tools​",
     "collapse": "Zwiń",
     "confirmDelete": "Potwierdź usunięcie",
@@ -632,8 +625,6 @@
       "floatingCardShowNowAction": "Pokaż kartę pływającą",
       "dataDir": "Katalog danych",
       "dataDirDesc": "Lokalizacja przechowywania kont i plików konfiguracji.",
-      "topRightAdVisible": "Pokaż górną promocję",
-      "topRightAdVisibleDesc": "Ukrywa górny obszar promocyjny w aplikacji. Strona sponsorów pozostaje bez zmian.",
       "opencodeTitle": "Integracja OpenCode",
       "opencodeRestart": "Uruchom ponownie OpenCode przy przełączaniu Codex",
       "opencodeRestartDesc": "Synchronizuj informacje o koncie Codex w OpenCode",
