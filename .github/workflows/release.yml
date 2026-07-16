@@ -45,65 +45,29 @@ jobs:
             exit 1
           fi
 
-      - name: Build bilingual release notes from changelog
+      - name: Build personal release notes
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ steps.app_version.outputs.VERSION }}"
-
-          extract_section() {
-            local file="$1"
-            local version="$2"
-
-            awk -v version="$version" '
-              BEGIN {
-                capture = 0
-                found = 0
-              }
-
-              /^## / {
-                if (capture) {
-                  exit
-                }
-                if ($0 ~ ("^## \\[" version "\\][[:space:]]*-.*$") || $0 ~ ("^## \\[v" version "\\][[:space:]]*-.*$")) {
-                  capture = 1
-                  found = 1
-                }
-              }
-
-              capture {
-                if ($0 ~ /^---[[:space:]]*$/) {
-                  exit
-                }
-                print
-              }
-
-              END {
-                if (!found) {
-                  exit 2
-                }
-              }
-            ' "$file"
-          }
-
-          if ! zh_section="$(extract_section CHANGELOG.zh-CN.md "$VERSION")"; then
-            echo "Missing changelog section for version $VERSION in CHANGELOG.zh-CN.md"
-            exit 1
-          fi
-
-          if ! en_section="$(extract_section CHANGELOG.md "$VERSION")"; then
-            echo "Missing changelog section for version $VERSION in CHANGELOG.md"
-            exit 1
-          fi
-
           {
-            echo "## 更新日志（中文）"
+            echo "# SC-Cockpit Tools v${VERSION}"
             echo
-            printf '%s\n' "$zh_section"
+            echo "Personal build maintained by **suoak**."
             echo
-            echo "## Changelog (English)"
+            echo "This release packages the current SC-Cockpit Tools desktop app for personal use. Download the installer for your platform from the assets below."
             echo
-            printf '%s\n' "$en_section"
+            echo "## Downloads"
+            echo
+            echo "- Windows: MSI is recommended; NSIS EXE is also provided."
+            echo "- macOS: use the universal DMG unless you specifically need an architecture tarball."
+            echo "- Linux: AppImage, deb, and rpm packages are provided where available."
+            echo
+            echo "## Notes"
+            echo
+            echo "- This is a personal fork release of SC-Cockpit Tools."
+            echo "- Updater metadata and checksums are included in the assets."
+            echo "- Detailed upstream changelog and contributor metadata are intentionally not expanded on this release page."
           } > release-notes.md
 
           date -u +"%Y-%m-%dT%H:%M:%SZ" > published-at.txt
@@ -146,7 +110,7 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v${{ steps.app_version.outputs.VERSION }}"
-          TITLE="Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
+          TITLE="SC-Cockpit Tools v${{ steps.app_version.outputs.VERSION }}"
           if gh release view "${TAG}" > /dev/null 2>&1; then
             gh release edit "${TAG}" \
               --title "${TITLE}" \
