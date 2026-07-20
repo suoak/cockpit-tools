@@ -100,6 +100,7 @@ import { requestCodexOpenAddAccount } from "../utils/codexAddAccountRequest";
 import { scrollElementTo } from "../utils/reducedMotion";
 import { SingleSelectDropdown } from "../components/SingleSelectDropdown";
 import { CodexLocalAccessModal } from "../components/CodexLocalAccessModal";
+import { CodexAccountPoolHealthModal } from "../components/CodexAccountPoolHealthModal";
 import { CodexStatsRangePicker } from "../components/CodexStatsRangePicker";
 import { PaginationControls } from "../components/PaginationControls";
 import { useCodexAccountOverviewMemberView } from "../hooks/useCodexAccountOverviewMemberView";
@@ -756,6 +757,7 @@ export function CodexApiServicePage() {
   const [proxyInput, setProxyInput] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [healthModalOpen, setHealthModalOpen] = useState(false);
   const [apiServiceIsCurrent, setApiServiceIsCurrent] = useState(false);
   const [apiKeyDrafts, setApiKeyDrafts] = useState<Record<string, string>>({});
   const [apiKeyPolicyDrafts, setApiKeyPolicyDrafts] = useState<
@@ -790,6 +792,8 @@ export function CodexApiServicePage() {
   const [sessionAffinityDraft, setSessionAffinityDraft] = useState(true);
   const [sessionAffinityTtlDraft, setSessionAffinityTtlDraft] =
     useState("3600");
+  const [responsesWebsocketsEnabledDraft, setResponsesWebsocketsEnabledDraft] =
+    useState(false);
   const [maxRetryCredentialsDraft, setMaxRetryCredentialsDraft] = useState("0");
   const [maxRetryIntervalDraft, setMaxRetryIntervalDraft] = useState("3");
   const [disableCoolingDraft, setDisableCoolingDraft] = useState(false);
@@ -1477,6 +1481,9 @@ export function CodexApiServicePage() {
     setSessionAffinityTtlDraft(
       formatSeconds(collection?.sessionAffinityTtlMs ?? 3600000),
     );
+    setResponsesWebsocketsEnabledDraft(
+      collection?.responsesWebsocketsEnabled ?? false,
+    );
     setMaxRetryCredentialsDraft(String(collection?.maxRetryCredentials ?? 0));
     setMaxRetryIntervalDraft(
       formatSeconds(collection?.maxRetryIntervalMs ?? 3000),
@@ -1496,6 +1503,7 @@ export function CodexApiServicePage() {
     collection?.accountModelRules,
     collection?.sessionAffinity,
     collection?.sessionAffinityTtlMs,
+    collection?.responsesWebsocketsEnabled,
     collection?.maxRetryCredentials,
     collection?.maxRetryIntervalMs,
     collection?.disableCooling,
@@ -1975,6 +1983,32 @@ export function CodexApiServicePage() {
     try {
       await saveMembers(accountIds, restrictFreeAccounts, backupAccountIds);
       setNotice(t("codex.localAccess.saveSuccess", "API 服务集合已更新"));
+    } catch (err) {
+      const message = String(err).replace(/^Error:\s*/, "");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecoverAccounts = async (accountIds: string[]) => {
+    if (busy || accountIds.length === 0) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const next =
+        await codexLocalAccessService.recoverCodexLocalAccessAccounts(
+          accountIds,
+        );
+      setState(next);
+      setNotice(
+        t("codex.localAccess.accountPoolHealth.recoverSuccess", {
+          count: accountIds.length,
+          defaultValue: "已提交 {{count}} 个账号的恢复操作",
+        }),
+      );
     } catch (err) {
       const message = String(err).replace(/^Error:\s*/, "");
       setError(message);
@@ -2629,6 +2663,7 @@ export function CodexApiServicePage() {
           await codexLocalAccessService.updateCodexLocalAccessRoutingOptions({
             sessionAffinity: sessionAffinityDraft,
             sessionAffinityTtlMs: ttlSeconds * 1000,
+            responsesWebsocketsEnabled: responsesWebsocketsEnabledDraft,
             maxRetryCredentials,
             maxRetryIntervalMs: maxRetryIntervalSeconds * 1000,
             disableCooling: disableCoolingDraft,
@@ -3686,14 +3721,22 @@ export function CodexApiServicePage() {
                 <h2>{t("codex.apiService.healthTitle", "服务健康")}</h2>
               </div>
               <div className="codex-api-service-health-grid">
-                <div>
+                <button
+                  type="button"
+                  className="codex-api-service-health-action"
+                  onClick={() => setHealthModalOpen(true)}
+                  aria-label={t(
+                    "codex.localAccess.accountPoolHealth.openDetails",
+                    "查看异常账号详情",
+                  )}
+                >
                   <span>
                     {t("codex.apiService.health.availableAccounts", "可用账号")}
                   </span>
                   <strong>
                     {availableAccountCount}/{memberAccounts.length}
                   </strong>
-                </div>
+                </button>
                 <div>
                   <span>{t("codex.apiService.health.cooldowns", "冷却")}</span>
                   <strong>{cooldownCount}</strong>
@@ -4537,7 +4580,16 @@ export function CodexApiServicePage() {
                                   count: health.cooldowns.length,
                                   defaultValue: "冷却 {{count}}",
                                 })
-                              : t("codex.localAccess.healthAvailable", "可用")}
+                              : health && !health.available
+                                ? t(
+                                    health.schedulerReason === "unauthorized"
+                                      ? "codex.apiService.accountHealth.authError"
+                                      : "codex.apiService.accountHealth.unavailable",
+                                    health.schedulerReason === "unauthorized"
+                                      ? "鉴权异常"
+                                      : "暂不可用",
+                                  )
+                                : t("codex.localAccess.healthAvailable", "可用")}
                           </span>
                           <span>
                             {t("codex.apiService.accountHealth.image", {
@@ -4629,6 +4681,22 @@ export function CodexApiServicePage() {
                       setSessionAffinityTtlDraft(event.target.value)
                     }
                     disabled={busy || !collection}
+                  />
+                </label>
+                <label>
+                  <span>
+                    {t(
+                      "codex.apiService.routing.responsesWebsockets",
+                      "Responses WebSocket",
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={responsesWebsocketsEnabledDraft}
+                    onChange={(event) =>
+                      setResponsesWebsocketsEnabledDraft(event.target.checked)
+                    }
+                    disabled={busy || !collection || gatewayMode !== "sidecar"}
                   />
                 </label>
                 <label>
@@ -4935,7 +5003,16 @@ export function CodexApiServicePage() {
                                   count: health.cooldowns.length,
                                   defaultValue: "冷却 {{count}}",
                                 })
-                              : t("codex.localAccess.healthAvailable", "可用")}
+                              : health && !health.available
+                                ? t(
+                                    health.schedulerReason === "unauthorized"
+                                      ? "codex.apiService.accountHealth.authError"
+                                      : "codex.apiService.accountHealth.unavailable",
+                                    health.schedulerReason === "unauthorized"
+                                      ? "鉴权异常"
+                                      : "暂不可用",
+                                  )
+                                : t("codex.localAccess.healthAvailable", "可用")}
                           </span>
                           <span>
                             {t("codex.apiService.accountHealth.image", {
@@ -6618,6 +6695,18 @@ export function CodexApiServicePage() {
         </div>
       )}
 
+      <CodexAccountPoolHealthModal
+        isOpen={healthModalOpen}
+        accountIds={memberIds}
+        accounts={accounts}
+        accountHealth={state?.accountHealth ?? []}
+        actionBusy={busy}
+        maskAccountText={maskAccountText}
+        onClose={() => setHealthModalOpen(false)}
+        onRecover={(accountId) => handleRecoverAccounts([accountId])}
+        onRecoverAll={handleRecoverAccounts}
+      />
+
       <CodexLocalAccessModal
         isOpen={memberModalOpen}
         mode="members"
@@ -6697,6 +6786,8 @@ export function CodexApiServicePage() {
         }
         onKillPort={handleKillPort}
         onToggleEnabled={handleToggleEnabled}
+        onRecoverAccounts={handleRecoverAccounts}
+        healthActionBusy={busy}
         onStreamTestMessage={({ sessionId, modelId, messages }) =>
           codexLocalAccessService.streamCodexLocalAccessChatTest(
             sessionId,

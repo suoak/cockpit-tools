@@ -79,12 +79,15 @@ import {
 } from "../components/CodexAccountGroupModal";
 import { CodexGroupAccountPickerModal } from "../components/CodexGroupAccountPickerModal";
 import { CodexLocalAccessModal } from "../components/CodexLocalAccessModal";
+import { CodexAccountPoolHealthModal } from "../components/CodexAccountPoolHealthModal";
 import {
   type CodexAccountGroup,
   assignAccountsToCodexGroup,
   cleanupDeletedCodexAccounts,
   deleteCodexGroup,
   getCodexAccountGroups,
+  isCodexGroupQuotaRefreshInherit,
+  resolveCodexGroupQuotaAutoRefreshMinutes,
   removeAccountsFromCodexGroup,
 } from "../services/codexAccountGroupService";
 import {
@@ -107,7 +110,10 @@ import {
   type CodexResetCredit,
   type CodexResetCreditsSnapshot,
 } from "../types/codex";
-import { filterCodexLocalAccessAccountIds } from "../utils/codexLocalAccessAccounts";
+import {
+  canAddCodexAccountToLocalAccess,
+  filterCodexLocalAccessAccountIds,
+} from "../utils/codexLocalAccessAccounts";
 import {
   extractCodexQuotaErrorCode,
   extractCodexQuotaErrorStatusCode,
@@ -186,6 +192,7 @@ import {
   isCodexAdditionalQuotaVisibleByDefault,
   isCodexCodeReviewQuotaVisibleByDefault,
 } from "../utils/codexPreferences";
+import { splitCodexImportPayloads } from "../utils/codexJsonImportProgress";
 import { emitAccountsChanged } from "../utils/accountSyncEvents";
 import {
   CODEX_OVERVIEW_FILTER_FIELDS,
@@ -536,11 +543,12 @@ function isAbnormalLocalAccessAccountFailure(
 ): boolean {
   return Boolean(
     health &&
-      health.consecutiveFailures >= 3 &&
-      health.lastFailureCategory &&
-      ABNORMAL_LOCAL_ACCESS_ACCOUNT_FAILURE_CATEGORIES.has(
-        health.lastFailureCategory,
-      ),
+      ((health.schedulerAvailable === false && !health.cooldowns.length) ||
+        (health.consecutiveFailures >= 3 &&
+          health.lastFailureCategory &&
+          ABNORMAL_LOCAL_ACCESS_ACCOUNT_FAILURE_CATEGORIES.has(
+            health.lastFailureCategory,
+          ))),
   );
 }
 
@@ -596,7 +604,7 @@ type CodexBatchImportFilter = "all" | "ready";
 
 function shouldAutoHideBatchDeleteJob(
   job: CodexBatchDeleteJobStatus | null,
-): job is CodexBatchDeleteJobStatus {
+): job is CodexBatchDeleteJobStatus & { status: "completed" } {
   return job?.status === "completed" && job.failed === 0;
 }
 
@@ -1005,10 +1013,17 @@ export function CodexAccountsPage() {
     useState<CodexLocalAccessState | null>(null);
   const localAccessStateRequestSeqRef = useRef(0);
   const [showLocalAccessModal, setShowLocalAccessModal] = useState(false);
+  const [showLocalAccessHealthModal, setShowLocalAccessHealthModal] =
+    useState(false);
+  const [localAccessHealthActionBusy, setLocalAccessHealthActionBusy] =
+    useState(false);
   const [localAccessModalMode, setLocalAccessModalMode] = useState<
     "panel" | "members"
   >("panel");
   const [localAccessSaving, setLocalAccessSaving] = useState(false);
+  const [addingLocalAccessAccountId, setAddingLocalAccessAccountId] = useState<
+    string | null
+  >(null);
   const [localAccessStarting, setLocalAccessStarting] = useState(false);
   const [syncImportedToApiService, setSyncImportedToApiService] = useState(
     readCodexImportSyncApiService,
@@ -1391,6 +1406,7 @@ export function CodexAccountsPage() {
     tokenInput,
     setTokenInput,
     importing,
+    setImporting,
     openAddModal,
     closeAddModal,
     externalImportProgress,
@@ -1465,6 +1481,10 @@ export function CodexAccountsPage() {
   );
   const [batchImportCheckQuota, setBatchImportCheckQuota] = useState(false);
   const [batchImportTagsInput, setBatchImportTagsInput] = useState("");
+  const [tokenImportProgress, setTokenImportProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [batchDeleteJob, setBatchDeleteJob] =
     useState<CodexBatchDeleteJobStatus | null>(null);
   const [batchDeleteBusy, setBatchDeleteBusy] = useState(false);
@@ -1474,6 +1494,7 @@ export function CodexAccountsPage() {
   const batchImportUnlistenersRef = useRef<UnlistenFn[]>([]);
   const batchImportSessionIdRef = useRef<string | null>(null);
   const batchDeleteRemoveIdsRef = useRef<Set<string>>(new Set());
+  const batchDeleteRefreshedCompletedRef = useRef(0);
   const codexAccountsRef = useRef<CodexAccount[]>(store.accounts);
   const codexCurrentAccountRef = useRef<CodexAccount | null>(
     store.currentAccount,
@@ -1505,11 +1526,26 @@ export function CodexAccountsPage() {
     await fetchCodexAccounts({ allowEmpty: allowEmptyAccounts });
     await fetchCodexCurrentAccount({ allowEmpty: allowEmptyCurrent });
     await reloadCodexGroups();
+    await emitAccountsChanged({
+      platformId: "codex",
+      reason: "delete",
+    });
   }, [
     fetchCodexAccounts,
     fetchCodexCurrentAccount,
     getBatchDeleteRefreshOptions,
     reloadCodexGroups,
+  ]);
+
+  const refreshAccountsDuringBatchDelete = useCallback(async () => {
+    const { allowEmptyAccounts, allowEmptyCurrent } =
+      getBatchDeleteRefreshOptions();
+    await fetchCodexAccounts({ allowEmpty: allowEmptyAccounts });
+    await fetchCodexCurrentAccount({ allowEmpty: allowEmptyCurrent });
+  }, [
+    fetchCodexAccounts,
+    fetchCodexCurrentAccount,
+    getBatchDeleteRefreshOptions,
   ]);
 
   useEffect(() => {
@@ -1526,37 +1562,47 @@ export function CodexAccountsPage() {
         setBatchDeleteJob((current) =>
           current?.jobId === jobId ? nextJob : current,
         );
+        if (
+          nextJob.completed > batchDeleteRefreshedCompletedRef.current
+        ) {
+          await refreshAccountsDuringBatchDelete();
+          batchDeleteRefreshedCompletedRef.current = nextJob.completed;
+        }
         shouldContinue = nextJob.status === "running";
       } catch (error) {
         console.warn("[Codex Batch Delete] 查询任务进度失败:", error);
       }
       if (!disposed && shouldContinue) {
-        timer = window.setTimeout(pollJob, 500);
+        timer = window.setTimeout(pollJob, 250);
       }
     };
 
-    timer = window.setTimeout(pollJob, 200);
+    timer = window.setTimeout(pollJob, 100);
     return () => {
       disposed = true;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [batchDeleteJob?.jobId, batchDeleteJob?.status]);
+  }, [
+    batchDeleteJob?.jobId,
+    batchDeleteJob?.status,
+    refreshAccountsDuringBatchDelete,
+  ]);
 
   useEffect(() => {
     if (!shouldAutoHideBatchDeleteJob(batchDeleteJob)) return;
     let disposed = false;
     const clearCompletedJob = async () => {
       try {
-        await invoke("clear_codex_batch_delete_job", {
-          jobId: batchDeleteJob.jobId,
-        });
+        await codexService.clearCodexBatchDelete(batchDeleteJob.jobId);
       } catch {
         // ignore cleanup failures
       }
       if (disposed) return;
-      batchDeleteRemoveIdsRef.current = new Set();
-      setBatchDeleteJob(null);
       await refreshAccountsAfterBatchDelete();
+      if (disposed) return;
+      batchDeleteRemoveIdsRef.current = new Set();
+      batchDeleteRefreshedCompletedRef.current = 0;
+      setBatchDeleteJob(null);
     };
     void clearCompletedJob();
     return () => {
@@ -1738,6 +1784,7 @@ export function CodexAccountsPage() {
   );
 
   const closeCodexAddModal = useCallback(() => {
+    if (importing) return;
     setReauthTargetAccount(null);
     setCodexAddTargetGroupId(null);
     setReauthEmailCopied(false);
@@ -1746,7 +1793,7 @@ export function CodexAccountsPage() {
     setPendingOAuthFieldErrors({});
     setPendingOAuthNoteModalOpen(false);
     closeAddModal();
-  }, [closeAddModal]);
+  }, [closeAddModal, importing]);
 
   // Keep the shared modal independent from the currently visible Codex page.
   useEffect(() => {
@@ -6383,10 +6430,42 @@ export function CodexAccountsPage() {
       );
       return;
     }
+    const payloads = splitCodexImportPayloads(trimmed);
+    if (payloads.length === 0) {
+      page.setAddStatus("error");
+      page.setAddMessage(t("common.shared.token.empty", "请输入 Token 或 JSON"));
+      return;
+    }
+
+    setImporting(true);
+    setTokenImportProgress({ current: 0, total: payloads.length });
     page.setAddStatus("loading");
-    page.setAddMessage(t("common.shared.token.importing", "正在导入..."));
     try {
-      const imported = await codexService.importCodexFromJson(trimmed);
+      const imported: CodexAccount[] = [];
+      const failures: string[] = [];
+      for (let index = 0; index < payloads.length; index += 1) {
+        const current = index + 1;
+        setTokenImportProgress({ current, total: payloads.length });
+        page.setAddMessage(
+          t("common.shared.externalImport.statusImporting", {
+            current,
+            total: payloads.length,
+            defaultValue: "正在导入第 {{current}} / {{total}} 个账号",
+          }),
+        );
+        try {
+          imported.push(
+            ...(await codexService.importCodexFromJson(payloads[index])),
+          );
+        } catch (error) {
+          failures.push(
+            `${current}: ${String(error).replace(/^Error:\s*/, "")}`,
+          );
+        }
+      }
+      if (imported.length === 0) {
+        throw new Error(failures.join("; ") || "无法解析导入内容");
+      }
       // 待授权账号若带 2FA 秘钥，同步写入本地 MFA 速查
       for (const account of imported) {
         const secret = account.two_factor_secret?.trim();
@@ -6407,16 +6486,29 @@ export function CodexAccountsPage() {
           reason: "import",
         });
       }
-      page.setAddStatus("success");
-      page.setAddMessage(
-        t(
-          "common.shared.token.importSuccessMsg",
-          "成功导入 {{count}} 个账号",
-        ).replace("{{count}}", String(imported.length)),
-      );
       try {
         const syncResult = await syncImportedAccountsToApiService(
           imported.map((account) => account.id),
+        );
+        if (failures.length > 0) {
+          page.setAddStatus("error");
+          page.setAddMessage(
+            t("codex.token.importPartial", {
+              success: imported.length,
+              failed: failures.length,
+              errors: failures.slice(0, 3).join("; "),
+              defaultValue:
+                "导入完成：成功 {{success}} 个，失败 {{failed}} 个。{{errors}}",
+            }),
+          );
+          return;
+        }
+        page.setAddStatus("success");
+        page.setAddMessage(
+          t(
+            "common.shared.token.importSuccessMsg",
+            "成功导入 {{count}} 个账号",
+          ).replace("{{count}}", String(imported.length)),
         );
         if (syncResult && syncResult.syncedAccountIds.length > 0) {
           closeAddModal();
@@ -6442,6 +6534,9 @@ export function CodexAccountsPage() {
           String(e).replace(/^Error:\s*/, ""),
         ),
       );
+    } finally {
+      setImporting(false);
+      setTokenImportProgress(null);
     }
   };
 
@@ -8166,6 +8261,43 @@ export function CodexAccountsPage() {
     setShowLocalAccessHideConfirm(true);
   }, []);
 
+  const handleRecoverLocalAccessAccounts = useCallback(
+    async (accountIds: string[]) => {
+      if (localAccessHealthActionBusy || accountIds.length === 0) return;
+      setLocalAccessHealthActionBusy(true);
+      try {
+        const nextState =
+          await codexLocalAccessService.recoverCodexLocalAccessAccounts(
+            accountIds,
+          );
+        setLocalAccessState(nextState);
+        setMessage({
+          text: t("codex.localAccess.accountPoolHealth.recoverSuccess", {
+            count: accountIds.length,
+            defaultValue: "已提交 {{count}} 个账号的恢复操作",
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to recover local access accounts:", error);
+        const message = String(error).replace(/^Error:\s*/, "");
+        setMessage({
+          text: t("messages.actionFailed", {
+            action: t(
+              "codex.localAccess.accountPoolHealth.recover",
+              "恢复账号状态",
+            ),
+            error: message,
+          }),
+          tone: "error",
+        });
+        throw new Error(message);
+      } finally {
+        setLocalAccessHealthActionBusy(false);
+      }
+    },
+    [localAccessHealthActionBusy, setMessage, t],
+  );
+
   const confirmHideLocalAccessEntry = useCallback(async () => {
     if (localAccessHideSubmitting) return;
     setLocalAccessHideSubmitting(true);
@@ -8207,6 +8339,91 @@ export function CodexAccountsPage() {
     () => [...(localAccessCollection?.accountIds ?? [])],
     [localAccessCollection?.accountIds],
   );
+
+  const canDirectlyAddLocalAccessAccount = useCallback(
+    (account: CodexAccount) =>
+      localAccessState !== null &&
+      canAddCodexAccountToLocalAccess(
+        account,
+        localAccessAccountIdSet,
+        localAccessCollection?.restrictFreeAccounts ?? true,
+      ),
+    [
+      localAccessAccountIdSet,
+      localAccessCollection?.restrictFreeAccounts,
+      localAccessState,
+    ],
+  );
+
+  const handleAddLocalAccessAccount = useCallback(
+    async (accountId: string) => {
+      if (addingLocalAccessAccountId) return;
+      setAddingLocalAccessAccountId(accountId);
+      try {
+        const result =
+          await codexLocalAccessService.appendCodexLocalAccessAccounts([
+            accountId,
+          ]);
+        setLocalAccessState(result.state);
+        const accountAdded = Boolean(
+          result.state.collection?.accountIds.includes(accountId),
+        );
+        if (!accountAdded) {
+          throw new Error(
+            t(
+              "codex.localAccess.noEligibleAccountsSelected",
+              "所选账号不在当前环境中，或不符合 API 服务条件。请先在当前环境导入可用 Codex 账号后再添加。",
+            ),
+          );
+        }
+        await ensureLocalAccessEntryVisible();
+        window.dispatchEvent(new Event("codex-local-access-state-updated"));
+        setMessage({
+          text: t("codex.localAccess.saveSuccess", "API 服务集合已更新"),
+        });
+      } catch (error) {
+        console.error("Failed to add account to API service:", error);
+        setMessage({
+          text: t("messages.actionFailed", {
+            action: t("codex.localAccess.entryAction", "添加至 API 服务"),
+            error: String(error).replace(/^Error:\s*/, ""),
+          }),
+          tone: "error",
+        });
+      } finally {
+        setAddingLocalAccessAccountId(null);
+      }
+    },
+    [addingLocalAccessAccountId, ensureLocalAccessEntryVisible, setMessage, t],
+  );
+
+  const renderAddLocalAccessAccountButton = (
+    account: CodexAccount,
+    className: string,
+    iconSize = 14,
+  ) => {
+    if (!canDirectlyAddLocalAccessAccount(account)) return null;
+    const label = t(
+      "codex.localAccess.entryAction",
+      "添加至 API 服务",
+    );
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={() => void handleAddLocalAccessAccount(account.id)}
+        disabled={addingLocalAccessAccountId !== null}
+        title={label}
+        aria-label={label}
+      >
+        {addingLocalAccessAccountId === account.id ? (
+          <RefreshCw size={iconSize} className="loading-spinner" />
+        ) : (
+          <Link2 size={iconSize} />
+        )}
+      </button>
+    );
+  };
 
   const handleSaveLocalAccessAccounts = useCallback(
     async (
@@ -9380,6 +9597,7 @@ export function CodexAccountsPage() {
     batchDeleteRemoveIdsRef.current = new Set(deleteConfirm.ids);
     try {
       const job = await codexService.startCodexBatchDelete(deleteConfirm.ids);
+      batchDeleteRefreshedCompletedRef.current = 0;
       if (shouldAutoHideBatchDeleteJob(job)) {
         await refreshAccountsAfterBatchDelete();
         try {
@@ -9409,6 +9627,7 @@ export function CodexAccountsPage() {
         tone: "success",
       });
     } catch (error) {
+      batchDeleteRemoveIdsRef.current = new Set();
       setBatchDeleteModalError(
         t("messages.actionFailed", {
           action: t("common.delete"),
@@ -9432,9 +9651,9 @@ export function CodexAccountsPage() {
     if (!batchDeleteJob?.jobId || batchDeleteBusy) return;
     setBatchDeleteBusy(true);
     try {
-      setBatchDeleteJob(
-        await codexService.pauseCodexBatchDelete(batchDeleteJob.jobId),
-      );
+      const job = await codexService.pauseCodexBatchDelete(batchDeleteJob.jobId);
+      setBatchDeleteJob(job);
+      await refreshAccountsAfterBatchDelete();
     } catch (error) {
       setMessage({
         text: t("codex.batchDelete.actionFailed", {
@@ -9445,7 +9664,13 @@ export function CodexAccountsPage() {
     } finally {
       setBatchDeleteBusy(false);
     }
-  }, [batchDeleteBusy, batchDeleteJob?.jobId, setMessage, t]);
+  }, [
+    batchDeleteBusy,
+    batchDeleteJob?.jobId,
+    refreshAccountsAfterBatchDelete,
+    setMessage,
+    t,
+  ]);
 
   const handleResumeBatchDelete = useCallback(async () => {
     if (!batchDeleteJob?.jobId || batchDeleteBusy) return;
@@ -9470,9 +9695,11 @@ export function CodexAccountsPage() {
     if (!batchDeleteJob?.jobId || batchDeleteBusy) return;
     setBatchDeleteBusy(true);
     try {
-      setBatchDeleteJob(
-        await codexService.retryFailedCodexBatchDelete(batchDeleteJob.jobId),
+      const job = await codexService.retryFailedCodexBatchDelete(
+        batchDeleteJob.jobId,
       );
+      batchDeleteRefreshedCompletedRef.current = job.completed;
+      setBatchDeleteJob(job);
     } catch (error) {
       setMessage({
         text: t("codex.batchDelete.actionFailed", {
@@ -9490,9 +9717,10 @@ export function CodexAccountsPage() {
     setBatchDeleteBusy(true);
     try {
       await codexService.clearCodexBatchDelete(batchDeleteJob.jobId);
+      await refreshAccountsAfterBatchDelete();
+      batchDeleteRemoveIdsRef.current = new Set();
+      batchDeleteRefreshedCompletedRef.current = 0;
       setBatchDeleteJob(null);
-      await store.fetchAccounts();
-      await reloadCodexGroups();
     } catch (error) {
       setMessage({
         text: t("codex.batchDelete.actionFailed", {
@@ -9506,9 +9734,8 @@ export function CodexAccountsPage() {
   }, [
     batchDeleteBusy,
     batchDeleteJob?.jobId,
-    reloadCodexGroups,
+    refreshAccountsAfterBatchDelete,
     setMessage,
-    store,
     t,
   ]);
 
@@ -9578,9 +9805,11 @@ export function CodexAccountsPage() {
 
       setRefreshingGroupId(group.id);
       try {
-        // 与 refresh_all 同源限流；避免 Promise.allSettled 无上限并发导致部分账号失败
-        const successCount =
-          await codexService.refreshCodexQuotasBatch(targetIds);
+        // 显式「刷新分组」：不遵守分组关闭策略，允许用户强制刷新
+        const successCount = await codexService.refreshCodexQuotasBatch(
+          targetIds,
+          { respectGroupQuotaRefresh: false },
+        );
 
         await fetchAccounts();
         await fetchCurrentAccount();
@@ -9813,6 +10042,11 @@ export function CodexAccountsPage() {
             )}
           </div>
           {renderAccountSpeedSelect(account, true)}
+          {renderAddLocalAccessAccountButton(
+            account,
+            "codex-compact-api-service-btn",
+            13,
+          )}
           {!isApiKeyAccount && (
             <button
               className={`codex-compact-note-btn ${hasCodexAccountNoteDetails(account) ? "has-note" : ""}`}
@@ -9942,6 +10176,7 @@ export function CodexAccountsPage() {
       const visibleTags = accountTags.slice(0, 8);
       const moreTagCount = Math.max(0, accountTags.length - visibleTags.length);
       const isInLocalAccess = localAccessAccountIdSet.has(account.id);
+      const canAddToLocalAccess = canDirectlyAddLocalAccessAccount(account);
       const subscriptionInfo = resolveSubscriptionPresentation(account);
       const isSubscriptionInfoMissing = subscriptionInfo.bucket === "missing";
       const isAccessTokenOnlySubscription =
@@ -10020,6 +10255,7 @@ export function CodexAccountsPage() {
           </div>
           {(meta.accountContextText ||
             isInLocalAccess ||
+            canAddToLocalAccess ||
             (!isApiKeyAccount && hasCodexAccountNoteDetails(account)) ||
             resetCreditControls) && (
             <div className="account-sub-line">
@@ -10035,6 +10271,21 @@ export function CodexAccountsPage() {
                 <span className="group-account-badge is-current">
                   {t("codex.localAccess.modal.selected", "已加入 API 服务")}
                 </span>
+              )}
+              {!isInLocalAccess && canAddToLocalAccess && (
+                <button
+                  type="button"
+                  className="group-account-badge codex-local-access-inline-add"
+                  onClick={() => void handleAddLocalAccessAccount(account.id)}
+                  disabled={addingLocalAccessAccountId === account.id}
+                  title={t(
+                    "codex.localAccess.entryAction",
+                    "添加至 API 服务",
+                  )}
+                >
+                  <Link2 size={11} />
+                  {t("codex.localAccess.entryAction", "添加至 API 服务")}
+                </button>
               )}
               {!isApiKeyAccount && renderAccountNoteButton(account)}
               {resetCreditControls}
@@ -10774,7 +11025,8 @@ export function CodexAccountsPage() {
             )}
 
             {localAccessAccountPoolHealthSummary.total > 0 && (
-              <div
+              <button
+                type="button"
                 className={`codex-local-access-health-summary${
                   localAccessAccountPoolHealthHasIssue ? " has-issue" : ""
                 }`}
@@ -10790,6 +11042,11 @@ export function CodexAccountsPage() {
                   defaultValue:
                     "可用 {{available}}/{{total}}，异常 {{abnormal}}，冷却 {{cooldown}}，缺失 {{missing}}，鉴权 {{authError}}，额度 {{quotaLimited}}",
                 })}
+                onClick={() => setShowLocalAccessHealthModal(true)}
+                aria-label={t(
+                  "codex.localAccess.accountPoolHealth.openDetails",
+                  "查看异常账号详情",
+                )}
               >
                 <span className="codex-local-access-health-summary-title">
                   {t("codex.localAccess.accountPoolHealth.title", "账号池")}
@@ -10819,7 +11076,7 @@ export function CodexAccountsPage() {
                     })}
                   </span>
                 )}
-              </div>
+              </button>
             )}
 
             {localAccessState?.lastError && (
@@ -11071,6 +11328,29 @@ export function CodexAccountsPage() {
                     {t("accounts.groups.accountCount", {
                       count: groupAccounts.length,
                     })}
+                    {(() => {
+                      const minutes =
+                        resolveCodexGroupQuotaAutoRefreshMinutes(group);
+                      if (minutes === null) return null;
+                      const label =
+                        minutes === -1
+                          ? t("accounts.groups.quotaRefreshOffBadge", "不刷新")
+                          : t("accounts.groups.quotaRefreshMinutesBadge", {
+                              count: minutes,
+                              defaultValue: "{{count}} 分钟",
+                            });
+                      return (
+                        <span
+                          className="folder-inline-quota-meta"
+                          title={t(
+                            "accounts.groups.quotaRefreshPolicyHint",
+                            "分组额度刷新为最高优先级；可继承平台设置、自定义间隔或不刷新",
+                          )}
+                        >
+                          · {label}
+                        </span>
+                      );
+                    })()}
                   </span>
                 </div>
                 <button
@@ -11081,7 +11361,12 @@ export function CodexAccountsPage() {
                           "accounts.groups.refreshEmpty",
                           "当前分组没有可刷新的账号",
                         )
-                      : t("accounts.groups.refresh", "刷新分组")
+                      : !isCodexGroupQuotaRefreshInherit(group)
+                        ? t(
+                            "accounts.groups.refreshForceHint",
+                            "本组自动额度策略非继承时，仍可手动刷新本组",
+                          )
+                        : t("accounts.groups.refresh", "刷新分组")
                   }
                   aria-label={t("accounts.groups.refresh", "刷新分组")}
                   disabled={groupRefreshDisabled}
@@ -11575,6 +11860,7 @@ export function CodexAccountsPage() {
                   <Terminal size={14} />
                 )}
               </button>
+              {renderAddLocalAccessAccountButton(account, "action-btn")}
               {isNewApiAccount && (
                 <button
                   className="action-btn"
@@ -11710,6 +11996,30 @@ export function CodexAccountsPage() {
                 {t("accounts.groups.accountCount", {
                   count: groupAccounts.length,
                 })}
+                {(() => {
+                  const minutes =
+                    resolveCodexGroupQuotaAutoRefreshMinutes(group);
+                  if (minutes === null) return null;
+                  const label =
+                    minutes === -1
+                      ? t("accounts.groups.quotaRefreshOffBadge", "不刷新")
+                      : t("accounts.groups.quotaRefreshMinutesBadge", {
+                          count: minutes,
+                          defaultValue: "{{count}} 分钟",
+                        });
+                  return (
+                    <span
+                      className="folder-inline-quota-meta"
+                      title={t(
+                        "accounts.groups.quotaRefreshPolicyHint",
+                        "分组额度刷新为最高优先级；可继承平台设置、自定义间隔或不刷新",
+                      )}
+                    >
+                      {" "}
+                      · {label}
+                    </span>
+                  );
+                })()}
               </span>
             </div>
           </td>
@@ -11723,7 +12033,12 @@ export function CodexAccountsPage() {
                         "accounts.groups.refreshEmpty",
                         "当前分组没有可刷新的账号",
                       )
-                    : t("accounts.groups.refresh", "刷新分组")
+                    : !isCodexGroupQuotaRefreshInherit(group)
+                      ? t(
+                          "accounts.groups.refreshForceHint",
+                          "本组自动额度策略非继承时，仍可手动刷新本组",
+                        )
+                      : t("accounts.groups.refresh", "刷新分组")
                 }
                 aria-label={t("accounts.groups.refresh", "刷新分组")}
                 disabled={groupRefreshDisabled}
@@ -13960,6 +14275,7 @@ export function CodexAccountsPage() {
                   <button
                     className="modal-close"
                     onClick={closeCodexAddModal}
+                    disabled={importing}
                     aria-label={t("common.close", "关闭")}
                   >
                     <X />
@@ -13969,6 +14285,7 @@ export function CodexAccountsPage() {
                   <button
                     className={`modal-tab ${addTab === "oauth" ? "active" : ""}`}
                     onClick={() => openCodexAddModal("oauth")}
+                    disabled={importing}
                   >
                     <Globe size={14} />
                     <span className="modal-tab-label">
@@ -13978,6 +14295,7 @@ export function CodexAccountsPage() {
                   <button
                     className={`modal-tab ${addTab === "token" ? "active" : ""}`}
                     onClick={() => openCodexAddModal("token")}
+                    disabled={importing}
                   >
                     <FileText size={14} />
                     <span className="modal-tab-label">
@@ -13987,6 +14305,7 @@ export function CodexAccountsPage() {
                   <button
                     className={`modal-tab ${addTab === "apikey" ? "active" : ""}`}
                     onClick={() => openCodexAddModal("apikey")}
+                    disabled={importing}
                   >
                     <KeyRound size={14} />
                     <span className="modal-tab-label">
@@ -13996,6 +14315,7 @@ export function CodexAccountsPage() {
                   <button
                     className={`modal-tab ${addTab === "import" ? "active" : ""}`}
                     onClick={() => openCodexAddModal("import")}
+                    disabled={importing}
                   >
                     <Database size={14} />
                     <span className="modal-tab-label">
@@ -14800,6 +15120,7 @@ export function CodexAccountsPage() {
                         className="token-input"
                         value={tokenInput}
                         onChange={(e) => setTokenInput(e.target.value)}
+                        disabled={importing}
                         placeholder={t(
                           "codex.token.placeholder",
                           '示例：session JSON、accessToken、at-… 个人访问令牌、Sub2API JSON，或 {"personal_access_token":"at-..."}',
@@ -14842,7 +15163,9 @@ export function CodexAccountsPage() {
                         ) : (
                           <Download size={16} />
                         )}
-                        {t("common.shared.token.import", "Import")}
+                        {tokenImportProgress
+                          ? `${tokenImportProgress.current}/${tokenImportProgress.total}`
+                          : t("common.shared.token.import", "Import")}
                       </button>
                     </div>
                   )}
@@ -17508,6 +17831,20 @@ export function CodexAccountsPage() {
             }
           />
 
+          <CodexAccountPoolHealthModal
+            isOpen={showLocalAccessHealthModal}
+            accountIds={localAccessCollection?.accountIds ?? []}
+            accounts={accounts}
+            accountHealth={localAccessState?.accountHealth ?? []}
+            actionBusy={localAccessHealthActionBusy}
+            maskAccountText={maskAccountText}
+            onClose={() => setShowLocalAccessHealthModal(false)}
+            onRecover={(accountId) =>
+              handleRecoverLocalAccessAccounts([accountId])
+            }
+            onRecoverAll={handleRecoverLocalAccessAccounts}
+          />
+
           <CodexLocalAccessModal
             isOpen={showLocalAccessModal}
             mode={localAccessModalMode}
@@ -17573,6 +17910,8 @@ export function CodexAccountsPage() {
             onRotateApiKey={handleRotateLocalAccessApiKey}
             onKillPort={handleKillLocalAccessPort}
             onToggleEnabled={handleToggleLocalAccessEnabled}
+            onRecoverAccounts={handleRecoverLocalAccessAccounts}
+            healthActionBusy={localAccessHealthActionBusy}
             onStreamTestMessage={({ sessionId, modelId, messages }) =>
               codexLocalAccessService.streamCodexLocalAccessChatTest(
                 sessionId,

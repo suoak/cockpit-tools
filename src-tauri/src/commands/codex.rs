@@ -17,7 +17,7 @@ use crate::modules::{
     opencode_auth, process,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -221,55 +221,58 @@ fn get_codex_batch_delete_job_status(job_id: &str) -> Result<CodexBatchDeleteJob
     Ok(codex_batch_delete_status(job_id, job))
 }
 
-async fn cleanup_batch_accounts_from_api_service(job_id: &str, account_ids: Vec<String>) {
-    if account_ids.is_empty() {
+async fn run_account_pool_cleanup_best_effort<F>(
+    scope: &str,
+    account_count: usize,
+    timeout: Duration,
+    cleanup: F,
+) where
+    F: std::future::Future<Output = Result<(), String>>,
+{
+    if account_count == 0 {
         return;
     }
-    match tokio::time::timeout(
-        Duration::from_secs(5),
-        codex_local_access::remove_deleted_accounts_from_local_access_pool(&account_ids),
-    )
-    .await
-    {
+    match tokio::time::timeout(timeout, cleanup).await {
         Ok(Ok(())) => {}
         Ok(Err(error)) => {
             logger::log_warn(&format!(
-                "[Codex Batch Delete] 删除前批量移除 API 服务账号池引用失败，继续删除账号: job_id={}, account_count={}, error={}",
-                job_id,
-                account_ids.len(),
+                "[Codex Delete] 删除前移除 API 服务账号池引用失败，继续删除本地账号: scope={}, account_count={}, error={}",
+                scope,
+                account_count,
                 error
             ));
         }
         Err(_) => {
             logger::log_warn(&format!(
-                "[Codex Batch Delete] 删除前批量移除 API 服务账号池引用超时，继续删除账号: job_id={}, account_count={}",
-                job_id,
-                account_ids.len()
+                "[Codex Delete] 删除前移除 API 服务账号池引用超时，继续删除本地账号: scope={}, account_count={}",
+                scope,
+                account_count
             ));
         }
     }
 }
 
+async fn cleanup_accounts_from_api_service_best_effort(scope: &str, account_ids: &[String]) {
+    run_account_pool_cleanup_best_effort(
+        scope,
+        account_ids.len(),
+        Duration::from_secs(5),
+        codex_local_access::remove_deleted_accounts_from_local_access_pool(account_ids),
+    )
+    .await;
+}
+
+fn spawn_accounts_cleanup_from_api_service(scope: String, account_ids: Vec<String>) {
+    if account_ids.is_empty() {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        cleanup_accounts_from_api_service_best_effort(&scope, &account_ids).await;
+    });
+}
+
 async fn run_codex_batch_delete_job(job_id: String) {
     loop {
-        let cleanup_request = {
-            let mut jobs = CODEX_BATCH_DELETE_JOBS.lock().unwrap();
-            let Some(job) = jobs.get_mut(&job_id) else {
-                return;
-            };
-            if job.api_service_cleaned {
-                None
-            } else {
-                job.api_service_cleaned = true;
-                Some((job.account_ids.clone(), job.clone()))
-            }
-        };
-        if let Some((cleanup_ids, snapshot)) = cleanup_request {
-            save_codex_batch_delete_job_snapshot_best_effort(&job_id, &snapshot);
-            cleanup_batch_accounts_from_api_service(&job_id, cleanup_ids).await;
-            continue;
-        }
-
         let next_account_id = {
             let mut jobs = CODEX_BATCH_DELETE_JOBS.lock().unwrap();
             let Some(job) = jobs.get_mut(&job_id) else {
@@ -289,9 +292,32 @@ async fn run_codex_batch_delete_job(job_id: String) {
                     "completed".to_string()
                 };
                 job.updated_at = now_unix_seconds();
+                let cleanup_ids = if job.api_service_cleaned {
+                    None
+                } else {
+                    job.api_service_cleaned = true;
+                    let failed_ids = job
+                        .errors
+                        .iter()
+                        .map(|error| error.account_id.as_str())
+                        .collect::<HashSet<_>>();
+                    Some(
+                        job.account_ids
+                            .iter()
+                            .filter(|account_id| !failed_ids.contains(account_id.as_str()))
+                            .cloned()
+                            .collect(),
+                    )
+                };
                 let snapshot = job.clone();
                 drop(jobs);
                 save_codex_batch_delete_job_snapshot_best_effort(&job_id, &snapshot);
+                if let Some(account_ids) = cleanup_ids {
+                    spawn_accounts_cleanup_from_api_service(
+                        format!("batch_job:{}", job_id),
+                        account_ids,
+                    );
+                }
                 return;
             }
             job.status = "running".to_string();
@@ -455,6 +481,7 @@ fn retry_failed_codex_batch_delete_job(job_id: &str) -> Result<CodexBatchDeleteJ
         job.failed = 0;
         job.errors = Vec::new();
         job.next_index = 0;
+        job.api_service_cleaned = false;
         job.status = "running".to_string();
         job.updated_at = now_unix_seconds();
         save_codex_batch_delete_job_snapshot_best_effort(job_id, job);
@@ -946,7 +973,9 @@ pub async fn delete_codex_account(account_id: String) -> Result<(), String> {
             account_id, error
         ));
     }
-    codex_local_access::remove_deleted_accounts_from_local_access_pool(&[account_id]).await?;
+    // 本地删除成功后立即返回；API 服务账号池持久化与网关重载在后台完成，
+    // 避免外部进程延迟让用户误以为账号没有删除。
+    spawn_accounts_cleanup_from_api_service("single_delete".to_string(), vec![account_id]);
     Ok(())
 }
 
@@ -961,7 +990,7 @@ pub async fn delete_codex_accounts(account_ids: Vec<String>) -> Result<(), Strin
             error
         ));
     }
-    codex_local_access::remove_deleted_accounts_from_local_access_pool(&account_ids).await?;
+    spawn_accounts_cleanup_from_api_service("multi_delete".to_string(), account_ids);
     Ok(())
 }
 
@@ -1268,6 +1297,14 @@ pub async fn refresh_current_codex_quota(app: AppHandle) -> Result<(), String> {
     if account.is_api_key_auth() {
         return Ok(());
     }
+    // 分组策略「不刷新」：自动当前号刷新静默跳过
+    if !codex_account::is_quota_refresh_enabled_for_account(&account.id) {
+        logger::log_info(&format!(
+            "[Codex Quota] 当前账号所属分组已关闭额度刷新，跳过: account_id={}",
+            account.id
+        ));
+        return Ok(());
+    }
 
     let result = codex_quota::refresh_account_quota(&account.id).await;
     if result.is_ok() {
@@ -1295,12 +1332,18 @@ pub async fn refresh_all_codex_quotas(app: AppHandle) -> Result<i32, String> {
 
 /// 按账号 ID 列表限流并发刷新配额（分组刷新 / 本地访问批量等）
 /// 只在全部任务结束后做一次 tray / post-check，避免 N 次并发互踩。
+///
+/// `respect_group_quota_refresh` 缺省 true：跳过分组「不刷新」账号。
+/// 显式「刷新分组」应传 false。
 #[tauri::command]
 pub async fn refresh_codex_quotas_batch(
     app: AppHandle,
     account_ids: Vec<String>,
+    respect_group_quota_refresh: Option<bool>,
 ) -> Result<i32, String> {
-    let results = codex_quota::refresh_quotas_for_account_ids(&account_ids).await?;
+    let respect = respect_group_quota_refresh.unwrap_or(true);
+    let results =
+        codex_quota::refresh_quotas_for_account_ids_with_options(&account_ids, respect).await?;
     let success_count = results.iter().filter(|(_, r)| r.is_ok()).count();
     if success_count > 0 {
         run_codex_post_refresh_checks(&app).await;
@@ -3159,6 +3202,13 @@ pub async fn codex_local_access_remove_account(
 }
 
 #[tauri::command]
+pub async fn codex_local_access_recover_accounts(
+    account_ids: Vec<String>,
+) -> Result<CodexLocalAccessState, String> {
+    codex_local_access::recover_local_access_accounts(account_ids).await
+}
+
+#[tauri::command]
 pub async fn codex_local_access_rotate_api_key() -> Result<CodexLocalAccessState, String> {
     codex_local_access::rotate_local_access_api_key().await
 }
@@ -3283,6 +3333,7 @@ pub async fn codex_local_access_reprice_request_logs() -> Result<CodexLocalAcces
 pub async fn codex_local_access_update_routing_options(
     session_affinity: bool,
     session_affinity_ttl_ms: i64,
+    responses_websockets_enabled: bool,
     max_retry_credentials: u16,
     max_retry_interval_ms: u64,
     disable_cooling: bool,
@@ -3292,6 +3343,7 @@ pub async fn codex_local_access_update_routing_options(
     codex_local_access::update_local_access_routing_options(
         session_affinity,
         session_affinity_ttl_ms,
+        responses_websockets_enabled,
         max_retry_credentials,
         max_retry_interval_ms,
         disable_cooling,
@@ -3566,6 +3618,25 @@ pub async fn codex_local_access_chat_test_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn account_pool_cleanup_error_does_not_block_local_delete_flow() {
+        run_account_pool_cleanup_best_effort("test_error", 1, Duration::from_secs(1), async {
+            Err("gateway reload failed".to_string())
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn account_pool_cleanup_timeout_does_not_block_local_delete_flow() {
+        run_account_pool_cleanup_best_effort(
+            "test_timeout",
+            1,
+            Duration::from_millis(1),
+            std::future::pending(),
+        )
+        .await;
+    }
 
     #[test]
     fn batch_delete_jobs_dir_reuses_existing_directory() {
