@@ -7,6 +7,18 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [1.3.13] - 2026-07-22
+
+### Fixed
+
+- **Fixed Codex official direct wakeup failing for K12 Agent Identity accounts**: wakeup requests now generate `AgentAssertion` credentials dynamically, register and persist a missing or invalid task, and retry safely once while preserving the existing wakeup behavior for regular OAuth accounts.
+
+## [1.3.12] - 2026-07-22
+
+### Fixed
+
+- **Fixed Agent Identity users in the same K12 workspace overwriting each other**: accounts are now distinguished by the combined ChatGPT account and user identity; reimporting the same user still updates the existing account and preserves its saved metadata, while accounts saved by the previous release keep their existing identifier.
+
 ## [1.3.11] - 2026-07-22
 
 ### Added
