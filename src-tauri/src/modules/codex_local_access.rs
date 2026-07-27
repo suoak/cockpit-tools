@@ -5393,6 +5393,143 @@ fn merge_collection_and_account_excluded_models(
     normalize_model_rule_list(rules)
 }
 
+fn normalize_quota_limit_name_to_model_pattern(limit_name: &str) -> Option<String> {
+    let trimmed = limit_name.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(trimmed.to_ascii_lowercase().replace(' ', "-"))
+}
+
+fn metered_features_in_quota_raw(raw: &Value) -> HashSet<String> {
+    let mut features = HashSet::new();
+    let Some(limits) = raw.get("additional_rate_limits").and_then(Value::as_array) else {
+        return features;
+    };
+    for entry in limits {
+        let Some(feature) = entry
+            .get("metered_feature")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
+            continue;
+        };
+        features.insert(feature.to_ascii_lowercase());
+    }
+    features
+}
+
+fn quota_disallowed_model_patterns(account: &CodexAccount) -> Vec<String> {
+    let Some(raw) = account
+        .quota
+        .as_ref()
+        .and_then(|quota| quota.raw_data.as_ref())
+    else {
+        return Vec::new();
+    };
+    let Some(limits) = raw.get("additional_rate_limits").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    let mut patterns = Vec::new();
+    for entry in limits {
+        let allowed = entry
+            .get("rate_limit")
+            .and_then(|value| value.get("allowed"))
+            .and_then(Value::as_bool);
+        if allowed != Some(false) {
+            continue;
+        }
+        let Some(limit_name) = entry.get("limit_name").and_then(Value::as_str) else {
+            continue;
+        };
+        if let Some(pattern) = normalize_quota_limit_name_to_model_pattern(limit_name) {
+            patterns.push(pattern);
+        }
+    }
+    patterns
+}
+
+fn metered_feature_model_patterns_for_pool(
+    collection: &CodexLocalAccessCollection,
+    account_overrides: &HashMap<String, CodexAccount>,
+) -> HashMap<String, String> {
+    let persisted_accounts = codex_account::list_accounts_checked().ok();
+    let mut patterns = HashMap::new();
+    for account_id in effective_sidecar_account_ids(collection) {
+        let account = account_overrides.get(&account_id).or_else(|| {
+            persisted_accounts
+                .as_ref()
+                .and_then(|accounts| accounts.iter().find(|account| account.id == account_id))
+        });
+        let Some(raw) = account
+            .and_then(|account| account.quota.as_ref())
+            .and_then(|quota| quota.raw_data.as_ref())
+        else {
+            continue;
+        };
+        let Some(limits) = raw.get("additional_rate_limits").and_then(Value::as_array) else {
+            continue;
+        };
+        for entry in limits {
+            let feature = entry
+                .get("metered_feature")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_ascii_lowercase);
+            let limit_name = entry.get("limit_name").and_then(Value::as_str);
+            if let (Some(feature), Some(limit_name)) = (feature, limit_name) {
+                if let Some(pattern) = normalize_quota_limit_name_to_model_pattern(limit_name) {
+                    patterns.entry(feature).or_insert(pattern);
+                }
+            }
+        }
+    }
+    patterns
+}
+
+fn implicit_metered_feature_exclusions(
+    account: &CodexAccount,
+    feature_patterns: &HashMap<String, String>,
+) -> Vec<String> {
+    if feature_patterns.is_empty() {
+        return Vec::new();
+    }
+    let Some(raw) = account
+        .quota
+        .as_ref()
+        .and_then(|quota| quota.raw_data.as_ref())
+    else {
+        return Vec::new();
+    };
+    let present = metered_features_in_quota_raw(raw);
+    feature_patterns
+        .iter()
+        .filter_map(|(feature, pattern)| {
+            if present.contains(feature) {
+                None
+            } else {
+                Some(pattern.clone())
+            }
+        })
+        .collect()
+}
+
+fn sidecar_excluded_models_for_account(
+    account: &CodexAccount,
+    collection: &CodexLocalAccessCollection,
+    metered_feature_patterns: &HashMap<String, String>,
+) -> Vec<String> {
+    let mut excluded = merge_collection_and_account_excluded_models(collection, &account.id);
+    excluded.extend(quota_disallowed_model_patterns(account));
+    excluded.extend(implicit_metered_feature_exclusions(
+        account,
+        metered_feature_patterns,
+    ));
+    normalize_model_rule_list(excluded)
+}
+
 fn custom_rule_map(rules: &[CodexLocalAccessCustomRoutingRule]) -> HashMap<&str, (i32, u32, bool)> {
     rules
         .iter()
@@ -9220,13 +9357,24 @@ fn restore_config_toml_from_takeover_backup(
         crate::modules::codex_config_format::read_codex_config_doc_from_str(current_config)
             .map_err(|e| format!("解析当前 Codex config.toml 失败: {}", e))?
     };
-    let backup_doc = match backup_config.filter(|content| !content.trim().is_empty()) {
+    let mut backup_doc = match backup_config.filter(|content| !content.trim().is_empty()) {
         Some(content) => Some(
             crate::modules::codex_config_format::read_codex_config_doc_from_str(content)
                 .map_err(|e| format!("解析 Codex API 服务接管备份 config.toml 失败: {}", e))?,
         ),
         None => None,
     };
+    if backup_doc
+        .as_ref()
+        .and_then(|doc| doc.get("model_catalog_json"))
+        .and_then(|item| item.as_str())
+        .map(str::trim)
+        == Some(CODEX_LOCAL_ACCESS_MODEL_CATALOG_FILE)
+    {
+        if let Some(doc) = backup_doc.as_mut() {
+            let _ = doc.remove("model_catalog_json");
+        }
+    }
 
     let current_selected_local_access = current_doc
         .get("model_provider")
@@ -10454,13 +10602,30 @@ fn sidecar_auth_json_for_account(
     collection: &CodexLocalAccessCollection,
     proxy_url: Option<&str>,
 ) -> Value {
+    let metered_feature_patterns =
+        metered_feature_model_patterns_for_pool(collection, &HashMap::new());
+    sidecar_auth_json_for_account_with_metered_feature_patterns(
+        account,
+        collection,
+        proxy_url,
+        &metered_feature_patterns,
+    )
+}
+
+fn sidecar_auth_json_for_account_with_metered_feature_patterns(
+    account: &CodexAccount,
+    collection: &CodexLocalAccessCollection,
+    proxy_url: Option<&str>,
+    metered_feature_patterns: &HashMap<String, String>,
+) -> Value {
     let account_id = account
         .account_id
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or(account.id.as_str());
-    let excluded_models = merge_collection_and_account_excluded_models(collection, &account.id);
+    let excluded_models =
+        sidecar_excluded_models_for_account(account, collection, metered_feature_patterns);
     if let Some(identity) = account.agent_identity.as_ref() {
         let mut value = json!({
             "type": "codex",
@@ -11006,6 +11171,22 @@ fn sidecar_codex_key_config_value(
     collection: &CodexLocalAccessCollection,
     proxy_url: Option<&str>,
 ) -> Option<Value> {
+    let metered_feature_patterns =
+        metered_feature_model_patterns_for_pool(collection, &HashMap::new());
+    sidecar_codex_key_config_value_with_metered_feature_patterns(
+        account,
+        collection,
+        proxy_url,
+        &metered_feature_patterns,
+    )
+}
+
+fn sidecar_codex_key_config_value_with_metered_feature_patterns(
+    account: &CodexAccount,
+    collection: &CodexLocalAccessCollection,
+    proxy_url: Option<&str>,
+    metered_feature_patterns: &HashMap<String, String>,
+) -> Option<Value> {
     let api_key = account.openai_api_key.as_deref()?.trim();
     if api_key.is_empty() {
         return None;
@@ -11018,7 +11199,8 @@ fn sidecar_codex_key_config_value(
         ));
         return None;
     };
-    let excluded_models = merge_collection_and_account_excluded_models(collection, &account.id);
+    let excluded_models =
+        sidecar_excluded_models_for_account(account, collection, metered_feature_patterns);
     let mut value = json!({
         "api-key": api_key,
         "base-url": base_url,
@@ -11372,6 +11554,8 @@ fn prepare_sidecar_launch_config_in_dir_sync(
     let mut manifest_accounts = Vec::new();
     let mut codex_keys = Vec::new();
     let mut expected_auth_files = HashSet::new();
+    let metered_feature_patterns =
+        metered_feature_model_patterns_for_pool(collection, &account_overrides);
     for (index, account_id) in effective_sidecar_account_ids(collection)
         .into_iter()
         .enumerate()
@@ -11414,9 +11598,12 @@ fn prepare_sidecar_launch_config_in_dir_sync(
         }
 
         if account.is_api_key_auth() {
-            if let Some(config_value) =
-                sidecar_codex_key_config_value(&account, collection, effective_proxy_url_ref)
-            {
+            if let Some(config_value) = sidecar_codex_key_config_value_with_metered_feature_patterns(
+                &account,
+                collection,
+                effective_proxy_url_ref,
+                &metered_feature_patterns,
+            ) {
                 codex_keys.push(config_value);
                 manifest_accounts.push(sidecar_account_manifest_value(&account, None, collection));
             } else {
@@ -11432,8 +11619,12 @@ fn prepare_sidecar_launch_config_in_dir_sync(
         let auth_path = auths_dir.join(&file_name);
         expected_auth_files.insert(file_name.clone());
         adopt_sidecar_agent_identity_task(&mut account, &auth_path)?;
-        let auth_json =
-            sidecar_auth_json_for_account(&account, collection, effective_proxy_url_ref);
+        let auth_json = sidecar_auth_json_for_account_with_metered_feature_patterns(
+            &account,
+            collection,
+            effective_proxy_url_ref,
+            &metered_feature_patterns,
+        );
         let auth_content = serde_json::to_string_pretty(&auth_json)
             .map_err(|e| format!("序列化 sidecar Codex OAuth 认证失败: {}", e))?;
         write_string_atomic_if_changed(&auth_path, &auth_content)?;
@@ -26870,6 +27061,87 @@ wire_api = "responses"
         );
     }
 
+    #[test]
+    fn scoped_api_key_pool_discovers_spark_entitlement_from_effective_accounts() {
+        let mut plus = test_account_with_plan("plus");
+        plus.id = "scoped-plus".to_string();
+        plus.quota = Some(CodexQuota {
+            hourly_percentage: 100,
+            hourly_reset_time: None,
+            hourly_window_minutes: Some(300),
+            hourly_window_present: Some(true),
+            weekly_percentage: 100,
+            weekly_reset_time: None,
+            weekly_window_minutes: Some(10_080),
+            weekly_window_present: Some(true),
+            reset_credits_available: None,
+            reset_credits: Vec::new(),
+            reset_credits_next_expires_at: None,
+            raw_data: Some(json!({ "additional_rate_limits": [] })),
+        });
+
+        let mut pro = test_account_with_plan("pro");
+        pro.id = "scoped-pro".to_string();
+        pro.quota = Some(CodexQuota {
+            hourly_percentage: 100,
+            hourly_reset_time: None,
+            hourly_window_minutes: Some(300),
+            hourly_window_present: Some(true),
+            weekly_percentage: 100,
+            weekly_reset_time: None,
+            weekly_window_minutes: Some(10_080),
+            weekly_window_present: Some(true),
+            reset_credits_available: None,
+            reset_credits: Vec::new(),
+            reset_credits_next_expires_at: None,
+            raw_data: Some(json!({
+                "additional_rate_limits": [{
+                    "limit_name": "GPT-5.3-Codex-Spark",
+                    "metered_feature": "codex_spark",
+                    "rate_limit": { "allowed": true }
+                }]
+            })),
+        });
+
+        let mut collection = test_local_access_collection(Vec::new());
+        collection.api_key.clear();
+        let mut api_key = build_local_access_api_key(Some("Scoped Spark"));
+        api_key.key = "scoped-spark-key".to_string();
+        api_key.inherit_account_pool = Some(false);
+        api_key.account_ids = vec![plus.id.clone(), pro.id.clone()];
+        collection.api_keys = vec![api_key];
+
+        let dir = make_temp_dir("codex-scoped-spark-entitlement");
+        let overrides = HashMap::from([(plus.id.clone(), plus.clone()), (pro.id.clone(), pro)]);
+        super::prepare_sidecar_launch_config_in_dir_sync(
+            &collection,
+            dir.clone(),
+            HashMap::new(),
+            None,
+            overrides,
+            None,
+        )
+        .expect("prepare scoped sidecar config");
+
+        let auth_path = sidecar_auths_dir(&dir).join(sidecar_auth_file_name(&plus.id));
+        let auth: Value =
+            serde_json::from_str(&fs::read_to_string(auth_path).expect("read scoped Plus auth"))
+                .expect("parse scoped Plus auth");
+        let excluded = auth
+            .get("excluded_models")
+            .and_then(Value::as_array)
+            .expect("excluded_models should be an array");
+        assert!(
+            excluded
+                .iter()
+                .filter_map(Value::as_str)
+                .any(|model| model.eq_ignore_ascii_case("gpt-5.3-codex-spark")),
+            "Plus account should exclude Spark discovered from its scoped Pro peer"
+        );
+
+        fs::remove_dir_all(dir).expect("cleanup scoped sidecar config");
+    }
+
     fn make_temp_dir(prefix: &str) -> PathBuf {
         for _ in 0..10 {
             let dir = std::env::temp_dir().join(format!(
@@ -28407,6 +28679,37 @@ wire_api = "responses"
                 .and_then(|value| value.as_str()),
             Some("keep-current")
         );
+    }
+
+    #[test]
+    fn takeover_backup_restore_drops_stale_local_access_catalog() {
+        let current = r#"model_provider = "codex_local_access"
+model_catalog_json = "cockpit-local-access-model-catalog.json"
+
+[model_providers.codex_local_access]
+name = "Codex API Service"
+base_url = "http://localhost:14998/v1"
+wire_api = "responses"
+requires_openai_auth = false
+experimental_bearer_token = "agt_codex_test"
+"#;
+        let stale_backup = r#"model_provider = "openai"
+model_catalog_json = "cockpit-local-access-model-catalog.json"
+model_context_window = 1000000
+"#;
+
+        let output = restore_config_toml_from_takeover_backup(Some(current), Some(stale_backup))
+            .expect("restore config")
+            .expect("restored content");
+        let parsed = output
+            .parse::<toml_edit::Document>()
+            .expect("parse restored toml");
+
+        assert_eq!(
+            parsed.get("model_provider").and_then(|item| item.as_str()),
+            Some("openai")
+        );
+        assert!(parsed.get("model_catalog_json").is_none());
     }
 
     #[test]
